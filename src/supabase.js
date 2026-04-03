@@ -6,14 +6,7 @@ const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: { persistSession: false },
-  global: {
-    headers: {
-      'apikey': SUPABASE_ANON_KEY,
-      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-    }
-  }
 })
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
 // ── HELPERS DE CONVERSIÓN ────────────────────────────────────
 // Supabase usa snake_case, React usa camelCase
