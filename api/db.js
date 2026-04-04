@@ -1,6 +1,13 @@
 export default async function handler(req, res) {
-  const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
-  const SUPABASE_KEY = process.env.VITE_SUPABASE_ANON_KEY;
+  const SUPABASE_URL = process.env.SUPABASE_URL;
+  const SUPABASE_KEY = process.env.SUPABASE_KEY;
+
+  if (req.method === 'OPTIONS') {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    return res.status(200).end();
+  }
 
   const { path, method, body } = req.body || {};
 
@@ -24,9 +31,6 @@ export default async function handler(req, res) {
     const data = text ? JSON.parse(text) : [];
 
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,DELETE,OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
     return res.status(response.status).json(data);
   } catch (error) {
     return res.status(500).json({ error: error.message });
