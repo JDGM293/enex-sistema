@@ -2252,6 +2252,8 @@ export default function ENEXSystem(){
     const _oc=oficinas.find(o=>(o.ciudad||"").toUpperCase().startsWith((selWR.origCity||"").toUpperCase()))||_origOff;
     const _cl=clients.find(c=>c.id===selWR.clienteId);
     const _destAddr=_cl?[_cl.dir,_cl.municipio,_cl.estado,_cl.pais].filter(Boolean).join(" · "):"";
+    const _usuarioWR=clients.find(c=>c.id===selWR.usuario)||currentUser;
+    const _usuarioNombre=_usuarioWR?fullName(_usuarioWR):(selWR.usuario||"—");
     const _bcBars=(code)=>String(code).split("").map((ch,i)=>{const v=ch.charCodeAt(0);return v>32?<div key={i} style={{width:v%3===0?3:v%3===1?2:1,height:14+(v*3)%22,background:"var(--navy)",flexShrink:0,display:"inline-block"}}/>:null;});
     return (
     <div className="ov" onClick={()=>setSelWR(null)}>
@@ -2304,7 +2306,7 @@ export default function ENEXSystem(){
               <div className="wr-num-meta">
                 📍 {selWR.origCity||"—"} → {selWR.destCity||"—"}<br/>
                 {fmtDate(selWR.fecha)} {fmtTime(selWR.fecha)}<br/>
-                Recibió: {selWR.usuario}
+                Recibió: {_usuarioNombre}
               </div>
               <div style={{marginTop:6}}><StBadge st={selWR.status}/></div>
             </div>
@@ -2515,7 +2517,7 @@ export default function ENEXSystem(){
                     <WRBarcode value={selWR.id} height={45} width={2}/>
                   </div>
                   <div style={{fontSize:9,color:"#444",marginTop:3}}>
-                    Printed: {fmtDate(selWR.fecha)} {fmtTime(selWR.fecha)} | Received By: {selWR.usuario}
+                    Printed: {fmtDate(selWR.fecha)} {fmtTime(selWR.fecha)} | Received By: {_usuarioNombre}
                   </div>
                 </td>
               </tr></tbody></table>
