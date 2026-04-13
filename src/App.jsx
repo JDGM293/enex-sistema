@@ -4892,25 +4892,112 @@ export default function ENEXSystem(){
       {showNewWR&&renderNewWRModal()}
       {selWR&&renderWRDetail()}
       {showStatModal&&renderStatModal()}
-      {showLabels&&(
-      <div className="ov" onClick={()=>setShowLabels(null)}>
-        <div className="modal mmd" onClick={e=>e.stopPropagation()}>
-          <div className="mhd"><div className="mt">🏷️ {showLabels.wr?.id}</div><button className="mcl" onClick={()=>setShowLabels(null)}>✕</button></div>
-          <div style={{background:"var(--bg3)",borderRadius:8,padding:16,fontFamily:"'DM Mono',monospace",fontSize:13,lineHeight:2}}>
-            <div><b>Consignatario:</b> {showLabels.wr?.consignee}</div>
-            <div><b>Casillero:</b> {showLabels.wr?.casillero}</div>
-            <div><b>Cajas:</b> {showLabels.wr?.cajas}</div>
-            <div><b>Carrier:</b> {showLabels.wr?.carrier} · <b>Tracking:</b> {showLabels.wr?.tracking}</div>
-            <div><b>Peso:</b> {showLabels.wr?.pesoLb} lb / {showLabels.wr?.pesoKg} kg</div>
-            <div><b>Ruta:</b> {showLabels.wr?.origCity} → {showLabels.wr?.destCity}</div>
-          </div>
-          <div className="mft">
-            <button className="btn-s" onClick={()=>setShowLabels(null)}>Cerrar</button>
-            <button className="btn-p" onClick={()=>window.print()}>🖨️ Imprimir</button>
+      {showLabels&&(()=>{
+        const _lwr=showLabels.wr;const _ldims=showLabels.dims||[];
+        const _totalPk=_ldims.reduce((s,d)=>s+(parseFloat(d.pk)||0),0);
+        const _totalPLb=_ldims.reduce((s,d)=>s+(parseFloat(d.pv)||0),0);
+        const LabelCaja=({d,idx,total})=>{
+          const bval=d.tracking||_lwr?.id||"";
+          const dimStr=d.l&&d.a&&d.h?`${parseFloat((d.l/2.54).toFixed(1))}"×${parseFloat((d.a/2.54).toFixed(1))}"×${parseFloat((d.h/2.54).toFixed(1))}"`:null;
+          return(
+            <div className="label-card" style={{width:288,minHeight:192,border:"2px solid #000",borderRadius:4,background:"#fff",display:"flex",flexDirection:"column",pageBreakInside:"avoid",fontFamily:"Arial,sans-serif"}}>
+              <div className="label-head" style={{background:"#000",color:"#fff",textAlign:"center",padding:"4px 8px"}}>
+                <div style={{fontWeight:900,fontSize:16,letterSpacing:3}}>{empresaNombre}</div>
+                <div style={{fontSize:8,letterSpacing:2,opacity:.8}}>INTERNATIONAL COURIER</div>
+              </div>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 8px",borderBottom:"1px solid #000"}}>
+                <div style={{fontSize:9,color:"#555",fontWeight:700}}>WAREHOUSE RECEIPT</div>
+                <div style={{fontFamily:"'DM Mono',monospace",fontWeight:800,fontSize:12}}>{_lwr?.id}</div>
+              </div>
+              <div style={{textAlign:"center",padding:"4px 6px",borderBottom:"2px solid #000",fontFamily:"'Rajdhani',sans-serif",fontSize:20,fontWeight:900,letterSpacing:2}}>
+                CAJA {idx} / {total}
+              </div>
+              <div style={{padding:"6px 8px",flex:1}}>
+                <div style={{display:"flex",gap:4,marginBottom:3,alignItems:"flex-start"}}>
+                  <span style={{fontSize:8,color:"#555",fontWeight:700,minWidth:64,textTransform:"uppercase",marginTop:1}}>Consignatario</span>
+                  <span style={{fontSize:11,fontWeight:700,color:"#000",lineHeight:1.2}}>{_lwr?.consignee}</span>
+                </div>
+                <div style={{display:"flex",gap:4,marginBottom:3}}>
+                  <span style={{fontSize:8,color:"#555",fontWeight:700,minWidth:64,textTransform:"uppercase"}}>Casillero</span>
+                  <span style={{fontSize:11,fontWeight:800,color:"#000"}}>#{_lwr?.casillero}</span>
+                </div>
+                <div style={{display:"flex",gap:4,marginBottom:3}}>
+                  <span style={{fontSize:8,color:"#555",fontWeight:700,minWidth:64,textTransform:"uppercase"}}>Ruta</span>
+                  <span style={{fontSize:10,fontWeight:600,color:"#000"}}>{_lwr?.origCity||"—"} → {_lwr?.destCity||"—"}</span>
+                </div>
+                {dimStr&&<div style={{display:"flex",gap:4,marginBottom:3}}>
+                  <span style={{fontSize:8,color:"#555",fontWeight:700,minWidth:64,textTransform:"uppercase"}}>Dims</span>
+                  <span style={{fontSize:10,fontFamily:"'DM Mono',monospace",color:"#000"}}>{dimStr} · {d.pk?`${d.pk}kg`:"—"}</span>
+                </div>}
+                {d.tracking&&<div style={{display:"flex",gap:4,marginBottom:3}}>
+                  <span style={{fontSize:8,color:"#555",fontWeight:700,minWidth:64,textTransform:"uppercase"}}>Tracking</span>
+                  <span style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:"#000",wordBreak:"break-all"}}>{d.tracking}</span>
+                </div>}
+              </div>
+              {bval&&<div style={{borderTop:"1px dashed #888",padding:"6px 8px",textAlign:"center",background:"#fafafa"}}>
+                <div style={{display:"flex",justifyContent:"center",marginBottom:2,overflow:"hidden"}}><WRBarcode value={bval} height={40} width={1.5}/></div>
+                <div style={{fontFamily:"'DM Mono',monospace",fontSize:8,letterSpacing:1,color:"#000",fontWeight:700}}>{bval}</div>
+              </div>}
+            </div>
+          );
+        };
+        const LabelGuia=()=>{
+          const bval=_lwr?.id||"";
+          return(
+            <div className="label-card" style={{width:576,minHeight:192,border:"2px solid #000",borderRadius:4,background:"#fff",display:"flex",flexDirection:"column",pageBreakInside:"avoid",fontFamily:"Arial,sans-serif"}}>
+              <div style={{background:"#000",color:"#fff",textAlign:"center",padding:"5px 8px"}}>
+                <div style={{fontWeight:900,fontSize:20,letterSpacing:4}}>{empresaNombre}</div>
+                <div style={{fontSize:8,letterSpacing:3,opacity:.8}}>INTERNATIONAL COURIER — GUÍA DE ENVÍO</div>
+              </div>
+              <div style={{display:"flex",flex:1}}>
+                <div style={{flex:1,padding:"8px 10px",borderRight:"1px solid #000"}}>
+                  <div style={{fontSize:8,color:"#555",fontWeight:700,textTransform:"uppercase",marginBottom:2}}>Remitente / Shipper</div>
+                  <div style={{fontWeight:700,fontSize:12,marginBottom:8}}>{showLabels.remitente||"—"}</div>
+                  <div style={{fontSize:8,color:"#555",fontWeight:700,textTransform:"uppercase",marginBottom:2}}>Consignatario / Consignee</div>
+                  <div style={{fontWeight:800,fontSize:14,marginBottom:2}}>{_lwr?.consignee}</div>
+                  <div style={{fontSize:10,color:"#555"}}>Casillero <b style={{color:"#000"}}>#{_lwr?.casillero}</b></div>
+                </div>
+                <div style={{flex:1,padding:"8px 10px"}}>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:8}}>
+                    <div><div style={{fontSize:8,color:"#555",fontWeight:700,textTransform:"uppercase"}}>Origen</div><div style={{fontWeight:700,fontSize:12}}>{_lwr?.origCity||"—"}</div></div>
+                    <div><div style={{fontSize:8,color:"#555",fontWeight:700,textTransform:"uppercase"}}>Destino</div><div style={{fontWeight:700,fontSize:12}}>{_lwr?.destCity||"—"}</div></div>
+                    <div><div style={{fontSize:8,color:"#555",fontWeight:700,textTransform:"uppercase"}}>Cajas</div><div style={{fontWeight:800,fontSize:14}}>{_lwr?.cajas||_ldims.length}</div></div>
+                    <div><div style={{fontSize:8,color:"#555",fontWeight:700,textTransform:"uppercase"}}>Peso</div><div style={{fontWeight:700,fontSize:12}}>{_totalPk.toFixed(1)} kg</div></div>
+                  </div>
+                  <div style={{textAlign:"center",borderTop:"1px dashed #888",paddingTop:6}}>
+                    <div style={{display:"flex",justifyContent:"center",marginBottom:2,overflow:"hidden"}}><WRBarcode value={bval} height={44} width={2}/></div>
+                    <div style={{fontFamily:"'DM Mono',monospace",fontSize:9,letterSpacing:1,fontWeight:700}}>{bval}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        };
+        return(
+        <div className="ov" onClick={()=>setShowLabels(null)}>
+          <div className="modal mxl" onClick={e=>e.stopPropagation()} style={{maxHeight:"90vh",overflowY:"auto"}}>
+            <div className="mhd">
+              <div className="mt">🏷️ Etiquetas — {_lwr?.id}</div>
+              <div style={{display:"flex",gap:6}}>
+                <button className="btn-p" style={{fontSize:10,padding:"4px 10px"}} onClick={()=>window.print()}>🖨️ Imprimir todo</button>
+                <button className="mcl" onClick={()=>setShowLabels(null)}>✕</button>
+              </div>
+            </div>
+            <div style={{marginBottom:12}}>
+              <div style={{fontSize:11,fontWeight:700,color:"var(--navy)",marginBottom:8}}>📦 Etiquetas de Caja ({_ldims.length||_lwr?.cajas||0})</div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:12}}>
+                {_ldims.length>0?_ldims.map((d,i)=><LabelCaja key={i} d={d} idx={i+1} total={_ldims.length}/>)
+                  :Array.from({length:_lwr?.cajas||1},(_,i)=><LabelCaja key={i} d={{}} idx={i+1} total={_lwr?.cajas||1}/>)}
+              </div>
+            </div>
+            <div style={{borderTop:"2px solid var(--b1)",paddingTop:12}}>
+              <div style={{fontSize:11,fontWeight:700,color:"var(--navy)",marginBottom:8}}>📋 Etiqueta de Guía</div>
+              <LabelGuia/>
+            </div>
           </div>
         </div>
-      </div>
-    )}
+        );
+      })()}
       {showNewCl&&<ClientModal agentes={agentes} oficinas={oficinas} autonomos={clients.filter(c=>c.tipo==="usuario"&&c.rol==="F")} allClients={clients} title="➕ Nuevo Registro" initial={{tipo:"cliente",clienteTipo:"matriz",primerNombre:"",segundoNombre:"",primerApellido:"",segundoApellido:"",cedula:"",dir:"",municipio:"",estado:"",pais:"",cp:"",tel1:"",tel2:"",email:"",casillero:"",rol:"I",password:""}} onClose={()=>setShowNewCl(false)} onSave={f=>{const esUser=f.tipo==="usuario";const prefix=esUser?"U":"C";const nextNum=clients.filter(c=>c.tipo===(esUser?"usuario":"cliente")).length+1;const newId=`${prefix}-${String(nextNum).padStart(3,"0")}`;const casillero=(!esUser&&!f.casillero)?newId:f.casillero;const newRec={...f,id:newId,casillero,clienteTipo:f.clienteTipo||"matriz"};setClients(p=>[...p,newRec]);dbUpsertCliente(newRec);setShowNewCl(false);logAction("Creó registro",`${newId} — ${f.primerNombre} ${f.primerApellido}`);}}/>}
       {showEditCl&&<ClientModal agentes={agentes} oficinas={oficinas} autonomos={clients.filter(c=>c.tipo==="usuario"&&c.rol==="F")} allClients={clients} title={`✏️ Editar — ${fullName(showEditCl)}`} initial={showEditCl} onClose={()=>setShowEditCl(null)} onSave={f=>{setClients(p=>p.map(c=>c.id===f.id?f:c));dbUpsertCliente({...f,clienteTipo:f.clienteTipo||"matriz"});logAction("Editó registro",`${f.id} — ${f.primerNombre} ${f.primerApellido}`);setShowEditCl(null);}}/>}
     </div></>
