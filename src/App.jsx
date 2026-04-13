@@ -2316,6 +2316,7 @@ export default function ENEXSystem(){
               <div className="wb-t">📤 Remitente / Shipper</div>
               <div className="wf"><div className="wfl">Nombre / Empresa</div><div className="wfv">{selWR.shipper||"—"}</div></div>
               <div className="wf"><div className="wfl">Recibido en</div><div className="wfv" style={{fontWeight:600}}>{_oc?.nombre||selWR.branch||"Casa Matriz"}{_oc?.ciudad?` — ${_oc.ciudad}`:""}</div></div>
+              <div className="wf"><div className="wfl">Procedencia</div><div className="wfv">{selWR.remitenteDir||""}</div></div>
             </div>
             <div className="wb">
               <div className="wb-t">📥 Consignatario / Consignee</div>
@@ -2533,7 +2534,7 @@ export default function ENEXSystem(){
                   </td>
                   <td style={{...TD,borderTop:"none"}}>
                     <div style={{fontWeight:700,fontSize:12}}>{selWR.consignee||"—"}</div>
-                    <div style={{fontSize:10,fontWeight:700,color:"#333",marginTop:2}}>Casillero: #{selWR.casillero||"—"}</div>
+                    <div style={{fontSize:10,fontWeight:700,color:"#333",marginTop:2}}>#{selWR.casillero||"—"}</div>
                     {_da&&<div style={{fontSize:10,marginTop:2}}>{_da}</div>}
                     <div style={{fontSize:10,marginTop:4}}>{selWR.destCity||"—"}, {(selWR.destCountry||"").replace(/[^\w\s]/gi,"").trim()}</div>
                   </td>
@@ -2564,10 +2565,11 @@ export default function ENEXSystem(){
               {(()=>{
                 const ROWS_PER_PAGE=15;
                 const allDims=selWR.dims&&selWR.dims.length>0?selWR.dims:[];
-                const totalRows=Math.max(allDims.length,selWR.cajas||0);
-                const rows=Array.from({length:totalRows},(_,i)=>allDims[i]||{});
+                const cajasCount=parseInt(selWR.cajas)||0;
+                const totalRows=Math.max(allDims.length,cajasCount);
+                const rows=Array.from({length:Math.max(totalRows,1)},(_,i)=>allDims[i]||{});
                 const chunks=[];
-                for(let i=0;i<Math.max(rows.length,1);i+=ROWS_PER_PAGE)chunks.push(rows.slice(i,i+ROWS_PER_PAGE));
+                for(let i=0;i<rows.length;i+=ROWS_PER_PAGE)chunks.push(rows.slice(i,i+ROWS_PER_PAGE));
                 if(chunks.length===0)chunks.push([]);
                 const totalPages=chunks.length;
                 const DimThead=()=><thead><tr>
@@ -2584,7 +2586,7 @@ export default function ENEXSystem(){
                   const offset=pi*ROWS_PER_PAGE;
                   const isLast=pi===totalPages-1;
                   return(
-                  <div key={pi} style={pi>0?{pageBreakBefore:"always",paddingTop:"0.45in"}:{}}>
+                  <div key={pi} style={pi>0?{pageBreakBefore:"always",breakBefore:"page",paddingTop:"0.45in"}:{}}>
                     {pi>0&&<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",borderBottom:"2px solid #000",paddingBottom:4,marginBottom:6,fontSize:10}}>
                       <span style={{fontWeight:700}}>{empresaNombre}</span>
                       <span>WR# {selWR.id}</span>
