@@ -408,6 +408,7 @@ input.fi:not([type="email"]):not([type="password"]):not([type="number"]){text-tr
   .modal{box-shadow:none!important;border:none!important;border-radius:0!important;max-height:none!important;overflow:visible!important;padding:0!important;margin:0!important;width:100%!important;position:static!important}
   .ov{position:static!important;background:none!important;backdrop-filter:none!important;padding:0!important;overflow:visible!important;display:block!important}
   body,html{background:#fff!important;margin:0!important;padding:0!important}
+  .wr-page-chunk+.wr-page-chunk{page-break-before:always!important;break-before:page!important}
   @page{size:letter portrait;margin:0.4in 0.5in}
 }
 
@@ -1564,7 +1565,7 @@ export default function ENEXSystem(){
         pesoKg:totalPesoKg,pesoLb:totalPesoLb,
         volKg:totalVolKg,volLb:totalVolLb,ft3:totalFt3,m3:totalM3,
         notas:wrf.notas,tipoEnvio:wrf.tipoEnvio,tipoPago:wrf.tipoPago,
-        shipper:wrf.remitente,cargos:wrf.cargos,
+        shipper:wrf.remitente,remitenteDir:wrf.remitenteDir||"",cargos:wrf.cargos,
       };
       wrf.cajas.forEach(c=>{if(c.tracking)checkAndRemoveScan(c.tracking);});
       setWrList(p=>p.map(x=>x.id===editWR.id?updated:x));
@@ -1592,7 +1593,7 @@ export default function ENEXSystem(){
         volKg:totalVolKg,volLb:totalVolLb,ft3:totalFt3,m3:totalM3,
         status:WR_STATUSES[0],notas:wrf.notas,
         tipoEnvio:wrf.tipoEnvio,tipoPago:wrf.tipoPago,
-        shipper:wrf.remitente,usuario:currentUser.id,foto:false,prealerta:false,
+        shipper:wrf.remitente,remitenteDir:wrf.remitenteDir||"",usuario:currentUser.id,foto:false,prealerta:false,
         cargos:wrf.cargos,
       };
       wrf.cajas.forEach(c=>{if(c.tracking)checkAndRemoveScan(c.tracking);});
@@ -2279,7 +2280,7 @@ export default function ENEXSystem(){
                 unitDim:"in",unitPeso:"lb", // mostrar en pulg/lb (unidades originales)
                 cajas:_rawCajas,
                 consignee:selWR.consignee||"",casilleroSearch:selWR.casillero||"",casillero:selWR.casillero||"",clienteId:selWR.clienteId||"",
-                remitente:selWR.shipper||"",tipoPago:selWR.tipoPago||"Prepago",tipoEnvio:selWR.tipoEnvio||"",
+                remitente:selWR.shipper||"",remitenteDir:selWR.remitenteDir||"",tipoPago:selWR.tipoPago||"Prepago",tipoEnvio:selWR.tipoEnvio||"",
                 notas:selWR.notas||"",cargos:selWR.cargos||[],
               });
               setShowNewWR(true);setSelWR(null);
@@ -2586,7 +2587,7 @@ export default function ENEXSystem(){
                   const offset=pi*ROWS_PER_PAGE;
                   const isLast=pi===totalPages-1;
                   return(
-                  <div key={pi} style={pi>0?{pageBreakBefore:"always",breakBefore:"page",paddingTop:"0.45in"}:{}}>
+                  <div key={pi} className="wr-page-chunk" style={pi>0?{pageBreakBefore:"always",breakBefore:"page",paddingTop:"0.45in",display:"block"}:{display:"block"}}>
                     {pi>0&&<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",borderBottom:"2px solid #000",paddingBottom:4,marginBottom:6,fontSize:10}}>
                       <span style={{fontWeight:700}}>{empresaNombre}</span>
                       <span>WR# {selWR.id}</span>
