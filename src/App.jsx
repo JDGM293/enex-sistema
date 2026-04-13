@@ -2315,7 +2315,6 @@ export default function ENEXSystem(){
             <div className="wb">
               <div className="wb-t">📤 Remitente / Shipper</div>
               <div className="wf"><div className="wfl">Nombre / Empresa</div><div className="wfv">{selWR.shipper||"—"}</div></div>
-              <div className="wf"><div className="wfl">Procedencia</div><div className="wfv">{selWR.origCountry||"USA 🇺🇸"} · {selWR.origCity||"—"}</div></div>
               <div className="wf"><div className="wfl">Recibido en</div><div className="wfv" style={{fontWeight:600}}>{_oc?.nombre||selWR.branch||"Casa Matriz"}{_oc?.ciudad?` — ${_oc.ciudad}`:""}</div></div>
             </div>
             <div className="wb">
@@ -2534,7 +2533,7 @@ export default function ENEXSystem(){
                   </td>
                   <td style={{...TD,borderTop:"none"}}>
                     <div style={{fontWeight:700,fontSize:12}}>{selWR.consignee||"—"}</div>
-                    <div style={{fontSize:10}}>{(selWR.destCountry||"").replace(/[^\w\s]/gi,"").trim()||"VENEZUELA"}</div>
+                    <div style={{fontSize:10,fontWeight:700,color:"#333",marginTop:2}}>Casillero: #{selWR.casillero||"—"}</div>
                     {_da&&<div style={{fontSize:10,marginTop:2}}>{_da}</div>}
                     <div style={{fontSize:10,marginTop:4}}>{selWR.destCity||"—"}, {(selWR.destCountry||"").replace(/[^\w\s]/gi,"").trim()}</div>
                   </td>
@@ -2561,63 +2560,80 @@ export default function ENEXSystem(){
                 </td></tr>
               </tbody></table>
 
-              {/* ── TABLA DE DIMENSIONES ── */}
-              <table style={{width:"100%",borderCollapse:"collapse",marginBottom:0,marginTop:4}}>
-                <thead><tr>
+              {/* ── TABLA DE DIMENSIONES — 15 filas por página ── */}
+              {(()=>{
+                const ROWS_PER_PAGE=15;
+                const allDims=selWR.dims&&selWR.dims.length>0?selWR.dims:[];
+                const totalRows=Math.max(allDims.length,selWR.cajas||0);
+                const rows=Array.from({length:totalRows},(_,i)=>allDims[i]||{});
+                const chunks=[];
+                for(let i=0;i<Math.max(rows.length,1);i+=ROWS_PER_PAGE)chunks.push(rows.slice(i,i+ROWS_PER_PAGE));
+                if(chunks.length===0)chunks.push([]);
+                const totalPages=chunks.length;
+                const DimThead=()=><thead><tr>
                   <th style={{...TH,width:"7%"}}>Line/Qty</th>
                   <th style={{...TH,width:"13%"}}>Dimensions (In)</th>
                   <th style={{...TH,width:"28%"}}>Tracking</th>
                   <th style={{...TH,width:"10%",textAlign:"right"}}>Weight lb</th>
                   <th style={{...TH,width:"10%",textAlign:"right"}}>Vol lb</th>
-                  <th style={{...TH,width:"9%",textAlign:"right"}}>Weight Ft3</th>
+                  <th style={{...TH,width:"9%",textAlign:"right"}}>Ft³</th>
                   <th style={{...TH,width:"9%",textAlign:"right"}}>M³</th>
                   <th style={{...TH,width:"10%",textAlign:"right"}}>Weight Kg</th>
-                </tr></thead>
-                <tbody>
-                  {(()=>{
-                    const allDims=selWR.dims&&selWR.dims.length>0?selWR.dims:[];
-                    const totalRows=Math.max(allDims.length,selWR.cajas||0);
-                    if(totalRows===0)return<tr><td colSpan={8} style={{...TD,textAlign:"center",height:60,color:"#999"}}>Sin dimensiones registradas</td></tr>;
-                    return Array.from({length:totalRows}).map((_,i)=>{
-                      const d=allDims[i]||{};
-                      const hasDims=d.l||d.a||d.h;
-                      const dv=hasDims?calcVol(d.l||0,d.a||0,d.h||0,"cm"):{volLb:0,ft3:0,m3:0};
-                      const trk=d.tracking||"";
-                      const car=d.carrier||"";
-                      return(
-                      <tr key={i}>
-                        <td style={{...TD,verticalAlign:"top"}}>{i+1}</td>
-                        <td style={{...TD,verticalAlign:"top"}}>
-                          {hasDims?<div>{toIn(d.l)}x{toIn(d.a)}x{toIn(d.h)}</div>:<div style={{color:"#999"}}>—</div>}
-                          {car&&<div style={{fontSize:9,color:"#555"}}>{car}</div>}
-                        </td>
-                        <td style={{...TD,fontSize:10,verticalAlign:"top",fontFamily:"'Courier New',monospace"}}>
-                          {trk&&<div>{trk}</div>}
-                          {d.descripcion&&<div style={{fontSize:10,fontFamily:"Arial",color:"#222"}}>{d.descripcion}</div>}
-                          {d.factura&&<div style={{fontSize:9,fontFamily:"Arial",color:"#555"}}>Fact: {d.factura}</div>}
-                        </td>
-                        <td style={{...TD,textAlign:"right",fontWeight:700}}>{d.pk?toLb(d.pk):"—"}</td>
-                        <td style={{...TD,textAlign:"right"}}>{hasDims?dv.volLb:"—"}</td>
-                        <td style={{...TD,textAlign:"right"}}>{hasDims?dv.ft3:"—"}</td>
-                        <td style={{...TD,textAlign:"right"}}>{hasDims?dv.m3:"—"}</td>
-                        <td style={{...TD,textAlign:"right"}}>{d.pk?.toFixed?.(2)||"—"}</td>
-                      </tr>);
-                    });
-                  })()}
-                </tbody>
-                <tfoot>
-                  <tr style={{background:"#f0f0f0"}}>
-                    <td style={{...TD,fontWeight:700}}>Pzas: {selWR.cajas||0}</td>
-                    <td style={TD}></td>
-                    <td style={TD}></td>
-                    <td style={{...TD,fontWeight:700,textAlign:"right"}}>{selWR.pesoLb}</td>
-                    <td style={{...TD,fontWeight:700,textAlign:"right"}}>{selWR.volLb||"—"}</td>
-                    <td style={{...TD,fontWeight:700,textAlign:"right"}}>{selWR.ft3}</td>
-                    <td style={{...TD,fontWeight:700,textAlign:"right"}}>{selWR.m3||"—"}</td>
-                    <td style={{...TD,fontWeight:700,textAlign:"right"}}>{selWR.pesoKg}</td>
-                  </tr>
-                </tfoot>
-              </table>
+                </tr></thead>;
+                return chunks.map((chunk,pi)=>{
+                  const offset=pi*ROWS_PER_PAGE;
+                  const isLast=pi===totalPages-1;
+                  return(
+                  <div key={pi} style={pi>0?{pageBreakBefore:"always",paddingTop:"0.45in"}:{}}>
+                    {pi>0&&<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",borderBottom:"2px solid #000",paddingBottom:4,marginBottom:6,fontSize:10}}>
+                      <span style={{fontWeight:700}}>{empresaNombre}</span>
+                      <span>WR# {selWR.id}</span>
+                      <span>{selWR.consignee} | {selWR.casillero}</span>
+                      <span>Pág. {pi+1}/{totalPages}</span>
+                    </div>}
+                    <table style={{width:"100%",borderCollapse:"collapse",marginBottom:0,marginTop:pi===0?4:0}}>
+                      <DimThead/>
+                      <tbody>
+                        {chunk.length===0?<tr><td colSpan={8} style={{...TD,textAlign:"center",height:60,color:"#999"}}>Sin dimensiones registradas</td></tr>
+                        :chunk.map((d,i)=>{
+                          const idx=offset+i;
+                          const hasDims=d.l||d.a||d.h;
+                          const dv=hasDims?calcVol(d.l||0,d.a||0,d.h||0,"cm"):{volLb:0,ft3:0,m3:0};
+                          return(
+                          <tr key={idx}>
+                            <td style={{...TD,verticalAlign:"top"}}>{idx+1}</td>
+                            <td style={{...TD,verticalAlign:"top"}}>
+                              {hasDims?<div>{toIn(d.l)}x{toIn(d.a)}x{toIn(d.h)}</div>:<div style={{color:"#999"}}>—</div>}
+                              {d.carrier&&<div style={{fontSize:9,color:"#555"}}>{d.carrier}</div>}
+                            </td>
+                            <td style={{...TD,fontSize:10,verticalAlign:"top",fontFamily:"'Courier New',monospace"}}>
+                              {d.tracking&&<div>{d.tracking}</div>}
+                              {d.descripcion&&<div style={{fontSize:10,fontFamily:"Arial",color:"#222"}}>{d.descripcion}</div>}
+                              {d.factura&&<div style={{fontSize:9,fontFamily:"Arial",color:"#555"}}>Fact: {d.factura}</div>}
+                            </td>
+                            <td style={{...TD,textAlign:"right",fontWeight:700}}>{d.pk?toLb(d.pk):"—"}</td>
+                            <td style={{...TD,textAlign:"right"}}>{hasDims?dv.volLb:"—"}</td>
+                            <td style={{...TD,textAlign:"right"}}>{hasDims?dv.ft3:"—"}</td>
+                            <td style={{...TD,textAlign:"right"}}>{hasDims?dv.m3:"—"}</td>
+                            <td style={{...TD,textAlign:"right"}}>{d.pk?.toFixed?.(2)||"—"}</td>
+                          </tr>);
+                        })}
+                      </tbody>
+                      {isLast&&<tfoot>
+                        <tr style={{background:"#f0f0f0"}}>
+                          <td style={{...TD,fontWeight:700}}>Pzas: {selWR.cajas||0}</td>
+                          <td style={TD}></td><td style={TD}></td>
+                          <td style={{...TD,fontWeight:700,textAlign:"right"}}>{selWR.pesoLb}</td>
+                          <td style={{...TD,fontWeight:700,textAlign:"right"}}>{selWR.volLb||"—"}</td>
+                          <td style={{...TD,fontWeight:700,textAlign:"right"}}>{selWR.ft3}</td>
+                          <td style={{...TD,fontWeight:700,textAlign:"right"}}>{selWR.m3||"—"}</td>
+                          <td style={{...TD,fontWeight:700,textAlign:"right"}}>{selWR.pesoKg}</td>
+                        </tr>
+                      </tfoot>}
+                    </table>
+                  </div>);
+                });
+              })()}
 
               {/* ── ENTREGADO POR ── */}
               <table style={{width:"100%",borderCollapse:"collapse",marginTop:4}}><tbody>
@@ -2748,7 +2764,9 @@ export default function ENEXSystem(){
 
   const renderEstadoCuenta=()=>{
     const wrTodos=ecCliente?wrList.filter(w=>
-      w.consignee===fullName(ecCliente)||w.casillero===ecCliente.casillero
+      w.clienteId===ecCliente.id||
+      w.casillero===ecCliente.casillero||
+      (w.consignee||"").trim().toUpperCase()===(fullName(ecCliente)||"").trim().toUpperCase()
     ):[];
 
     // Filtro por mes/año
