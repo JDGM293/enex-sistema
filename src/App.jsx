@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import JsBarcode from "jsbarcode";
 import { dbGetClientes, dbUpsertCliente, dbDeleteCliente, dbGetWR, dbUpsertWR, dbDeleteWR, dbGetAgentes, dbUpsertAgente, dbDeleteAgente, dbGetOficinas, dbUpsertOficina, dbDeleteOficina, dbGetTarifas, dbUpsertTarifa, dbDeleteTarifa, dbGetConsolidaciones, dbUpsertConsolidacion, dbLogActividad, dbGetActividad, dbGetConfig, dbSetConfig, dbGetScanLog, dbInsertScan, dbSetScanRegistered, dbDeleteScanIds } from "./supabase";
 
 // ─── TEMA CLARO PROFESIONAL ───────────────────────────────────────────────────
@@ -292,7 +293,7 @@ input.fi:not([type="email"]):not([type="password"]):not([type="number"]){text-tr
 
 /* ── WR DETAIL ────────────────────────────────────────────────────────────── */
 .wr-doc{background:var(--bg3);border:1px solid var(--b1);border-radius:12px;padding:20px}
-.wr-doc-hd{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;padding-bottom:12px;border-bottom:2px solid var(--navy)}
+.wr-doc-hd{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;padding-bottom:8px;border-bottom:2px solid var(--navy)}
 .wr-co{font-family:'Rajdhani',sans-serif;font-size:26px;font-weight:800;color:var(--navy);letter-spacing:3px}
 .wr-co-info{font-size:10px;color:var(--t2);line-height:1.9;margin-top:3px}
 .wr-num-d{font-family:'DM Mono',monospace;font-size:16px;font-weight:700;color:var(--navy);letter-spacing:2px;text-align:right}
@@ -947,8 +948,8 @@ const emptyWRF=()=>({
 const WRBarcode=({value,height=50,width=2})=>{
   const ref=useRef(null);
   useEffect(()=>{
-    if(ref.current&&typeof window!=="undefined"&&window.JsBarcode){
-      try{window.JsBarcode(ref.current,String(value),{format:"CODE128",width,height,displayValue:false,margin:0,background:"transparent"});}
+    if(ref.current){
+      try{JsBarcode(ref.current,String(value),{format:"CODE128",width,height,displayValue:false,margin:0,background:"transparent"});}
       catch(e){console.warn("Barcode:",e);}
     }
   },[value,height,width]);
