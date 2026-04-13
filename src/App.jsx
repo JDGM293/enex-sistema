@@ -334,7 +334,7 @@ input.fi:not([type="email"]):not([type="password"]):not([type="number"]){text-tr
 .modal{background:var(--bg2);border:1px solid var(--b1);border-radius:14px;width:100%;padding:22px;animation:mfi .18s ease;box-shadow:0 20px 60px rgba(0,0,0,.25)}
 .msm{max-width:520px}.mmd{max-width:820px}.mlg{max-width:1060px}.mxl{max-width:1280px}
 @keyframes mfi{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
-.mhd{display:flex;align-items:center;gap:10px;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--b1)}
+.mhd{display:flex;align-items:center;gap:10px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--b1)}
 .mt{font-family:'Rajdhani',sans-serif;font-size:19px;font-weight:700;flex:1;color:var(--navy)}
 .mcl{width:28px;height:28px;border-radius:6px;background:var(--bg4);border:1px solid var(--b1);color:var(--t2);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all .12s}
 .mcl:hover{background:var(--bg5);color:var(--t1)}
@@ -2297,7 +2297,7 @@ export default function ENEXSystem(){
             </div>
             <div style={{textAlign:"right"}}>
               <div style={{fontSize:9,letterSpacing:2,textTransform:"uppercase",color:"var(--t2)",marginBottom:2}}>Warehouse Receipt</div>
-              <div style={{display:"flex",alignItems:"flex-end",justifyContent:"flex-end",gap:1,height:36,marginBottom:4}}>{_bcBars(selWR.id)}</div>
+              <div style={{display:"flex",alignItems:"flex-end",justifyContent:"flex-end",marginBottom:4}}><WRBarcode value={selWR.id} height={36} width={2}/></div>
               <div className="wr-num-d">{selWR.id}</div>
               <div className="wr-num-meta">
                 📍 {selWR.origCity||"—"} → {selWR.destCity||"—"}<br/>
