@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import JsBarcode from "jsbarcode";
+import Barcode from "react-barcode";
 import { dbGetClientes, dbUpsertCliente, dbDeleteCliente, dbGetWR, dbUpsertWR, dbDeleteWR, dbGetAgentes, dbUpsertAgente, dbDeleteAgente, dbGetOficinas, dbUpsertOficina, dbDeleteOficina, dbGetTarifas, dbUpsertTarifa, dbDeleteTarifa, dbGetConsolidaciones, dbUpsertConsolidacion, dbLogActividad, dbGetActividad, dbGetConfig, dbSetConfig, dbGetScanLog, dbInsertScan, dbSetScanRegistered, dbDeleteScanIds } from "./supabase";
 
 // ─── TEMA CLARO PROFESIONAL ───────────────────────────────────────────────────
@@ -946,14 +946,7 @@ const emptyWRF=()=>({
 
 // ─── BARCODE COMPONENT (Code 128, escaneable) ────────────────────────────────
 const WRBarcode=({value,height=50,width=2})=>{
-  const ref=useRef(null);
-  useEffect(()=>{
-    if(ref.current){
-      try{JsBarcode(ref.current,String(value),{format:"CODE128",width,height,displayValue:false,margin:0,background:"transparent"});}
-      catch(e){console.warn("Barcode:",e);}
-    }
-  },[value,height,width]);
-  return <svg ref={ref} style={{display:"block"}}/>;
+  return <Barcode value={String(value)} format="CODE128" width={width} height={height} displayValue={false} margin={0} background="transparent"/>;
 };
 
 // ─── STANDALONE COMPONENTS (outside main component to avoid hook issues) ─────
