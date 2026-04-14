@@ -2562,15 +2562,19 @@ export default function ENEXSystem(){
                 </td></tr>
               </tbody></table>
 
-              {/* ── TABLA DE DIMENSIONES — 15 filas por página ── */}
+              {/* ── TABLA DE DIMENSIONES — paginado ── */}
               {(()=>{
-                const ROWS_PER_PAGE=15;
+                const ROWS_P1=12;
+                const ROWS_REST=15;
                 const allDims=selWR.dims&&selWR.dims.length>0?selWR.dims:[];
                 const cajasCount=parseInt(selWR.cajas)||0;
                 const totalRows=Math.max(allDims.length,cajasCount);
                 const rows=Array.from({length:Math.max(totalRows,1)},(_,i)=>allDims[i]||{});
                 const chunks=[];
-                for(let i=0;i<rows.length;i+=ROWS_PER_PAGE)chunks.push(rows.slice(i,i+ROWS_PER_PAGE));
+                if(rows.length>0){
+                  chunks.push(rows.slice(0,ROWS_P1));
+                  for(let i=ROWS_P1;i<rows.length;i+=ROWS_REST)chunks.push(rows.slice(i,i+ROWS_REST));
+                }
                 if(chunks.length===0)chunks.push([]);
                 const totalPages=chunks.length;
                 const DimThead=()=><thead><tr>
