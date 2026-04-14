@@ -2562,19 +2562,15 @@ export default function ENEXSystem(){
                 </td></tr>
               </tbody></table>
 
-              {/* ── TABLA DE DIMENSIONES — paginado ── */}
+              {/* ── TABLA DE DIMENSIONES — 15 filas por página ── */}
               {(()=>{
-                const ROWS_P1=12;
-                const ROWS_REST=15;
+                const ROWS_PER_PAGE=15;
                 const allDims=selWR.dims&&selWR.dims.length>0?selWR.dims:[];
                 const cajasCount=parseInt(selWR.cajas)||0;
                 const totalRows=Math.max(allDims.length,cajasCount);
                 const rows=Array.from({length:Math.max(totalRows,1)},(_,i)=>allDims[i]||{});
                 const chunks=[];
-                if(rows.length>0){
-                  chunks.push(rows.slice(0,ROWS_P1));
-                  for(let i=ROWS_P1;i<rows.length;i+=ROWS_REST)chunks.push(rows.slice(i,i+ROWS_REST));
-                }
+                for(let i=0;i<rows.length;i+=ROWS_PER_PAGE)chunks.push(rows.slice(i,i+ROWS_PER_PAGE));
                 if(chunks.length===0)chunks.push([]);
                 const totalPages=chunks.length;
                 const DimThead=()=><thead><tr>
@@ -2587,7 +2583,7 @@ export default function ENEXSystem(){
                   <th style={{...TH,width:"11%",textAlign:"right"}}>M³</th>
                 </tr></thead>;
                 const renderChunk=(chunk,pi)=>{
-                  const offset=pi===0?0:ROWS_P1+(pi-1)*ROWS_REST;
+                  const offset=pi*ROWS_PER_PAGE;
                   const isLast=pi===totalPages-1;
                   return(
                   <div key={pi} style={{display:"block",pageBreakBefore:pi>0?"always":"auto",breakBefore:pi>0?"page":"auto"}}>
