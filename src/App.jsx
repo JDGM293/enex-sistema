@@ -2583,15 +2583,15 @@ export default function ENEXSystem(){
                   <th style={{...TH,width:"9%",textAlign:"right"}}>M³</th>
                   <th style={{...TH,width:"10%",textAlign:"right"}}>Weight Kg</th>
                 </tr></thead>;
-                return chunks.map((chunk,pi)=>{
+                const renderChunk=(chunk,pi)=>{
                   const offset=pi*ROWS_PER_PAGE;
                   const isLast=pi===totalPages-1;
                   return(
-                  <div key={pi} className="wr-page-chunk" style={pi>0?{pageBreakBefore:"always",breakBefore:"page",paddingTop:"0.45in",display:"block"}:{display:"block"}}>
+                  <div key={pi} style={{display:"block"}}>
                     {pi>0&&<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",borderBottom:"2px solid #000",paddingBottom:4,marginBottom:6,fontSize:10}}>
                       <span style={{fontWeight:700}}>{empresaNombre}</span>
                       <span>WR# {selWR.id}</span>
-                      <span>{selWR.consignee} | {selWR.casillero}</span>
+                      <span>{selWR.consignee} | #{selWR.casillero}</span>
                       <span>Pág. {pi+1}/{totalPages}</span>
                     </div>}
                     <table style={{width:"100%",borderCollapse:"collapse",marginBottom:0,marginTop:pi===0?4:0}}>
@@ -2635,6 +2635,13 @@ export default function ENEXSystem(){
                       </tfoot>}
                     </table>
                   </div>);
+                };
+                return chunks.flatMap((chunk,pi)=>{
+                  const els=[renderChunk(chunk,pi)];
+                  if(pi<totalPages-1)els.push(
+                    <div key={`pb${pi}`} style={{pageBreakAfter:"always",breakAfter:"page",height:0,lineHeight:0,fontSize:0}}/>
+                  );
+                  return els;
                 });
               })()}
 
