@@ -2651,7 +2651,7 @@ export default function ENEXSystem(){
                     <div style={{fontSize:9,color:"#555"}}>Fecha y Hora</div>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",height:18}}>
                       <span/>
-                      <span style={{fontSize:9,color:"#555"}}>Pag: {chunks.length}/{chunks.length}</span>
+                      <span style={{fontSize:9,color:"#555"}}>Pag: 1/1</span>
                     </div>
                   </td>
                 </tr>
