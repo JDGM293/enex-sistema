@@ -1219,8 +1219,8 @@ export default function ENEXSystem(){
   const [ecCliente,setEcCliente]=useState(null);
   const [ecResults,setEcResults]=useState([]);
   const [ecFiltro,setEcFiltro]=useState("todos");
-  const [ecMes,setEcMes]=useState(new Date().getMonth());
-  const [ecAnio,setEcAnio]=useState(new Date().getFullYear());
+  const [ecMes,setEcMes]=useState("");
+  const [ecAnio,setEcAnio]=useState("");
   const [consolList,setConsolList]=useState([]);
   const [showNewConsol,setShowNewConsol]=useState(false);
   const [labelTipo,setLabelTipo]=useState("WR");
