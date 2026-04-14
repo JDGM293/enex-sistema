@@ -64,6 +64,7 @@ export const wrToDB = (w) => ({
   dest_country: w.destCountry, dest_city: w.destCity,
   status_code: w.status?.code, status_label: w.status?.label, status_cls: w.status?.cls,
   historial: w.historial || [], dims: w.dims || [], notas: w.notas,
+  remitente_dir: w.remitenteDir || "",
 })
 
 // ── CLIENTES ─────────────────────────────────────────────────
