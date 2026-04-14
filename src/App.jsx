@@ -2587,7 +2587,7 @@ export default function ENEXSystem(){
                   <th style={{...TH,width:"11%",textAlign:"right"}}>M³</th>
                 </tr></thead>;
                 const renderChunk=(chunk,pi)=>{
-                  const offset=pi*ROWS_PER_PAGE;
+                  const offset=pi===0?0:ROWS_P1+(pi-1)*ROWS_REST;
                   const isLast=pi===totalPages-1;
                   return(
                   <div key={pi} style={{display:"block",pageBreakBefore:pi>0?"always":"auto",breakBefore:pi>0?"page":"auto"}}>
