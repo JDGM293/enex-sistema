@@ -405,7 +405,7 @@ input.fi:not([type="email"]):not([type="password"]):not([type="number"]){text-tr
   *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
   html,body{overflow:visible!important;height:auto!important;background:#fff!important;margin:0!important;padding:0!important}
   .app{display:block!important;overflow:visible!important;height:auto!important}
-  .sb,.main{display:none!important}
+  .sb,.main,.mhd,.mft,.wr-doc,.btn-s,.btn-p,.btn-g,.mcl,.topbar,.wr-toolbar,.pag,.rp{display:none!important}
   .ov{position:static!important;background:none!important;backdrop-filter:none!important;padding:0!important;overflow:visible!important;display:block!important}
   .wr-print-only{display:block!important}
   .modal{box-shadow:none!important;border:none!important;border-radius:0!important;max-height:none!important;overflow:visible!important;padding:0!important;margin:0!important;width:100%!important;position:static!important}
