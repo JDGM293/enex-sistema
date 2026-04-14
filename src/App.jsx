@@ -2586,7 +2586,7 @@ export default function ENEXSystem(){
                   const offset=pi*ROWS_PER_PAGE;
                   const isLast=pi===totalPages-1;
                   return(
-                  <div key={pi} style={{display:"block"}}>
+                  <div key={pi} style={{display:"block",pageBreakBefore:pi>0?"always":"auto",breakBefore:pi>0?"page":"auto"}}>
                     {pi>0&&<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",borderBottom:"2px solid #000",paddingBottom:4,marginBottom:6,fontSize:10}}>
                       <span style={{fontWeight:700}}>{empresaNombre}</span>
                       <span>WR# {selWR.id}</span>
@@ -2633,13 +2633,7 @@ export default function ENEXSystem(){
                     </table>
                   </div>);
                 };
-                return chunks.flatMap((chunk,pi)=>{
-                  const els=[renderChunk(chunk,pi)];
-                  if(pi<totalPages-1)els.push(
-                    <div key={`pb${pi}`} style={{pageBreakAfter:"always",breakAfter:"page",height:0,lineHeight:0,fontSize:0}}/>
-                  );
-                  return els;
-                });
+                return chunks.map((chunk,pi)=>renderChunk(chunk,pi));
               })()}
 
               {/* ── ENTREGADO POR ── */}
@@ -2657,7 +2651,7 @@ export default function ENEXSystem(){
                     <div style={{fontSize:9,color:"#555"}}>Fecha y Hora</div>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",height:18}}>
                       <span/>
-                      <span style={{fontSize:9,color:"#555"}}>Pag: 1/1</span>
+                      <span style={{fontSize:9,color:"#555"}}>Pag: {chunks.length}/{chunks.length}</span>
                     </div>
                   </td>
                 </tr>
