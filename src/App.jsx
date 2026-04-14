@@ -2576,13 +2576,12 @@ export default function ENEXSystem(){
                 const totalPages=chunks.length;
                 const DimThead=()=><thead><tr>
                   <th style={{...TH,width:"7%"}}>Line/Qty</th>
-                  <th style={{...TH,width:"13%"}}>Dimensions (In)</th>
-                  <th style={{...TH,width:"28%"}}>Tracking</th>
-                  <th style={{...TH,width:"10%",textAlign:"right"}}>Weight lb</th>
-                  <th style={{...TH,width:"10%",textAlign:"right"}}>Vol lb</th>
-                  <th style={{...TH,width:"9%",textAlign:"right"}}>Ft³</th>
-                  <th style={{...TH,width:"9%",textAlign:"right"}}>M³</th>
-                  <th style={{...TH,width:"10%",textAlign:"right"}}>Weight Kg</th>
+                  <th style={{...TH,width:"15%"}}>Dimensions (In)</th>
+                  <th style={{...TH,width:"33%"}}>Tracking</th>
+                  <th style={{...TH,width:"12%",textAlign:"right"}}>Weight lb</th>
+                  <th style={{...TH,width:"12%",textAlign:"right"}}>Vol lb</th>
+                  <th style={{...TH,width:"10%",textAlign:"right"}}>Ft³</th>
+                  <th style={{...TH,width:"11%",textAlign:"right"}}>M³</th>
                 </tr></thead>;
                 const renderChunk=(chunk,pi)=>{
                   const offset=pi*ROWS_PER_PAGE;
@@ -2598,7 +2597,7 @@ export default function ENEXSystem(){
                     <table style={{width:"100%",borderCollapse:"collapse",marginBottom:0,marginTop:pi===0?4:0}}>
                       <DimThead/>
                       <tbody>
-                        {chunk.length===0?<tr><td colSpan={8} style={{...TD,textAlign:"center",height:60,color:"#999"}}>Sin dimensiones registradas</td></tr>
+                        {chunk.length===0?<tr><td colSpan={7} style={{...TD,textAlign:"center",height:60,color:"#999"}}>Sin dimensiones registradas</td></tr>
                         :chunk.map((d,i)=>{
                           const idx=offset+i;
                           const hasDims=d.l||d.a||d.h;
@@ -2619,7 +2618,6 @@ export default function ENEXSystem(){
                             <td style={{...TD,textAlign:"right"}}>{hasDims?dv.volLb:"—"}</td>
                             <td style={{...TD,textAlign:"right"}}>{hasDims?dv.ft3:"—"}</td>
                             <td style={{...TD,textAlign:"right"}}>{hasDims?dv.m3:"—"}</td>
-                            <td style={{...TD,textAlign:"right"}}>{d.pk?.toFixed?.(2)||"—"}</td>
                           </tr>);
                         })}
                       </tbody>
@@ -2631,7 +2629,6 @@ export default function ENEXSystem(){
                           <td style={{...TD,fontWeight:700,textAlign:"right"}}>{selWR.volLb||"—"}</td>
                           <td style={{...TD,fontWeight:700,textAlign:"right"}}>{selWR.ft3}</td>
                           <td style={{...TD,fontWeight:700,textAlign:"right"}}>{selWR.m3||"—"}</td>
-                          <td style={{...TD,fontWeight:700,textAlign:"right"}}>{selWR.pesoKg}</td>
                         </tr>
                       </tfoot>}
                     </table>
