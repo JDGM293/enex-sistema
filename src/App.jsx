@@ -2532,6 +2532,7 @@ export default function ENEXSystem(){
                 <tr>
                   <td style={{...TD,borderRight:"none",borderTop:"none",minHeight:70}}>
                     <div style={{fontWeight:700}}>{selWR.shipper||"—"}</div>
+                    {selWR.remitenteDir&&<div style={{fontSize:10,marginTop:2}}>{selWR.remitenteDir}</div>}
                   </td>
                   <td style={{...TD,borderTop:"none"}}>
                     <div style={{fontWeight:700,fontSize:12}}>{selWR.consignee||"—"}</div>
@@ -2562,16 +2563,17 @@ export default function ENEXSystem(){
                 </td></tr>
               </tbody></table>
 
-              {/* ── TABLA DE DIMENSIONES — 15 filas por página ── */}
+              {/* ── TABLA DE DIMENSIONES — 13 filas p1, 15 resto ── */}
               {(()=>{
-                const ROWS_PER_PAGE=15;
+                const ROWS_P1=13;
+                const ROWS_REST=15;
                 const allDims=selWR.dims&&selWR.dims.length>0?selWR.dims:[];
                 const cajasCount=parseInt(selWR.cajas)||0;
                 const totalRows=Math.max(allDims.length,cajasCount);
                 const rows=Array.from({length:Math.max(totalRows,1)},(_,i)=>allDims[i]||{});
                 const chunks=[];
-                for(let i=0;i<rows.length;i+=ROWS_PER_PAGE)chunks.push(rows.slice(i,i+ROWS_PER_PAGE));
-                if(chunks.length===0)chunks.push([]);
+                chunks.push(rows.slice(0,ROWS_P1));
+                for(let i=ROWS_P1;i<rows.length;i+=ROWS_REST)chunks.push(rows.slice(i,i+ROWS_REST));
                 const totalPages=chunks.length;
                 const DimThead=()=><thead><tr>
                   <th style={{...TH,width:"7%"}}>Line/Qty</th>
@@ -2583,7 +2585,7 @@ export default function ENEXSystem(){
                   <th style={{...TH,width:"11%",textAlign:"right"}}>M³</th>
                 </tr></thead>;
                 const renderChunk=(chunk,pi)=>{
-                  const offset=pi*ROWS_PER_PAGE;
+                  const offset=pi===0?0:ROWS_P1+(pi-1)*ROWS_REST;
                   const isLast=pi===totalPages-1;
                   return(
                   <div key={pi} style={{display:"block",pageBreakBefore:pi>0?"always":"auto",breakBefore:pi>0?"page":"auto"}}>
