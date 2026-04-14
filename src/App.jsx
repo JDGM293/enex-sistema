@@ -403,11 +403,12 @@ input.fi:not([type="email"]):not([type="password"]):not([type="number"]){text-tr
 .wr-print-only{display:none}
 @media print{
   *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
-  .sb,.topbar,.wr-toolbar,.pag,.rp,.mft,.mhd,.wr-doc,.btn-s,.btn-p,.btn-g,.mcl{display:none!important}
-  .wr-print-only{display:block!important}
-  .modal{box-shadow:none!important;border:none!important;border-radius:0!important;max-height:none!important;overflow:visible!important;padding:0!important;margin:0!important;width:100%!important;position:static!important}
+  html,body{overflow:visible!important;height:auto!important;background:#fff!important;margin:0!important;padding:0!important}
+  .app{display:block!important;overflow:visible!important;height:auto!important}
+  .sb,.main,.mhd,.mft,.wr-doc,.btn-s,.btn-p,.btn-g,.mcl,.topbar,.wr-toolbar,.pag,.rp{display:none!important}
   .ov{position:static!important;background:none!important;backdrop-filter:none!important;padding:0!important;overflow:visible!important;display:block!important}
-  body,html{background:#fff!important;margin:0!important;padding:0!important}
+  .wr-print-only{display:block!important}
+  .modal{box-shadow:none!important;border:none!important;border-radius:0!important;max-height:none!important;overflow:visible!important;padding:0!important;margin:0!important;width:100%!important;max-width:100%!important;position:static!important}
   @page{size:letter portrait;margin:0.4in 0.5in}
 }
 
@@ -2562,16 +2563,15 @@ export default function ENEXSystem(){
                 </td></tr>
               </tbody></table>
 
-              {/* ── TABLA DE DIMENSIONES — 15 filas por página ── */}
+              {/* ── TABLA DE DIMENSIONES — 13 p1, 15 resto ── */}
               {(()=>{
-                const ROWS_PER_PAGE=15;
+                const R1=13,RN=15;
                 const allDims=selWR.dims&&selWR.dims.length>0?selWR.dims:[];
                 const cajasCount=parseInt(selWR.cajas)||0;
                 const totalRows=Math.max(allDims.length,cajasCount);
                 const rows=Array.from({length:Math.max(totalRows,1)},(_,i)=>allDims[i]||{});
-                const chunks=[];
-                for(let i=0;i<Math.max(rows.length,1);i+=ROWS_PER_PAGE)chunks.push(rows.slice(i,i+ROWS_PER_PAGE));
-                if(chunks.length===0)chunks.push([]);
+                const chunks=[rows.slice(0,R1)];
+                for(let i=R1;i<rows.length;i+=RN)chunks.push(rows.slice(i,i+RN));
                 const totalPages=chunks.length;
                 const DimThead=()=><thead><tr>
                   <th style={{...TH,width:"7%"}}>Line/Qty</th>
@@ -2583,7 +2583,7 @@ export default function ENEXSystem(){
                   <th style={{...TH,width:"11%",textAlign:"right"}}>M³</th>
                 </tr></thead>;
                 const renderChunk=(chunk,pi)=>{
-                  const offset=pi*ROWS_PER_PAGE;
+                  const offset=pi===0?0:R1+(pi-1)*RN;
                   const isLast=pi===totalPages-1;
                   return(
                   <div key={pi} style={pi>0?{pageBreakBefore:"always",paddingTop:"0.45in"}:{}}>
