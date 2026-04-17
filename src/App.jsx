@@ -405,7 +405,7 @@ input.fi:not([type="email"]):not([type="password"]):not([type="number"]){text-tr
   *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
   html,body{overflow:visible!important;height:auto!important;background:#fff!important;margin:0!important;padding:0!important}
   .app{display:block!important;overflow:visible!important;height:auto!important}
-  .sb,.main,.mhd,.mft,.wr-doc,.btn-s,.btn-p,.btn-g,.mcl,.topbar,.wr-toolbar,.pag,.rp{display:none!important}
+  .sb,.main,.mhd,.mft,.wr-doc,.btn-s,.btn-p,.btn-g,.mcl,.topbar,.wr-toolbar,.pag,.rp,.no-print{display:none!important}
   .ov{position:static!important;background:none!important;backdrop-filter:none!important;padding:0!important;overflow:visible!important;display:block!important}
   .wr-print-only{display:block!important}
   .modal{box-shadow:none!important;border:none!important;border-radius:0!important;max-height:none!important;overflow:visible!important;padding:0!important;margin:0!important;width:100%!important;max-width:100%!important;position:static!important}
@@ -752,7 +752,7 @@ const TypeBadge=({t})=><span className={`type-b ${TYPE_CLS[t]||""}`}>{t}</span>;
 
 // ─── WR ROW ────────────────────────────────────────────────────────────────────
 const CT_LABEL_WR={agente:"🤝 Agente",vendedor_agente:"💼 Vend. Agente",autonomo:"🧑‍💻 Autónomo",oficina:"🏢 Oficina",vendedor_oficina:"🛒 Vend. Oficina",matriz:"🏛️ Matriz"};
-const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[],oficinas=[],empresaNombre="Casa Matriz"})=>{
+const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[],oficinas=[],empresaNombre="Casa Matriz",sendTypes=[],onAssignTipo})=>{
   const isIn=unitL==="in";
   const isLb=unitW==="lb";
   const showVol = isLb ? `${w.volLb}lb` : `${w.volKg}kg`;
@@ -850,7 +850,16 @@ const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[
       <td style={{textAlign:"right"}}><span className="c-m3">{w.m3||"—"}</span></td>
       <td style={{maxWidth:90,padding:"4px 6px"}}><div style={{maxWidth:84,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><StBadge st={w.status}/></div></td>
       <td><span className="c-note">{w.notas||"—"}</span></td>
-      <td><TypeBadge t={w.tipoEnvio}/></td>
+      <td onClick={e=>e.stopPropagation()}>
+        {w.tipoEnvio
+          ?<TypeBadge t={w.tipoEnvio}/>
+          :(onAssignTipo&&sendTypes.length>0
+            ?<select value="" onChange={e=>{if(e.target.value)onAssignTipo(w,e.target.value);}} style={{fontSize:10,padding:"2px 4px",border:"1px dashed var(--navy)",borderRadius:4,background:"var(--bg3)",color:"var(--navy)",fontWeight:600,cursor:"pointer"}}>
+                <option value="">— Confirmar tipo —</option>
+                {sendTypes.map(t=><option key={t} value={t}>{t}</option>)}
+              </select>
+            :<span style={{color:"var(--t3)"}}>—</span>)}
+      </td>
       <td style={{textAlign:"center"}}><span className={`ic-b ${w.foto?"has":""}`}>{w.foto?"📷":"—"}</span></td>
       <td style={{textAlign:"center"}}><span className={`ic-b ${w.prealerta?"has":""}`}>{w.prealerta?"📎":"—"}</span></td>
     </tr>
@@ -859,7 +868,7 @@ const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[
 
 // ─── WR TABLE COMPONENT ────────────────────────────────────────────────────────
 const PAGE_SIZE=50;
-const WRTable=({rows,selId,onSelect,unitL,unitW,onSort,sortCol,sortDir,dimOpen,onDimToggle,page,onPage,clients=[],agentes=[],oficinas=[],empresaNombre="Casa Matriz"})=>{
+const WRTable=({rows,selId,onSelect,unitL,unitW,onSort,sortCol,sortDir,dimOpen,onDimToggle,page,onPage,clients=[],agentes=[],oficinas=[],empresaNombre="Casa Matriz",sendTypes=[],onAssignTipo})=>{
   const totalPages=Math.max(1,Math.ceil(rows.length/PAGE_SIZE));
   const pageRows=rows.slice((page-1)*PAGE_SIZE,page*PAGE_SIZE);
   const SortTh=({col,children,align})=>(
@@ -901,6 +910,7 @@ const WRTable=({rows,selId,onSelect,unitL,unitW,onSort,sortCol,sortDir,dimOpen,o
             ):pageRows.map(w=>(
               <WRRow key={w.id} w={w} sel={selId===w.id} onClick={()=>onSelect(w)}
                 unitL={unitL} unitW={unitW} clients={clients} agentes={agentes} oficinas={oficinas} empresaNombre={empresaNombre}
+                sendTypes={sendTypes} onAssignTipo={onAssignTipo}
                 dimOpen={dimOpen===w.id} onDimToggle={()=>onDimToggle(w.id)}/>
             ))}
           </tbody>
@@ -976,7 +986,7 @@ const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomo
     return upd;
   });
   return (
-    <div className="ov" onClick={onClose}>
+    <div className="ov">
       <div className="modal mmd" onClick={e=>e.stopPropagation()}>
         <div className="mhd"><div className="mt">{title}</div><button className="mcl" onClick={onClose}>✕</button></div>
         <div className="sdiv">TIPO DE REGISTRO</div>
@@ -1606,6 +1616,32 @@ export default function ENEXSystem(){
     }
   };
 
+  // ── ASIGNAR TIPO DE ENVÍO Y CONFIRMAR ──────────────────────────────────────
+  // Al asignar tipo a un WR sin tipo → cambia status a "3" (Confirmado).
+  // Si ya tiene tipo, solo actualiza el tipo sin tocar status.
+  const assignTipoEnvio=(w,tipo)=>{
+    if(!tipo||!w)return;
+    const hadTipo=!!(w.tipoEnvio&&String(w.tipoEnvio).trim());
+    const stConfirmado=WR_STATUSES.find(s=>s.code==="3");
+    const currentCode=w.status?.code||"1";
+    // Solo cambiar status a Confirmado si estaba en "1" (Recibido) o "2" (algún intermedio pre-confirmación)
+    // No degradar si ya está en 3 o en una fase posterior.
+    const preConfirmCodes=["1","2"];
+    const shouldConfirm=!hadTipo&&preConfirmCodes.includes(currentCode)&&stConfirmado;
+    const upd={
+      ...w,
+      tipoEnvio:tipo,
+      ...(shouldConfirm?{
+        status:stConfirmado,
+        historial:[...(w.historial||[]),{code:stConfirmado.code,label:stConfirmado.label,fecha:new Date(),user:currentUser.id,nota:`Confirmado al asignar tipo: ${tipo}`}],
+      }:{}),
+    };
+    setWrList(p=>p.map(x=>x.id===w.id?upd:x));
+    if(selWR&&selWR.id===w.id)setSelWR(upd);
+    dbUpsertWR(upd);
+    logAction(shouldConfirm?`Confirmó WR (${tipo})`:`Cambió tipo de envío → ${tipo}`,w.id);
+  };
+
 
   // ── ALL ADDITIONAL STATE (must be declared before any render functions) ──────
 
@@ -1670,6 +1706,7 @@ export default function ENEXSystem(){
           {renderWRToolbar()}
           <WRTable rows={filteredWR} selId={selWR?.id} onSelect={setSelWR}
             unitL={unitL} unitW={unitW} clients={clients} agentes={agentes} oficinas={oficinas} empresaNombre={empresaNombre}
+            sendTypes={SEND_TYPES} onAssignTipo={assignTipoEnvio}
             onSort={handleSort} sortCol={sortCol} sortDir={sortDir}
             dimOpen={dimOpen} onDimToggle={handleDimToggle}
             page={page} onPage={setPage}/>
@@ -1733,6 +1770,7 @@ export default function ENEXSystem(){
       {renderWRToolbar()}
       <WRTable rows={filteredWR} selId={selWR?.id} onSelect={setSelWR}
         unitL={unitL} unitW={unitW} clients={clients} agentes={agentes} oficinas={oficinas} empresaNombre={empresaNombre}
+        sendTypes={SEND_TYPES} onAssignTipo={assignTipoEnvio}
         onSort={handleSort} sortCol={sortCol} sortDir={sortDir}
         dimOpen={dimOpen} onDimToggle={handleDimToggle}
         page={page} onPage={setPage}/>
@@ -2004,7 +2042,7 @@ export default function ENEXSystem(){
   // ── CLIENT FORM MODAL ──────────────────────────────────────────────────────
   // ── NEW WR MODAL ────────────────────────────────────────────────────────────
   const renderNewWRModal=()=>(
-    <div className="ov" onClick={()=>{setShowNewWR(false);setEditWR(null);setWrf(emptyWRF());setClientSearch("");}}>
+    <div className="ov">
       <div className="modal mxl" onClick={e=>e.stopPropagation()}>
         <div className="mhd">
           <div className="mt">{editWR?"✏️ Editar WR — "+editWR.id:"📦 Nuevo Warehouse Receipt"} — {wrf.cajas.length} {wrf.cajas.length===1?"caja":"cajas"}</div>
@@ -2257,7 +2295,7 @@ export default function ENEXSystem(){
     const _usuarioNombre=_usuarioWR?fullName(_usuarioWR):(selWR.usuario||"—");
     const _bcBars=(code)=>String(code).split("").map((ch,i)=>{const v=ch.charCodeAt(0);return v>32?<div key={i} style={{width:v%3===0?3:v%3===1?2:1,height:14+(v*3)%22,background:"var(--navy)",flexShrink:0,display:"inline-block"}}/>:null;});
     return (
-    <div className="ov" onClick={()=>setSelWR(null)}>
+    <div className="ov">
       <div className="modal mlg" onClick={e=>e.stopPropagation()}>
         <div className="mhd">
           <div className="mt">📋 Warehouse Receipt</div>
@@ -2290,6 +2328,20 @@ export default function ENEXSystem(){
             <button className="mcl" onClick={()=>setSelWR(null)}>✕</button>
           </div>
         </div>
+        {/* Barra de confirmación por tipo de envío */}
+        {canEdit&&(
+          <div className="no-print" style={{display:"flex",alignItems:"center",gap:10,padding:"8px 14px",background:"var(--bg4)",borderBottom:"1px solid var(--b1)",flexWrap:"wrap"}}>
+            <div style={{fontSize:10,fontWeight:700,color:"var(--t3)",textTransform:"uppercase",letterSpacing:.5}}>Tipo de Envío:</div>
+            <select className="fs" style={{fontSize:11,padding:"4px 8px",minWidth:180}} value={selWR.tipoEnvio||""}
+              onChange={e=>{if(e.target.value)assignTipoEnvio(selWR,e.target.value);}}>
+              <option value="">— Sin asignar —</option>
+              {SEND_TYPES.map(t=><option key={t} value={t}>{t}</option>)}
+            </select>
+            {selWR.tipoEnvio
+              ?<span style={{fontSize:10,color:"var(--teal)",fontWeight:600}}>✓ {selWR.status?.code==="3"?"Confirmado":"Tipo asignado"}</span>
+              :<span style={{fontSize:10,color:"var(--orange)",fontWeight:600}}>⚠️ Asigna un tipo para confirmar el WR</span>}
+          </div>
+        )}
         <div className="wr-doc">
           <div className="wr-doc-hd">
             <div>
@@ -2563,9 +2615,9 @@ export default function ENEXSystem(){
                 </td></tr>
               </tbody></table>
 
-              {/* ── TABLA DE DIMENSIONES — 13 p1, 15 resto ── */}
+              {/* ── TABLA DE DIMENSIONES — 12 p1, 15 resto ── */}
               {(()=>{
-                const R1=13,RN=15;
+                const R1=12,RN=15;
                 const allDims=selWR.dims&&selWR.dims.length>0?selWR.dims:[];
                 const cajasCount=parseInt(selWR.cajas)||0;
                 const totalRows=Math.max(allDims.length,cajasCount);
@@ -2677,7 +2729,7 @@ export default function ENEXSystem(){
 
   // ── STAT MODAL (clickable stats) ────────────────────────────────────────────
   const renderStatModal=()=>showStatModal&&(
-    <div className="ov" onClick={()=>setShowStatModal(null)}>
+    <div className="ov">
       <div className="modal mlg" onClick={e=>e.stopPropagation()}>
         <div className="mhd">
           <div className="mt">{showStatModal.ic} {showStatModal.label} — {showStatModal.rows.length} registros</div>
@@ -3150,7 +3202,7 @@ export default function ENEXSystem(){
 
       {/* MODAL NUEVO EMBARQUE */}
       {showNewConsol&&(
-        <div className="ov" onClick={()=>setShowNewConsol(false)}>
+        <div className="ov">
           <div className="modal mxl" onClick={e=>e.stopPropagation()}>
             <div className="mhd">
               <div className="mt">🗂️ Nuevo Embarque Consolidado</div>
@@ -3701,7 +3753,7 @@ export default function ENEXSystem(){
               </table>
             </div>
             {showNewAgente&&(
-              <div className="ov" onClick={()=>setShowNewAgente(false)}>
+              <div className="ov">
                 <div className="modal" style={{maxWidth:520}} onClick={e=>e.stopPropagation()}>
                   <div className="mhd"><div className="mt">{editAgente?"✏️ Editar Agente":"➕ Nuevo Agente"}</div><button className="mcl" onClick={()=>{setShowNewAgente(false);setEditAgente(null);}}>✕</button></div>
                   <div className="fgrid g2" style={{marginBottom:10}}>
@@ -3781,7 +3833,7 @@ export default function ENEXSystem(){
               </table>
             </div>
             {showNewOficina&&(
-              <div className="ov" onClick={()=>setShowNewOficina(false)}>
+              <div className="ov">
                 <div className="modal" style={{maxWidth:520}} onClick={e=>e.stopPropagation()}>
                   <div className="mhd"><div className="mt">{editOficina?"✏️ Editar Oficina":"➕ Nueva Oficina"}</div><button className="mcl" onClick={()=>{setShowNewOficina(false);setEditOficina(null);}}>✕</button></div>
                   <div className="fgrid g2" style={{marginBottom:10}}>
@@ -3877,7 +3929,7 @@ export default function ENEXSystem(){
               </table>
             </div>
             {showNewTarifa&&(
-              <div className="ov" onClick={()=>setShowNewTarifa(false)}>
+              <div className="ov">
                 <div className="modal" style={{maxWidth:520}} onClick={e=>e.stopPropagation()}>
                   <div className="mhd"><div className="mt">{editTarifa?"✏️ Editar Tarifa":"➕ Nueva Tarifa"}</div><button className="mcl" onClick={()=>setShowNewTarifa(false)}>✕</button></div>
                   <div className="sdiv">RUTA</div>
@@ -4366,7 +4418,7 @@ export default function ENEXSystem(){
 
       {/* MODAL NUEVA SOLICITUD */}
       {showNewPickup&&(
-        <div className="ov" onClick={()=>setShowNewPickup(false)}>
+        <div className="ov">
           <div className="modal mxl" onClick={e=>e.stopPropagation()}>
             <div className="mhd"><div className="mt">🚐 Nueva Solicitud de Pick-up</div><button className="mcl" onClick={()=>setShowNewPickup(false)}>✕</button></div>
 
@@ -4995,7 +5047,7 @@ export default function ENEXSystem(){
           );
         };
         return(
-        <div className="ov" onClick={()=>setShowLabels(null)}>
+        <div className="ov">
           <div className="modal mxl" onClick={e=>e.stopPropagation()} style={{maxHeight:"90vh",overflowY:"auto"}}>
             <div className="mhd">
               <div className="mt">🏷️ Etiquetas — {_lwr?.id}</div>
