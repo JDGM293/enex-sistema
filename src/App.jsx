@@ -848,14 +848,14 @@ const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[
       <td style={{textAlign:"right"}}><span className="c-wtvol">{showVol}</span></td>
       <td style={{textAlign:"right"}}><span className="c-ft3">{w.ft3||"—"}</span></td>
       <td style={{textAlign:"right"}}><span className="c-m3">{w.m3||"—"}</span></td>
-      <td style={{maxWidth:90,padding:"4px 6px"}}><div style={{maxWidth:84,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><StBadge st={w.status}/></div></td>
+      <td style={{maxWidth:60,padding:"4px 4px"}}><div style={{maxWidth:56,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><StBadge st={w.status}/></div></td>
       <td><span className="c-note">{w.notas||"—"}</span></td>
-      <td onClick={e=>e.stopPropagation()}>
+      <td onClick={e=>e.stopPropagation()} style={{maxWidth:80,padding:"4px 4px"}}>
         {w.tipoEnvio
           ?<TypeBadge t={w.tipoEnvio}/>
           :(onAssignTipo&&sendTypes.length>0
-            ?<select value="" onChange={e=>{if(e.target.value)onAssignTipo(w,e.target.value);}} style={{fontSize:10,padding:"2px 4px",border:"1px dashed var(--navy)",borderRadius:4,background:"var(--bg3)",color:"var(--navy)",fontWeight:600,cursor:"pointer"}}>
-                <option value="">— Confirmar tipo —</option>
+            ?<select value="" onChange={e=>{if(e.target.value)onAssignTipo(w,e.target.value);}} title="Confirmar tipo de envío" style={{fontSize:10,padding:"2px 3px",border:"1px dashed var(--navy)",borderRadius:4,background:"var(--bg3)",color:"var(--navy)",fontWeight:600,cursor:"pointer",maxWidth:72}}>
+                <option value="">— Asignar —</option>
                 {sendTypes.map(t=><option key={t} value={t}>{t}</option>)}
               </select>
             :<span style={{color:"var(--t3)"}}>—</span>)}
@@ -897,9 +897,9 @@ const WRTable=({rows,selId,onSelect,unitL,unitW,onSort,sortCol,sortDir,dimOpen,o
               <th style={{textAlign:"right",minWidth:80}}>Peso Vol.</th>
               <th style={{textAlign:"right",minWidth:60}}>Ft³</th>
               <th style={{textAlign:"right",minWidth:60}}>M³</th>
-              <th style={{width:90,maxWidth:90}}>Estado</th>
-              <th style={{minWidth:110}}>Notas</th>
-              <th style={{minWidth:110}}>Tipo Envío</th>
+              <th style={{width:60,maxWidth:60}}>Estado</th>
+              <th style={{minWidth:200}}>Notas</th>
+              <th style={{width:70,maxWidth:80}}>Tipo Envío</th>
               <th style={{textAlign:"center",width:40}}>📷</th>
               <th style={{textAlign:"center",width:65}}>Pre-Alerta</th>
             </tr>
@@ -971,10 +971,10 @@ const getHeaderName=(w,clients=[],agentes=[],oficinas=[],empresaNombre="")=>{
     return of?.nombre?`${empresaNombre} — ${String(of.nombre).toUpperCase()}`:empresaNombre;
   }
   if(ct==="autonomo"){
-    // autónomos son usuarios (tipo="usuario", rol="F"); el casillero vive en ese usuario
+    // autónomos son usuarios (tipo="usuario", rol="F"); usar el ID (N° de Usuario) del autónomo
     const au=clients.find(c=>c.id===cl?.autonomoId);
-    const cas=au?.casillero||"";
-    return cas?`${empresaNombre} — #${cas}`:empresaNombre;
+    const num=au?.id||"";
+    return num?`${empresaNombre} — ${num}`:empresaNombre;
   }
   return empresaNombre;
 };
@@ -1188,8 +1188,16 @@ const emptyConsol=(firstType="")=>({
   fechaSalida:"", fechaLlegada:"",
   numVuelo:"", awb:"", bl:"",
   notas:"",
-  containers:[{tipo:"E",largo:"",ancho:"",alto:"",pesoLb:"",sello:"",wr:[]}],
+  containers:[{tipo:"",largo:"",ancho:"",alto:"",pesoLb:"",sello:"",wr:[]}],
 });
+
+// Parse "LxWxH in" / "88×56×48 in" → {l,w,h}. Returns null si no puede.
+const parseContainerDim=(dimStr)=>{
+  if(!dimStr||typeof dimStr!=="string")return null;
+  if(dimStr.toLowerCase().includes("libre"))return null;
+  const m=dimStr.match(/(\d+(?:\.\d+)?)\s*[×xX]\s*(\d+(?:\.\d+)?)\s*[×xX]\s*(\d+(?:\.\d+)?)/);
+  return m?{l:m[1],a:m[2],h:m[3]}:null;
+};
 
 const emptyPickup=()=>({
   clienteId:"",clienteNombre:"",clienteDir:"",clienteTel:"",
@@ -1234,8 +1242,8 @@ export default function ENEXSystem(){
   const [wrSecInicio,setWrSecInicio]=useState(1);
   const [consolNumTipo,setConsolNumTipo]=useState(3);
   const [consolSecInicio,setConsolSecInicio]=useState(1);
-  const [labelWRTipo,setLabelWRTipo]=useState(1);   // 1=6×4 Tipo1, 2=6×4 Tipo2, 3=2×4 Tipo1, 4=2×4 Tipo2
-  const [labelCSATipo,setLabelCSATipo]=useState(1); // 1=6×4 Tipo1, 2=6×4 Tipo2, 3=2×4 Tipo1, 4=2×4 Tipo2
+  const [labelWRTipo,setLabelWRTipo]=useState(1);   // 1=4×6 Básica, 2=4×6 Completa, 3=4×2 Básica, 4=4×2 Completa
+  const [labelCSATipo,setLabelCSATipo]=useState(1); // 1=4×6 Grande, 2=4×2 Compacta
   const [empresaNombre,setEmpresaNombre]=useState("ENEX");
   const [empresaSlug,setEmpresaSlug]=useState("1N");
 
@@ -1360,8 +1368,9 @@ export default function ENEXSystem(){
       if(consolNumT)setConsolNumTipo(consolNumT);
       if(consolSecT)setConsolSecInicio(consolSecT);
       if(empSlugT)setEmpresaSlug(empSlugT);
-      if(labelWRT)setLabelWRTipo(labelWRT);
-      if(labelCsaT)setLabelCSATipo(labelCsaT);
+      if(labelWRT)setLabelWRTipo(Math.min(4,Math.max(1,parseInt(labelWRT)||1)));
+      // Guía consolidada ahora solo tiene 2 tipos; normalizar si había 3 o 4 guardado
+      if(labelCsaT){const n=parseInt(labelCsaT)||1;setLabelCSATipo(n>=2?2:1);}
     };
     load();
   },[]);
@@ -3301,8 +3310,9 @@ export default function ENEXSystem(){
             {cf.containers.map((cont,ci)=>{
               const contWRPeso=parseFloat(cont.wr.reduce((s,w)=>s+(w.pesoLb||0),0).toFixed(1));
               const contWRCajas=cont.wr.reduce((s,w)=>s+(w.cajas||1),0);
-              const contType=CONTAINER_TYPES.find(t=>t.code===cont.tipo)||CONTAINER_TYPES[0];
-              const pct=contType.maxLb>0?Math.min(100,Math.round((contWRPeso/contType.maxLb)*100)):0;
+              const contType=CONTAINER_TYPES.find(t=>t.code===cont.tipo);
+              const maxLb=contType?.maxLb||0;
+              const pct=maxLb>0?Math.min(100,Math.round((contWRPeso/maxLb)*100)):0;
               return (
                 <div key={ci} style={{border:"2px solid var(--navy)",borderRadius:10,marginBottom:12,overflow:"hidden"}}>
                   {/* Header container */}
@@ -3310,11 +3320,22 @@ export default function ENEXSystem(){
                     <span style={{color:"#E5AE3A",fontFamily:"'Rajdhani',sans-serif",fontWeight:800,fontSize:14}}>
                       📦 CONTENEDOR {ci+1}
                     </span>
-                    <select value={cont.tipo} onChange={e=>scCont(ci,"tipo",e.target.value)}
+                    <select value={cont.tipo} onChange={e=>{
+                        const code=e.target.value;
+                        const reg=CONTAINER_TYPES.find(t=>t.code===code);
+                        const dims=reg?parseContainerDim(reg.dim):null;
+                        setCf(p=>({...p,containers:p.containers.map((c,i)=>i===ci?{
+                          ...c,
+                          tipo:code,
+                          // Si el tipo trae medidas oficiales, autollenar; si es "Libre" o no existe, dejar manual
+                          ...(dims?{largo:dims.l,ancho:dims.a,alto:dims.h}:{})
+                        }:c)}));
+                      }}
                       style={{background:"rgba(255,255,255,.15)",border:"1px solid rgba(255,255,255,.3)",borderRadius:5,color:"#fff",padding:"3px 8px",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                      <option value="" style={{background:"var(--navy)"}}>— Seleccionar tipo —</option>
                       {CONTAINER_TYPES.map(t=><option key={t.code} value={t.code} style={{background:"var(--navy)"}}>{t.name}</option>)}
                     </select>
-                    <span style={{fontSize:11,color:"rgba(255,255,255,.6)"}}>{contType.dim}</span>
+                    <span style={{fontSize:11,color:"rgba(255,255,255,.6)"}}>{cont.tipo?(contType?.dim||"Manual"):"Selecciona un tipo"}</span>
                     <div style={{flex:1}}/>
                     <span style={{fontSize:11,color:"#E5AE3A",fontWeight:600}}>{cont.wr.length} WR · {contWRCajas} cajas · {contWRPeso}lb</span>
                     {cf.containers.length>1&&(
@@ -3327,7 +3348,7 @@ export default function ENEXSystem(){
                     <div style={{marginBottom:10}}>
                       <div style={{display:"flex",justifyContent:"space-between",fontSize:10,marginBottom:3}}>
                         <span style={{color:"var(--t2)"}}>Capacidad usada</span>
-                        <span style={{fontFamily:"'DM Mono',monospace",fontWeight:600,color:pct>90?"var(--red)":pct>70?"var(--orange)":"var(--green)"}}>{contWRPeso}lb / {contType.maxLb}lb ({pct}%)</span>
+                        <span style={{fontFamily:"'DM Mono',monospace",fontWeight:600,color:pct>90?"var(--red)":pct>70?"var(--orange)":"var(--green)"}}>{contWRPeso}lb / {maxLb||"—"}lb ({maxLb?pct:0}%)</span>
                       </div>
                       <div style={{height:6,background:"var(--bg4)",borderRadius:3,overflow:"hidden"}}>
                         <div style={{height:"100%",borderRadius:3,background:pct>90?"var(--red)":pct>70?"var(--orange)":"var(--green)",width:`${pct}%`,transition:"width .3s"}}/>
@@ -3550,7 +3571,7 @@ export default function ENEXSystem(){
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
                 <div>
                   <div style={{fontSize:12,fontWeight:700,color:"var(--t2)",marginBottom:8}}>📦 Etiqueta WR</div>
-                  {[{v:1,l:"6×4 pulg. — Tipo 1 (completa con 8 franjas)"},{v:2,l:"6×4 pulg. — Tipo 2 (limpia y moderna)"},{v:3,l:"2×4 pulg. — Tipo 1 (compacta 3 franjas)"},{v:4,l:"2×4 pulg. — Tipo 2 (diseño ENEX)"}].map(t=>(
+                  {[{v:1,l:"4×6 pulg. — Tipo 1 Básica (7 franjas)"},{v:2,l:"4×6 pulg. — Tipo 2 Completa (5 franjas + QR)"},{v:3,l:"4×2 pulg. — Tipo 3 Básica (3 franjas)"},{v:4,l:"4×2 pulg. — Tipo 4 Completa (3 franjas)"}].map(t=>(
                     <div key={t.v} onClick={()=>setLabelWRTipo(t.v)} style={{padding:"8px 12px",borderRadius:6,border:`2px solid ${labelWRTipo===t.v?"var(--navy)":"var(--b1)"}`,background:labelWRTipo===t.v?"#EEF3FF":"var(--bg3)",marginBottom:6,cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>
                       <div style={{width:14,height:14,borderRadius:"50%",border:`2px solid ${labelWRTipo===t.v?"var(--navy)":"var(--b1)"}`,background:labelWRTipo===t.v?"var(--navy)":"transparent",flexShrink:0}}/>
                       <div style={{fontSize:12,fontWeight:600}}>{t.l}</div>
@@ -3559,7 +3580,7 @@ export default function ENEXSystem(){
                 </div>
                 <div>
                   <div style={{fontSize:12,fontWeight:700,color:"var(--t2)",marginBottom:8}}>🗂️ Etiqueta Guía Consolidada</div>
-                  {[{v:1,l:"6×4 pulg. — Tipo 1 (completa)"},{v:2,l:"6×4 pulg. — Tipo 2 (limpia)"},{v:3,l:"2×4 pulg. — Tipo 1 (compacta)"},{v:4,l:"2×4 pulg. — Tipo 2 (diseño ENEX)"}].map(t=>(
+                  {[{v:1,l:"4×6 pulg. — Tipo 1 Grande (5 franjas)"},{v:2,l:"4×2 pulg. — Tipo 2 Compacta"}].map(t=>(
                     <div key={t.v} onClick={()=>setLabelCSATipo(t.v)} style={{padding:"8px 12px",borderRadius:6,border:`2px solid ${labelCSATipo===t.v?"var(--navy)":"var(--b1)"}`,background:labelCSATipo===t.v?"#EEF3FF":"var(--bg3)",marginBottom:6,cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>
                       <div style={{width:14,height:14,borderRadius:"50%",border:`2px solid ${labelCSATipo===t.v?"var(--navy)":"var(--b1)"}`,background:labelCSATipo===t.v?"var(--navy)":"transparent",flexShrink:0}}/>
                       <div style={{fontSize:12,fontWeight:600}}>{t.l}</div>
@@ -4994,196 +5015,251 @@ export default function ENEXSystem(){
         const _lwr=showLabels.wr;const _ldims=showLabels.dims||[];
         const _hdrName=getHeaderName(_lwr,clients,agentes,oficinas,empresaNombre);
         // ── ETIQUETAS DE CAJA WR — 4 TIPOS ──────────────────────────────────
-        // Tipo 1: 6×4 Sencilla (7 franjas)
-        // Tipo 2: 6×4 Completa (7 franjas + QR + nombre pequeño arriba WR#)
-        // Tipo 3: 2×4 Sencilla (3 franjas)
-        // Tipo 4: 2×4 Completa (3 franjas + QR + nombre pequeño arriba WR#)
-        // Barcode: WR# + pieza (CAJA idx/total)
+        // TODAS: fondo blanco, letras negras, orientación correcta.
+        // Tipo 1 Básica:  4"ancho × 6"alto portrait (384×576)  · 7 franjas
+        // Tipo 2 Completa:4"ancho × 6"alto portrait (384×576)  · 5 franjas + QR placeholder
+        // Tipo 3 Básica:  4"ancho × 2"alto landscape (384×192) · 3 franjas
+        // Tipo 4 Completa:4"ancho × 2"alto landscape (384×192) · 3 franjas
+        // Barcode de caja: `${WR#}-${idx}/${total}`
 
-        // ── Tipo 1 — 6×4 Sencilla ───────────────────────────────────────────
+        const _fechaStr=_lwr?.fecha?new Date(_lwr.fecha).toLocaleDateString("es-VE"):"—";
+        const _horaStr=_lwr?.fecha?new Date(_lwr.fecha).toLocaleTimeString("es-VE",{hour:"2-digit",minute:"2-digit"}):"";
+        const _shipperName=showLabels.remitente||_lwr?.shipper||_lwr?.remitente||"—";
+        const _referencia=_lwr?.proNumber||_lwr?.ocNumber||"—";
+
+        // ── Tipo 1 Básica — 4"×6" (portrait) 7 franjas ──────────────────────
         const LabelCaja1=({d,idx,total})=>{
           const bval=`${_lwr?.id||""}-${idx}/${total}`;
-          const dimStr=d.l&&d.a&&d.h?`${parseFloat((d.l/2.54).toFixed(1))}"×${parseFloat((d.a/2.54).toFixed(1))}"×${parseFloat((d.h/2.54).toFixed(1))}"`:"—";
+          const dimStr=d.l&&d.a&&d.h?`${parseFloat((d.l/2.54).toFixed(1))}×${parseFloat((d.a/2.54).toFixed(1))}×${parseFloat((d.h/2.54).toFixed(1))}"`:"—";
+          const pkLb=d.pkLb||(d.pk?parseFloat((d.pk*2.205).toFixed(1)):null);
+          const pvLb=d.volLb||d.pv||null;
+          const ft3=d.ft3||null;
+          const m3=d.m3||null;
           return(
-            <div className="label-card label-6x4" style={{width:576,height:384,border:"2px solid #000",background:"#fff",color:"#000",display:"flex",flexDirection:"column",pageBreakInside:"avoid",fontFamily:"Arial,sans-serif"}}>
-              {/* Franja 1 — Header con nombre dinámico */}
-              <div style={{background:"#000",color:"#fff",textAlign:"center",padding:"6px 10px",borderBottom:"2px solid #000"}}>
-                <div style={{fontWeight:900,fontSize:28,letterSpacing:4,lineHeight:1}}>{_hdrName}</div>
-                <div style={{fontSize:9,letterSpacing:3,opacity:.85,marginTop:2}}>WAREHOUSE RECEIPT</div>
+            <div className="label-card label-4x6" style={{width:384,height:576,border:"2px solid #000",background:"#fff",color:"#000",display:"flex",flexDirection:"column",pageBreakInside:"avoid",fontFamily:"Arial,sans-serif"}}>
+              {/* Franja 1 — Nombre dinámico */}
+              <div style={{textAlign:"center",padding:"10px 8px",borderBottom:"2px solid #000"}}>
+                <div style={{fontWeight:900,fontSize:24,letterSpacing:3,lineHeight:1.05,color:"#000"}}>{_hdrName}</div>
               </div>
-              {/* Franja 2 — WR# */}
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 12px",borderBottom:"1.5px solid #000"}}>
-                <div style={{fontSize:10,color:"#000",fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>N° WR</div>
-                <div style={{fontFamily:"'DM Mono',monospace",fontWeight:900,fontSize:22,letterSpacing:2}}>{_lwr?.id||"—"}</div>
+              {/* Franja 2 — WR# + barcode */}
+              <div style={{padding:"6px 10px",borderBottom:"2px solid #000",textAlign:"center"}}>
+                <div style={{fontFamily:"'DM Mono',monospace",fontWeight:900,fontSize:18,letterSpacing:2,marginBottom:2}}>{_lwr?.id||"—"}</div>
+                <div style={{overflow:"hidden"}}><WRBarcode value={_lwr?.id||""} height={40} width={1.6}/></div>
               </div>
-              {/* Franja 3 — CAJA idx/total */}
-              <div style={{textAlign:"center",padding:"6px",borderBottom:"2px solid #000",fontFamily:"'Rajdhani','Arial Black',sans-serif",fontSize:30,fontWeight:900,letterSpacing:3,background:"#f2f2f2"}}>
-                CAJA {idx} / {total}
+              {/* Franja 3 — Shipper */}
+              <div style={{padding:"6px 10px",borderBottom:"1.5px solid #000"}}>
+                <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:"#000"}}>Shipper</div>
+                <div style={{fontSize:13,fontWeight:700,lineHeight:1.2}}>{_shipperName}</div>
+                {_lwr?.remitenteTel&&<div style={{fontSize:10,fontFamily:"'DM Mono',monospace"}}>{_lwr.remitenteTel}</div>}
               </div>
-              {/* Franja 4 — Consignatario + casillero */}
-              <div style={{padding:"6px 12px",borderBottom:"1px solid #000"}}>
-                <div style={{fontSize:9,color:"#555",fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Consignatario</div>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
-                  <div style={{fontSize:15,fontWeight:800,lineHeight:1.2,flex:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{_lwr?.consignee||"—"}</div>
-                  <div style={{fontSize:14,fontWeight:900,fontFamily:"'DM Mono',monospace"}}>#{_lwr?.casillero||"—"}</div>
+              {/* Franja 4 — Consignatario (Nombre y Apellido) */}
+              <div style={{padding:"6px 10px",borderBottom:"1.5px solid #000"}}>
+                <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Consignatario</div>
+                <div style={{fontSize:16,fontWeight:900,lineHeight:1.1}}>{_lwr?.consignee||"—"}</div>
+                <div style={{fontSize:10,fontFamily:"'DM Mono',monospace",fontWeight:700,marginTop:1}}>#{_lwr?.casillero||"—"}</div>
+              </div>
+              {/* Franja 5 — Origen | Destino */}
+              <div style={{display:"flex",borderBottom:"1.5px solid #000"}}>
+                <div style={{flex:1,padding:"6px 10px",borderRight:"1.5px solid #000"}}>
+                  <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Origen</div>
+                  <div style={{fontSize:14,fontWeight:800}}>{_lwr?.origCity||"—"}</div>
+                </div>
+                <div style={{flex:1,padding:"6px 10px",textAlign:"right"}}>
+                  <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Destino</div>
+                  <div style={{fontSize:14,fontWeight:800}}>{_lwr?.destCity||"—"}</div>
                 </div>
               </div>
-              {/* Franja 5 — Ruta */}
-              <div style={{padding:"6px 12px",borderBottom:"1px solid #000",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                <div>
-                  <div style={{fontSize:9,color:"#555",fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Ruta</div>
-                  <div style={{fontSize:13,fontWeight:700}}>{_lwr?.origCity||"—"} → {_lwr?.destCity||"—"}</div>
+              {/* Franja 6 — Tracking + pesos + medidas + recuadro pieza */}
+              <div style={{padding:"6px 10px",borderBottom:"1.5px solid #000",display:"flex",alignItems:"stretch",gap:8,flex:1}}>
+                <div style={{flex:1,display:"flex",flexDirection:"column",gap:3,fontSize:10}}>
+                  <div><span style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Tracking </span><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,wordBreak:"break-all"}}>{d.tracking||"—"}</span></div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:2,fontFamily:"'DM Mono',monospace",fontWeight:700}}>
+                    <span>P: {pkLb?`${pkLb} lb`:"—"}</span>
+                    <span>Pv: {pvLb?`${pvLb} lb`:"—"}</span>
+                    <span>ft³: {ft3||"—"}</span>
+                    <span>m³: {m3||"—"}</span>
+                  </div>
+                  <div><span style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Medidas </span><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700}}>{dimStr}</span></div>
                 </div>
-                <div style={{textAlign:"right"}}>
-                  <div style={{fontSize:9,color:"#555",fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Tipo</div>
-                  <div style={{fontSize:12,fontWeight:700}}>{_lwr?.tipoEnvio||showLabels.tipoEnvio||"—"}</div>
+                {/* Recuadro pequeño — número de pieza */}
+                <div style={{width:70,border:"2px solid #000",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                  <div style={{fontSize:8,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Pieza</div>
+                  <div style={{fontFamily:"'Rajdhani','Arial Black',sans-serif",fontSize:22,fontWeight:900,lineHeight:1}}>{idx}/{total}</div>
                 </div>
               </div>
-              {/* Franja 6a — Dims + peso */}
-              <div style={{padding:"5px 12px",borderBottom:"1px dashed #888",display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:11}}>
-                <div><span style={{color:"#555",fontWeight:700,textTransform:"uppercase",fontSize:9,letterSpacing:1}}>Dims </span><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700}}>{dimStr}</span></div>
-                <div><span style={{color:"#555",fontWeight:700,textTransform:"uppercase",fontSize:9,letterSpacing:1}}>Peso </span><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700}}>{d.pkLb?`${d.pkLb} lb`:d.pk?`${d.pk} kg`:"—"}</span></div>
-              </div>
-              {/* Franja 6b — Tracking (si hay) */}
-              <div style={{padding:"4px 12px",borderBottom:"2px solid #000",fontSize:10,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                <span style={{color:"#555",fontWeight:700,textTransform:"uppercase",fontSize:9,letterSpacing:1}}>Tracking</span>
-                <span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,wordBreak:"break-all"}}>{d.tracking||"—"}</span>
-              </div>
-              {/* Franja 7 — Barcode */}
-              <div style={{flex:1,padding:"4px 8px",textAlign:"center",display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center",background:"#fff"}}>
-                <div style={{overflow:"hidden"}}><WRBarcode value={bval} height={56} width={2}/></div>
-                <div style={{fontFamily:"'DM Mono',monospace",fontSize:11,letterSpacing:2,fontWeight:700,marginTop:2}}>{bval}</div>
+              {/* Franja 7 — Fecha y hora de registro + barcode pieza */}
+              <div style={{padding:"3px 10px",display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:8}}>
+                <span style={{fontFamily:"'DM Mono',monospace",fontWeight:700}}>{_fechaStr} {_horaStr}</span>
+                <span style={{fontFamily:"'DM Mono',monospace",fontWeight:700}}>{bval}</span>
               </div>
             </div>
           );
         };
 
-        // ── Tipo 2 — 6×4 Completa (QR + nombre pequeño arriba WR#) ──────────
+        // ── Tipo 2 Completa — 4"×6" (portrait) 5 franjas ────────────────────
         const LabelCaja2=({d,idx,total})=>{
           const bval=`${_lwr?.id||""}-${idx}/${total}`;
-          const dimStr=d.l&&d.a&&d.h?`${parseFloat((d.l/2.54).toFixed(1))}"×${parseFloat((d.a/2.54).toFixed(1))}"×${parseFloat((d.h/2.54).toFixed(1))}"`:"—";
+          const dimStr=d.l&&d.a&&d.h?`${parseFloat((d.l/2.54).toFixed(1))}×${parseFloat((d.a/2.54).toFixed(1))}×${parseFloat((d.h/2.54).toFixed(1))}"`:"—";
+          const pkLb=d.pkLb||(d.pk?parseFloat((d.pk*2.205).toFixed(1)):null);
+          const pvLb=d.volLb||d.pv||null;
           return(
-            <div className="label-card label-6x4" style={{width:576,height:384,border:"2px solid #000",background:"#fff",color:"#000",display:"flex",flexDirection:"column",pageBreakInside:"avoid",fontFamily:"Arial,sans-serif"}}>
-              {/* Franja 1 — Header */}
-              <div style={{background:"#000",color:"#fff",textAlign:"center",padding:"6px 10px",borderBottom:"2px solid #000"}}>
-                <div style={{fontWeight:900,fontSize:26,letterSpacing:4,lineHeight:1}}>{_hdrName}</div>
-                <div style={{fontSize:9,letterSpacing:3,opacity:.85,marginTop:2}}>WAREHOUSE RECEIPT · INTERNATIONAL COURIER</div>
-              </div>
-              {/* Franja 2 — Nombre pequeño + WR# */}
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 12px",borderBottom:"1.5px solid #000"}}>
-                <div>
-                  <div style={{fontSize:8,color:"#555",fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>{_hdrName}</div>
-                  <div style={{fontFamily:"'DM Mono',monospace",fontWeight:900,fontSize:20,letterSpacing:2}}>{_lwr?.id||"—"}</div>
+            <div className="label-card label-4x6" style={{width:384,height:576,border:"2px solid #000",background:"#fff",color:"#000",display:"flex",flexDirection:"column",pageBreakInside:"avoid",fontFamily:"Arial,sans-serif"}}>
+              {/* Franja 1 — Shipper | Consignatario */}
+              <div style={{display:"flex",borderBottom:"2px solid #000"}}>
+                <div style={{flex:1,padding:"6px 10px",borderRight:"2px solid #000"}}>
+                  <div style={{fontSize:8,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Shipper</div>
+                  <div style={{fontSize:12,fontWeight:700,lineHeight:1.2}}>{_shipperName}</div>
                 </div>
-                <div style={{textAlign:"right"}}>
-                  <div style={{fontSize:8,color:"#555",fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Fecha</div>
-                  <div style={{fontFamily:"'DM Mono',monospace",fontSize:10,fontWeight:700}}>{_lwr?.fecha?new Date(_lwr.fecha).toLocaleDateString("es-VE"):"—"}</div>
+                <div style={{flex:1,padding:"6px 10px"}}>
+                  <div style={{fontSize:8,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Consignatario</div>
+                  <div style={{fontSize:13,fontWeight:900,lineHeight:1.15}}>{_lwr?.consignee||"—"}</div>
+                  <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",fontWeight:700}}>#{_lwr?.casillero||"—"}</div>
                 </div>
               </div>
-              {/* Franja 3 — CAJA idx/total + QR placeholder a la derecha */}
-              <div style={{display:"flex",borderBottom:"2px solid #000",background:"#f2f2f2"}}>
-                <div style={{flex:1,textAlign:"center",padding:"8px",fontFamily:"'Rajdhani','Arial Black',sans-serif",fontSize:28,fontWeight:900,letterSpacing:3,display:"flex",alignItems:"center",justifyContent:"center"}}>
-                  CAJA {idx} / {total}
+              {/* Franja 2 — Pesos + medidas + recuadro pieza */}
+              <div style={{padding:"6px 10px",borderBottom:"2px solid #000",display:"flex",alignItems:"stretch",gap:8}}>
+                <div style={{flex:1,fontSize:10,display:"flex",flexDirection:"column",gap:2}}>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:2,fontFamily:"'DM Mono',monospace",fontWeight:700}}>
+                    <span>Peso: {pkLb?`${pkLb} lb`:"—"}</span>
+                    <span>P.Vol: {pvLb?`${pvLb} lb`:"—"}</span>
+                    <span>ft³: {d.ft3||"—"}</span>
+                    <span>m³: {d.m3||"—"}</span>
+                  </div>
+                  <div><span style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Medidas </span><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700}}>{dimStr}</span></div>
                 </div>
-                <div style={{width:70,height:70,border:"1.5px dashed #888",display:"flex",alignItems:"center",justifyContent:"center",margin:"4px 8px",background:"#fff"}}>
-                  <div style={{fontSize:7,color:"#888",textAlign:"center",fontWeight:700}}>QR<br/>(futuro)</div>
-                </div>
-              </div>
-              {/* Franja 4 — Consignatario + casillero */}
-              <div style={{padding:"5px 12px",borderBottom:"1px solid #000"}}>
-                <div style={{fontSize:9,color:"#555",fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Consignatario</div>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
-                  <div style={{fontSize:14,fontWeight:800,lineHeight:1.2,flex:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{_lwr?.consignee||"—"}</div>
-                  <div style={{fontSize:13,fontWeight:900,fontFamily:"'DM Mono',monospace"}}>#{_lwr?.casillero||"—"}</div>
-                </div>
-              </div>
-              {/* Franja 5 — Ruta */}
-              <div style={{padding:"5px 12px",borderBottom:"1px solid #000",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                <div>
-                  <div style={{fontSize:9,color:"#555",fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Ruta</div>
-                  <div style={{fontSize:12,fontWeight:700}}>{_lwr?.origCity||"—"} → {_lwr?.destCity||"—"}</div>
-                </div>
-                <div style={{textAlign:"right"}}>
-                  <div style={{fontSize:9,color:"#555",fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Tipo</div>
-                  <div style={{fontSize:11,fontWeight:700}}>{_lwr?.tipoEnvio||showLabels.tipoEnvio||"—"}</div>
+                <div style={{width:70,border:"2px solid #000",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                  <div style={{fontSize:8,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Pieza</div>
+                  <div style={{fontFamily:"'Rajdhani','Arial Black',sans-serif",fontSize:22,fontWeight:900,lineHeight:1}}>{idx}/{total}</div>
                 </div>
               </div>
-              {/* Franja 6a — Dims */}
-              <div style={{padding:"4px 12px",borderBottom:"1px dashed #888",display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:10}}>
-                <div><span style={{color:"#555",fontWeight:700,textTransform:"uppercase",fontSize:9,letterSpacing:1}}>Dims </span><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700}}>{dimStr}</span></div>
-                <div><span style={{color:"#555",fontWeight:700,textTransform:"uppercase",fontSize:9,letterSpacing:1}}>Peso </span><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700}}>{d.pkLb?`${d.pkLb} lb`:d.pk?`${d.pk} kg`:"—"}</span></div>
+              {/* Franja 3 — N° WR + Código Barra + Tipo Envío */}
+              <div style={{padding:"6px 10px",borderBottom:"2px solid #000",textAlign:"center"}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:3}}>
+                  <div style={{fontFamily:"'DM Mono',monospace",fontWeight:900,fontSize:16,letterSpacing:2}}>{_lwr?.id||"—"}</div>
+                  <div style={{fontSize:10,fontWeight:700,border:"1.5px solid #000",padding:"2px 8px",borderRadius:3}}>{_lwr?.tipoEnvio||showLabels.tipoEnvio||"—"}</div>
+                </div>
+                <div style={{overflow:"hidden"}}><WRBarcode value={_lwr?.id||""} height={38} width={1.5}/></div>
               </div>
-              {/* Franja 6b — Tracking */}
-              <div style={{padding:"4px 12px",borderBottom:"2px solid #000",fontSize:10,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                <span style={{color:"#555",fontWeight:700,textTransform:"uppercase",fontSize:9,letterSpacing:1}}>Tracking</span>
-                <span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,wordBreak:"break-all"}}>{d.tracking||"—"}</span>
+              {/* Franja 4 — Notas + Referencia + Tipo de Pago */}
+              <div style={{padding:"6px 10px",borderBottom:"2px solid #000",flex:1,display:"flex",flexDirection:"column",gap:3}}>
+                <div><span style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Notas </span><span style={{fontSize:10,fontWeight:600}}>{_lwr?.notas||"—"}</span></div>
+                <div style={{display:"flex",justifyContent:"space-between",gap:8}}>
+                  <div style={{flex:1}}><span style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Ref </span><span style={{fontSize:10,fontFamily:"'DM Mono',monospace",fontWeight:700}}>{_referencia}</span></div>
+                  <div><span style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Pago </span><span style={{fontSize:10,fontWeight:700}}>{_lwr?.tipoPago||"—"}</span></div>
+                </div>
               </div>
-              {/* Franja 7 — Barcode */}
-              <div style={{flex:1,padding:"4px 8px",textAlign:"center",display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center",background:"#fff"}}>
-                <div style={{overflow:"hidden"}}><WRBarcode value={bval} height={48} width={1.8}/></div>
-                <div style={{fontFamily:"'DM Mono',monospace",fontSize:10,letterSpacing:2,fontWeight:700,marginTop:2}}>{bval}</div>
+              {/* Franja 5 — QR + Origen/Destino + fecha/hora */}
+              <div style={{padding:"6px 10px",display:"flex",alignItems:"stretch",gap:8}}>
+                {/* QR placeholder */}
+                <div style={{width:70,height:70,border:"1.5px dashed #888",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                  <div style={{fontSize:7,color:"#888",textAlign:"center",fontWeight:700}}>QR<br/>RUTA<br/>(futuro)</div>
+                </div>
+                <div style={{flex:1,display:"flex",flexDirection:"column",justifyContent:"space-between"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",fontSize:11,fontWeight:800}}>
+                    <div>
+                      <div style={{fontSize:8,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Origen</div>
+                      <div>{_lwr?.origCity||"—"}</div>
+                    </div>
+                    <div style={{textAlign:"right"}}>
+                      <div style={{fontSize:8,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Destino</div>
+                      <div>{_lwr?.destCity||"—"}</div>
+                    </div>
+                  </div>
+                  <div style={{fontSize:8,fontFamily:"'DM Mono',monospace",fontWeight:700,textAlign:"right"}}>{_fechaStr} {_horaStr}</div>
+                </div>
               </div>
             </div>
           );
         };
 
-        // ── Tipo 3 — 2×4 Sencilla (3 franjas) ───────────────────────────────
+        // ── Tipo 3 Básica — 4"×2" (landscape) 3 franjas ─────────────────────
         const LabelCaja3=({d,idx,total})=>{
           const bval=`${_lwr?.id||""}-${idx}/${total}`;
+          const dimStr=d.l&&d.a&&d.h?`${parseFloat((d.l/2.54).toFixed(1))}×${parseFloat((d.a/2.54).toFixed(1))}×${parseFloat((d.h/2.54).toFixed(1))}"`:"—";
+          const pkLb=d.pkLb||(d.pk?parseFloat((d.pk*2.205).toFixed(1)):null);
           return(
-            <div className="label-card label-2x4" style={{width:384,height:192,border:"2px solid #000",background:"#fff",color:"#000",display:"flex",flexDirection:"column",pageBreakInside:"avoid",fontFamily:"Arial,sans-serif"}}>
-              {/* Franja 1 — Header + WR# + CAJA idx/total */}
-              <div style={{background:"#000",color:"#fff",padding:"4px 8px",borderBottom:"2px solid #000",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                <div style={{fontWeight:900,fontSize:14,letterSpacing:2,lineHeight:1}}>{_hdrName}</div>
-                <div style={{fontFamily:"'DM Mono',monospace",fontWeight:900,fontSize:13,letterSpacing:1}}>{_lwr?.id||"—"}</div>
-              </div>
-              {/* Franja 2 — CAJA idx/total grande + Consignatario */}
-              <div style={{padding:"4px 8px",borderBottom:"1.5px solid #000",display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
-                <div style={{fontFamily:"'Rajdhani','Arial Black',sans-serif",fontSize:20,fontWeight:900,letterSpacing:2,flexShrink:0}}>
-                  CAJA {idx}/{total}
+            <div className="label-card label-4x2" style={{width:384,height:192,border:"2px solid #000",background:"#fff",color:"#000",display:"flex",flexDirection:"column",pageBreakInside:"avoid",fontFamily:"Arial,sans-serif"}}>
+              {/* Franja 1 — Col 1 Nombre | Col 2 Consignatario */}
+              <div style={{display:"flex",borderBottom:"1.5px solid #000"}}>
+                <div style={{flex:1,padding:"4px 8px",borderRight:"1.5px solid #000"}}>
+                  <div style={{fontSize:7,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>De</div>
+                  <div style={{fontSize:12,fontWeight:900,lineHeight:1.1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{_hdrName}</div>
                 </div>
-                <div style={{flex:1,textAlign:"right",overflow:"hidden"}}>
-                  <div style={{fontSize:11,fontWeight:800,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{_lwr?.consignee||"—"}</div>
-                  <div style={{fontSize:10,fontFamily:"'DM Mono',monospace",fontWeight:700}}>#{_lwr?.casillero||"—"} · {_lwr?.origCity||"—"}→{_lwr?.destCity||"—"}</div>
+                <div style={{flex:1,padding:"4px 8px"}}>
+                  <div style={{fontSize:7,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Consignatario</div>
+                  <div style={{fontSize:12,fontWeight:900,lineHeight:1.1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{_lwr?.consignee||"—"}</div>
+                  <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",fontWeight:700}}>#{_lwr?.casillero||"—"}</div>
                 </div>
               </div>
-              {/* Franja 3 — Barcode */}
-              <div style={{flex:1,padding:"4px 8px",textAlign:"center",display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center"}}>
-                <div style={{overflow:"hidden"}}><WRBarcode value={bval} height={50} width={1.6}/></div>
-                <div style={{fontFamily:"'DM Mono',monospace",fontSize:10,letterSpacing:2,fontWeight:700,marginTop:1}}>{bval}</div>
+              {/* Franja 2 — N° WR + barcode + Ciudad Destino */}
+              <div style={{padding:"3px 8px",borderBottom:"1.5px solid #000",display:"flex",alignItems:"center",gap:6}}>
+                <div style={{flex:1,overflow:"hidden"}}>
+                  <div style={{fontFamily:"'DM Mono',monospace",fontWeight:900,fontSize:11,letterSpacing:1}}>{_lwr?.id||"—"}</div>
+                  <div style={{overflow:"hidden"}}><WRBarcode value={_lwr?.id||""} height={28} width={1.2}/></div>
+                </div>
+                <div style={{textAlign:"right",flexShrink:0}}>
+                  <div style={{fontSize:7,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Destino</div>
+                  <div style={{fontSize:12,fontWeight:900}}>{_lwr?.destCity||"—"}</div>
+                </div>
+              </div>
+              {/* Franja 3 — Pesos + medidas + tracking + pieza */}
+              <div style={{padding:"3px 8px",flex:1,display:"flex",alignItems:"stretch",gap:6}}>
+                <div style={{flex:1,fontSize:9,display:"flex",flexDirection:"column",justifyContent:"center",gap:1,fontFamily:"'DM Mono',monospace",fontWeight:700}}>
+                  <div>{pkLb?`${pkLb}lb`:"—"} · {dimStr}</div>
+                  <div style={{whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>Trk: {d.tracking||"—"}</div>
+                </div>
+                <div style={{width:52,border:"1.5px solid #000",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                  <div style={{fontSize:7,fontWeight:700,textTransform:"uppercase"}}>Pieza</div>
+                  <div style={{fontFamily:"'Rajdhani','Arial Black',sans-serif",fontSize:15,fontWeight:900,lineHeight:1}}>{idx}/{total}</div>
+                </div>
               </div>
             </div>
           );
         };
 
-        // ── Tipo 4 — 2×4 Completa (3 franjas + QR + nombre pequeño) ─────────
+        // ── Tipo 4 Completa — 4"×2" (landscape) 3 franjas 2-col ─────────────
         const LabelCaja4=({d,idx,total})=>{
           const bval=`${_lwr?.id||""}-${idx}/${total}`;
+          const dimStr=d.l&&d.a&&d.h?`${parseFloat((d.l/2.54).toFixed(1))}×${parseFloat((d.a/2.54).toFixed(1))}×${parseFloat((d.h/2.54).toFixed(1))}"`:"—";
+          const pkLb=d.pkLb||(d.pk?parseFloat((d.pk*2.205).toFixed(1)):null);
           return(
-            <div className="label-card label-2x4" style={{width:384,height:192,border:"2px solid #000",background:"#fff",color:"#000",display:"flex",flexDirection:"column",pageBreakInside:"avoid",fontFamily:"Arial,sans-serif"}}>
-              {/* Franja 1 — Header */}
-              <div style={{background:"#000",color:"#fff",padding:"3px 8px",borderBottom:"2px solid #000",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                <div style={{fontWeight:900,fontSize:13,letterSpacing:2,lineHeight:1}}>{_hdrName}</div>
-                <div style={{fontSize:8,letterSpacing:1,opacity:.85}}>WAREHOUSE RECEIPT</div>
-              </div>
-              {/* Franja 2 — Nombre pequeño + WR# + CAJA idx/total + QR + consignatario */}
+            <div className="label-card label-4x2" style={{width:384,height:192,border:"2px solid #000",background:"#fff",color:"#000",display:"flex",flexDirection:"column",pageBreakInside:"avoid",fontFamily:"Arial,sans-serif"}}>
+              {/* Franja 1 — Col1 (más pequeña) Nombre | Col2 WR# + barcode */}
               <div style={{display:"flex",borderBottom:"1.5px solid #000"}}>
-                <div style={{flex:1,padding:"3px 8px"}}>
-                  <div style={{fontSize:7,color:"#555",fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>{_hdrName}</div>
-                  <div style={{fontFamily:"'DM Mono',monospace",fontWeight:900,fontSize:13,letterSpacing:1}}>{_lwr?.id||"—"}</div>
-                  <div style={{fontFamily:"'Rajdhani','Arial Black',sans-serif",fontSize:14,fontWeight:900,letterSpacing:1}}>CAJA {idx}/{total}</div>
-                  <div style={{fontSize:9,fontWeight:700,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{_lwr?.consignee||"—"} · #{_lwr?.casillero||"—"}</div>
+                <div style={{width:110,padding:"3px 6px",borderRight:"1.5px solid #000",display:"flex",flexDirection:"column",justifyContent:"center"}}>
+                  <div style={{fontSize:7,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>De</div>
+                  <div style={{fontSize:11,fontWeight:900,lineHeight:1.1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{_hdrName}</div>
                 </div>
-                <div style={{width:56,borderLeft:"1px dashed #888",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                  <div style={{width:44,height:44,border:"1.5px dashed #888",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                    <div style={{fontSize:6,color:"#888",textAlign:"center",fontWeight:700}}>QR<br/>(futuro)</div>
-                  </div>
+                <div style={{flex:1,padding:"3px 8px"}}>
+                  <div style={{fontFamily:"'DM Mono',monospace",fontWeight:900,fontSize:11,letterSpacing:1}}>{_lwr?.id||"—"}</div>
+                  <div style={{overflow:"hidden"}}><WRBarcode value={_lwr?.id||""} height={26} width={1.2}/></div>
                 </div>
               </div>
-              {/* Franja 3 — Barcode */}
-              <div style={{flex:1,padding:"3px 8px",textAlign:"center",display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center"}}>
-                <div style={{overflow:"hidden"}}><WRBarcode value={bval} height={40} width={1.4}/></div>
-                <div style={{fontFamily:"'DM Mono',monospace",fontSize:9,letterSpacing:2,fontWeight:700,marginTop:1}}>{bval}</div>
+              {/* Franja 2 — Col1 Shipper | Col2 Consignatario */}
+              <div style={{display:"flex",borderBottom:"1.5px solid #000"}}>
+                <div style={{flex:1,padding:"3px 8px",borderRight:"1.5px solid #000"}}>
+                  <div style={{fontSize:7,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Shipper</div>
+                  <div style={{fontSize:10,fontWeight:700,lineHeight:1.1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{_shipperName}</div>
+                </div>
+                <div style={{flex:1,padding:"3px 8px"}}>
+                  <div style={{fontSize:7,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Consignatario</div>
+                  <div style={{fontSize:10,fontWeight:900,lineHeight:1.1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{_lwr?.consignee||"—"}</div>
+                  <div style={{fontSize:8,fontFamily:"'DM Mono',monospace",fontWeight:700}}>#{_lwr?.casillero||"—"}</div>
+                </div>
+              </div>
+              {/* Franja 3 — Col1 Pesos/Medidas/Tracking | Col2 Envío/Pago/Pieza/Ruta */}
+              <div style={{display:"flex",flex:1}}>
+                <div style={{flex:1,padding:"3px 8px",borderRight:"1.5px solid #000",fontSize:8,display:"flex",flexDirection:"column",justifyContent:"center",gap:1,fontFamily:"'DM Mono',monospace",fontWeight:700}}>
+                  <div>P: {pkLb?`${pkLb}lb`:"—"}</div>
+                  <div>Med: {dimStr}</div>
+                  <div style={{whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>Trk: {d.tracking||"—"}</div>
+                </div>
+                <div style={{flex:1,padding:"3px 8px",fontSize:8,display:"flex",flexDirection:"column",justifyContent:"center",gap:1,fontFamily:"'DM Mono',monospace",fontWeight:700}}>
+                  <div>Env: {_lwr?.tipoEnvio||showLabels.tipoEnvio||"—"}</div>
+                  <div>Pago: {_lwr?.tipoPago||"—"}</div>
+                  <div>Pz: <b style={{fontSize:10}}>{idx}/{total}</b></div>
+                  <div style={{whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{_lwr?.origCity||"—"} → {_lwr?.destCity||"—"}</div>
+                </div>
               </div>
             </div>
           );
@@ -5191,7 +5267,7 @@ export default function ENEXSystem(){
 
         // Router — selecciona el componente según labelWRTipo
         const LabelCaja=labelWRTipo===2?LabelCaja2:labelWRTipo===3?LabelCaja3:labelWRTipo===4?LabelCaja4:LabelCaja1;
-        const _tipoDesc=labelWRTipo===2?"6×4 Completa":labelWRTipo===3?"2×4 Sencilla":labelWRTipo===4?"2×4 Completa":"6×4 Sencilla";
+        const _tipoDesc=labelWRTipo===2?"4×6 Tipo 2 Completa":labelWRTipo===3?"4×2 Tipo 3 Básica":labelWRTipo===4?"4×2 Tipo 4 Completa":"4×6 Tipo 1 Básica";
 
         return(
         <div className="ov">
@@ -5235,107 +5311,123 @@ export default function ENEXSystem(){
           return{tipo:ct.tipo||"—",dim:"—",manual:true};
         };
 
-        // ── Tipo 1 — 6×4 (6 franjas; franja 5 dividida en 5a/5b) ─────────────
+        // Helpers de fecha/hora (registro de la guía)
+        const _gfechaStr=(()=>{const d=_g?.fecha?new Date(_g.fecha):null;return d?d.toLocaleDateString("es-VE"):(_g?.fechaSalida||"—");})();
+        const _ghoraStr=(()=>{const d=_g?.fecha?new Date(_g.fecha):null;return d?d.toLocaleTimeString("es-VE",{hour:"2-digit",minute:"2-digit"}):"";})();
+
+        // ── Tipo 1 Grande — 4" ancho × 6" alto (portrait 384×576), 5 franjas ─
         const LabelGuiaConsol1=({ct,idx,total})=>{
           const bval=`${_g?.id||""}-${idx}/${total}`;
           const cd=contDims(ct);
           const cajasInCont=(ct.wr||[]).reduce((a,w)=>a+(w.cajas||1),0);
           return(
-            <div className="label-card label-6x4" style={{width:576,height:384,border:"2px solid #000",background:"#fff",color:"#000",display:"flex",flexDirection:"column",pageBreakInside:"avoid",fontFamily:"Arial,sans-serif"}}>
-              {/* Franja 1 — Header */}
-              <div style={{background:"#000",color:"#fff",textAlign:"center",padding:"6px 10px",borderBottom:"2px solid #000"}}>
-                <div style={{fontWeight:900,fontSize:26,letterSpacing:4,lineHeight:1}}>{_rem}</div>
-                <div style={{fontSize:9,letterSpacing:3,opacity:.85,marginTop:2}}>GUÍA CONSOLIDADA · INTERNATIONAL COURIER</div>
+            <div className="label-card label-4x6" style={{width:384,height:576,border:"2px solid #000",background:"#fff",color:"#000",display:"flex",flexDirection:"column",pageBreakInside:"avoid",fontFamily:"Arial,sans-serif"}}>
+              {/* Franja 1 — Nombre Empresa Matriz */}
+              <div style={{textAlign:"center",padding:"8px 10px",borderBottom:"2px solid #000"}}>
+                <div style={{fontWeight:900,fontSize:22,letterSpacing:4,lineHeight:1}}>{_rem}</div>
+                <div style={{fontSize:9,letterSpacing:3,marginTop:3,fontWeight:700}}>GUÍA CONSOLIDADA</div>
               </div>
-              {/* Franja 2 — Guía# + fecha */}
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 12px",borderBottom:"1.5px solid #000"}}>
-                <div>
-                  <div style={{fontSize:9,color:"#555",fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>N° Guía</div>
-                  <div style={{fontFamily:"'DM Mono',monospace",fontWeight:900,fontSize:20,letterSpacing:2}}>{_g?.id||"—"}</div>
-                </div>
-                <div style={{textAlign:"right"}}>
-                  <div style={{fontSize:9,color:"#555",fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Fecha Salida</div>
-                  <div style={{fontFamily:"'DM Mono',monospace",fontSize:11,fontWeight:700}}>{_g?.fechaSalida||(_g?.fecha?new Date(_g.fecha).toLocaleDateString("es-VE"):"—")}</div>
-                  <div style={{fontSize:10,fontWeight:700,marginTop:2}}>{_g?.tipoEnvio||"—"}</div>
-                </div>
+              {/* Franja 2 — Número de Guía */}
+              <div style={{textAlign:"center",padding:"10px 10px",borderBottom:"2px solid #000",background:"#fff"}}>
+                <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:2}}>N° Guía</div>
+                <div style={{fontFamily:"'DM Mono',monospace",fontWeight:900,fontSize:26,letterSpacing:3,marginTop:2}}>{_g?.id||"—"}</div>
               </div>
-              {/* Franja 3 — CONTENEDOR idx/total + tipo */}
-              <div style={{textAlign:"center",padding:"6px",borderBottom:"2px solid #000",fontFamily:"'Rajdhani','Arial Black',sans-serif",fontSize:26,fontWeight:900,letterSpacing:3,background:"#f2f2f2"}}>
-                CONTENEDOR {idx} / {total}
-                <div style={{fontSize:11,fontFamily:"Arial,sans-serif",letterSpacing:1,marginTop:2,fontWeight:700}}>{cd.tipo}</div>
-              </div>
-              {/* Franja 4 — Ruta */}
-              <div style={{padding:"5px 12px",borderBottom:"1px solid #000",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                <div>
-                  <div style={{fontSize:9,color:"#555",fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Origen</div>
-                  <div style={{fontSize:13,fontWeight:700}}>{OFFICE_CONFIG.origCity||"—"}</div>
+              {/* Franja 3 — Origen | Destino */}
+              <div style={{display:"flex",borderBottom:"2px solid #000"}}>
+                <div style={{flex:1,padding:"8px 10px",borderRight:"1.5px solid #000",textAlign:"center"}}>
+                  <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:2}}>Origen</div>
+                  <div style={{fontSize:14,fontWeight:900,marginTop:2}}>{OFFICE_CONFIG.origCity||"—"}</div>
                 </div>
-                <div style={{fontSize:20,color:"#555",fontWeight:900}}>→</div>
-                <div style={{textAlign:"right"}}>
-                  <div style={{fontSize:9,color:"#555",fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Destino</div>
-                  <div style={{fontSize:13,fontWeight:700}}>{_g?.destino||"—"}</div>
+                <div style={{flex:1,padding:"8px 10px",textAlign:"center"}}>
+                  <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:2}}>Destino</div>
+                  <div style={{fontSize:14,fontWeight:900,marginTop:2}}>{_g?.destino||"—"}</div>
                 </div>
               </div>
-              {/* Franja 5a — Medidas del contenedor */}
-              <div style={{padding:"4px 12px",borderBottom:"1px dashed #888",display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:11}}>
-                <div><span style={{color:"#555",fontWeight:700,textTransform:"uppercase",fontSize:9,letterSpacing:1}}>Medidas </span><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700}}>{cd.dim}</span>{cd.manual&&<span style={{fontSize:8,color:"#888",marginLeft:6}}>(manual)</span>}</div>
-                <div><span style={{color:"#555",fontWeight:700,textTransform:"uppercase",fontSize:9,letterSpacing:1}}>Sello </span><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700}}>{ct.sello||"—"}</span></div>
+              {/* Franja 4 — Tipo Envío | Tipo Cont+Medidas | Peso Contenedor */}
+              <div style={{display:"flex",borderBottom:"2px solid #000"}}>
+                <div style={{flex:"0 0 100px",padding:"6px 6px",borderRight:"1px solid #000",textAlign:"center"}}>
+                  <div style={{fontSize:8,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Tipo Envío</div>
+                  <div style={{fontSize:11,fontWeight:900,marginTop:2}}>{_g?.tipoEnvio||"—"}</div>
+                </div>
+                <div style={{flex:1,padding:"6px 6px",borderRight:"1px solid #000",textAlign:"center"}}>
+                  <div style={{fontSize:8,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Contenedor</div>
+                  <div style={{fontSize:10,fontWeight:900,marginTop:2}}>{cd.tipo}</div>
+                  <div style={{fontFamily:"'DM Mono',monospace",fontSize:9,fontWeight:700,marginTop:1}}>{cd.dim}{cd.manual&&<span style={{fontSize:7,marginLeft:3}}>(man)</span>}</div>
+                </div>
+                <div style={{flex:"0 0 88px",padding:"6px 6px",textAlign:"center"}}>
+                  <div style={{fontSize:8,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Peso</div>
+                  <div style={{fontFamily:"'DM Mono',monospace",fontSize:13,fontWeight:900,marginTop:2}}>{ct.pesoLb?`${ct.pesoLb} lb`:"—"}</div>
+                </div>
               </div>
-              {/* Franja 5b — Peso y cajas en ESTE contenedor */}
-              <div style={{padding:"4px 12px",borderBottom:"2px solid #000",display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:11}}>
-                <div><span style={{color:"#555",fontWeight:700,textTransform:"uppercase",fontSize:9,letterSpacing:1}}>Peso </span><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700}}>{ct.pesoLb?`${ct.pesoLb} lb`:"—"}</span></div>
-                <div><span style={{color:"#555",fontWeight:700,textTransform:"uppercase",fontSize:9,letterSpacing:1}}>WR </span><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700}}>{(ct.wr||[]).length}</span></div>
-                <div><span style={{color:"#555",fontWeight:700,textTransform:"uppercase",fontSize:9,letterSpacing:1}}>Cajas </span><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700}}>{cajasInCont}</span></div>
-              </div>
-              {/* Franja 6 — Barcode */}
-              <div style={{flex:1,padding:"4px 8px",textAlign:"center",display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center",background:"#fff"}}>
-                <div style={{overflow:"hidden"}}><WRBarcode value={bval} height={54} width={2}/></div>
-                <div style={{fontFamily:"'DM Mono',monospace",fontSize:11,letterSpacing:2,fontWeight:700,marginTop:2}}>{bval}</div>
+              {/* Franja 5 — Barcode + Pieza + recuadro paquetes + fecha/hora */}
+              <div style={{flex:1,padding:"8px 8px",display:"flex",flexDirection:"column"}}>
+                <div style={{display:"flex",alignItems:"center",gap:6,flex:1}}>
+                  <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+                    <div style={{overflow:"hidden",width:"100%"}}><WRBarcode value={bval} height={70} width={1.9}/></div>
+                    <div style={{fontFamily:"'DM Mono',monospace",fontSize:10,letterSpacing:2,fontWeight:700,marginTop:2}}>{bval}</div>
+                  </div>
+                  <div style={{flex:"0 0 54px",textAlign:"center",border:"1.5px solid #000",padding:"4px 2px"}}>
+                    <div style={{fontSize:7,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Pieza</div>
+                    <div style={{fontFamily:"'DM Mono',monospace",fontSize:16,fontWeight:900,lineHeight:1,marginTop:2}}>{idx}/{total}</div>
+                  </div>
+                  <div style={{flex:"0 0 54px",textAlign:"center",border:"2px solid #000",padding:"4px 2px"}}>
+                    <div style={{fontSize:7,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Paq.</div>
+                    <div style={{fontFamily:"'DM Mono',monospace",fontSize:20,fontWeight:900,lineHeight:1,marginTop:2}}>{cajasInCont}</div>
+                  </div>
+                </div>
+                <div style={{textAlign:"center",fontFamily:"'DM Mono',monospace",fontSize:9,fontWeight:700,marginTop:6,paddingTop:4,borderTop:"1px dashed #888"}}>
+                  {_gfechaStr} {_ghoraStr}
+                </div>
               </div>
             </div>
           );
         };
 
-        // ── Tipo 2 — 2×4 (compacta) ──────────────────────────────────────────
+        // ── Tipo 2 Compacta — 4" ancho × 2" alto (landscape 384×192), 3 franjas ─
         const LabelGuiaConsol2=({ct,idx,total})=>{
           const bval=`${_g?.id||""}-${idx}/${total}`;
           const cd=contDims(ct);
           const cajasInCont=(ct.wr||[]).reduce((a,w)=>a+(w.cajas||1),0);
           return(
-            <div className="label-card label-2x4" style={{width:384,height:192,border:"2px solid #000",background:"#fff",color:"#000",display:"flex",flexDirection:"column",pageBreakInside:"avoid",fontFamily:"Arial,sans-serif"}}>
-              {/* Franja 1 — Header + Guía# */}
-              <div style={{background:"#000",color:"#fff",padding:"3px 8px",borderBottom:"2px solid #000",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <div className="label-card label-4x2" style={{width:384,height:192,border:"2px solid #000",background:"#fff",color:"#000",display:"flex",flexDirection:"column",pageBreakInside:"avoid",fontFamily:"Arial,sans-serif"}}>
+              {/* Franja 1 — Empresa Matriz + N° Guía */}
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"3px 8px",borderBottom:"1.5px solid #000"}}>
                 <div style={{fontWeight:900,fontSize:13,letterSpacing:2,lineHeight:1}}>{_rem}</div>
-                <div style={{fontFamily:"'DM Mono',monospace",fontWeight:900,fontSize:12,letterSpacing:1}}>{_g?.id||"—"}</div>
+                <div style={{fontFamily:"'DM Mono',monospace",fontWeight:900,fontSize:13,letterSpacing:1}}>{_g?.id||"—"}</div>
               </div>
-              {/* Franja 2 — CONT idx/total + tipo + medidas + peso */}
+              {/* Franja 2 — Ruta + tipo envío + contenedor/medidas + peso */}
               <div style={{padding:"3px 8px",borderBottom:"1.5px solid #000"}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                  <div style={{fontFamily:"'Rajdhani','Arial Black',sans-serif",fontSize:16,fontWeight:900,letterSpacing:2}}>CONT {idx}/{total}</div>
-                  <div style={{fontSize:10,fontWeight:700}}>{cd.tipo}</div>
+                <div style={{display:"flex",justifyContent:"space-between",fontSize:10,fontWeight:700}}>
+                  <span>{OFFICE_CONFIG.origCity||"—"} → {_g?.destino||"—"}</span>
+                  <span>{_g?.tipoEnvio||"—"}</span>
                 </div>
                 <div style={{display:"flex",justifyContent:"space-between",fontSize:9,fontFamily:"'DM Mono',monospace",fontWeight:700,marginTop:2}}>
-                  <span>{cd.dim}</span>
-                  <span>{ct.pesoLb?`${ct.pesoLb}lb`:"—"} · {(ct.wr||[]).length}WR · {cajasInCont}cj</span>
-                </div>
-                <div style={{display:"flex",justifyContent:"space-between",fontSize:9,fontWeight:700,marginTop:1}}>
-                  <span>{OFFICE_CONFIG.origCity||"—"} → {_g?.destino||"—"}</span>
-                  <span style={{fontFamily:"'DM Mono',monospace"}}>Sello: {ct.sello||"—"}</span>
+                  <span>{cd.tipo} {cd.dim}</span>
+                  <span>{ct.pesoLb?`${ct.pesoLb}lb`:"—"}</span>
                 </div>
               </div>
-              {/* Franja 3 — Barcode */}
-              <div style={{flex:1,padding:"3px 8px",textAlign:"center",display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center"}}>
-                <div style={{overflow:"hidden"}}><WRBarcode value={bval} height={40} width={1.4}/></div>
-                <div style={{fontFamily:"'DM Mono',monospace",fontSize:9,letterSpacing:2,fontWeight:700,marginTop:1}}>{bval}</div>
+              {/* Franja 3 — Barcode + Pieza + Paquetes */}
+              <div style={{flex:1,padding:"3px 6px",display:"flex",alignItems:"center",gap:4}}>
+                <div style={{flex:1,textAlign:"center",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+                  <div style={{overflow:"hidden",width:"100%"}}><WRBarcode value={bval} height={42} width={1.3}/></div>
+                  <div style={{fontFamily:"'DM Mono',monospace",fontSize:8,letterSpacing:1,fontWeight:700,marginTop:1}}>{bval}</div>
+                </div>
+                <div style={{flex:"0 0 40px",textAlign:"center",border:"1.5px solid #000",padding:"2px 1px"}}>
+                  <div style={{fontSize:6,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Pz.</div>
+                  <div style={{fontFamily:"'DM Mono',monospace",fontSize:12,fontWeight:900,lineHeight:1}}>{idx}/{total}</div>
+                </div>
+                <div style={{flex:"0 0 40px",textAlign:"center",border:"2px solid #000",padding:"2px 1px"}}>
+                  <div style={{fontSize:6,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Paq.</div>
+                  <div style={{fontFamily:"'DM Mono',monospace",fontSize:14,fontWeight:900,lineHeight:1}}>{cajasInCont}</div>
+                </div>
               </div>
             </div>
           );
         };
 
-        // Router — labelCSATipo: 1=6×4 Tipo1, 2=6×4 Tipo2, 3=2×4 Tipo1, 4=2×4 Tipo2
-        // Para la guía consolidada solo tenemos 2 layouts; mapeamos 1–2→6×4 y 3–4→2×4.
-        const LabelGuiaConsol=(labelCSATipo===3||labelCSATipo===4)?LabelGuiaConsol2:LabelGuiaConsol1;
-        const _tipoDesc=(labelCSATipo===3||labelCSATipo===4)?"2×4":"6×4";
+        // Router — solo 2 tipos: 1=Grande 4×6, 2=Compacta 4×2
+        const LabelGuiaConsol=labelCSATipo===2?LabelGuiaConsol2:LabelGuiaConsol1;
+        const _tipoDesc=labelCSATipo===2?"4×2 Tipo 2 Compacta":"4×6 Tipo 1 Grande";
 
         return(
           <div className="ov">
