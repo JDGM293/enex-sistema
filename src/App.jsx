@@ -1364,6 +1364,22 @@ export default function ENEXSystem(){
   const [contScanErr,setContScanErr]=useState({});
   // Reset calculadora al entrar al tab (no persiste entre visitas)
   useEffect(()=>{ if(tab==="calculadora") setCalcForm(CALC_FORM_EMPTY); /* eslint-disable-next-line */ },[tab]);
+  // Reset Estado de Cuenta al entrar al tab (búsqueda y filtros en blanco)
+  useEffect(()=>{
+    if(tab==="estadocuenta"){
+      setEcSearch("");setEcCliente(null);setEcResults([]);
+      setEcFiltro("todos");setEcMes("");setEcAnio("");
+    }
+  /* eslint-disable-next-line */
+  },[tab]);
+  // Reset Impresión al entrar al tab (tipo y búsqueda en blanco)
+  useEffect(()=>{
+    if(tab==="etiquetas"){
+      setEtqTipo("wr");
+      setEtqSearch("");
+    }
+  /* eslint-disable-next-line */
+  },[tab]);
   // ── SUPABASE: cargar datos al iniciar ────────────────────────────────────
   useEffect(()=>{
     const load=async()=>{
@@ -3698,11 +3714,15 @@ export default function ENEXSystem(){
     return (
     <div className="page-scroll">
       <div className="card" style={{maxWidth:640}}>
-        <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:15,fontWeight:700,color:"var(--navy)",marginBottom:10}}>🏷️ Imprimir Etiquetas</div>
-        {/* Selector WR / Guía Consolidada */}
-        <div style={{display:"flex",gap:6,marginBottom:12}}>
-          <button className={`btn-${etqMode==="wr"?"p":"s"}`} style={{flex:1}} onClick={()=>{_etqMode("wr");setEtqSearch("");}}>📦 Etiquetas de WR</button>
-          <button className={`btn-${etqMode==="guia"?"p":"s"}`} style={{flex:1}} onClick={()=>{_etqMode("guia");setEtqSearch("");}}>🗂️ Etiquetas de Guía Consolidada</button>
+        <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:15,fontWeight:700,color:"var(--navy)",marginBottom:4}}>🖨️ Impresión</div>
+        <div style={{fontSize:11,color:"var(--t3)",marginBottom:10}}>Etiquetas de caja, guía consolidada, notas de entrega, egresos y recibos (próximamente).</div>
+        {/* Selector tipo de impresión */}
+        <div style={{display:"flex",gap:6,marginBottom:12,flexWrap:"wrap"}}>
+          <button className={`btn-${etqMode==="wr"?"p":"s"}`} style={{flex:"1 1 160px"}} onClick={()=>{_etqMode("wr");setEtqSearch("");}}>📦 Etiquetas WR</button>
+          <button className={`btn-${etqMode==="guia"?"p":"s"}`} style={{flex:"1 1 160px"}} onClick={()=>{_etqMode("guia");setEtqSearch("");}}>🗂️ Etiquetas Guía</button>
+          <button className="btn-s" style={{flex:"1 1 160px",opacity:.5,cursor:"not-allowed"}} disabled title="Disponible próximamente">📄 Nota Entrega</button>
+          <button className="btn-s" style={{flex:"1 1 160px",opacity:.5,cursor:"not-allowed"}} disabled title="Disponible próximamente">🪪 Egreso WR</button>
+          <button className="btn-s" style={{flex:"1 1 160px",opacity:.5,cursor:"not-allowed"}} disabled title="Disponible próximamente">💵 Recibo de Pago</button>
         </div>
         <input className="fi" style={{marginBottom:12}} value={etqSearch} onChange={e=>setEtqSearch(e.target.value)}
           placeholder={etqMode==="guia"?"Buscar guía por número, destino o tipo…":"Buscar WR por número, nombre o casillero…"}/>
@@ -4831,8 +4851,23 @@ export default function ENEXSystem(){
     return next;
   });
 
-  // Moneda dinámica según país de origen
-  const calcCurr=PAIS_CURR[calcForm.origPais]||"USD";
+  // Lookup de tarifa en la tabla real de Tarifas (config) — match exacto 5 campos;
+  // fallback a paisOrig+paisDest+tipoEnvio si no hay match con ciudad; null si no hay nada.
+  const findTarifa=(oPais,oCiu,dPais,dCiu,tipo)=>{
+    if(!oPais||!dPais||!tipo)return null;
+    const activas=(tarifas||[]).filter(t=>t.activo!==false);
+    // 1) exact match (5 campos)
+    let m=activas.find(t=>t.paisOrig===oPais&&t.ciudadOrig===oCiu&&t.paisDest===dPais&&t.ciudadDest===dCiu&&t.tipoEnvio===tipo);
+    if(m)return {...m,matchLevel:"ciudad"};
+    // 2) match por país origen + país destino + tipo
+    m=activas.find(t=>t.paisOrig===oPais&&t.paisDest===dPais&&t.tipoEnvio===tipo);
+    if(m)return {...m,matchLevel:"pais"};
+    return null;
+  };
+
+  const calcTarifa=findTarifa(calcForm.origPais,calcForm.origCiudad,calcForm.destPais,calcForm.destCiudad,calcForm.tipoEnvio);
+  // Moneda: la de la tarifa encontrada; si no hay, la del país origen
+  const calcCurr=calcTarifa?.moneda||PAIS_CURR[calcForm.origPais]||"USD";
   const calcCurrSym=cSym(calcCurr);
 
   const calcResult=(()=>{
@@ -4843,17 +4878,35 @@ export default function ENEXSystem(){
     const lb=calcForm.unitDim==="cm"?parseFloat((pesoInput*2.205).toFixed(2)):pesoInput;
     const lCm=calcForm.unitDim==="in"?l*2.54:l,aCm=calcForm.unitDim==="in"?a*2.54:a,hCm=calcForm.unitDim==="in"?h*2.54:h;
     const vc=calcVol(lCm,aCm,hCm,"cm");
-    const tarifa=TARIFAS_BASE[calcForm.tipoEnvio]||TARIFAS_BASE[SEND_TYPES[0]]||{porLb:1.8,porFt3:28,min:25};
+    // Si no hay tarifa configurada para la ruta+tipo, devolver solo medidas sin total
+    if(!calcTarifa){
+      const kg=parseFloat((lb/2.205).toFixed(2));
+      return {lb,kg,volLb:vc.volLb,ft3:vc.ft3,m3:vc.m3,total:null,billingLb:Math.max(lb,vc.volLb),tarifaMissing:true};
+    }
+    const porLb=parseFloat(calcTarifa.porLb)||0;
+    const porFt3=parseFloat(calcTarifa.porFt3)||0;
+    const min=parseFloat(calcTarifa.min)||0;
     // Peso facturable aéreo = max(real, volumétrico) · Marítimo = solo ft³
     const billingLb=Math.max(lb,vc.volLb);
-    const byLb=Math.max(tarifa.min,billingLb*tarifa.porLb);
-    const byFt3=Math.max(tarifa.min,vc.ft3*tarifa.porFt3);
     const esAereo=tipoEsAereoG(calcForm.tipoEnvio);
     const esMaritimo=tipoEsMaritimoG(calcForm.tipoEnvio);
-    const raw=esAereo?byLb:(esMaritimo?byFt3:Math.max(byLb,byFt3));
-    const total=parseFloat(raw.toFixed(2));
+    const rawByLb=billingLb*porLb;
+    const rawByFt3=vc.ft3*porFt3;
+    const byLb=Math.max(min,rawByLb);
+    const byFt3=Math.max(min,rawByFt3);
+    const rawSel=esAereo?rawByLb:(esMaritimo?rawByFt3:Math.max(rawByLb,rawByFt3));
+    const totalFinal=Math.max(min,rawSel);
+    const total=parseFloat(totalFinal.toFixed(2));
     const kg=parseFloat((lb/2.205).toFixed(2));
-    return {lb,kg,volLb:vc.volLb,ft3:vc.ft3,m3:vc.m3,total,byLb:parseFloat(byLb.toFixed(2)),byFt3:parseFloat(byFt3.toFixed(2)),billingLb};
+    return {
+      lb,kg,volLb:vc.volLb,ft3:vc.ft3,m3:vc.m3,total,
+      byLb:parseFloat(byLb.toFixed(2)),byFt3:parseFloat(byFt3.toFixed(2)),
+      billingLb,
+      raw:parseFloat(rawSel.toFixed(2)),
+      usoMinimo:totalFinal>rawSel-0.001&&totalFinal<=min+0.001,
+      tarifa:calcTarifa,
+      tarifaMissing:false,
+    };
   })();
 
   const renderCalculadora=()=>(
@@ -4920,6 +4973,11 @@ export default function ENEXSystem(){
           </div>
         </div>
 
+        {/* Botón Limpiar */}
+        <div style={{display:"flex",justifyContent:"flex-end",marginBottom:10}}>
+          <button className="btn-s" onClick={()=>setCalcForm(CALC_FORM_EMPTY)}>🧹 Limpiar valores</button>
+        </div>
+
         {/* Resultado */}
         {calcResult&&(
           <>
@@ -4932,35 +4990,31 @@ export default function ENEXSystem(){
               ))}
             </div>
 
-            <div style={{background:"var(--navy)",borderRadius:14,padding:"24px",marginBottom:14,textAlign:"center"}}>
-              <div style={{fontSize:13,color:"rgba(255,255,255,.6)",marginBottom:8}}>Costo Estimado · {calcForm.tipoEnvio||"—"} · {COUNTRIES.find(c=>c.dial===calcForm.origPais)?.name?.split(" ")[0]||"—"} → {COUNTRIES.find(c=>c.dial===calcForm.destPais)?.name?.split(" ")[0]||"—"}</div>
-              <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:52,fontWeight:800,color:"#E5AE3A",lineHeight:1}}>{calcCurrSym}{calcResult.total}</div>
-              <div style={{fontSize:12,color:"rgba(255,255,255,.4)",marginTop:6}}>{calcCurr} · Estimado aproximado</div>
-            </div>
-
-            <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,padding:"14px",marginBottom:14}}>
-              <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:13,fontWeight:700,color:"var(--navy)",marginBottom:10}}>📊 Comparación por Tipo de Envío</div>
-              <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:8}}>
-                {SEND_TYPES.map(t=>{
-                  const tar=TARIFAS_BASE[t];
-                  if(!tar)return null;
-                  const billingLb=calcResult.billingLb;
-                  const ft3=calcResult.ft3;
-                  const ea=tipoEsAereoG(t),em=tipoEsMaritimoG(t);
-                  const byLb=Math.max(tar.min,billingLb*tar.porLb);
-                  const byFt=Math.max(tar.min,ft3*tar.porFt3);
-                  const est=parseFloat((ea?byLb:em?byFt:Math.max(byLb,byFt)).toFixed(2));
-                  const isActive=t===calcForm.tipoEnvio;
-                  return (
-                    <div key={t} onClick={()=>sc3("tipoEnvio",t)} style={{background:isActive?"var(--navy)":"var(--bg4)",border:`2px solid ${isActive?"var(--navy)":"var(--b1)"}`,borderRadius:8,padding:"10px",textAlign:"center",cursor:"pointer",transition:"all .1s"}}>
-                      <div style={{fontSize:11,fontWeight:600,color:isActive?"#E5AE3A":"var(--t2)",marginBottom:4}}>{t}</div>
-                      <div style={{fontFamily:"'DM Mono',monospace",fontSize:16,fontWeight:800,color:isActive?"#fff":"var(--navy)"}}>{calcCurrSym}{est}</div>
-                    </div>
-                  );
-                })}
+            {calcResult.tarifaMissing?(
+              <div style={{background:"#FEF3C7",border:"1.5px solid #F59E0B",borderRadius:14,padding:"20px",marginBottom:14,textAlign:"center"}}>
+                <div style={{fontSize:24,marginBottom:6}}>⚠️</div>
+                <div style={{fontSize:15,fontWeight:700,color:"#92400E",marginBottom:4}}>No hay tarifa configurada para esta ruta</div>
+                <div style={{fontSize:12,color:"#92400E"}}>
+                  {calcForm.origPais&&calcForm.destPais&&calcForm.tipoEnvio
+                    ?`Configure una tarifa para ${COUNTRIES.find(c=>c.dial===calcForm.origPais)?.name||calcForm.origPais} → ${COUNTRIES.find(c=>c.dial===calcForm.destPais)?.name||calcForm.destPais} · ${calcForm.tipoEnvio} en Configuración → Tarifas.`
+                    :"Complete país origen, país destino y tipo de envío para calcular el costo."}
+                </div>
               </div>
-            </div>
-            <div style={{fontSize:12,color:"var(--t3)",textAlign:"center"}}>* Los precios son estimados basados en tarifas estándar. Contacta a ENEX para una cotización exacta.</div>
+            ):(
+              <>
+                <div style={{background:"var(--navy)",borderRadius:14,padding:"24px",marginBottom:14,textAlign:"center"}}>
+                  <div style={{fontSize:13,color:"rgba(255,255,255,.6)",marginBottom:8}}>Costo Estimado · {calcForm.tipoEnvio||"—"} · {COUNTRIES.find(c=>c.dial===calcForm.origPais)?.name?.split(" ")[0]||"—"} → {COUNTRIES.find(c=>c.dial===calcForm.destPais)?.name?.split(" ")[0]||"—"}</div>
+                  <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:52,fontWeight:800,color:"#E5AE3A",lineHeight:1}}>{calcCurrSym}{calcResult.total}</div>
+                  <div style={{fontSize:12,color:"rgba(255,255,255,.4)",marginTop:6}}>{calcCurr} · Estimado aproximado{calcResult.usoMinimo?` · Aplicado mínimo ${calcCurrSym}${calcResult.tarifa.min}`:""}</div>
+                </div>
+                <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,padding:"14px",marginBottom:14,display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,fontSize:11}}>
+                  <div><span style={{color:"var(--t3)"}}>Tarifa aplicada:</span> <b style={{fontFamily:"'DM Mono',monospace"}}>{calcCurrSym}{calcResult.tarifa.porLb||0}/lb · {calcCurrSym}{calcResult.tarifa.porFt3||0}/ft³</b></div>
+                  <div><span style={{color:"var(--t3)"}}>Cargo mínimo:</span> <b style={{fontFamily:"'DM Mono',monospace"}}>{calcCurrSym}{calcResult.tarifa.min||0}</b></div>
+                  <div><span style={{color:"var(--t3)"}}>Match:</span> <b>{calcResult.tarifa.matchLevel==="ciudad"?"🎯 Ciudad":"🌍 País"}</b></div>
+                </div>
+                <div style={{fontSize:12,color:"var(--t3)",textAlign:"center"}}>* Los precios son estimados basados en tarifas configuradas. Contacta a ENEX para una cotización exacta.</div>
+              </>
+            )}
           </>
         )}
         {!calcResult&&(
@@ -5214,6 +5268,7 @@ export default function ENEXSystem(){
       casillero:c?c.casillero:"",
       clienteId:c?c.id:"",
       reempaqueDe:[...parentIds],
+      notas:`Reempaque de: ${parentIds.join(", ")}`,
     });
     setEditWR(null);
     setShowNewWR(true);
@@ -5549,7 +5604,7 @@ export default function ENEXSystem(){
       {id:"clients",ic:"👥",l:"Clientes & Usuarios"},
       {id:"agentes",ic:"🤝",l:"Agentes",onClick:()=>goSettingsTab("agentes"),activeWhen:()=>tab==="settings"&&cfgTab==="agentes"},
       {id:"oficinas",ic:"🏢",l:"Oficinas",onClick:()=>goSettingsTab("oficinas"),activeWhen:()=>tab==="settings"&&cfgTab==="oficinas"},
-      {id:"etiquetas",ic:"🏷️",l:"Imprimir Etiquetas"},
+      {id:"etiquetas",ic:"🖨️",l:"Impresión"},
       {id:"tracking",ic:"🔍",l:"Tracking"},
       {id:"pickup",ic:"🚐",l:"Pick-up"},
     ]},
