@@ -647,37 +647,55 @@ const buildConsolNum=(origCode,destCode,seq,tipo=1,secInicio=1,tipoEnvio="Marít
 };
 
 // ─── STATIC DATA ──────────────────────────────────────────────────────────────
-// phase: origen | transito | destino | excep | entrega
-// guide:true → se actualiza desde la guía consolidada y cascada a WRs
-// auto:true  → se asigna automáticamente por el sistema
-// exc:true   → estado de excepción
+// phase    : origen | transito | destino | excep | entrega
+// auto     : el sistema lo asigna automáticamente (no aparece como botón manual)
+// manual   : el usuario puede fijarlo manualmente desde algún módulo
+// channels : dónde aparece/puede ser editado el estado:
+//              "dashboard"      → siempre visible para admin/operadores
+//              "cliente"        → visible en tracking público / portal del cliente
+//              "consolidacion"  → editable desde la barra de 7 fases de la guía
+//              "recepcion"      → editable desde Recepción en Almacén
+// exc:true → estado de excepción (faltante / investigación / sobrante)
 const WR_STATUSES=[
-  {code:"1",   label:"Recibido",        cls:"s1", phase:"origen",   auto:true},
-  {code:"2",   label:"Origen",          cls:"s2", phase:"origen",   auto:true},
-  {code:"2.3", label:"Reempacado",      cls:"s6", phase:"origen",   auto:true},
-  {code:"3",   label:"Confirmado",      cls:"s3", phase:"origen",   auto:true},
-  {code:"4",   label:"Consolidado",     cls:"s3", phase:"origen",   auto:true},
-  {code:"5",   label:"Entregado Línea", cls:"s2", phase:"transito", guide:true},
-  {code:"6",   label:"Aduana Salida",   cls:"s5", phase:"transito", guide:true},
-  {code:"7",   label:"Auditoria",       cls:"s4", phase:"transito", guide:true},
-  {code:"8",   label:"Liberado",        cls:"s3", phase:"transito", guide:true},
-  {code:"9",   label:"Tránsito",        cls:"s2", phase:"transito", guide:true},
-  {code:"10",  label:"Aduana Tránsito", cls:"s5", phase:"transito", guide:true},
-  {code:"11",  label:"Auditoria",       cls:"s4", phase:"transito", guide:true},
-  {code:"12",  label:"Liberado",        cls:"s3", phase:"transito", guide:true},
-  {code:"13",  label:"Tránsito Final",  cls:"s2", phase:"transito", guide:true},
-  {code:"14",  label:"Aduana Destino",  cls:"s5", phase:"destino",  guide:true},
-  {code:"15",  label:"Auditoria",       cls:"s4", phase:"destino",  guide:true},
-  {code:"16",  label:"Liberado",        cls:"s3", phase:"destino",  guide:true},
-  {code:"17",  label:"Almacén",         cls:"s6", phase:"destino",  auto:true},
-  {code:"18",  label:"Faltante",        cls:"s4", phase:"excep",    exc:true},
-  {code:"18.1",label:"Investigación",   cls:"s4", phase:"excep",    exc:true},
-  {code:"19",  label:"Sobrante",        cls:"s5", phase:"excep",    exc:true},
-  {code:"20",  label:"Por Entrega",     cls:"s3", phase:"entrega",  auto:true},
-  {code:"21",  label:"Entregado",       cls:"s3", phase:"entrega"},
-  {code:"22",  label:"Por Cobrar",      cls:"s5", phase:"entrega"},
-  {code:"23",  label:"Cobrado",         cls:"s3", phase:"entrega"},
+  {code:"1",   label:"Recibido",        cls:"s1", phase:"origen",   auto:true,  manual:false, channels:["dashboard"]},
+  {code:"2",   label:"Origen",          cls:"s2", phase:"origen",   auto:true,  manual:false, channels:["dashboard","cliente"]},
+  {code:"2.3", label:"Reempacado",      cls:"s6", phase:"origen",   auto:true,  manual:false, channels:["dashboard"]},
+  {code:"3",   label:"Confirmado",      cls:"s3", phase:"origen",   auto:true,  manual:false, channels:["dashboard"]},
+  {code:"4",   label:"Consolidado",     cls:"s3", phase:"origen",   auto:true,  manual:false, channels:["dashboard"]},
+  {code:"5",   label:"Entregado Línea", cls:"s2", phase:"transito", auto:false, manual:true,  channels:["dashboard","cliente","consolidacion"]},
+  {code:"6",   label:"Aduana Salida",   cls:"s5", phase:"transito", auto:false, manual:true,  channels:["dashboard","cliente","consolidacion"]},
+  {code:"7",   label:"Auditoria",       cls:"s4", phase:"transito", auto:false, manual:true,  channels:["dashboard","cliente","consolidacion"]},
+  {code:"8",   label:"Liberado",        cls:"s3", phase:"transito", auto:false, manual:true,  channels:["dashboard","cliente","consolidacion"]},
+  {code:"9",   label:"Tránsito",        cls:"s2", phase:"transito", auto:false, manual:true,  channels:["dashboard","cliente","consolidacion"]},
+  {code:"10",  label:"Aduana Tránsito", cls:"s5", phase:"transito", auto:false, manual:true,  channels:["dashboard","cliente","consolidacion"]},
+  {code:"11",  label:"Auditoria",       cls:"s4", phase:"transito", auto:false, manual:true,  channels:["dashboard","cliente","consolidacion"]},
+  {code:"12",  label:"Liberado",        cls:"s3", phase:"transito", auto:false, manual:true,  channels:["dashboard","cliente","consolidacion"]},
+  {code:"13",  label:"Tránsito Final",  cls:"s2", phase:"transito", auto:false, manual:true,  channels:["dashboard","cliente","consolidacion"]},
+  {code:"14",  label:"Aduana Destino",  cls:"s5", phase:"destino",  auto:false, manual:true,  channels:["dashboard","cliente","consolidacion"]},
+  {code:"15",  label:"Auditoria",       cls:"s4", phase:"destino",  auto:false, manual:true,  channels:["dashboard","cliente","consolidacion"]},
+  {code:"16",  label:"Liberado",        cls:"s3", phase:"destino",  auto:false, manual:true,  channels:["dashboard","cliente","consolidacion"]},
+  {code:"17",  label:"Almacén",         cls:"s6", phase:"destino",  auto:true,  manual:false, channels:["dashboard","recepcion"]},
+  {code:"18",  label:"Faltante",        cls:"s4", phase:"excep",    auto:true,  manual:false, channels:["dashboard"],             exc:true},
+  {code:"18.1",label:"Investigación",   cls:"s4", phase:"excep",    auto:false, manual:true,  channels:["dashboard","recepcion"], exc:true},
+  {code:"19",  label:"Sobrante",        cls:"s5", phase:"excep",    auto:true,  manual:false, channels:["dashboard","recepcion"], exc:true},
+  {code:"20",  label:"Por Entrega",     cls:"s3", phase:"entrega",  auto:true,  manual:false, channels:["dashboard","cliente"]},
+  {code:"21",  label:"Entregado",       cls:"s3", phase:"entrega",  auto:true,  manual:false, channels:["dashboard","recepcion"]},
+  {code:"22",  label:"Por Cobrar",      cls:"s5", phase:"entrega",  auto:true,  manual:false, channels:["dashboard"]},
+  {code:"23",  label:"Cobrado",         cls:"s3", phase:"entrega",  auto:true,  manual:false, channels:["dashboard"]},
+  {code:"25",  label:"Egresado",        cls:"s3", phase:"entrega",  auto:true,  manual:false, channels:["dashboard","cliente"]},
 ];
+// Helpers de consulta sobre WR_STATUSES — usar siempre estos en vez de inspeccionar
+// flags sueltos, así un cambio de modelo solo requiere tocar el array.
+const getStatus       =(code)=>WR_STATUSES.find(s=>s.code===String(code));
+const isAutoStatus    =(code)=>!!getStatus(code)?.auto;
+const isManualStatus  =(code)=>!!getStatus(code)?.manual;
+const statusInChannel =(code,channel)=>(getStatus(code)?.channels||[]).includes(channel);
+// Estados visibles en el tracking público del cliente
+const CLIENT_STATUSES =WR_STATUSES.filter(s=>s.channels?.includes("cliente"));
+// Estados editables manualmente desde la barra de 7 fases en Consolidación
+const CONSOL_STATUSES =WR_STATUSES.filter(s=>s.manual&&s.channels?.includes("consolidacion"));
+// Estados que Recepción en Almacén puede fijar/leer
+const RECEP_STATUSES  =WR_STATUSES.filter(s=>s.channels?.includes("recepcion"));
 // GUIDE_PHASES — 7 fases de progreso de la guía consolidada
 // Cada fase representa un hito macro; agrupan los códigos WR_STATUSES con guide:true
 // El código "avance" es el que se fija al avanzar a esa fase (código más representativo del grupo)
@@ -2620,11 +2638,14 @@ export default function ENEXSystem(){
           {canStatus&&(
             <div style={{marginBottom:12}}>
               <div className="sdiv">ACTUALIZAR ESTADO</div>
-              {/* Grupos de estados manuales para WR individuales */}
+              {/* Grupos de estados manuales para WR individuales.
+                  Criterio: filtramos por `s.manual` excepto Excepciones (18/18.1/19
+                  tienen flujos especiales propios) y mantenemos el botón Entregado (21)
+                  transitoriamente hasta que Lote 5 (Notas de Entrega) lo reemplace. */}
               {[
-                {label:"📍 Origen",filter:s=>s.phase==="origen"&&!s.auto},
+                {label:"📍 Origen",filter:s=>s.phase==="origen"&&s.manual},
                 {label:"⚠️ Excepciones",filter:s=>s.phase==="excep"},
-                {label:"🚚 Entrega",filter:s=>s.phase==="entrega"&&!s.auto},
+                {label:"🚚 Entrega",filter:s=>s.phase==="entrega"&&(s.manual||s.code==="21")},
               ].map(grp=>{
                 const sts=WR_STATUSES.filter(grp.filter);
                 if(sts.length===0)return null;
@@ -3305,9 +3326,15 @@ export default function ENEXSystem(){
   const removeContainer=(ci)=>setCf(p=>({...p,containers:p.containers.filter((_,i)=>i!==ci)}));
 
   // Actualiza el estado de una guía consolidada y lo cascada a todos sus WRs
+  // Solo permite avanzar a estados con channels.includes("consolidacion").
+  // Estados auto (17 Almacén, 20 Por Entrega, etc.) no se deben fijar desde aquí.
   const updateGuideStatus=(consolId,stCode)=>{
-    const st=WR_STATUSES.find(s=>s.code===stCode);
+    const st=getStatus(stCode);
     if(!st)return;
+    if(!statusInChannel(stCode,"consolidacion")){
+      alert(`El estado "${st.label}" no se puede fijar desde Consolidación.\nEste estado se asigna automáticamente desde otro módulo (ej: Recepción en Almacén).`);
+      return;
+    }
     // Actualizar el estado en la consolidación
     setConsolList(p=>p.map(c=>{
       if(c.id!==consolId)return c;
@@ -3425,15 +3452,18 @@ export default function ENEXSystem(){
                         const isDone=curPhaseIdx>i;
                         const isCur=curPhaseIdx===i;
                         const isNext=curPhaseIdx+1===i;
-                        const bg=isDone?"var(--navy)":isCur?"var(--cyan)":isNext?"#EEF3FF":"#fff";
-                        const color=isDone||isCur?"#fff":"var(--t2)";
+                        const editable=statusInChannel(ph.advance,"consolidacion");
+                        const bg=isDone?"var(--navy)":isCur?"var(--cyan)":isNext&&editable?"#EEF3FF":"#fff";
+                        const color=isDone||isCur?"#fff":editable?"var(--t2)":"var(--t3)";
                         return (
                           <span key={ph.key}
-                            title={`${i+1}. ${ph.label} — click para fijar esta fase`}
-                            onClick={()=>updateGuideStatus(c.id,ph.advance)}
+                            title={editable
+                              ?`${i+1}. ${ph.label} — click para fijar esta fase`
+                              :`${i+1}. ${ph.label} — se asigna automáticamente (no editable aquí)`}
+                            onClick={editable?(()=>updateGuideStatus(c.id,ph.advance)):undefined}
                             style={{
-                              flex:1,cursor:"pointer",padding:"4px 2px",textAlign:"center",
-                              background:bg,color,borderRadius:4,
+                              flex:1,cursor:editable?"pointer":"not-allowed",padding:"4px 2px",textAlign:"center",
+                              background:bg,color,borderRadius:4,opacity:editable?1:.6,
                               fontSize:9,fontWeight:isCur?700:600,
                               border:isCur?"1.5px solid var(--navy)":"1px solid transparent",
                               transition:"all .15s",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",
