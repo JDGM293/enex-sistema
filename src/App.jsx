@@ -678,8 +678,30 @@ const WR_STATUSES=[
   {code:"22",  label:"Por Cobrar",      cls:"s5", phase:"entrega"},
   {code:"23",  label:"Cobrado",         cls:"s3", phase:"entrega"},
 ];
+// GUIDE_PHASES — 7 fases de progreso de la guía consolidada
+// Cada fase representa un hito macro; agrupan los códigos WR_STATUSES con guide:true
+// El código "avance" es el que se fija al avanzar a esa fase (código más representativo del grupo)
+const GUIDE_PHASES=[
+  {key:"consol",  label:"Consolidado",      short:"Consol.",  codes:["4"],             advance:"4",  icon:"🗂️"},
+  {key:"linea",   label:"Entregado Línea",  short:"Línea",    codes:["5"],             advance:"5",  icon:"🛫"},
+  {key:"adsal",   label:"Aduana Salida",    short:"Ad. Sal.", codes:["6","7","8"],     advance:"6",  icon:"🛃"},
+  {key:"trans",   label:"Tránsito",         short:"Tránsito", codes:["9","10","11","12","13"], advance:"9", icon:"✈️"},
+  {key:"addest",  label:"Aduana Destino",   short:"Ad. Dest.",codes:["14","15"],       advance:"14", icon:"🛂"},
+  {key:"liber",   label:"Liberado",         short:"Liberado", codes:["16"],            advance:"16", icon:"✅"},
+  {key:"almacen", label:"En Almacén",       short:"Almacén",  codes:["17"],            advance:"17", icon:"🏬"},
+];
+const currentGuidePhaseIdx=(code)=>{
+  const idx=GUIDE_PHASES.findIndex(p=>p.codes.includes(String(code)));
+  if(idx>=0) return idx;
+  // Si el código es anterior a "4" (1/2/2.3/3) la guía aún no alcanza la primera fase
+  const n=parseFloat(code);
+  if(!isNaN(n)&&n<4) return -1;
+  return 0;
+};
 const SEND_TYPES_INIT=["Aéreo Express","Aéreo Económico","Marítimo FCL","Marítimo LCL","Terrestre"];
 const PAY_TYPES_INIT=["Prepago","Crédito","Contra Entrega","Corporativo","Gobierno"];
+const CURR_SYM={USD:"$",EUR:"€",VES:"Bs.",COP:"$",MXN:"$",ARS:"$",CLP:"$",PEN:"S/",BRL:"R$",DOP:"RD$",PAB:"B/."};
+const cSym=(c)=>CURR_SYM[c]||"$";
 const PKG_TYPES=["Caja Cartón","Caja Madera","Paleta","Sobre","Tambor","Bolsa","Tubo","Maletín","Crate","Otro"];
 const CHARGES_INIT=["Manejo Especial","Seguro","Sobredimensionado","Peligroso","Refrigerado","Entrega Especial","Combustible","Recargo Remoto"];
 const CONTAINER_TYPES_INIT=[
@@ -703,6 +725,11 @@ const COUNTRIES_INIT=[
   {dial:"55",name:"Brasil 🇧🇷",cities:[{code:"GRU",name:"São Paulo"}]},
   {dial:"507",name:"Panamá 🇵🇦",cities:[{code:"PTY",name:"Panamá"}]},
 ];
+// Moneda por dial de país (usada por Calculadora y otras vistas)
+const PAIS_CURR={"01":"USD","58":"USD","57":"COP","34":"EUR","52":"MXN","51":"PEN","56":"CLP","54":"ARS","55":"BRL","507":"USD"};
+// Clasificación de tipo de envío (global)
+const tipoEsAereoG=(te)=>{const t=(te||"").toLowerCase().replace(/á/g,"a").replace(/é/g,"e");return t.includes("aereo")||t.includes("express")||t.includes("economico");};
+const tipoEsMaritimoG=(te)=>{const t=(te||"").toLowerCase().replace(/í/g,"i");return t.includes("maritimo")||t.includes("fcl")||t.includes("lcl");};
 
 // ─── INITIAL DATA — VACÍO (solo usuario Administrador) ────────────────────────
 const CLIENTS_INIT=[
@@ -853,7 +880,10 @@ const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[
       <td><span className="c-note">{w.notas||"—"}</span></td>
       <td onClick={e=>e.stopPropagation()} style={{minWidth:110,padding:"4px 6px"}}>
         {w.tipoEnvio
-          ?<TypeBadge t={w.tipoEnvio}/>
+          ?<div style={{display:"inline-flex",alignItems:"center",gap:4}}>
+              <TypeBadge t={w.tipoEnvio}/>
+              {onAssignTipo&&<span onClick={()=>{if(window.confirm(`¿Quitar tipo de envío del WR ${w.id}?${w.status?.code==="3"?"\n\nTambién se revertirá la confirmación.":""}`))onAssignTipo(w,"");}} title="Quitar tipo de envío" style={{cursor:"pointer",fontSize:12,color:"var(--red)",padding:"0 4px",lineHeight:1,fontWeight:700}}>✕</span>}
+            </div>
           :(onAssignTipo&&sendTypes.length>0
             ?<select value="" onChange={e=>{if(e.target.value)onAssignTipo(w,e.target.value);}} title="Confirmar tipo de envío" style={{fontSize:10,padding:"2px 4px",border:"1px dashed var(--navy)",borderRadius:4,background:"var(--bg3)",color:"var(--navy)",fontWeight:600,cursor:"pointer",minWidth:100}}>
                 <option value="">— Asignar —</option>
@@ -953,6 +983,7 @@ const emptyWRF=()=>({
   notas:"",cargos:[],
   unitDim:"in",unitPeso:"lb",
   cajas:[emptyCaja()],
+  reempaqueDe:[], // IDs de WR padre cuando el modal se abre desde Reempaque
 });
 
 // ─── HEADER NAME HELPER ──────────────────────────────────────────────────────
@@ -1258,6 +1289,7 @@ export default function ENEXSystem(){
   // ── REGISTRO DE ACTIVIDAD ────────────────────────────────────────────────
   const [actLog,setActLog]=useState([]);
   const [etqSearch,setEtqSearch]=useState("");
+  const [etqTipo,setEtqTipo]=useState("wr"); // "wr" | "guia"
   const [selRole,setSelRole]=useState(null);
   const [ecSearch,setEcSearch]=useState("");
   const [ecCliente,setEcCliente]=useState(null);
@@ -1272,8 +1304,12 @@ export default function ENEXSystem(){
   // con el resto de hooks para cumplir las reglas de React).
   const [rpqSel,setRpqSel]=useState([]);
   const [rpqSearch,setRpqSearch]=useState("");
+  // Modal de Reempaque scopeado a un cliente (desde Estado de Cuenta)
+  const [rpqCliModal,setRpqCliModal]=useState(null); // null | {cliente, selectedIds:[]}
   const [rdScan,setRdScan]=useState("");
   const [rdSearch,setRdSearch]=useState("");
+  const [rdTab,setRdTab]=useState("pendientes"); // pendientes | archivadas
+  const [rdSelGuia,setRdSelGuia]=useState(""); // id de la guía seleccionada para recepción
   const [labelTipo,setLabelTipo]=useState("WR");
   const [openDays,setOpenDays]=useState({});
   const [actFilter,setActFilter]=useState("");
@@ -1317,7 +1353,8 @@ export default function ENEXSystem(){
   const [showNewPickup,setShowNewPickup]=useState(false);
   const [pickupClientSearch,setPickupClientSearch]=useState("");
   const [pickupClientResults,setPickupClientResults]=useState([]);
-  const [calcForm,setCalcForm]=useState({largo:"",ancho:"",alto:"",pesoLb:"",unitDim:"in",origPais:"01",origCiudad:"MI",destPais:"58",destCiudad:"VL",tipoEnvio:""});
+  const CALC_FORM_EMPTY={largo:"",ancho:"",alto:"",pesoLb:"",unitDim:"in",origPais:"",origCiudad:"",destPais:"",destCiudad:"",tipoEnvio:""};
+  const [calcForm,setCalcForm]=useState(CALC_FORM_EMPTY);
   const [contabTab,setContabTab]=useState("facturas");
   const [facturas,setFacturas]=useState([]);
   const [pagos,setPagos]=useState([]);
@@ -1325,6 +1362,8 @@ export default function ENEXSystem(){
   const [puf,setPuf]=useState(emptyPickup());
   const [contScanVal,setContScanVal]=useState({});
   const [contScanErr,setContScanErr]=useState({});
+  // Reset calculadora al entrar al tab (no persiste entre visitas)
+  useEffect(()=>{ if(tab==="calculadora") setCalcForm(CALC_FORM_EMPTY); /* eslint-disable-next-line */ },[tab]);
   // ── SUPABASE: cargar datos al iniciar ────────────────────────────────────
   useEffect(()=>{
     const load=async()=>{
@@ -1628,6 +1667,8 @@ export default function ENEXSystem(){
       logAction("Editó WR",editWR.id);
     } else {
       // ── CREATE MODE ────────────────────────────────────────────────────────
+      const reempaqueIds=Array.isArray(wrf.reempaqueDe)?wrf.reempaqueDe:[];
+      const esReempaque=reempaqueIds.length>0;
       const n={
         id:wrNumPrev,
         origCountry:COUNTRIES.find(c=>c.dial===OFFICE_CONFIG.origCountry)?.name||"USA 🇺🇸",
@@ -1638,8 +1679,9 @@ export default function ENEXSystem(){
         branch:OFFICE_CONFIG.branch,
         fecha:now,
         consignee:wrf.consignee,casillero:_casillero,clienteId:_clienteId,
-        carrier:wrf.cajas[0]?.carrier||"",tracking:wrf.cajas[0]?.tracking||"",
-        descripcion:wrf.cajas[0]?.descripcion||"",factura:wrf.cajas[0]?.numFactura||"",
+        carrier:esReempaque?"REEMPAQUE":(wrf.cajas[0]?.carrier||""),tracking:wrf.cajas[0]?.tracking||"",
+        descripcion:wrf.cajas[0]?.descripcion||(esReempaque?`Reempaque de: ${reempaqueIds.join(", ")}`:""),
+        factura:wrf.cajas[0]?.numFactura||"",
         valor:wrf.cajas.reduce((s,c)=>s+parseFloat(c.montoFactura||0),0),
         dims,
         pesoKg:totalPesoKg,pesoLb:totalPesoLb,
@@ -1648,12 +1690,26 @@ export default function ENEXSystem(){
         tipoEnvio:wrf.tipoEnvio,tipoPago:wrf.tipoPago,
         shipper:wrf.remitente,remitenteDir:wrf.remitenteDir||"",usuario:currentUser.id,foto:false,prealerta:false,
         cargos:wrf.cargos,
+        ...(esReempaque?{reempaqueDe:[...reempaqueIds],historial:[{code:"1",label:"Recibido",fecha:now,user:currentUser.id,nota:`Reempaque de: ${reempaqueIds.join(", ")}`}]}:{}),
       };
       wrf.cajas.forEach(c=>{if(c.tracking)checkAndRemoveScan(c.tracking);});
-      setWrList(p=>[n,...p]);
+      // Si es reempaque, marcar padres como REEMPACADO (2.3) y guardar referencia hacia este WR nuevo
+      let padresUpd=[];
+      if(esReempaque){
+        const stReempacado=WR_STATUSES.find(s=>s.code==="2.3");
+        padresUpd=wrList.filter(w=>reempaqueIds.includes(w.id)).map(w=>({
+          ...w,
+          status:stReempacado,
+          reempacadoEn:n.id,
+          historial:[...(w.historial||[]),{code:"2.3",label:"Reempacado",fecha:now,user:currentUser.id,nota:`Reempacado → ${n.id}`}],
+        }));
+      }
+      setWrList(p=>[n,...p.map(w=>padresUpd.find(pa=>pa.id===w.id)||w)]);
+      padresUpd.forEach(dbUpsertWR);
       dbUpsertWR(n);
       setShowNewWR(false);
       setWrf(emptyWRF());setClientSearch("");
+      if(esReempaque){logAction("Creó Reempaque",`${n.id} ← [${reempaqueIds.join(", ")}]`);setRpqSel([]);}
       logAction("Creó WR",wrNumPrev);
       setShowLabels({wr:n,dims,remitente:wrf.remitente,tipoEnvio:wrf.tipoEnvio});
     }
@@ -1663,14 +1719,33 @@ export default function ENEXSystem(){
   // Al asignar tipo a un WR sin tipo → cambia status a "3" (Confirmado).
   // Si ya tiene tipo, solo actualiza el tipo sin tocar status.
   const assignTipoEnvio=(w,tipo)=>{
-    if(!tipo||!w)return;
-    const hadTipo=!!(w.tipoEnvio&&String(w.tipoEnvio).trim());
+    if(!w)return;
+    // Blanquear tipo: si está Confirmado (3), revertir al estado previo del historial (desconfirma)
+    if(!tipo||!String(tipo).trim()){
+      if(!hasPerm("desconfirmar")){window.alert("Tu rol no tiene permiso para quitar/revertir el tipo de envío.");return;}
+      const currentCode=w.status?.code||"1";
+      let stTarget=w.status;
+      let histExtra=[];
+      if(currentCode==="3"){
+        const hist=Array.isArray(w.historial)?w.historial:[];
+        const prev=[...hist].reverse().find(h=>h.code&&h.code!=="3");
+        const stFallback=WR_STATUSES.find(s=>s.code==="1")||w.status;
+        stTarget=prev?(WR_STATUSES.find(s=>s.code===prev.code)||stFallback):stFallback;
+        histExtra=[{code:stTarget.code,label:stTarget.label,fecha:new Date(),user:currentUser.id,nota:"Tipo de envío removido — reversión de confirmación"}];
+      }
+      const upd={...w,tipoEnvio:"",status:stTarget,historial:[...(w.historial||[]),...histExtra]};
+      setWrList(p=>p.map(x=>x.id===w.id?upd:x));
+      if(selWR&&selWR.id===w.id)setSelWR(upd);
+      dbUpsertWR(upd);
+      logAction(currentCode==="3"?"Desconfirmó WR (quitó tipo)":"Quitó tipo de envío",w.id);
+      return;
+    }
     const stConfirmado=WR_STATUSES.find(s=>s.code==="3");
     const currentCode=w.status?.code||"1";
     // Solo cambiar status a Confirmado si estaba en "1" (Recibido) o "2" (algún intermedio pre-confirmación)
     // No degradar si ya está en 3 o en una fase posterior.
     const preConfirmCodes=["1","2"];
-    const shouldConfirm=!hadTipo&&preConfirmCodes.includes(currentCode)&&stConfirmado;
+    const shouldConfirm=preConfirmCodes.includes(currentCode)&&stConfirmado;
     const upd={
       ...w,
       tipoEnvio:tipo,
@@ -1686,11 +1761,12 @@ export default function ENEXSystem(){
   };
 
   // Revierte un WR Confirmado (status 3) al status anterior del historial.
-  // Si no hay anterior registrado, vuelve a "1" (Recibido). No borra el tipoEnvío.
+  // Si no hay anterior registrado, vuelve a "1" (Recibido). También limpia el tipoEnvio
+  // para permitir que el usuario vuelva a asignarlo y reconfirmar.
   const revertirConfirmacion=(w)=>{
     if(!w||w.status?.code!=="3")return;
     if(!hasPerm("desconfirmar")){window.alert("Tu rol no tiene permiso para revertir confirmaciones.");return;}
-    if(!window.confirm(`¿Revertir la confirmación del WR ${w.id}?\nVolverá al estado anterior (antes de ser confirmado).`))return;
+    if(!window.confirm(`¿Revertir la confirmación del WR ${w.id}?\nVolverá al estado anterior y se quitará el tipo de envío (para que puedas reasignarlo).`))return;
     const hist=Array.isArray(w.historial)?w.historial:[];
     // Buscar el último estado del historial que NO sea "3" (el previo a confirmar)
     const prev=[...hist].reverse().find(h=>h.code&&h.code!=="3");
@@ -1699,7 +1775,8 @@ export default function ENEXSystem(){
     const upd={
       ...w,
       status:stTarget,
-      historial:[...hist,{code:stTarget.code,label:stTarget.label,fecha:new Date(),user:currentUser.id,nota:"Reversión de confirmación"}],
+      tipoEnvio:"",
+      historial:[...hist,{code:stTarget.code,label:stTarget.label,fecha:new Date(),user:currentUser.id,nota:"Reversión de confirmación (tipo de envío quitado)"}],
     };
     setWrList(p=>p.map(x=>x.id===w.id?upd:x));
     if(selWR&&selWR.id===w.id)setSelWR(upd);
@@ -2400,7 +2477,16 @@ export default function ENEXSystem(){
           <div className="no-print" style={{display:"flex",alignItems:"center",gap:10,padding:"8px 14px",background:"var(--bg4)",borderBottom:"1px solid var(--b1)",flexWrap:"wrap"}}>
             <div style={{fontSize:10,fontWeight:700,color:"var(--t3)",textTransform:"uppercase",letterSpacing:.5}}>Tipo de Envío:</div>
             <select className="fs" style={{fontSize:11,padding:"4px 8px",minWidth:180}} value={selWR.tipoEnvio||""}
-              onChange={e=>{if(e.target.value)assignTipoEnvio(selWR,e.target.value);}}>
+              onChange={e=>{
+                const v=e.target.value;
+                if(v===selWR.tipoEnvio)return;
+                if(!v){
+                  if(selWR.status?.code==="3"){
+                    if(!window.confirm(`¿Quitar tipo de envío del WR ${selWR.id}?\n\nTambién se revertirá la confirmación.`))return;
+                  } else if(selWR.tipoEnvio&&!window.confirm(`¿Quitar tipo de envío del WR ${selWR.id}?`))return;
+                }
+                assignTipoEnvio(selWR,v);
+              }}>
               <option value="">— Sin asignar —</option>
               {SEND_TYPES.map(t=><option key={t} value={t}>{t}</option>)}
             </select>
@@ -2971,7 +3057,7 @@ export default function ENEXSystem(){
         {ecCliente&&(
           <>
             {/* HEADER CLIENTE */}
-            <div style={{display:"grid",gridTemplateColumns:"auto 1fr",gap:16,marginBottom:14,background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:12,padding:"16px 20px",boxShadow:"var(--shadow)"}}>
+            <div style={{display:"grid",gridTemplateColumns:"auto 1fr auto",gap:16,marginBottom:14,background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:12,padding:"16px 20px",boxShadow:"var(--shadow)",alignItems:"center"}}>
               <div style={{width:56,height:56,borderRadius:12,background:"var(--navy)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:20}}>{initials(ecCliente)}</div>
               <div>
                 <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:20,fontWeight:700,color:"var(--navy)"}}>{fullName(ecCliente)}</div>
@@ -2981,6 +3067,10 @@ export default function ENEXSystem(){
                   <span>📞 {ecCliente.tel1}</span>
                   <span>📍 {ecCliente.municipio}, {ecCliente.estado}</span>
                 </div>
+              </div>
+              <div style={{display:"flex",gap:8,flexShrink:0}}>
+                {hasPerm("crear_wr")&&<button className="btn-p" style={{fontSize:11,padding:"6px 12px"}} onClick={()=>openWRModalForClient(ecCliente)}>+ Nuevo WR</button>}
+                {hasPerm("crear_reempaque")&&<button className="btn-s" style={{fontSize:11,padding:"6px 12px"}} onClick={()=>setRpqCliModal({cliente:ecCliente,selectedIds:[]})}>🔁 Reempaque</button>}
               </div>
             </div>
 
@@ -3114,6 +3204,62 @@ export default function ENEXSystem(){
             </div>
           </>
         )}
+
+        {/* MODAL REEMPAQUE POR CLIENTE — solo WR del cliente seleccionado */}
+        {rpqCliModal&&(()=>{
+          const cli=rpqCliModal.cliente;
+          const cliWRs=wrList.filter(w=>{
+            const c=w.status?.code||"1";
+            // Excluir ya reempacados o fases tardías
+            if(["2.3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","18.1","19","20","21","22","23"].includes(c))return false;
+            return w.clienteId===cli.id||w.casillero===cli.casillero||(w.consignee||"").trim().toUpperCase()===(fullName(cli)||"").trim().toUpperCase();
+          });
+          const tog=(id)=>setRpqCliModal(p=>({...p,selectedIds:p.selectedIds.includes(id)?p.selectedIds.filter(x=>x!==id):[...p.selectedIds,id]}));
+          const ids=rpqCliModal.selectedIds;
+          return (
+            <div className="ov" onClick={()=>setRpqCliModal(null)}>
+              <div className="modal" style={{maxWidth:820}} onClick={e=>e.stopPropagation()}>
+                <div className="mhd">
+                  <div className="mt">🔁 Reempaque — {fullName(cli)}</div>
+                  <button className="mcl" onClick={()=>setRpqCliModal(null)}>✕</button>
+                </div>
+                <div style={{padding:"0 14px 10px",fontSize:11,color:"var(--t2)"}}>Selecciona los WR de este cliente que se agruparán. Se creará un nuevo WR y los seleccionados quedarán marcados como REEMPACADO.</div>
+                <div style={{maxHeight:"55vh",overflow:"auto",margin:"0 14px",border:"1px solid var(--b1)",borderRadius:8}}>
+                  <table className="wt">
+                    <thead><tr>
+                      <th style={{width:40}}></th>
+                      <th>N° WR</th><th>Fecha</th><th>Tracking</th><th>Descripción</th><th>Estado</th><th style={{textAlign:"right"}}>Cajas</th>
+                    </tr></thead>
+                    <tbody>
+                      {cliWRs.length===0
+                        ?<tr><td colSpan={7} style={{textAlign:"center",padding:30,color:"var(--t3)"}}>Este cliente no tiene WR elegibles para reempacar.</td></tr>
+                        :cliWRs.map(w=>(
+                          <tr key={w.id} className={ids.includes(w.id)?"sel":""} onClick={()=>tog(w.id)} style={{cursor:"pointer"}}>
+                            <td style={{textAlign:"center"}}><input type="checkbox" checked={ids.includes(w.id)} onChange={()=>tog(w.id)}/></td>
+                            <td><span className="c-wr">{w.id}</span></td>
+                            <td><span className="c-dt">{fmtDate(w.fecha)}</span></td>
+                            <td><span className="c-trk">{w.tracking||"—"}</span></td>
+                            <td style={{maxWidth:220,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{w.descripcion||"—"}</td>
+                            <td><StBadge st={w.status}/></td>
+                            <td style={{textAlign:"right",fontWeight:700}}>{w.cajas||0}</td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="mft">
+                  <div style={{fontSize:11,color:"var(--t2)",marginRight:"auto"}}>Seleccionados: <strong>{ids.length}</strong></div>
+                  <button className="btn-s" onClick={()=>setRpqCliModal(null)}>Cancelar</button>
+                  <button className="btn-p" disabled={ids.length===0} style={{opacity:ids.length===0?.5:1}} onClick={()=>{
+                    const sel=[...ids];
+                    setRpqCliModal(null);
+                    openWRModalAsReempaque(sel,cli);
+                  }}>Continuar → Crear WR de Reempaque</button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </div>
     );
   };
@@ -3185,7 +3331,7 @@ export default function ENEXSystem(){
       notas:cf.notas,containers:cf.containers,
       wrIds:allWR.map(w=>w.id),
       totalWR,totalCajas,totalLb,totalFt3,totalM3,totalVolLb,
-      status:existing?.status||"En preparación",usuario:existing?.usuario||currentUser.id,
+      status:existing?.status||"Consolidado",usuario:existing?.usuario||currentUser.id,
     };
     setConsolList(p=>existing?p.map(c=>c.id===n.id?n:c):[n,...p]);
     dbUpsertConsolidacion(n);
@@ -3234,6 +3380,7 @@ export default function ENEXSystem(){
             <tbody>
               {consolList.map(c=>{
                 const stActual=WR_STATUSES.find(s=>s.label===c.status)||WR_STATUSES.find(s=>s.code==="4");
+                const curPhaseIdx=currentGuidePhaseIdx(stActual?.code||"4");
                 return (
                 <tr key={c.id}>
                   <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",background:"#EEF3FF",padding:"2px 6px",borderRadius:4,border:"1px solid #B8C8F0",fontSize:11}}>{c.id}</span></td>
@@ -3248,19 +3395,35 @@ export default function ENEXSystem(){
                   <td style={{fontFamily:"'DM Mono',monospace",fontSize:10,color:"var(--cyan)"}}>{c.numVuelo||"—"}</td>
                   <td style={{fontFamily:"'DM Mono',monospace",fontSize:10,color:"var(--purple)"}}>{c.awb||c.bl||"—"}</td>
                   <td style={{fontFamily:"'DM Mono',monospace",fontSize:10}}>{c.fechaSalida||"—"}</td>
-                  <td style={{minWidth:260,padding:"6px 8px"}}>
+                  <td style={{minWidth:320,padding:"6px 8px"}}>
                     {/* Estado actual destacado */}
-                    <div style={{marginBottom:6}}><StBadge st={stActual||{cls:"s3",label:c.status||"En preparación"}}/></div>
-                    {/* Chips clickeables con nombre completo */}
-                    <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
-                      {WR_STATUSES.filter(s=>s.guide).map(s=>{
-                        const on=c.status===s.label;
+                    <div style={{marginBottom:6,display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                      <StBadge st={stActual||{cls:"s3",label:c.status||"En preparación"}}/>
+                      <span style={{fontSize:10,color:"var(--t3)"}}>
+                        {curPhaseIdx>=0?`Fase ${curPhaseIdx+1}/7`:"Pre-consolidado"}
+                      </span>
+                    </div>
+                    {/* Barra de progreso 7 fases */}
+                    <div style={{display:"flex",alignItems:"stretch",gap:2,background:"#F3F5F9",border:"1px solid #DFE4EE",borderRadius:6,padding:2,overflow:"hidden"}}>
+                      {GUIDE_PHASES.map((ph,i)=>{
+                        const isDone=curPhaseIdx>i;
+                        const isCur=curPhaseIdx===i;
+                        const isNext=curPhaseIdx+1===i;
+                        const bg=isDone?"var(--navy)":isCur?"var(--cyan)":isNext?"#EEF3FF":"#fff";
+                        const color=isDone||isCur?"#fff":"var(--t2)";
                         return (
-                          <span key={s.code} onClick={()=>updateGuideStatus(c.id,s.code)}
-                            title={`${s.code} · ${s.label}`}
-                            className={`st ${s.cls}`}
-                            style={{fontSize:10,cursor:"pointer",opacity:on?1:.55,outline:on?"2px solid var(--navy)":"none",outlineOffset:on?1:0}}>
-                            <span className="st-dot"/>{s.code}·{s.label}
+                          <span key={ph.key}
+                            title={`${i+1}. ${ph.label} — click para fijar esta fase`}
+                            onClick={()=>updateGuideStatus(c.id,ph.advance)}
+                            style={{
+                              flex:1,cursor:"pointer",padding:"4px 2px",textAlign:"center",
+                              background:bg,color,borderRadius:4,
+                              fontSize:9,fontWeight:isCur?700:600,
+                              border:isCur?"1.5px solid var(--navy)":"1px solid transparent",
+                              transition:"all .15s",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",
+                            }}>
+                            <span style={{display:"block",fontSize:11,lineHeight:1}}>{ph.icon}</span>
+                            <span style={{display:"block",fontSize:8,marginTop:1,lineHeight:1}}>{ph.short}</span>
                           </span>
                         );
                       })}
@@ -3530,12 +3693,20 @@ export default function ENEXSystem(){
   );
 
   // ── PÁGINA IMPRIMIR ETIQUETAS ───────────────────────────────────────────────
-  const renderEtiquetasPage=()=>(
+  const renderEtiquetasPage=()=>{
+    const [etqMode,_etqMode]=[etqTipo,setEtqTipo];
+    return (
     <div className="page-scroll">
       <div className="card" style={{maxWidth:640}}>
         <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:15,fontWeight:700,color:"var(--navy)",marginBottom:10}}>🏷️ Imprimir Etiquetas</div>
-        <input className="fi" style={{marginBottom:12}} value={etqSearch} onChange={e=>setEtqSearch(e.target.value)} placeholder="Buscar WR por número, nombre o casillero…"/>
-        {etqSearch.length>1&&(wrList||[]).filter(w=>w.id.toLowerCase().includes(etqSearch.toLowerCase())||(w.consignee||"").toLowerCase().includes(etqSearch.toLowerCase())).slice(0,20).map(w=>(
+        {/* Selector WR / Guía Consolidada */}
+        <div style={{display:"flex",gap:6,marginBottom:12}}>
+          <button className={`btn-${etqMode==="wr"?"p":"s"}`} style={{flex:1}} onClick={()=>{_etqMode("wr");setEtqSearch("");}}>📦 Etiquetas de WR</button>
+          <button className={`btn-${etqMode==="guia"?"p":"s"}`} style={{flex:1}} onClick={()=>{_etqMode("guia");setEtqSearch("");}}>🗂️ Etiquetas de Guía Consolidada</button>
+        </div>
+        <input className="fi" style={{marginBottom:12}} value={etqSearch} onChange={e=>setEtqSearch(e.target.value)}
+          placeholder={etqMode==="guia"?"Buscar guía por número, destino o tipo…":"Buscar WR por número, nombre o casillero…"}/>
+        {etqMode==="wr"&&etqSearch.length>1&&(wrList||[]).filter(w=>w.id.toLowerCase().includes(etqSearch.toLowerCase())||(w.consignee||"").toLowerCase().includes(etqSearch.toLowerCase())).slice(0,20).map(w=>(
           <div key={w.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:8,border:"1px solid var(--b1)",marginBottom:6,cursor:"pointer",background:"var(--bg3)"}}
             onClick={()=>setShowLabels({wr:w,dims:w.dims||[],remitente:w.shipper||"",tipoEnvio:w.tipoEnvio||""})}>
             <div style={{fontFamily:"'DM Mono',monospace",fontWeight:700,fontSize:12,color:"var(--navy)"}}>{w.id}</div>
@@ -3544,10 +3715,28 @@ export default function ENEXSystem(){
             <span style={{color:"var(--cyan)",fontSize:12,fontWeight:600}}>🏷️ Imprimir</span>
           </div>
         ))}
+        {etqMode==="guia"&&etqSearch.length>1&&(consolList||[]).filter(g=>{
+          const q=etqSearch.toLowerCase();
+          return String(g.id||"").toLowerCase().includes(q)||String(g.destino||"").toLowerCase().includes(q)||String(g.tipoEnvio||"").toLowerCase().includes(q);
+        }).slice(0,20).map(g=>(
+          <div key={g.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:8,border:"1px solid var(--b1)",marginBottom:6,cursor:"pointer",background:"var(--bg3)"}}
+            onClick={()=>setShowConsolLabels({guia:g,containers:g.containers||[],remitente:empresaNombre||"ENEX"})}>
+            <div style={{fontFamily:"'DM Mono',monospace",fontWeight:700,fontSize:12,color:"var(--purple)"}}>{g.id}</div>
+            <div style={{flex:1}}>
+              <div style={{fontWeight:600,fontSize:13}}>{g.destino||"—"} · {g.tipoEnvio||"—"}</div>
+              <div style={{fontSize:11,color:"var(--t3)"}}>{(g.containers||[]).length} cont. · {g.totalWR||0} WR · {g.totalCajas||0} cajas</div>
+            </div>
+            <span style={{fontSize:10,color:"var(--t2)",fontWeight:600,background:"var(--bg4)",padding:"3px 7px",borderRadius:4,border:"1px solid var(--b1)"}}>{g.status||"—"}</span>
+            <span style={{color:"var(--cyan)",fontSize:12,fontWeight:600}}>🏷️ Imprimir</span>
+          </div>
+        ))}
         {etqSearch.length<=1&&<div style={{color:"var(--t3)",fontSize:12,textAlign:"center",padding:20}}>Escribe al menos 2 caracteres para buscar</div>}
+        {etqSearch.length>1&&etqMode==="wr"&&(wrList||[]).filter(w=>w.id.toLowerCase().includes(etqSearch.toLowerCase())||(w.consignee||"").toLowerCase().includes(etqSearch.toLowerCase())).length===0&&<div style={{color:"var(--t3)",fontSize:12,textAlign:"center",padding:20}}>No se encontraron WR.</div>}
+        {etqSearch.length>1&&etqMode==="guia"&&(consolList||[]).filter(g=>{const q=etqSearch.toLowerCase();return String(g.id||"").toLowerCase().includes(q)||String(g.destino||"").toLowerCase().includes(q)||String(g.tipoEnvio||"").toLowerCase().includes(q);}).length===0&&<div style={{color:"var(--t3)",fontSize:12,textAlign:"center",padding:20}}>No se encontraron guías consolidadas.</div>}
       </div>
     </div>
-  );
+    );
+  };
 
   // ── CONFIGURACIÓN ───────────────────────────────────────────────────────────
 
@@ -4031,14 +4220,15 @@ export default function ENEXSystem(){
                   {tarifas.map(t=>{
                     const esAereo=tipoEsAereo(t.tipoEnvio);
                     const esMaritimo=tipoEsMaritimo(t.tipoEnvio);
-                    const monto=esAereo?`$${t.porLb}/lb`:esMaritimo?`$${t.porFt3}/ft³`:`$${t.porLb}/lb`;
+                    const sy=cSym(t.moneda);
+                    const monto=esAereo?`${sy}${t.porLb}/lb`:esMaritimo?`${sy}${t.porFt3}/ft³`:`${sy}${t.porLb}/lb`;
                     return(
                     <tr key={t.id}>
                       <td style={{fontWeight:600,fontSize:11}}>{t.paisOrig}-{t.ciudadOrig}</td>
                       <td style={{fontWeight:600,fontSize:11}}>{t.paisDest}-{t.ciudadDest}</td>
                       <td><TypeBadge t={t.tipoEnvio}/></td>
                       <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:esAereo?"var(--green)":"var(--sky)"}}>{monto}</td>
-                      <td style={{fontFamily:"'DM Mono',monospace",color:"var(--orange)"}}>${t.min}</td>
+                      <td style={{fontFamily:"'DM Mono',monospace",color:"var(--orange)"}}>{sy}{t.min}</td>
                       <td style={{fontSize:11}}>{t.moneda}</td>
                       <td><span style={{fontSize:9,padding:"2px 8px",borderRadius:4,fontWeight:700,background:t.activo?"#E8F8EE":"#FEE8E8",color:t.activo?"var(--green)":"var(--red)",border:"1px solid",borderColor:t.activo?"#80D0A0":"#F0A0A0"}}>{t.activo?"✅ Activa":"❌ Inactiva"}</span></td>
                       <td><div style={{display:"flex",gap:4}}>
@@ -4071,11 +4261,11 @@ export default function ENEXSystem(){
                         {SEND_TYPES.map(t=><option key={t} value={t}>{t}</option>)}
                       </select>
                     </div>
-                    {formEsAereo&&<div className="fg"><div className="fl">Precio por lb ($)</div><input className="fi" type="number" step="0.01" min="0" value={tafForm.porLb} onChange={e=>setTafForm(p=>({...p,porLb:e.target.value}))}/></div>}
-                    {formEsMaritimo&&<div className="fg"><div className="fl">Precio por ft³ ($)</div><input className="fi" type="number" step="0.01" min="0" value={tafForm.porFt3} onChange={e=>setTafForm(p=>({...p,porFt3:e.target.value}))}/></div>}
-                    {!formEsAereo&&!formEsMaritimo&&tafForm.tipoEnvio&&<div className="fg"><div className="fl">Precio por lb ($)</div><input className="fi" type="number" step="0.01" min="0" value={tafForm.porLb} onChange={e=>setTafForm(p=>({...p,porLb:e.target.value}))}/></div>}
-                    <div className="fg"><div className="fl">Cargo mínimo ($)</div><input className="fi" type="number" step="0.01" min="0" value={tafForm.min} onChange={e=>setTafForm(p=>({...p,min:e.target.value}))}/></div>
-                    <div className="fg"><div className="fl">Moneda</div><select className="fs" value={tafForm.moneda} onChange={e=>setTafForm(p=>({...p,moneda:e.target.value}))}><option>USD</option><option>EUR</option><option>VES</option></select></div>
+                    {formEsAereo&&<div className="fg"><div className="fl">Precio por lb ({cSym(tafForm.moneda)})</div><input className="fi" type="number" step="0.01" min="0" value={tafForm.porLb} onChange={e=>setTafForm(p=>({...p,porLb:e.target.value}))}/></div>}
+                    {formEsMaritimo&&<div className="fg"><div className="fl">Precio por ft³ ({cSym(tafForm.moneda)})</div><input className="fi" type="number" step="0.01" min="0" value={tafForm.porFt3} onChange={e=>setTafForm(p=>({...p,porFt3:e.target.value}))}/></div>}
+                    {!formEsAereo&&!formEsMaritimo&&tafForm.tipoEnvio&&<div className="fg"><div className="fl">Precio por lb ({cSym(tafForm.moneda)})</div><input className="fi" type="number" step="0.01" min="0" value={tafForm.porLb} onChange={e=>setTafForm(p=>({...p,porLb:e.target.value}))}/></div>}
+                    <div className="fg"><div className="fl">Cargo mínimo ({cSym(tafForm.moneda)})</div><input className="fi" type="number" step="0.01" min="0" value={tafForm.min} onChange={e=>setTafForm(p=>({...p,min:e.target.value}))}/></div>
+                    <div className="fg"><div className="fl">Moneda</div><select className="fs" value={tafForm.moneda} onChange={e=>setTafForm(p=>({...p,moneda:e.target.value}))}><option>USD</option><option>EUR</option><option>VES</option><option>COP</option><option>MXN</option><option>ARS</option><option>CLP</option><option>PEN</option><option>BRL</option><option>DOP</option><option>PAB</option></select></div>
                   </div>
                   <div className="mft">
                     <button className="btn-s" onClick={()=>setShowNewTarifa(false)}>Cancelar</button>
@@ -4633,7 +4823,17 @@ export default function ENEXSystem(){
   );
 
   // ── CALCULADORA ───────────────────────────────────────────────────────────────
-  const sc3=(k,v)=>setCalcForm(p=>({...p,[k]:v}));
+  // Al cambiar país, resetear ciudad (evita selección inválida/obsoleta)
+  const sc3=(k,v)=>setCalcForm(p=>{
+    const next={...p,[k]:v};
+    if(k==="origPais") next.origCiudad="";
+    if(k==="destPais") next.destCiudad="";
+    return next;
+  });
+
+  // Moneda dinámica según país de origen
+  const calcCurr=PAIS_CURR[calcForm.origPais]||"USD";
+  const calcCurrSym=cSym(calcCurr);
 
   const calcResult=(()=>{
     const l=parseFloat(calcForm.largo)||0,a=parseFloat(calcForm.ancho)||0,h=parseFloat(calcForm.alto)||0;
@@ -4644,11 +4844,16 @@ export default function ENEXSystem(){
     const lCm=calcForm.unitDim==="in"?l*2.54:l,aCm=calcForm.unitDim==="in"?a*2.54:a,hCm=calcForm.unitDim==="in"?h*2.54:h;
     const vc=calcVol(lCm,aCm,hCm,"cm");
     const tarifa=TARIFAS_BASE[calcForm.tipoEnvio]||TARIFAS_BASE[SEND_TYPES[0]]||{porLb:1.8,porFt3:28,min:25};
-    const byLb=Math.max(tarifa.min,lb*tarifa.porLb);
+    // Peso facturable aéreo = max(real, volumétrico) · Marítimo = solo ft³
+    const billingLb=Math.max(lb,vc.volLb);
+    const byLb=Math.max(tarifa.min,billingLb*tarifa.porLb);
     const byFt3=Math.max(tarifa.min,vc.ft3*tarifa.porFt3);
-    const total=parseFloat(Math.max(byLb,byFt3).toFixed(2));
+    const esAereo=tipoEsAereoG(calcForm.tipoEnvio);
+    const esMaritimo=tipoEsMaritimoG(calcForm.tipoEnvio);
+    const raw=esAereo?byLb:(esMaritimo?byFt3:Math.max(byLb,byFt3));
+    const total=parseFloat(raw.toFixed(2));
     const kg=parseFloat((lb/2.205).toFixed(2));
-    return {lb,kg,volLb:vc.volLb,ft3:vc.ft3,m3:vc.m3,total,byLb:parseFloat(byLb.toFixed(2)),byFt3:parseFloat(byFt3.toFixed(2))};
+    return {lb,kg,volLb:vc.volLb,ft3:vc.ft3,m3:vc.m3,total,byLb:parseFloat(byLb.toFixed(2)),byFt3:parseFloat(byFt3.toFixed(2)),billingLb};
   })();
 
   const renderCalculadora=()=>(
@@ -4665,30 +4870,35 @@ export default function ENEXSystem(){
               <div className="fg">
                 <div className="fl">País Origen</div>
                 <select className="fs" value={calcForm.origPais} onChange={e=>sc3("origPais",e.target.value)}>
+                  <option value="">— Seleccionar —</option>
                   {COUNTRIES.map(c=><option key={c.dial} value={c.dial}>{c.name}</option>)}
                 </select>
               </div>
               <div className="fg">
                 <div className="fl">Ciudad Origen</div>
-                <select className="fs" value={calcForm.origCiudad} onChange={e=>sc3("origCiudad",e.target.value)}>
+                <select className="fs" value={calcForm.origCiudad} onChange={e=>sc3("origCiudad",e.target.value)} disabled={!calcForm.origPais}>
+                  <option value="">— Seleccionar —</option>
                   {(COUNTRIES.find(c=>c.dial===calcForm.origPais)?.cities||[]).map(c=><option key={c.code} value={c.code}>{c.name}</option>)}
                 </select>
               </div>
               <div className="fg">
                 <div className="fl">País Destino</div>
                 <select className="fs" value={calcForm.destPais} onChange={e=>sc3("destPais",e.target.value)}>
+                  <option value="">— Seleccionar —</option>
                   {COUNTRIES.map(c=><option key={c.dial} value={c.dial}>{c.name}</option>)}
                 </select>
               </div>
               <div className="fg">
                 <div className="fl">Ciudad Destino</div>
-                <select className="fs" value={calcForm.destCiudad} onChange={e=>sc3("destCiudad",e.target.value)}>
+                <select className="fs" value={calcForm.destCiudad} onChange={e=>sc3("destCiudad",e.target.value)} disabled={!calcForm.destPais}>
+                  <option value="">— Seleccionar —</option>
                   {(COUNTRIES.find(c=>c.dial===calcForm.destPais)?.cities||[]).map(c=><option key={c.code} value={c.code}>{c.name}</option>)}
                 </select>
               </div>
               <div className="fg full">
                 <div className="fl">Tipo de Envío</div>
                 <select className="fs" value={calcForm.tipoEnvio} onChange={e=>sc3("tipoEnvio",e.target.value)}>
+                  <option value="">— Seleccionar —</option>
                   {SEND_TYPES.map(t=><option key={t}>{t}</option>)}
                 </select>
               </div>
@@ -4723,9 +4933,9 @@ export default function ENEXSystem(){
             </div>
 
             <div style={{background:"var(--navy)",borderRadius:14,padding:"24px",marginBottom:14,textAlign:"center"}}>
-              <div style={{fontSize:13,color:"rgba(255,255,255,.6)",marginBottom:8}}>Costo Estimado · {calcForm.tipoEnvio} · {COUNTRIES.find(c=>c.dial===calcForm.origPais)?.name?.split(" ")[0]} → {COUNTRIES.find(c=>c.dial===calcForm.destPais)?.name?.split(" ")[0]}</div>
-              <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:52,fontWeight:800,color:"#E5AE3A",lineHeight:1}}>${calcResult.total}</div>
-              <div style={{fontSize:12,color:"rgba(255,255,255,.4)",marginTop:6}}>USD · Estimado aproximado</div>
+              <div style={{fontSize:13,color:"rgba(255,255,255,.6)",marginBottom:8}}>Costo Estimado · {calcForm.tipoEnvio||"—"} · {COUNTRIES.find(c=>c.dial===calcForm.origPais)?.name?.split(" ")[0]||"—"} → {COUNTRIES.find(c=>c.dial===calcForm.destPais)?.name?.split(" ")[0]||"—"}</div>
+              <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:52,fontWeight:800,color:"#E5AE3A",lineHeight:1}}>{calcCurrSym}{calcResult.total}</div>
+              <div style={{fontSize:12,color:"rgba(255,255,255,.4)",marginTop:6}}>{calcCurr} · Estimado aproximado</div>
             </div>
 
             <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,padding:"14px",marginBottom:14}}>
@@ -4734,14 +4944,17 @@ export default function ENEXSystem(){
                 {SEND_TYPES.map(t=>{
                   const tar=TARIFAS_BASE[t];
                   if(!tar)return null;
-                  const lb=parseFloat(calcForm.pesoLb)||0;
+                  const billingLb=calcResult.billingLb;
                   const ft3=calcResult.ft3;
-                  const est=parseFloat(Math.max(tar.min,Math.max(lb*tar.porLb,ft3*tar.porFt3)).toFixed(2));
+                  const ea=tipoEsAereoG(t),em=tipoEsMaritimoG(t);
+                  const byLb=Math.max(tar.min,billingLb*tar.porLb);
+                  const byFt=Math.max(tar.min,ft3*tar.porFt3);
+                  const est=parseFloat((ea?byLb:em?byFt:Math.max(byLb,byFt)).toFixed(2));
                   const isActive=t===calcForm.tipoEnvio;
                   return (
                     <div key={t} onClick={()=>sc3("tipoEnvio",t)} style={{background:isActive?"var(--navy)":"var(--bg4)",border:`2px solid ${isActive?"var(--navy)":"var(--b1)"}`,borderRadius:8,padding:"10px",textAlign:"center",cursor:"pointer",transition:"all .1s"}}>
                       <div style={{fontSize:11,fontWeight:600,color:isActive?"#E5AE3A":"var(--t2)",marginBottom:4}}>{t}</div>
-                      <div style={{fontFamily:"'DM Mono',monospace",fontSize:16,fontWeight:800,color:isActive?"#fff":"var(--navy)"}}>${est}</div>
+                      <div style={{fontFamily:"'DM Mono',monospace",fontSize:16,fontWeight:800,color:isActive?"#fff":"var(--navy)"}}>{calcCurrSym}{est}</div>
                     </div>
                   );
                 })}
@@ -4988,43 +5201,37 @@ export default function ENEXSystem(){
   };
 
   // ── REEMPAQUE ───────────────────────────────────────────────────────────────
-  // Módulo que permite tomar uno o varios WR existentes, marcarlos como "Reempacado"
-  // (status 2.3) y crear un nuevo WR vacío con la numeración siguiente, guardando
-  // referencia a los WR padres. Solo el WR nuevo factura; los padres quedan fuera
-  // del estado de cuenta (estado 2.3 = Reempacado).
-  const createReempaque=()=>{
+  // El flujo de Reempaque abre el WR Modal estándar con `reempaqueDe` preseteado:
+  // al guardar el WR nuevo, se marcan automáticamente los padres como REEMPACADO (2.3).
+  // Solo el WR nuevo factura; los padres quedan fuera del estado de cuenta.
+  const openWRModalAsReempaque=(parentIds,clientePrefill)=>{
     if(!hasPerm("crear_reempaque")){window.alert("Tu rol no tiene permiso para crear reempaques.");return;}
-    if(rpqSel.length===0){window.alert("Selecciona al menos un WR para reempacar.");return;}
-    if(!window.confirm(`Se creará un nuevo WR vacío (número ${wrNumPrev}) con ${rpqSel.length} WR como referencia. Los WR seleccionados pasarán a estado REEMPACADO. ¿Continuar?`))return;
-    const stReempacado=WR_STATUSES.find(s=>s.code==="2.3");
-    const now=new Date();
-    // 1) Crear nuevo WR vacío con referencia a los padres
-    const nuevo={
-      id:wrNumPrev,
-      fecha:now,
-      clienteId:"",casillero:"",shipper:"",consignee:"",
-      carrier:"REEMPAQUE",tracking:"",descripcion:`Reempaque de: ${rpqSel.join(", ")}`,
-      factura:"",valor:0,cajas:0,pesoLb:0,volLb:0,ft3:0,m3:0,
-      dims:[],origCity:OFFICE_CONFIG.origCity,destCity:OFFICE_CONFIG.destCity,
-      branch:empresaNombre||"Casa Matriz",notas:"WR generado desde módulo de Reempaque",
-      tipoEnvio:"",tipoPago:"Prepago",status:WR_STATUSES[0],
-      reempaqueDe:[...rpqSel],       // IDs de los WR padre
-      historial:[{code:"1",label:"Recibido",fecha:now,user:currentUser.id,nota:`Reempaque de: ${rpqSel.join(", ")}`}],
-    };
-    // 2) Marcar WR padres como REEMPACADO y guardar referencia hacia el nuevo
-    const padresActualizados=wrList.filter(w=>rpqSel.includes(w.id)).map(w=>({
-      ...w,
-      status:stReempacado,
-      reempacadoEn:nuevo.id,
-      historial:[...(w.historial||[]),{code:"2.3",label:"Reempacado",fecha:now,user:currentUser.id,nota:`Reempacado → ${nuevo.id}`}],
-    }));
-    setWrList(p=>[nuevo,...p.map(w=>padresActualizados.find(pa=>pa.id===w.id)||w)]);
-    padresActualizados.forEach(dbUpsertWR);
-    dbUpsertWR(nuevo);
-    logAction("Creó Reempaque",`${nuevo.id} ← [${rpqSel.join(", ")}]`);
-    setRpqSel([]);
-    setSelWR(nuevo);
-    window.alert(`✅ Reempaque creado: ${nuevo.id}\n${rpqSel.length} WR padre(s) marcados como REEMPACADO.`);
+    if(!parentIds||parentIds.length===0){window.alert("Selecciona al menos un WR para reempacar.");return;}
+    const c=clientePrefill||null;
+    setWrf({...emptyWRF(),
+      consignee:c?fullName(c):"",
+      casilleroSearch:c?c.casillero:"",
+      casillero:c?c.casillero:"",
+      clienteId:c?c.id:"",
+      reempaqueDe:[...parentIds],
+    });
+    setEditWR(null);
+    setShowNewWR(true);
+  };
+  const createReempaque=()=>{
+    openWRModalAsReempaque(rpqSel,null);
+  };
+  // Nuevo WR prellenado con un cliente (desde Estado de Cuenta)
+  const openWRModalForClient=(c)=>{
+    if(!hasPerm("crear_wr")){window.alert("Tu rol no tiene permiso para crear WR.");return;}
+    setWrf({...emptyWRF(),
+      consignee:fullName(c),
+      casilleroSearch:c.casillero||"",
+      casillero:c.casillero||"",
+      clienteId:c.id,
+    });
+    setEditWR(null);
+    setShowNewWR(true);
   };
   const renderReempaque=()=>{
     // Candidatos: WR en origen no consolidados y no ya reempacados
@@ -5122,82 +5329,200 @@ export default function ENEXSystem(){
   const rdOnScan=()=>{
     const v=(rdScan||"").trim().toUpperCase();
     if(!v)return;
+    // 1) Buscar guía consolidada por ID
+    const guia=consolList.find(c=>String(c.id).toUpperCase()===v);
+    if(guia){
+      if(guia.archivada){window.alert(`La guía ${guia.id} ya fue recibida y archivada.`);setRdScan("");return;}
+      recibirGuiaCompleta(guia,`Recepción por escaneo de guía (${v})`);
+      setRdScan("");
+      return;
+    }
+    // 2) Buscar WR por N° o tracking
     const match=wrList.find(w=>String(w.id).toUpperCase()===v||String(w.tracking||"").toUpperCase()===v);
-    if(!match){window.alert(`No se encontró WR con "${v}".`);return;}
+    if(!match){window.alert(`No se encontró WR ni guía con "${v}".`);return;}
     if(match.status?.code==="17"){window.alert(`El WR ${match.id} ya está en Almacén.`);setRdScan("");return;}
     recibirEnDestino(match,`Recibido en destino por escaneo (${v})`);
     setRdScan("");
   };
+  // Recibe todos los WR de una guía consolidada y la archiva
+  const recibirGuiaCompleta=(guia,nota="Recepción de guía completa en almacén")=>{
+    if(!guia)return;
+    if(!hasPerm("hacer_recepcion_dest")){window.alert("Tu rol no tiene permiso para registrar recepciones en destino.");return;}
+    const st=WR_STATUSES.find(s=>s.code==="17");
+    const allWrIds=(guia.containers||[]).flatMap(ct=>(ct.wr||[]).map(w=>w.id));
+    if(allWrIds.length===0){window.alert(`La guía ${guia.id} no tiene WRs asociados.`);return;}
+    // Actualizar todos los WR
+    setWrList(p=>p.map(w=>{
+      if(!allWrIds.includes(w.id))return w;
+      const upd={...w,status:st,historial:[...(w.historial||[]),{code:"17",label:"Almacén",fecha:new Date(),user:currentUser.id,nota:`${nota} — guía ${guia.id}`}]};
+      dbUpsertWR(upd);
+      return upd;
+    }));
+    // Archivar la guía
+    const updGuia={...guia,archivada:true,status:"Almacén",fechaRecibidaAlmacen:new Date()};
+    setConsolList(p=>p.map(c=>c.id===guia.id?updGuia:c));
+    dbUpsertConsolidacion(updGuia);
+    logAction(`Recibió guía ${guia.id} en almacén`,`${allWrIds.length} WRs → Almacén`);
+    window.alert(`✅ Guía ${guia.id} recibida.\n${allWrIds.length} WR movidos a Almacén.\nGuía archivada.`);
+  };
   const renderRecepcionDest=()=>{
     const q=(rdSearch||"").toLowerCase().trim();
-    // Candidatos: en tránsito destino o liberados, pero no aún Almacén ni fases de entrega
+    // Guías activas (no archivadas): se muestran para selección manual o escaneo
+    const guiasActivas=consolList.filter(c=>!c.archivada);
+    const guiasArchivadas=consolList.filter(c=>c.archivada);
+    const guiaSel=guiasActivas.find(c=>c.id===rdSelGuia);
+    // WRs de la guía seleccionada
+    const guiaWrIds=guiaSel?(guiaSel.containers||[]).flatMap(ct=>(ct.wr||[]).map(w=>w.id)):[];
+    // Candidatos: WRs en tránsito destino o liberados, pero no aún Almacén ni fases de entrega.
+    // Si hay guía seleccionada, filtrar por esa guía; si no, mostrar todos los candidatos.
     const candidatos=wrList.filter(w=>{
       const c=w.status?.code||"";
       const esTransitoDest=["13","14","15","16","9.1","10.1","10.2"].includes(c);
       const puedoRecibir=esTransitoDest||["8","12"].includes(c);
       if(!puedoRecibir)return false;
+      if(guiaSel&&!guiaWrIds.includes(w.id))return false;
       if(!q)return true;
       return [w.id,w.consignee,w.casillero,w.tracking].some(v=>String(v||"").toLowerCase().includes(q));
     });
     const enAlmacen=wrList.filter(w=>w.status?.code==="17").slice(0,30);
     return (
       <div className="page-scroll">
-        <div className="card" style={{marginBottom:14}}>
-          <div style={{fontSize:15,fontWeight:700,color:"var(--navy)",marginBottom:10}}>📬 Recepción en Destino</div>
-          <div style={{fontSize:11,color:"var(--t3)",marginBottom:10}}>Escanea o escribe N° de WR / Tracking para marcar como recibido en Almacén (estado 17).</div>
-          <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-            <input className="fi" placeholder="Escanear o escribir N° WR / Tracking…" value={rdScan} onChange={e=>setRdScan(e.target.value.toUpperCase())} onKeyDown={e=>{if(e.key==="Enter"&&hasPerm("hacer_recepcion_dest"))rdOnScan();}} disabled={!hasPerm("hacer_recepcion_dest")} style={{fontFamily:"'DM Mono',monospace",fontSize:14,letterSpacing:1,padding:"8px 12px",width:320,opacity:hasPerm("hacer_recepcion_dest")?1:.5}} autoFocus/>
-            {hasPerm("hacer_recepcion_dest")&&<button className="btn-p" onClick={rdOnScan}>📥 Recibir</button>}
-            {!hasPerm("hacer_recepcion_dest")&&<span style={{fontSize:11,color:"var(--red)",fontWeight:600}}>⚠️ Tu rol no tiene permiso para registrar recepciones en destino.</span>}
+        {/* HEADER + TABS */}
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
+          <div style={{flex:1}}>
+            <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:16,fontWeight:700,color:"var(--navy)"}}>📬 Recepción en Almacén</div>
+            <div style={{fontSize:11,color:"var(--t3)",marginTop:2}}>Recibe guías completas o WR individuales. Las guías recibidas se archivan automáticamente.</div>
+          </div>
+          <div style={{display:"flex",gap:4,background:"#EEF2F7",border:"1px solid #DCE2EC",borderRadius:8,padding:3}}>
+            <button onClick={()=>setRdTab("pendientes")} style={{fontSize:11,fontWeight:600,padding:"6px 14px",borderRadius:6,border:"none",cursor:"pointer",background:rdTab==="pendientes"?"var(--navy)":"transparent",color:rdTab==="pendientes"?"#fff":"var(--t2)"}}>⏳ Pendientes ({guiasActivas.length})</button>
+            <button onClick={()=>setRdTab("archivadas")} style={{fontSize:11,fontWeight:600,padding:"6px 14px",borderRadius:6,border:"none",cursor:"pointer",background:rdTab==="archivadas"?"var(--navy)":"transparent",color:rdTab==="archivadas"?"#fff":"var(--t2)"}}>📦 Archivadas ({guiasArchivadas.length})</button>
           </div>
         </div>
-        <div className="card" style={{marginBottom:14}}>
-          <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:8}}>
-            <div style={{fontSize:13,fontWeight:700,color:"var(--navy)"}}>⏳ Pendientes de recibir ({candidatos.length})</div>
-            <input className="fi" placeholder="Buscar…" value={rdSearch} onChange={e=>setRdSearch(e.target.value)} style={{fontSize:12,padding:"6px 10px",width:220,marginLeft:"auto"}}/>
+
+        {rdTab==="pendientes"&&<>
+          {/* SCAN / MANUAL */}
+          <div className="card" style={{marginBottom:14}}>
+            <div style={{fontSize:13,fontWeight:700,color:"var(--navy)",marginBottom:8}}>🔎 Escanear o seleccionar guía</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,alignItems:"end"}}>
+              <div>
+                <div style={{fontSize:10,color:"var(--t3)",marginBottom:3,fontWeight:600}}>Por escaneo (N° guía / N° WR / Tracking)</div>
+                <div style={{display:"flex",gap:6}}>
+                  <input className="fi" placeholder="Escanear o escribir…" value={rdScan} onChange={e=>setRdScan(e.target.value.toUpperCase())} onKeyDown={e=>{if(e.key==="Enter"&&hasPerm("hacer_recepcion_dest"))rdOnScan();}} disabled={!hasPerm("hacer_recepcion_dest")} style={{flex:1,fontFamily:"'DM Mono',monospace",fontSize:13,letterSpacing:1,padding:"8px 12px",opacity:hasPerm("hacer_recepcion_dest")?1:.5}} autoFocus/>
+                  {hasPerm("hacer_recepcion_dest")&&<button className="btn-p" onClick={rdOnScan}>📥 Recibir</button>}
+                </div>
+              </div>
+              <div>
+                <div style={{fontSize:10,color:"var(--t3)",marginBottom:3,fontWeight:600}}>Seleccionar guía manualmente</div>
+                <div style={{display:"flex",gap:6}}>
+                  <select className="fi" value={rdSelGuia} onChange={e=>setRdSelGuia(e.target.value)} style={{flex:1,fontSize:12,padding:"8px 10px"}}>
+                    <option value="">— Todas las guías pendientes —</option>
+                    {guiasActivas.map(c=>(<option key={c.id} value={c.id}>{c.id} · {c.destino} · {c.totalWR||0} WR · {c.status||"—"}</option>))}
+                  </select>
+                  {guiaSel&&hasPerm("hacer_recepcion_dest")&&(
+                    <button className="btn-p" title={`Recibir los ${guiaWrIds.length} WR de ${guiaSel.id} y archivar la guía`}
+                      onClick={()=>{if(window.confirm(`¿Recibir los ${guiaWrIds.length} WR de la guía ${guiaSel.id} y archivarla?`))recibirGuiaCompleta(guiaSel,"Recepción manual de guía completa");}}>
+                      ✅ Recibir guía completa
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+            {!hasPerm("hacer_recepcion_dest")&&<div style={{fontSize:11,color:"var(--red)",fontWeight:600,marginTop:6}}>⚠️ Tu rol no tiene permiso para registrar recepciones.</div>}
           </div>
-          <div style={{maxHeight:"40vh",overflow:"auto",border:"1px solid var(--b1)",borderRadius:8}}>
-            <table className="wt">
-              <thead><tr>
-                <th>N° WR</th><th>Consignatario</th><th>Casillero</th>
-                <th>Tracking</th><th>Estado actual</th><th style={{width:130}}>Acción</th>
-              </tr></thead>
-              <tbody>
-                {candidatos.length===0
-                  ?<tr><td colSpan={6} style={{textAlign:"center",padding:40,color:"var(--t3)"}}>No hay WR pendientes de recepción en destino.</td></tr>
-                  :candidatos.map(w=>(
-                    <tr key={w.id}>
-                      <td><span className="c-wr">{w.id}</span></td>
-                      <td><span className="c-name">{w.consignee||"—"}</span></td>
-                      <td><span className="c-cas">{w.casillero||"—"}</span></td>
-                      <td><span className="c-trk">{w.tracking||"—"}</span></td>
-                      <td><StBadge st={w.status}/></td>
-                      <td>{hasPerm("hacer_recepcion_dest")?<button className="btn-s" style={{fontSize:10,padding:"4px 10px"}} onClick={()=>recibirEnDestino(w,"Recepción manual en destino")}>📥 Recibir</button>:<span style={{fontSize:10,color:"var(--t4)"}}>—</span>}</td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-        {enAlmacen.length>0&&(
-          <div className="card">
-            <div style={{fontSize:13,fontWeight:700,color:"var(--navy)",marginBottom:8}}>📦 Últimos recibidos en Almacén</div>
-            <div style={{maxHeight:"28vh",overflow:"auto",border:"1px solid var(--b1)",borderRadius:8}}>
+
+          {/* LISTA DE WR PENDIENTES */}
+          <div className="card" style={{marginBottom:14}}>
+            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:8}}>
+              <div style={{fontSize:13,fontWeight:700,color:"var(--navy)"}}>⏳ {guiaSel?`WR de ${guiaSel.id}`:"WR pendientes de recibir"} ({candidatos.length})</div>
+              <input className="fi" placeholder="Buscar…" value={rdSearch} onChange={e=>setRdSearch(e.target.value)} style={{fontSize:12,padding:"6px 10px",width:220,marginLeft:"auto"}}/>
+            </div>
+            <div style={{maxHeight:"40vh",overflow:"auto",border:"1px solid var(--b1)",borderRadius:8}}>
               <table className="wt">
-                <thead><tr><th>N° WR</th><th>Consignatario</th><th>Casillero</th><th>Tracking</th><th>Estado</th></tr></thead>
+                <thead><tr>
+                  <th>N° WR</th><th>Consignatario</th><th>Casillero</th>
+                  <th>Tracking</th><th>Estado actual</th><th style={{width:130}}>Acción</th>
+                </tr></thead>
                 <tbody>
-                  {enAlmacen.map(w=>(
-                    <tr key={w.id}>
-                      <td><span className="c-wr">{w.id}</span></td>
-                      <td>{w.consignee||"—"}</td>
-                      <td>{w.casillero||"—"}</td>
-                      <td><span className="c-trk">{w.tracking||"—"}</span></td>
-                      <td><StBadge st={w.status}/></td>
+                  {candidatos.length===0
+                    ?<tr><td colSpan={6} style={{textAlign:"center",padding:40,color:"var(--t3)"}}>{guiaSel?`No hay WR pendientes en ${guiaSel.id}.`:"No hay WR pendientes de recepción."}</td></tr>
+                    :candidatos.map(w=>(
+                      <tr key={w.id}>
+                        <td><span className="c-wr">{w.id}</span></td>
+                        <td><span className="c-name">{w.consignee||"—"}</span></td>
+                        <td><span className="c-cas">{w.casillero||"—"}</span></td>
+                        <td><span className="c-trk">{w.tracking||"—"}</span></td>
+                        <td><StBadge st={w.status}/></td>
+                        <td>{hasPerm("hacer_recepcion_dest")?<button className="btn-s" style={{fontSize:10,padding:"4px 10px"}} onClick={()=>recibirEnDestino(w,"Recepción manual en destino")}>📥 Recibir</button>:<span style={{fontSize:10,color:"var(--t4)"}}>—</span>}</td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {enAlmacen.length>0&&(
+            <div className="card">
+              <div style={{fontSize:13,fontWeight:700,color:"var(--navy)",marginBottom:8}}>📦 Últimos WR recibidos en Almacén</div>
+              <div style={{maxHeight:"28vh",overflow:"auto",border:"1px solid var(--b1)",borderRadius:8}}>
+                <table className="wt">
+                  <thead><tr><th>N° WR</th><th>Consignatario</th><th>Casillero</th><th>Tracking</th><th>Estado</th></tr></thead>
+                  <tbody>
+                    {enAlmacen.map(w=>(
+                      <tr key={w.id}>
+                        <td><span className="c-wr">{w.id}</span></td>
+                        <td>{w.consignee||"—"}</td>
+                        <td>{w.casillero||"—"}</td>
+                        <td><span className="c-trk">{w.tracking||"—"}</span></td>
+                        <td><StBadge st={w.status}/></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </>}
+
+        {rdTab==="archivadas"&&(
+          <div className="card" style={{padding:0}}>
+            {guiasArchivadas.length===0?(
+              <div style={{textAlign:"center",padding:60,color:"var(--t3)"}}>Aún no hay guías recibidas/archivadas.</div>
+            ):(
+              <table className="ct">
+                <thead><tr>
+                  <th>N° Guía</th><th>Destino</th><th>Tipo</th><th>WR</th><th>Cajas</th>
+                  <th>Peso lb</th><th>Ft³</th><th>Fecha creación</th><th>Recibida en almacén</th>
+                  <th style={{width:130}}>Acciones</th>
+                </tr></thead>
+                <tbody>
+                  {guiasArchivadas.map(c=>(
+                    <tr key={c.id}>
+                      <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",background:"#EEF3FF",padding:"2px 6px",borderRadius:4,border:"1px solid #B8C8F0",fontSize:11}}>{c.id}</span></td>
+                      <td style={{fontWeight:600,color:"var(--t1)"}}>{c.destino}</td>
+                      <td><TypeBadge t={c.tipoEnvio}/></td>
+                      <td style={{textAlign:"center",fontWeight:700,color:"var(--navy)"}}>{c.totalWR||0}</td>
+                      <td style={{textAlign:"center"}}>{c.totalCajas||0}</td>
+                      <td style={{fontFamily:"'DM Mono',monospace"}}>{c.totalLb||0}lb</td>
+                      <td style={{fontFamily:"'DM Mono',monospace",color:"var(--sky)"}}>{c.totalFt3||0}</td>
+                      <td style={{fontFamily:"'DM Mono',monospace",fontSize:10}}>{fmtDate(c.fecha)}</td>
+                      <td style={{fontFamily:"'DM Mono',monospace",fontSize:10,color:"var(--navy)",fontWeight:600}}>{fmtDate(c.fechaRecibidaAlmacen)}</td>
+                      <td>
+                        {hasPerm("editar_guia")&&(
+                          <button className="btn-s" style={{fontSize:10,padding:"3px 8px"}} title="Desarchivar (volver a pendientes)"
+                            onClick={()=>{
+                              if(!window.confirm(`¿Desarchivar la guía ${c.id}? Volverá a pendientes pero los WR permanecerán en Almacén.`))return;
+                              const upd={...c,archivada:false,fechaRecibidaAlmacen:null};
+                              setConsolList(p=>p.map(x=>x.id===c.id?upd:x));
+                              dbUpsertConsolidacion(upd);
+                              logAction("Desarchivó guía",c.id);
+                            }}>↩️ Desarchivar</button>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-            </div>
+            )}
           </div>
         )}
       </div>
@@ -5218,7 +5543,7 @@ export default function ENEXSystem(){
       {id:"wr",ic:"📦",l:"Warehouse Receipt",badge:String(filteredWR.length)},
       {id:"reempaque",ic:"🔁",l:"Reempaque"},
       {id:"consolidation",ic:"🗂️",l:"Consolidación"},
-      {id:"recepciondest",ic:"📬",l:"Recepción en Destino"},
+      {id:"recepciondest",ic:"📬",l:"Recepción en Almacén"},
     ]},
     {label:"Gestión",items:[
       {id:"clients",ic:"👥",l:"Clientes & Usuarios"},

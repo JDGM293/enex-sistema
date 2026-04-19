@@ -193,18 +193,40 @@ export const dbGetConsolidaciones = async () => {
   if (error) { console.error('getConsolidaciones:', error); return [] }
   return data.map(r => ({
     id: r.id, destino: r.destino, tipoEnvio: r.tipo_envio,
+    fecha: r.fecha || r.created_at || null,
     fechaSalida: r.fecha_salida, fechaLlegada: r.fecha_llegada,
     numVuelo: r.num_vuelo, awb: r.awb, bl: r.bl,
     notas: r.notas, containers: r.containers || [], wrIds: r.wr_ids || [],
+    status: r.status || '1',
+    usuario: r.usuario || null,
+    totalWR: r.total_wr ?? 0,
+    totalCajas: r.total_cajas ?? 0,
+    totalLb: r.total_lb ?? 0,
+    totalFt3: r.total_ft3 ?? 0,
+    totalM3: r.total_m3 ?? 0,
+    totalVolLb: r.total_vol_lb ?? 0,
+    archivada: r.archivada ?? false,
+    fechaRecibidaAlmacen: r.fecha_recibida_almacen || null,
   }))
 }
 
 export const dbUpsertConsolidacion = async (c) => {
   const { error } = await supabase.from('consolidaciones').upsert({
     id: c.id, destino: c.destino, tipo_envio: c.tipoEnvio,
+    fecha: c.fecha || new Date().toISOString(),
     fecha_salida: c.fechaSalida, fecha_llegada: c.fechaLlegada,
     num_vuelo: c.numVuelo, awb: c.awb, bl: c.bl,
     notas: c.notas, containers: c.containers, wr_ids: c.wrIds || [],
+    status: c.status || '1',
+    usuario: c.usuario || null,
+    total_wr: c.totalWR ?? 0,
+    total_cajas: c.totalCajas ?? 0,
+    total_lb: c.totalLb ?? 0,
+    total_ft3: c.totalFt3 ?? 0,
+    total_m3: c.totalM3 ?? 0,
+    total_vol_lb: c.totalVolLb ?? 0,
+    archivada: c.archivada ?? false,
+    fecha_recibida_almacen: c.fechaRecibidaAlmacen || null,
   })
   if (error) console.error('upsertConsolidacion:', error)
 }
