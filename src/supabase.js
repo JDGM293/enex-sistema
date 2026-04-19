@@ -47,10 +47,13 @@ export const wrFromDB = (r) => r ? ({
   descripcion: r.descripcion, valor: r.valor, tipoEnvio: r.tipo_envio,
   tipoPago: r.tipo_pago || "", branch: r.branch || "", usuario: r.usuario || "",
   cargos: r.cargos || [], foto: r.foto || false, prealerta: r.prealerta || false,
+  factura: r.factura || "",
   origCountry: r.orig_country, origCity: r.orig_city,
   destCountry: r.dest_country, destCity: r.dest_city,
   status: r.status_code ? {code:r.status_code, label:r.status_label, cls:r.status_cls} : null,
   historial: r.historial || [], dims: r.dims || [], notas: r.notas,
+  reempaqueDe: r.reempaque_de || null,
+  reempacadoEn: r.reempacado_en || null,
 }) : null
 
 export const wrToDB = (w) => ({
@@ -60,11 +63,16 @@ export const wrToDB = (w) => ({
   cajas: w.cajas, peso_lb: w.pesoLb, peso_kg: w.pesoKg,
   vol_lb: w.volLb, vol_kg: w.volKg, ft3: w.ft3, m3: w.m3,
   descripcion: w.descripcion, valor: w.valor, tipo_envio: w.tipoEnvio,
+  tipo_pago: w.tipoPago || "", branch: w.branch || "", usuario: w.usuario || "",
+  cargos: w.cargos || [], foto: w.foto || false, prealerta: w.prealerta || false,
+  factura: w.factura || "",
   orig_country: w.origCountry, orig_city: w.origCity,
   dest_country: w.destCountry, dest_city: w.destCity,
   status_code: w.status?.code, status_label: w.status?.label, status_cls: w.status?.cls,
   historial: w.historial || [], dims: w.dims || [], notas: w.notas,
   remitente_dir: w.remitenteDir || "",
+  reempaque_de: w.reempaqueDe || null,
+  reempacado_en: w.reempacadoEn || null,
 })
 
 // ── CLIENTES ─────────────────────────────────────────────────
@@ -199,6 +207,11 @@ export const dbUpsertConsolidacion = async (c) => {
     notas: c.notas, containers: c.containers, wr_ids: c.wrIds || [],
   })
   if (error) console.error('upsertConsolidacion:', error)
+}
+
+export const dbDeleteConsolidacion = async (id) => {
+  const { error } = await supabase.from('consolidaciones').delete().eq('id', id)
+  if (error) console.error('deleteConsolidacion:', error)
 }
 
 // ── CONFIGURACION (tipos de envio, pago, contenedor, paises) ─
