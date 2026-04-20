@@ -5414,41 +5414,180 @@ export default function ENEXSystem(){
   const rdOnScan=()=>{
     const v=(rdScan||"").trim().toUpperCase();
     if(!v)return;
-    // 1) Buscar guía consolidada por ID
-    const guia=consolList.find(c=>String(c.id).toUpperCase()===v);
-    if(guia){
-      if(guia.archivada){window.alert(`La guía ${guia.id} ya fue recibida y archivada.`);setRdScan("");return;}
-      recibirGuiaCompleta(guia,`Recepción por escaneo de guía (${v})`);
-      setRdScan("");
-      return;
+    // 1) Buscar guía consolidada por ID (sólo si NO hay guía seleccionada para checklist)
+    if(!rdSelGuia){
+      const guia=consolList.find(c=>String(c.id).toUpperCase()===v);
+      if(guia){
+        if(guia.archivada){window.alert(`La guía ${guia.id} ya fue recibida y archivada.`);setRdScan("");return;}
+        recibirGuiaCompleta(guia,`Recepción por escaneo de guía (${v})`);
+        setRdScan("");
+        return;
+      }
     }
     // 2) Buscar WR por N° o tracking
     const match=wrList.find(w=>String(w.id).toUpperCase()===v||String(w.tracking||"").toUpperCase()===v);
     if(!match){window.alert(`No se encontró WR ni guía con "${v}".`);return;}
+    // 2.a) Ya está en Almacén — avisar y no hacer nada
     if(match.status?.code==="17"){window.alert(`El WR ${match.id} ya está en Almacén.`);setRdScan("");return;}
+    // 2.b) Checklist activo — verificar si el WR pertenece a la guía seleccionada
+    if(rdSelGuia){
+      const guia=consolList.find(c=>c.id===rdSelGuia);
+      const wrIds=(guia?.containers||[]).flatMap(ct=>(ct.wr||[]).map(w=>w.id));
+      if(!wrIds.includes(match.id)){
+        // Es SOBRANTE: el WR llegó pero no estaba en la lista de esta guía
+        const ok=window.confirm(
+          `⚠️ WR ${match.id} no pertenece a la guía ${rdSelGuia}.\n`+
+          `Estado actual: ${match.status?.code} ${match.status?.label||""}\n\n`+
+          `¿Registrar como SOBRANTE (19)? Luego decidirás si pasa a Por Entrega o vuelve a Consolidado para la próxima guía.`
+        );
+        if(!ok){setRdScan("");return;}
+        marcarSobrante(match,rdSelGuia);
+        setRdScan("");
+        return;
+      }
+    }
     recibirEnDestino(match,`Recibido en destino por escaneo (${v})`);
     setRdScan("");
   };
-  // Recibe todos los WR de una guía consolidada y la archiva
+  // Marca un WR como FALTANTE (18). Usado desde el checklist cuando el paquete
+  // no llegó físicamente. La resolución (investigación/seguro/causante) es manual.
+  const marcarFaltante=(w,guiaId="")=>{
+    if(!w)return;
+    if(!hasPerm("hacer_recepcion_dest")){window.alert("Tu rol no tiene permiso.");return;}
+    if(w.status?.code==="18"||w.status?.code==="18.1"){window.alert(`El WR ${w.id} ya está marcado como faltante.`);return;}
+    if(!window.confirm(`¿Marcar WR ${w.id} como FALTANTE (18)?\nEsto indica que el paquete no llegó físicamente y debe investigarse.`))return;
+    const st=getStatus("18");
+    const upd={...w,status:st,historial:[...(w.historial||[]),{code:"18",label:"Faltante",fecha:new Date(),user:currentUser.id,nota:`Faltante en recepción${guiaId?` — guía ${guiaId}`:""}`}]};
+    setWrList(p=>p.map(x=>x.id===w.id?upd:x));
+    if(selWR&&selWR.id===w.id)setSelWR(upd);
+    dbUpsertWR(upd);
+    logAction("Marcó faltante",w.id);
+  };
+  // Promueve un FALTANTE (18) a INVESTIGACIÓN (18.1) con nota obligatoria.
+  const marcarInvestigacion=(w)=>{
+    if(!w)return;
+    if(!hasPerm("hacer_recepcion_dest")){window.alert("Tu rol no tiene permiso.");return;}
+    const nota=window.prompt(`Abrir INVESTIGACIÓN para WR ${w.id}.\nDescripción (obligatoria):\n- Seguro / Causante / Cláusula $100 / Otro`);
+    if(!nota)return;
+    const st=getStatus("18.1");
+    const upd={...w,status:st,historial:[...(w.historial||[]),{code:"18.1",label:"Investigación",fecha:new Date(),user:currentUser.id,nota}]};
+    setWrList(p=>p.map(x=>x.id===w.id?upd:x));
+    if(selWR&&selWR.id===w.id)setSelWR(upd);
+    dbUpsertWR(upd);
+    logAction("Abrió investigación",`${w.id} — ${nota}`);
+  };
+  // Marca un WR como SOBRANTE (19), enlazándolo a la guía que lo detectó.
+  // La resolución ocurre luego vía `resolverSobrante`.
+  const marcarSobrante=(w,guiaId="")=>{
+    if(!w)return;
+    if(!hasPerm("hacer_recepcion_dest")){window.alert("Tu rol no tiene permiso.");return;}
+    const st=getStatus("19");
+    const upd={...w,status:st,sobranteDeGuia:guiaId||w.sobranteDeGuia||"",historial:[...(w.historial||[]),{code:"19",label:"Sobrante",fecha:new Date(),user:currentUser.id,nota:`Sobrante${guiaId?` detectado en guía ${guiaId}`:""}`}]};
+    setWrList(p=>p.map(x=>x.id===w.id?upd:x));
+    if(selWR&&selWR.id===w.id)setSelWR(upd);
+    dbUpsertWR(upd);
+    logAction("Marcó sobrante",`${w.id}${guiaId?` (guía ${guiaId})`:""}`);
+  };
+  // Resuelve un SOBRANTE (19). destino: "20" (Por Entrega) o "4" (vuelve a Consolidado para próxima guía).
+  const resolverSobrante=(w,destino)=>{
+    if(!w)return;
+    if(!hasPerm("hacer_recepcion_dest")){window.alert("Tu rol no tiene permiso.");return;}
+    if(!["20","4"].includes(destino)){window.alert("Destino de sobrante inválido.");return;}
+    const st=getStatus(destino);
+    const nota=destino==="20"?"Sobrante → Por Entrega":"Sobrante → vuelve a Consolidado para próxima guía";
+    const upd={...w,status:st,sobranteDeGuia:"",historial:[...(w.historial||[]),{code:destino,label:st.label,fecha:new Date(),user:currentUser.id,nota}]};
+    setWrList(p=>p.map(x=>x.id===w.id?upd:x));
+    if(selWR&&selWR.id===w.id)setSelWR(upd);
+    dbUpsertWR(upd);
+    logAction("Resolvió sobrante",`${w.id} → ${destino} ${st.label}`);
+  };
+  // Revierte una recepción individual: del 17 Almacén vuelve al estado anterior
+  // encontrado en el historial (busca el último que no sea 17).
+  const revertirRecepcion=(w)=>{
+    if(!w||w.status?.code!=="17")return;
+    if(!hasPerm("editar_recepcion_dest")){window.alert("Tu rol no tiene permiso para revertir.");return;}
+    if(!window.confirm(`¿Revertir la recepción de ${w.id}? Vuelve al estado anterior.`))return;
+    const hist=[...(w.historial||[])];
+    // quitar la última entrada (que es la del 17) y buscar el anterior
+    const prev=[...hist].reverse().find(h=>h.code!=="17");
+    const prevCode=prev?.code||"16";
+    const st=getStatus(prevCode)||getStatus("16");
+    const upd={...w,status:st,historial:[...hist,{code:prevCode,label:st.label,fecha:new Date(),user:currentUser.id,nota:"Revertida recepción en almacén"}]};
+    setWrList(p=>p.map(x=>x.id===w.id?upd:x));
+    if(selWR&&selWR.id===w.id)setSelWR(upd);
+    dbUpsertWR(upd);
+    logAction("Revirtió recepción",w.id);
+  };
+  // Cierra la recepción de una guía: promueve todos los WR en 17 Almacén → 20 Por Entrega
+  // y archiva la guía. Los faltantes (18/18.1) y sobrantes (19) permanecen en su estado.
+  // Bloquea el cierre si quedan WR en estados pre-destino (< 17 y no excep/entrega).
+  const cerrarRecepcionGuia=(guia)=>{
+    if(!guia)return;
+    if(!hasPerm("hacer_recepcion_dest")){window.alert("Tu rol no tiene permiso.");return;}
+    const allWrIds=(guia.containers||[]).flatMap(ct=>(ct.wr||[]).map(w=>w.id));
+    const wrs=wrList.filter(w=>allWrIds.includes(w.id));
+    const pendientes=wrs.filter(w=>{
+      const c=w.status?.code||"";
+      // WR todavía sin resolución: no está recibido (17), ni es excepción (18/18.1/19)
+      return !["17","18","18.1","19","20","21","22","23","25"].includes(c);
+    });
+    if(pendientes.length>0){
+      window.alert(
+        `No se puede cerrar la guía ${guia.id}.\n`+
+        `${pendientes.length} WR aún no están resueltos:\n`+
+        pendientes.slice(0,5).map(w=>`• ${w.id} (${w.status?.code||"?"})`).join("\n")+
+        (pendientes.length>5?`\n…y ${pendientes.length-5} más`:"")+
+        `\n\nMárcalos como recibidos o faltantes antes de cerrar.`
+      );
+      return;
+    }
+    const recibidos=wrs.filter(w=>w.status?.code==="17");
+    const faltantes=wrs.filter(w=>w.status?.code==="18"||w.status?.code==="18.1").length;
+    const sobrantes=wrs.filter(w=>w.status?.code==="19").length;
+    if(!window.confirm(
+      `¿Cerrar recepción de la guía ${guia.id}?\n`+
+      `✓ ${recibidos.length} recibidos pasarán a Por Entrega (20)\n`+
+      `⚠️ ${faltantes} faltantes/investigación permanecerán pendientes\n`+
+      `➕ ${sobrantes} sobrantes permanecerán como 19 (resuélvelos aparte)\n\n`+
+      `La guía se archivará.`
+    ))return;
+    // Promover 17 → 20
+    const st20=getStatus("20");
+    setWrList(p=>p.map(w=>{
+      if(!allWrIds.includes(w.id)||w.status?.code!=="17")return w;
+      const upd={...w,status:st20,historial:[...(w.historial||[]),{code:"20",label:"Por Entrega",fecha:new Date(),user:currentUser.id,nota:`Cierre recepción guía ${guia.id}`}]};
+      dbUpsertWR(upd);
+      return upd;
+    }));
+    // Archivar guía
+    const updGuia={...guia,archivada:true,status:"Recibida (cerrada)",fechaRecibidaAlmacen:new Date()};
+    setConsolList(p=>p.map(c=>c.id===guia.id?updGuia:c));
+    dbUpsertConsolidacion(updGuia);
+    logAction(`Cerró recepción guía ${guia.id}`,`${recibidos.length} WR → Por Entrega · ${faltantes} faltantes · ${sobrantes} sobrantes`);
+    setRdSelGuia("");
+    window.alert(`✅ Guía ${guia.id} cerrada.\n${recibidos.length} WR pasaron a Por Entrega (20).`);
+  };
+  // Marca como recibidos (17 Almacén) todos los WR de una guía, en un paso.
+  // NO archiva la guía — la archivación requiere `cerrarRecepcionGuia` (paso 2).
+  // Sólo afecta a WRs que aún no estén en 17/18/18.1/19 (respeta faltantes y sobrantes).
   const recibirGuiaCompleta=(guia,nota="Recepción de guía completa en almacén")=>{
     if(!guia)return;
     if(!hasPerm("hacer_recepcion_dest")){window.alert("Tu rol no tiene permiso para registrar recepciones en destino.");return;}
-    const st=WR_STATUSES.find(s=>s.code==="17");
+    const st=getStatus("17");
     const allWrIds=(guia.containers||[]).flatMap(ct=>(ct.wr||[]).map(w=>w.id));
     if(allWrIds.length===0){window.alert(`La guía ${guia.id} no tiene WRs asociados.`);return;}
-    // Actualizar todos los WR
+    let cambiados=0;
     setWrList(p=>p.map(w=>{
       if(!allWrIds.includes(w.id))return w;
+      // respetar WRs ya procesados (Almacén, Faltante, Investigación, Sobrante, Por Entrega, etc.)
+      if(["17","18","18.1","19","20","21","22","23","25"].includes(w.status?.code||""))return w;
+      cambiados++;
       const upd={...w,status:st,historial:[...(w.historial||[]),{code:"17",label:"Almacén",fecha:new Date(),user:currentUser.id,nota:`${nota} — guía ${guia.id}`}]};
       dbUpsertWR(upd);
       return upd;
     }));
-    // Archivar la guía
-    const updGuia={...guia,archivada:true,status:"Almacén",fechaRecibidaAlmacen:new Date()};
-    setConsolList(p=>p.map(c=>c.id===guia.id?updGuia:c));
-    dbUpsertConsolidacion(updGuia);
-    logAction(`Recibió guía ${guia.id} en almacén`,`${allWrIds.length} WRs → Almacén`);
-    window.alert(`✅ Guía ${guia.id} recibida.\n${allWrIds.length} WR movidos a Almacén.\nGuía archivada.`);
+    logAction(`Recibió guía ${guia.id} (bulk)`,`${cambiados} WR → Almacén`);
+    window.alert(`✅ ${cambiados} WR marcados como recibidos (Almacén).\nUsa "Cerrar recepción de guía" cuando termines el checklist para pasarlos a Por Entrega.`);
   };
   const renderRecepcionDest=()=>{
     const q=(rdSearch||"").toLowerCase().trim();
@@ -5458,18 +5597,56 @@ export default function ENEXSystem(){
     const guiaSel=guiasActivas.find(c=>c.id===rdSelGuia);
     // WRs de la guía seleccionada
     const guiaWrIds=guiaSel?(guiaSel.containers||[]).flatMap(ct=>(ct.wr||[]).map(w=>w.id)):[];
-    // Candidatos: WRs en tránsito destino o liberados, pero no aún Almacén ni fases de entrega.
-    // Si hay guía seleccionada, filtrar por esa guía; si no, mostrar todos los candidatos.
+    // Checklist completo de la guía (WRs en su estado actual, sean pre-destino, 17, 18, etc.)
+    const checklist=guiaSel?wrList.filter(w=>guiaWrIds.includes(w.id)&&(!q||[w.id,w.consignee,w.casillero,w.tracking].some(v=>String(v||"").toLowerCase().includes(q)))):[];
+    // Sobrantes detectados para esta guía (linkeados vía sobranteDeGuia)
+    const sobrantesGuia=guiaSel?wrList.filter(w=>w.sobranteDeGuia===guiaSel.id&&w.status?.code==="19"):[];
+    // Stats de la guía seleccionada
+    const chkCode=(w)=>w.status?.code||"";
+    const nRecibidos=checklist.filter(w=>chkCode(w)==="17").length;
+    const nFaltantes=checklist.filter(w=>["18","18.1"].includes(chkCode(w))).length;
+    const nPorEntrega=checklist.filter(w=>["20","21","22","23","25"].includes(chkCode(w))).length;
+    const nPendientes=checklist.filter(w=>{const c=chkCode(w);return c&&!["17","18","18.1","19","20","21","22","23","25"].includes(c);}).length;
+    // Candidatos globales (cuando NO hay guía seleccionada): WRs en tránsito destino o liberados
     const candidatos=wrList.filter(w=>{
       const c=w.status?.code||"";
       const esTransitoDest=["13","14","15","16","9.1","10.1","10.2"].includes(c);
       const puedoRecibir=esTransitoDest||["8","12"].includes(c);
       if(!puedoRecibir)return false;
-      if(guiaSel&&!guiaWrIds.includes(w.id))return false;
       if(!q)return true;
       return [w.id,w.consignee,w.casillero,w.tracking].some(v=>String(v||"").toLowerCase().includes(q));
     });
     const enAlmacen=wrList.filter(w=>w.status?.code==="17").slice(0,30);
+    // Render de las acciones por WR en el checklist — depende del estado actual
+    const renderChkActions=(w)=>{
+      const c=chkCode(w);
+      if(!hasPerm("hacer_recepcion_dest"))return<span style={{fontSize:10,color:"var(--t4)"}}>—</span>;
+      // Pre-destino (14/15/16/13/etc) o estados de tránsito
+      if(!["17","18","18.1","19","20","21","22","23","25"].includes(c)){
+        return(<div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+          <button className="btn-s" style={{fontSize:9,padding:"3px 7px",background:"#E8F5E9",borderColor:"#81C784",color:"#2E7D32"}}
+            onClick={()=>recibirEnDestino(w,`Checklist guía ${guiaSel?.id||"?"}`)}>✅ Recibir</button>
+          <button className="btn-s" style={{fontSize:9,padding:"3px 7px",background:"#FFEBEE",borderColor:"#E57373",color:"#C62828"}}
+            onClick={()=>marcarFaltante(w,guiaSel?.id)}>❌ Faltante</button>
+        </div>);
+      }
+      if(c==="17"){
+        return(<div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+          <span style={{fontSize:9,fontWeight:700,color:"#2E7D32"}}>✓ Recibido</span>
+          {hasPerm("editar_recepcion_dest")&&<button className="btn-s" style={{fontSize:9,padding:"3px 7px"}} onClick={()=>revertirRecepcion(w)}>↩️ Revertir</button>}
+        </div>);
+      }
+      if(c==="18"){
+        return(<div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+          <span style={{fontSize:9,fontWeight:700,color:"#C62828"}}>⚠️ Faltante</span>
+          <button className="btn-s" style={{fontSize:9,padding:"3px 7px",background:"#FFF3E0",borderColor:"#FFB74D",color:"#E65100"}}
+            onClick={()=>marcarInvestigacion(w)}>🔍 Investigar</button>
+        </div>);
+      }
+      if(c==="18.1")return<span style={{fontSize:9,fontWeight:700,color:"#E65100"}}>🔍 En investigación</span>;
+      if(c==="19")return<span style={{fontSize:9,fontWeight:700,color:"#7B1FA2"}}>➕ Sobrante</span>;
+      return<span style={{fontSize:9,fontWeight:700,color:"var(--t3)"}}>{c} {w.status?.label||""}</span>;
+    };
     return (
       <div className="page-scroll">
         {/* HEADER + TABS */}
@@ -5504,9 +5681,9 @@ export default function ENEXSystem(){
                     {guiasActivas.map(c=>(<option key={c.id} value={c.id}>{c.id} · {c.destino} · {c.totalWR||0} WR · {c.status||"—"}</option>))}
                   </select>
                   {guiaSel&&hasPerm("hacer_recepcion_dest")&&(
-                    <button className="btn-p" title={`Recibir los ${guiaWrIds.length} WR de ${guiaSel.id} y archivar la guía`}
-                      onClick={()=>{if(window.confirm(`¿Recibir los ${guiaWrIds.length} WR de la guía ${guiaSel.id} y archivarla?`))recibirGuiaCompleta(guiaSel,"Recepción manual de guía completa");}}>
-                      ✅ Recibir guía completa
+                    <button className="btn-s" title={`Marcar como recibidos todos los ${guiaWrIds.length} WR pendientes de ${guiaSel.id} (bulk → estado 17 Almacén). No archiva.`}
+                      onClick={()=>{if(window.confirm(`¿Marcar todos los WR pendientes de ${guiaSel.id} como recibidos (17 Almacén)?\nNo archivará la guía — luego usa "Cerrar Recepción" cuando estés conforme.`))recibirGuiaCompleta(guiaSel,"Recepción bulk (atajo checklist)");}}>
+                      📥 Marcar todos recibidos
                     </button>
                   )}
                 </div>
@@ -5515,35 +5692,129 @@ export default function ENEXSystem(){
             {!hasPerm("hacer_recepcion_dest")&&<div style={{fontSize:11,color:"var(--red)",fontWeight:600,marginTop:6}}>⚠️ Tu rol no tiene permiso para registrar recepciones.</div>}
           </div>
 
-          {/* LISTA DE WR PENDIENTES */}
-          <div className="card" style={{marginBottom:14}}>
-            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:8}}>
-              <div style={{fontSize:13,fontWeight:700,color:"var(--navy)"}}>⏳ {guiaSel?`WR de ${guiaSel.id}`:"WR pendientes de recibir"} ({candidatos.length})</div>
-              <input className="fi" placeholder="Buscar…" value={rdSearch} onChange={e=>setRdSearch(e.target.value)} style={{fontSize:12,padding:"6px 10px",width:220,marginLeft:"auto"}}/>
+          {/* CHECKLIST DE GUÍA SELECCIONADA */}
+          {guiaSel&&(
+            <div className="card" style={{marginBottom:14}}>
+              <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:8,flexWrap:"wrap"}}>
+                <div style={{fontSize:13,fontWeight:700,color:"var(--navy)"}}>📋 Checklist {guiaSel.id} ({checklist.length} WR)</div>
+                {/* Stats inline */}
+                <div style={{display:"flex",gap:8,fontSize:11,alignItems:"center"}}>
+                  <span style={{background:"#E8F5E9",color:"#2E7D32",padding:"2px 8px",borderRadius:10,fontWeight:700,border:"1px solid #A5D6A7"}}>✓ {nRecibidos} recibidos</span>
+                  <span style={{background:"#FFEBEE",color:"#C62828",padding:"2px 8px",borderRadius:10,fontWeight:700,border:"1px solid #EF9A9A"}}>⚠️ {nFaltantes} faltantes</span>
+                  <span style={{background:"#F3E5F5",color:"#7B1FA2",padding:"2px 8px",borderRadius:10,fontWeight:700,border:"1px solid #CE93D8"}}>➕ {sobrantesGuia.length} sobrantes</span>
+                  {nPorEntrega>0&&<span style={{background:"#E3F2FD",color:"#1565C0",padding:"2px 8px",borderRadius:10,fontWeight:700,border:"1px solid #90CAF9"}}>🚚 {nPorEntrega} por entrega</span>}
+                  <span style={{background:nPendientes>0?"#FFF3E0":"#F5F5F5",color:nPendientes>0?"#E65100":"var(--t3)",padding:"2px 8px",borderRadius:10,fontWeight:700,border:`1px solid ${nPendientes>0?"#FFCC80":"#E0E0E0"}`}}>⏳ {nPendientes} pendientes</span>
+                </div>
+                <input className="fi" placeholder="Buscar en checklist…" value={rdSearch} onChange={e=>setRdSearch(e.target.value)} style={{fontSize:12,padding:"6px 10px",width:200,marginLeft:"auto"}}/>
+              </div>
+              <div style={{maxHeight:"42vh",overflow:"auto",border:"1px solid var(--b1)",borderRadius:8}}>
+                <table className="wt">
+                  <thead><tr>
+                    <th style={{width:30,textAlign:"center"}}>#</th>
+                    <th>N° WR</th><th>Consignatario</th><th>Casillero</th>
+                    <th>Tracking</th><th>Estado</th><th style={{width:180}}>Acción</th>
+                  </tr></thead>
+                  <tbody>
+                    {checklist.length===0
+                      ?<tr><td colSpan={7} style={{textAlign:"center",padding:40,color:"var(--t3)"}}>No hay WR que coincidan con la búsqueda.</td></tr>
+                      :checklist.map((w,i)=>{
+                        const c=chkCode(w);
+                        const rowBg=c==="17"?"#F1F8E9":["18","18.1"].includes(c)?"#FFF5F5":c==="19"?"#FAF4FC":["20","21","22","23","25"].includes(c)?"#F0F7FF":"";
+                        return(
+                          <tr key={w.id} style={{background:rowBg}}>
+                            <td style={{textAlign:"center",fontSize:10,color:"var(--t3)",fontFamily:"'DM Mono',monospace"}}>{i+1}</td>
+                            <td><span className="c-wr">{w.id}</span></td>
+                            <td><span className="c-name">{w.consignee||"—"}</span></td>
+                            <td><span className="c-cas">{w.casillero||"—"}</span></td>
+                            <td><span className="c-trk">{w.tracking||"—"}</span></td>
+                            <td><StBadge st={w.status}/></td>
+                            <td>{renderChkActions(w)}</td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* SOBRANTES DE ESTA GUÍA */}
+              {sobrantesGuia.length>0&&(
+                <div style={{marginTop:12,border:"1px dashed #CE93D8",borderRadius:8,padding:10,background:"#FCF5FF"}}>
+                  <div style={{fontSize:12,fontWeight:700,color:"#7B1FA2",marginBottom:6}}>➕ Sobrantes detectados en {guiaSel.id} ({sobrantesGuia.length})</div>
+                  <div style={{maxHeight:"20vh",overflow:"auto"}}>
+                    <table className="wt">
+                      <thead><tr><th>N° WR</th><th>Consignatario</th><th>Tracking</th><th style={{width:260}}>Resolución</th></tr></thead>
+                      <tbody>
+                        {sobrantesGuia.map(w=>(
+                          <tr key={w.id}>
+                            <td><span className="c-wr">{w.id}</span></td>
+                            <td>{w.consignee||"—"}</td>
+                            <td><span className="c-trk">{w.tracking||"—"}</span></td>
+                            <td>{hasPerm("hacer_recepcion_dest")?(
+                              <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+                                <button className="btn-s" style={{fontSize:9,padding:"3px 7px",background:"#E3F2FD",borderColor:"#64B5F6",color:"#1565C0"}}
+                                  onClick={()=>resolverSobrante(w,"20")}>🚚 A Por Entrega (20)</button>
+                                <button className="btn-s" style={{fontSize:9,padding:"3px 7px"}}
+                                  onClick={()=>resolverSobrante(w,"4")}>🔄 Próx. guía (4)</button>
+                              </div>
+                            ):<span style={{fontSize:10,color:"var(--t4)"}}>—</span>}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* CERRAR RECEPCIÓN */}
+              {hasPerm("hacer_recepcion_dest")&&(
+                <div style={{marginTop:12,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",paddingTop:10,borderTop:"1px solid var(--b2)"}}>
+                  <div style={{fontSize:11,color:"var(--t3)"}}>
+                    {nPendientes>0
+                      ?<span style={{color:"#E65100",fontWeight:600}}>⚠️ Quedan {nPendientes} WR sin resolver. Márcalos como Recibidos o Faltantes antes de cerrar.</span>
+                      :"Todos los WR están resueltos. Listos para cerrar la recepción."}
+                  </div>
+                  <div style={{flex:1}}/>
+                  <button className="btn-p" disabled={nPendientes>0} style={{opacity:nPendientes>0?.45:1,fontSize:12,padding:"8px 18px"}}
+                    onClick={()=>cerrarRecepcionGuia(guiaSel)}>
+                    ✅ Cerrar Recepción de Guía ({nRecibidos} → Por Entrega)
+                  </button>
+                </div>
+              )}
             </div>
-            <div style={{maxHeight:"40vh",overflow:"auto",border:"1px solid var(--b1)",borderRadius:8}}>
-              <table className="wt">
-                <thead><tr>
-                  <th>N° WR</th><th>Consignatario</th><th>Casillero</th>
-                  <th>Tracking</th><th>Estado actual</th><th style={{width:130}}>Acción</th>
-                </tr></thead>
-                <tbody>
-                  {candidatos.length===0
-                    ?<tr><td colSpan={6} style={{textAlign:"center",padding:40,color:"var(--t3)"}}>{guiaSel?`No hay WR pendientes en ${guiaSel.id}.`:"No hay WR pendientes de recepción."}</td></tr>
-                    :candidatos.map(w=>(
-                      <tr key={w.id}>
-                        <td><span className="c-wr">{w.id}</span></td>
-                        <td><span className="c-name">{w.consignee||"—"}</span></td>
-                        <td><span className="c-cas">{w.casillero||"—"}</span></td>
-                        <td><span className="c-trk">{w.tracking||"—"}</span></td>
-                        <td><StBadge st={w.status}/></td>
-                        <td>{hasPerm("hacer_recepcion_dest")?<button className="btn-s" style={{fontSize:10,padding:"4px 10px"}} onClick={()=>recibirEnDestino(w,"Recepción manual en destino")}>📥 Recibir</button>:<span style={{fontSize:10,color:"var(--t4)"}}>—</span>}</td>
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
+          )}
+
+          {/* LISTA GLOBAL (sin guía seleccionada) */}
+          {!guiaSel&&(
+            <div className="card" style={{marginBottom:14}}>
+              <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:8}}>
+                <div style={{fontSize:13,fontWeight:700,color:"var(--navy)"}}>⏳ WR pendientes en tránsito destino ({candidatos.length})</div>
+                <div style={{fontSize:10,color:"var(--t3)"}}>Selecciona una guía arriba para ver el checklist completo.</div>
+                <input className="fi" placeholder="Buscar…" value={rdSearch} onChange={e=>setRdSearch(e.target.value)} style={{fontSize:12,padding:"6px 10px",width:220,marginLeft:"auto"}}/>
+              </div>
+              <div style={{maxHeight:"40vh",overflow:"auto",border:"1px solid var(--b1)",borderRadius:8}}>
+                <table className="wt">
+                  <thead><tr>
+                    <th>N° WR</th><th>Consignatario</th><th>Casillero</th>
+                    <th>Tracking</th><th>Estado actual</th><th style={{width:130}}>Acción</th>
+                  </tr></thead>
+                  <tbody>
+                    {candidatos.length===0
+                      ?<tr><td colSpan={6} style={{textAlign:"center",padding:40,color:"var(--t3)"}}>No hay WR pendientes de recepción.</td></tr>
+                      :candidatos.map(w=>(
+                        <tr key={w.id}>
+                          <td><span className="c-wr">{w.id}</span></td>
+                          <td><span className="c-name">{w.consignee||"—"}</span></td>
+                          <td><span className="c-cas">{w.casillero||"—"}</span></td>
+                          <td><span className="c-trk">{w.tracking||"—"}</span></td>
+                          <td><StBadge st={w.status}/></td>
+                          <td>{hasPerm("hacer_recepcion_dest")?<button className="btn-s" style={{fontSize:10,padding:"4px 10px"}} onClick={()=>recibirEnDestino(w,"Recepción manual en destino")}>📥 Recibir</button>:<span style={{fontSize:10,color:"var(--t4)"}}>—</span>}</td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
+          )}
 
           {enAlmacen.length>0&&(
             <div className="card">

@@ -54,6 +54,7 @@ export const wrFromDB = (r) => r ? ({
   historial: r.historial || [], dims: r.dims || [], notas: r.notas,
   reempaqueDe: r.reempaque_de || null,
   reempacadoEn: r.reempacado_en || null,
+  sobranteDeGuia: r.sobrante_de_guia || "",
 }) : null
 
 export const wrToDB = (w) => ({
@@ -73,6 +74,7 @@ export const wrToDB = (w) => ({
   remitente_dir: w.remitenteDir || "",
   reempaque_de: w.reempaqueDe || null,
   reempacado_en: w.reempacadoEn || null,
+  sobrante_de_guia: w.sobranteDeGuia || "",
 })
 
 // ── CLIENTES ─────────────────────────────────────────────────
