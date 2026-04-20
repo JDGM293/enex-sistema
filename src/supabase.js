@@ -281,6 +281,57 @@ export const dbDeleteCargoRelease = async (id) => {
   if (error) console.error('deleteCargoRelease:', error)
 }
 
+// ── DELIVERY NOTES (Notas de Entrega) ────────────────────────
+export const dbGetDeliveryNotes = async () => {
+  const { data, error } = await supabase.from('delivery_notes').select('*').order('fecha', {ascending:false})
+  if (error) { console.error('getDeliveryNotes:', error); return [] }
+  return data.map(r => ({
+    id: r.id,
+    fecha: r.fecha ? new Date(r.fecha) : new Date(),
+    wrIds: r.wr_ids || [],
+    clienteId: r.cliente_id || '',
+    consignatario: r.consignatario || '',
+    receptorNombre: r.receptor_nombre || '',
+    receptorDocumento: r.receptor_documento || '',
+    receptorTelefono: r.receptor_telefono || '',
+    direccionEntrega: r.direccion_entrega || '',
+    metodoEntrega: r.metodo_entrega || '', // "retiro_oficina" | "domicilio" | "transportista"
+    transportista: r.transportista || '',
+    notas: r.notas || '',
+    usuario: r.usuario || '',
+    firmaDataUrl: r.firma_data_url || '',
+    anulado: r.anulado ?? false,
+    motivoAnulacion: r.motivo_anulacion || '',
+  }))
+}
+
+export const dbUpsertDeliveryNote = async (dn) => {
+  const { error } = await supabase.from('delivery_notes').upsert({
+    id: dn.id,
+    fecha: dn.fecha instanceof Date ? dn.fecha.toISOString() : dn.fecha,
+    wr_ids: dn.wrIds || [],
+    cliente_id: dn.clienteId || '',
+    consignatario: dn.consignatario || '',
+    receptor_nombre: dn.receptorNombre || '',
+    receptor_documento: dn.receptorDocumento || '',
+    receptor_telefono: dn.receptorTelefono || '',
+    direccion_entrega: dn.direccionEntrega || '',
+    metodo_entrega: dn.metodoEntrega || '',
+    transportista: dn.transportista || '',
+    notas: dn.notas || '',
+    usuario: dn.usuario || '',
+    firma_data_url: dn.firmaDataUrl || '',
+    anulado: dn.anulado ?? false,
+    motivo_anulacion: dn.motivoAnulacion || '',
+  })
+  if (error) console.error('upsertDeliveryNote:', error)
+}
+
+export const dbDeleteDeliveryNote = async (id) => {
+  const { error } = await supabase.from('delivery_notes').delete().eq('id', id)
+  if (error) console.error('deleteDeliveryNote:', error)
+}
+
 // ── CONFIGURACION (tipos de envio, pago, contenedor, paises) ─
 export const dbGetConfig = async (clave) => {
   const { data, error } = await supabase

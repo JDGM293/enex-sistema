@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { dbGetClientes, dbUpsertCliente, dbDeleteCliente, dbGetWR, dbUpsertWR, dbDeleteWR, dbGetAgentes, dbUpsertAgente, dbDeleteAgente, dbGetOficinas, dbUpsertOficina, dbDeleteOficina, dbGetTarifas, dbUpsertTarifa, dbDeleteTarifa, dbGetConsolidaciones, dbUpsertConsolidacion, dbDeleteConsolidacion, dbGetCargoReleases, dbUpsertCargoRelease, dbDeleteCargoRelease, dbLogActividad, dbGetActividad, dbGetConfig, dbSetConfig, dbGetScanLog, dbInsertScan, dbSetScanRegistered, dbDeleteScanIds } from "./supabase";
+import { dbGetClientes, dbUpsertCliente, dbDeleteCliente, dbGetWR, dbUpsertWR, dbDeleteWR, dbGetAgentes, dbUpsertAgente, dbDeleteAgente, dbGetOficinas, dbUpsertOficina, dbDeleteOficina, dbGetTarifas, dbUpsertTarifa, dbDeleteTarifa, dbGetConsolidaciones, dbUpsertConsolidacion, dbDeleteConsolidacion, dbGetCargoReleases, dbUpsertCargoRelease, dbDeleteCargoRelease, dbGetDeliveryNotes, dbUpsertDeliveryNote, dbDeleteDeliveryNote, dbLogActividad, dbGetActividad, dbGetConfig, dbSetConfig, dbGetScanLog, dbInsertScan, dbSetScanRegistered, dbDeleteScanIds } from "./supabase";
 
 // ─── TEMA CLARO PROFESIONAL ───────────────────────────────────────────────────
 const S = `
@@ -1333,6 +1333,11 @@ export default function ENEXSystem(){
   const [crModal,setCrModal]=useState(null); // null | {wrIds:[], agenteCarga, contacto, documento, vehiculo, notas, editId?}
   const [crSearch,setCrSearch]=useState("");
   const [crPrint,setCrPrint]=useState(null); // release a imprimir
+  // Delivery Notes (entregas)
+  const [deliveryNotes,setDeliveryNotes]=useState([]);
+  const [dnModal,setDnModal]=useState(null); // null | {wrIds, consignatario, clienteId, receptorNombre, receptorDocumento, receptorTelefono, direccionEntrega, metodoEntrega, transportista, notas, editId?}
+  const [dnSearch,setDnSearch]=useState("");
+  const [dnPrint,setDnPrint]=useState(null); // nota a imprimir
   const [labelTipo,setLabelTipo]=useState("WR");
   const [openDays,setOpenDays]=useState({});
   const [actFilter,setActFilter]=useState("");
@@ -1406,10 +1411,10 @@ export default function ENEXSystem(){
   // ── SUPABASE: cargar datos al iniciar ────────────────────────────────────
   useEffect(()=>{
     const load=async()=>{
-      const [cls,wrs,ags,ofs,tfs,cons,acts,scans,crs,sendT,payT,chargesT,contT,countriesT,
+      const [cls,wrs,ags,ofs,tfs,cons,acts,scans,crs,dns,sendT,payT,chargesT,contT,countriesT,
              wrNumT,wrSecT,consolNumT,consolSecT,empSlugT,labelWRT,labelCsaT]=await Promise.all([
         dbGetClientes(),dbGetWR(),dbGetAgentes(),dbGetOficinas(),
-        dbGetTarifas(),dbGetConsolidaciones(),dbGetActividad(),dbGetScanLog(),dbGetCargoReleases(),
+        dbGetTarifas(),dbGetConsolidaciones(),dbGetActividad(),dbGetScanLog(),dbGetCargoReleases(),dbGetDeliveryNotes(),
         dbGetConfig('send_types'),dbGetConfig('pay_types'),dbGetConfig('charges'),
         dbGetConfig('container_types'),dbGetConfig('countries'),
         dbGetConfig('wr_num_tipo'),dbGetConfig('wr_sec_inicio'),
@@ -1440,6 +1445,7 @@ export default function ENEXSystem(){
       if(acts.length>0)setActLog(acts);
       if(scans.length>0)setScanLog(scans);
       if(crs&&crs.length>0)setCargoReleases(crs);
+      if(dns&&dns.length>0)setDeliveryNotes(dns);
       if(sendT&&sendT.length>0){
         setSendTypes(sendT);
         // Sincronizar forms que aún no tienen tipo de envío con el primero disponible
@@ -2509,6 +2515,7 @@ export default function ENEXSystem(){
             }}>✏️ Editar</button>}
             {hasPerm("borrar_wr")&&<button className="btn-s" style={{fontSize:10,padding:"4px 10px",color:"var(--red)",borderColor:"var(--red)"}} onClick={()=>{if(window.confirm(`¿Borrar WR ${selWR.id}? Esta acción no se puede deshacer.`)){setWrList(p=>p.filter(x=>x.id!==selWR.id));dbDeleteWR(selWR.id);logAction("Borró WR",selWR.id);setSelWR(null);}}}>🗑 Borrar</button>}
             {crElegible(selWR)&&hasPerm("hacer_egreso")&&<button className="btn-s" style={{fontSize:10,padding:"4px 10px",background:"#E8F5E9",borderColor:"#81C784",color:"#2E7D32",fontWeight:700}} onClick={()=>{crOpenNew([selWR.id]);setSelWR(null);}} title="Registrar egreso individual de este WR">🚀 Egresar</button>}
+            {dnElegible(selWR)&&hasPerm("entregar")&&<button className="btn-s" style={{fontSize:10,padding:"4px 10px",background:"#E3F2FD",borderColor:"#64B5F6",color:"#1565C0",fontWeight:700}} onClick={()=>{dnOpenNew([selWR.id]);setSelWR(null);}} title="Registrar entrega al cliente">📝 Entregar</button>}
             <button className="btn-p" style={{fontSize:10,padding:"4px 10px"}} onClick={()=>window.print()}>🖨 Imprimir</button>
             <button className="mcl" onClick={()=>setSelWR(null)}>✕</button>
           </div>
@@ -5680,6 +5687,108 @@ export default function ENEXSystem(){
     logAction("Borró egreso",cr.id);
   };
 
+  // ── Delivery Notes (Notas de Entrega) ───────────────────────────────────────
+  // Al crear: los WR pasan a estado 21 Entregado. Elegible: 20 Por Entrega y 25 Egresado
+  // (por ejemplo, cuando el agente de carga ya llevó la mercancía y solo queda confirmar
+  // la entrega firmada por el cliente final).
+  const dnElegible=(w)=>["20","25"].includes(w.status?.code||"");
+  const dnBuildId=()=>{
+    const d=new Date();
+    const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,"0"), dd=String(d.getDate()).padStart(2,"0");
+    const prefix=`NE-${y}${m}${dd}`;
+    const sameDay=deliveryNotes.filter(n=>String(n.id).startsWith(prefix));
+    const n=String(sameDay.length+1).padStart(3,"0");
+    return `${prefix}-${n}`;
+  };
+  const dnOpenNew=(preselectedIds=[])=>{
+    if(!hasPerm("entregar")){window.alert("Tu rol no tiene permiso para registrar entregas.");return;}
+    // Intentar auto-completar consignatario/clienteId si todos los WR preseleccionados son del mismo cliente
+    let auto={consignatario:"",clienteId:"",direccionEntrega:""};
+    if(preselectedIds.length>0){
+      const pre=preselectedIds.map(id=>wrList.find(w=>w.id===id)).filter(Boolean);
+      const uniqCli=[...new Set(pre.map(w=>w.clienteId||"").filter(Boolean))];
+      const uniqCon=[...new Set(pre.map(w=>w.consignee||"").filter(Boolean))];
+      if(uniqCli.length===1)auto.clienteId=uniqCli[0];
+      if(uniqCon.length===1)auto.consignatario=uniqCon[0];
+      if(uniqCli.length===1){
+        const cli=clients.find(c=>c.id===uniqCli[0]);
+        if(cli)auto.direccionEntrega=[cli.dir,cli.municipio,cli.estado].filter(Boolean).join(", ");
+      }
+    }
+    setDnModal({wrIds:preselectedIds,consignatario:auto.consignatario,clienteId:auto.clienteId,receptorNombre:"",receptorDocumento:"",receptorTelefono:"",direccionEntrega:auto.direccionEntrega,metodoEntrega:"retiro_oficina",transportista:"",notas:"",editId:null});
+  };
+  const dnOpenEdit=(dn)=>{
+    if(!hasPerm("editar_entrega")){window.alert("Tu rol no tiene permiso para editar entregas.");return;}
+    setDnModal({wrIds:dn.wrIds||[],consignatario:dn.consignatario||"",clienteId:dn.clienteId||"",receptorNombre:dn.receptorNombre||"",receptorDocumento:dn.receptorDocumento||"",receptorTelefono:dn.receptorTelefono||"",direccionEntrega:dn.direccionEntrega||"",metodoEntrega:dn.metodoEntrega||"retiro_oficina",transportista:dn.transportista||"",notas:dn.notas||"",editId:dn.id});
+  };
+  const dnSubmit=()=>{
+    const f=dnModal; if(!f)return;
+    if(!f.consignatario.trim()){window.alert("El consignatario es obligatorio.");return;}
+    if(!f.receptorNombre.trim()){window.alert("El nombre del receptor es obligatorio.");return;}
+    if(!f.wrIds||f.wrIds.length===0){window.alert("Agrega al menos 1 WR a la nota de entrega.");return;}
+    const editing=!!f.editId;
+    const id=editing?f.editId:dnBuildId();
+    const now=new Date();
+    const dn={
+      id,fecha:editing?(deliveryNotes.find(n=>n.id===id)?.fecha||now):now,
+      wrIds:f.wrIds,
+      clienteId:f.clienteId||"",
+      consignatario:f.consignatario.trim(),
+      receptorNombre:f.receptorNombre.trim(),
+      receptorDocumento:f.receptorDocumento.trim(),
+      receptorTelefono:f.receptorTelefono.trim(),
+      direccionEntrega:f.direccionEntrega.trim(),
+      metodoEntrega:f.metodoEntrega||"retiro_oficina",
+      transportista:f.transportista.trim(),
+      notas:f.notas.trim(),
+      usuario:currentUser.id||currentUser.email||"",
+      firmaDataUrl:"",
+      anulado:false,motivoAnulacion:"",
+    };
+    if(editing){
+      setDeliveryNotes(p=>p.map(n=>n.id===id?{...n,...dn}:n));
+    }else{
+      setDeliveryNotes(p=>[dn,...p]);
+      // Promover WRs → 21 Entregado
+      const st21=getStatus("21");
+      setWrList(p=>p.map(w=>{
+        if(!dn.wrIds.includes(w.id))return w;
+        const upd={...w,status:st21,historial:[...(w.historial||[]),{code:"21",label:"Entregado",fecha:now,user:currentUser.id,nota:`Nota ${id} → ${dn.receptorNombre} (${dn.consignatario})`}]};
+        dbUpsertWR(upd);
+        return upd;
+      }));
+    }
+    dbUpsertDeliveryNote(dn);
+    logAction(editing?"Editó entrega":"Creó entrega",`${id} · ${dn.wrIds.length} WR → ${dn.consignatario}`);
+    setDnModal(null);
+    if(!editing)window.alert(`✅ Nota de entrega ${id} creada.\n${dn.wrIds.length} WR → Entregado (21).`);
+  };
+  const dnAnular=(dn)=>{
+    if(!hasPerm("revertir_entrega")&&!hasPerm("editar_entrega")){window.alert("Tu rol no tiene permiso.");return;}
+    const motivo=window.prompt(`Anular nota de entrega ${dn.id}.\nMotivo (obligatorio):`);
+    if(!motivo)return;
+    const upd={...dn,anulado:true,motivoAnulacion:motivo};
+    setDeliveryNotes(p=>p.map(n=>n.id===dn.id?upd:n));
+    dbUpsertDeliveryNote(upd);
+    // Revertir WRs a 20 Por Entrega
+    const st20=getStatus("20");
+    setWrList(p=>p.map(w=>{
+      if(!dn.wrIds.includes(w.id))return w;
+      if(w.status?.code!=="21")return w; // si ya avanzó (22/23…), no revertir
+      const u={...w,status:st20,historial:[...(w.historial||[]),{code:"20",label:"Por Entrega",fecha:new Date(),user:currentUser.id,nota:`Entrega ${dn.id} anulada: ${motivo}`}]};
+      dbUpsertWR(u);
+      return u;
+    }));
+    logAction("Anuló entrega",`${dn.id} — ${motivo}`);
+  };
+  const dnDelete=(dn)=>{
+    if(!hasPerm("borrar_entrega")){window.alert("Tu rol no tiene permiso para borrar entregas.");return;}
+    if(!window.confirm(`¿Borrar permanentemente la nota de entrega ${dn.id}? Esto NO revierte los estados de los WR. Si quieres deshacer, usa "Anular".`))return;
+    setDeliveryNotes(p=>p.filter(n=>n.id!==dn.id));
+    dbDeleteDeliveryNote(dn.id);
+    logAction("Borró entrega",dn.id);
+  };
+
   const renderRecepcionDest=()=>{
     const q=(rdSearch||"").toLowerCase().trim();
     // Guías activas (no archivadas): se muestran para selección manual o escaneo
@@ -6043,6 +6152,73 @@ export default function ENEXSystem(){
     );
   };
 
+  const renderDeliveryNotes=()=>{
+    const q=(dnSearch||"").toLowerCase().trim();
+    const activas=deliveryNotes.filter(n=>!n.anulado);
+    const anuladas=deliveryNotes.filter(n=>n.anulado);
+    const lista=deliveryNotes.filter(n=>!q||[n.id,n.consignatario,n.receptorNombre,n.receptorDocumento,n.transportista].some(v=>String(v||"").toLowerCase().includes(q)));
+    const metodoLabel={retiro_oficina:"🏢 Retiro oficina",domicilio:"🏠 Domicilio",transportista:"🚚 Transportista"};
+    return(
+      <div className="page-scroll">
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
+          <div style={{flex:1}}>
+            <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:16,fontWeight:700,color:"var(--navy)"}}>📝 Notas de Entrega</div>
+            <div style={{fontSize:11,color:"var(--t3)",marginTop:2}}>Entrega física al cliente final. Los WR pasan a Entregado (21). Estado elegible: 20 Por Entrega o 25 Egresado.</div>
+          </div>
+          <div style={{display:"flex",gap:6,fontSize:11}}>
+            <span style={{background:"#E8F5E9",color:"#2E7D32",padding:"4px 10px",borderRadius:10,fontWeight:700,border:"1px solid #A5D6A7"}}>✓ {activas.length} activas</span>
+            <span style={{background:"#FFF3E0",color:"#E65100",padding:"4px 10px",borderRadius:10,fontWeight:700,border:"1px solid #FFCC80"}}>✕ {anuladas.length} anuladas</span>
+          </div>
+          {hasPerm("entregar")&&<button className="btn-p" onClick={()=>dnOpenNew()}>➕ Nueva Entrega</button>}
+        </div>
+
+        <div className="card" style={{marginBottom:10}}>
+          <input className="fi" placeholder="Buscar por N° nota, consignatario, receptor, documento, transportista…"
+            value={dnSearch} onChange={e=>setDnSearch(e.target.value)} style={{fontSize:12,width:"100%",padding:"8px 12px"}}/>
+        </div>
+
+        <div className="card" style={{padding:0,overflow:"hidden"}}>
+          {lista.length===0?(
+            <div style={{textAlign:"center",padding:60,color:"var(--t3)"}}>No hay entregas registradas.</div>
+          ):(
+            <table className="ct">
+              <thead><tr>
+                <th>N° Nota</th><th>Fecha</th><th>Consignatario</th><th>Receptor</th><th>Método</th>
+                <th style={{textAlign:"center"}}>WR</th><th>Usuario</th><th>Estado</th><th style={{width:200}}>Acciones</th>
+              </tr></thead>
+              <tbody>
+                {lista.map(n=>(
+                  <tr key={n.id} style={{background:n.anulado?"#FFF5F5":""}}>
+                    <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",background:"#EEF3FF",padding:"2px 6px",borderRadius:4,border:"1px solid #B8C8F0",fontSize:11}}>{n.id}</span></td>
+                    <td style={{fontFamily:"'DM Mono',monospace",fontSize:10}}>{fmtDate(n.fecha)} {fmtTime(n.fecha)}</td>
+                    <td style={{fontWeight:600,color:"var(--t1)"}}>{n.consignatario||"—"}</td>
+                    <td style={{fontSize:11,color:"var(--t2)"}}>{n.receptorNombre||"—"}{n.receptorDocumento?` · ${n.receptorDocumento}`:""}</td>
+                    <td style={{fontSize:10,color:"var(--t2)"}}>{metodoLabel[n.metodoEntrega]||"—"}</td>
+                    <td style={{textAlign:"center",fontWeight:700,color:"var(--navy)"}}>{(n.wrIds||[]).length}</td>
+                    <td style={{fontSize:11,color:"var(--t3)"}}>{n.usuario||"—"}</td>
+                    <td>{n.anulado
+                      ?<span style={{fontSize:10,fontWeight:700,color:"#C62828"}}>✕ Anulada</span>
+                      :<span style={{fontSize:10,fontWeight:700,color:"#2E7D32"}}>✓ Activa</span>}
+                      {n.anulado&&n.motivoAnulacion&&<div style={{fontSize:9,color:"#C62828",marginTop:2}}>{n.motivoAnulacion}</div>}
+                    </td>
+                    <td>
+                      <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+                        <button className="btn-s" style={{fontSize:10,padding:"3px 8px"}} onClick={()=>setDnPrint(n)} title="Ver / Imprimir nota">🖨️ Nota</button>
+                        {!n.anulado&&hasPerm("editar_entrega")&&<button className="btn-s" style={{fontSize:10,padding:"3px 8px"}} onClick={()=>dnOpenEdit(n)}>✏️ Editar</button>}
+                        {!n.anulado&&(hasPerm("revertir_entrega")||hasPerm("editar_entrega"))&&<button className="btn-s" style={{fontSize:10,padding:"3px 8px",background:"#FFF3E0",borderColor:"#FFB74D",color:"#E65100"}} onClick={()=>dnAnular(n)}>✕ Anular</button>}
+                        {hasPerm("borrar_entrega")&&<button className="btn-d" style={{fontSize:10,padding:"3px 8px"}} onClick={()=>dnDelete(n)}>🗑️</button>}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   // ── NAV ─────────────────────────────────────────────────────────────────────
   // Shortcut handler: abre Configuración preseleccionando un tab
   const goSettingsTab=(t)=>{setTab("settings");setCfgTab(t);};
@@ -6059,6 +6235,7 @@ export default function ENEXSystem(){
       {id:"consolidation",ic:"🗂️",l:"Consolidación"},
       {id:"recepciondest",ic:"📬",l:"Recepción en Almacén"},
       {id:"cargorelease",ic:"🚀",l:"Cargo Release"},
+      {id:"entregas",ic:"📝",l:"Notas de Entrega"},
     ]},
     {label:"Gestión",items:[
       {id:"clients",ic:"👥",l:"Clientes & Usuarios"},
@@ -6086,7 +6263,7 @@ export default function ENEXSystem(){
     ]},
   ];
 
-  const PAGE_TITLES={dashboard:"Dashboard General",wr:"Warehouse Receipts",scan:"Recepción en Puerta",etiquetas:"Imprimir Etiquetas",clients:"Clientes & Usuarios",estadocuenta:"Estado de Cuenta",roles:"Roles & Permisos",consolidation:"Consolidación",tracking:"Tracking",pickup:"Pick-up",contabilidad:"Contabilidad",calculadora:"Calculadora de Envío",chat:"Chat Interno",docs:"Documentos",reports:"Reportes",alerts:"Alertas",settings:"Configuración",reempaque:"Reempaque",recepciondest:"Recepción en Destino",cargorelease:"Cargo Release (Egreso)"};
+  const PAGE_TITLES={dashboard:"Dashboard General",wr:"Warehouse Receipts",scan:"Recepción en Puerta",etiquetas:"Imprimir Etiquetas",clients:"Clientes & Usuarios",estadocuenta:"Estado de Cuenta",roles:"Roles & Permisos",consolidation:"Consolidación",tracking:"Tracking",pickup:"Pick-up",contabilidad:"Contabilidad",calculadora:"Calculadora de Envío",chat:"Chat Interno",docs:"Documentos",reports:"Reportes",alerts:"Alertas",settings:"Configuración",reempaque:"Reempaque",recepciondest:"Recepción en Destino",cargorelease:"Cargo Release (Egreso)",entregas:"Notas de Entrega"};
 
   const renderPage=()=>{
     switch(tab){
@@ -6107,6 +6284,7 @@ export default function ENEXSystem(){
       case "reempaque":    return renderReempaque();
       case "recepciondest":return renderRecepcionDest();
       case "cargorelease": return renderCargoRelease();
+      case "entregas":     return renderDeliveryNotes();
       default:             return <div className="page-scroll"><div className="card" style={{textAlign:"center",padding:60,color:"var(--t3)"}}>{PAGE_TITLES[tab]} — Módulo próximamente</div></div>;
     }
   };
@@ -6794,6 +6972,239 @@ export default function ENEXSystem(){
                   </div>
                   <div style={{marginTop:24,fontSize:9,color:"#777",textAlign:"center",borderTop:"1px dashed #999",paddingTop:6}}>
                     La firma confirma recepción conforme de los WR listados. Cualquier discrepancia debe reportarse al momento de la entrega.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── Delivery Note — MODAL FORMULARIO ────────────────────────────────── */}
+      {dnModal&&(()=>{
+        const f=dnModal;
+        const editing=!!f.editId;
+        const elegibles=wrList.filter(w=>dnElegible(w)||f.wrIds.includes(w.id));
+        const sel=f.wrIds.map(id=>wrList.find(w=>w.id===id)).filter(Boolean);
+        const qRef=f._q||"";
+        const filtered=elegibles.filter(w=>{
+          if(f.wrIds.includes(w.id))return false;
+          if(!qRef)return true;
+          const qq=qRef.toLowerCase();
+          return [w.id,w.consignee,w.shipper,w.tracking,w.proNumber].some(v=>String(v||"").toLowerCase().includes(qq));
+        }).slice(0,30);
+        const clientesMatriz=clients.filter(c=>c.tipo==="cliente");
+        return(
+          <div className="modal-bg">
+            <div className="modal" style={{maxWidth:900,width:"94%"}} onClick={e=>e.stopPropagation()}>
+              <div className="mhd">
+                <div>
+                  <div className="mtitle">📝 {editing?`Editar Nota de Entrega ${f.editId}`:"Nueva Nota de Entrega"}</div>
+                  <div style={{fontSize:10,color:"var(--t3)",marginTop:2}}>Los WR seleccionados pasarán a <b>Entregado (21)</b> al guardar.</div>
+                </div>
+                <button className="mcl" onClick={()=>setDnModal(null)}>✕</button>
+              </div>
+              <div className="mbd" style={{maxHeight:"72vh",overflow:"auto"}}>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+                  <div><div style={{fontSize:10,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Cliente (casillero)</div>
+                    <select className="fs" value={f.clienteId} onChange={e=>{
+                      const cid=e.target.value;
+                      const cli=clients.find(c=>c.id===cid);
+                      setDnModal(p=>({
+                        ...p,
+                        clienteId:cid,
+                        consignatario:cli?[cli.primerNombre,cli.segundoNombre,cli.primerApellido,cli.segundoApellido].filter(Boolean).join(" "):p.consignatario,
+                        direccionEntrega:cli?[cli.dir,cli.municipio,cli.estado].filter(Boolean).join(", "):p.direccionEntrega,
+                      }));
+                    }} style={{width:"100%"}}>
+                      <option value="">— Sin cliente asociado —</option>
+                      {clientesMatriz.map(c=>(<option key={c.id} value={c.id}>{c.casillero||c.id} · {[c.primerNombre,c.primerApellido].filter(Boolean).join(" ")}</option>))}
+                    </select>
+                  </div>
+                  <div><div style={{fontSize:10,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Consignatario *</div>
+                    <input className="fi" value={f.consignatario} onChange={e=>setDnModal(p=>({...p,consignatario:e.target.value}))} placeholder="Nombre del destinatario/empresa"/>
+                  </div>
+                  <div><div style={{fontSize:10,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Receptor (persona que firma) *</div>
+                    <input className="fi" value={f.receptorNombre} onChange={e=>setDnModal(p=>({...p,receptorNombre:e.target.value}))} placeholder="Nombre y apellido"/>
+                  </div>
+                  <div><div style={{fontSize:10,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Documento/Cédula</div>
+                    <input className="fi" value={f.receptorDocumento} onChange={e=>setDnModal(p=>({...p,receptorDocumento:e.target.value}))} placeholder="V-12345678"/>
+                  </div>
+                  <div><div style={{fontSize:10,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Teléfono</div>
+                    <input className="fi" value={f.receptorTelefono} onChange={e=>setDnModal(p=>({...p,receptorTelefono:e.target.value}))} placeholder="0414-1234567"/>
+                  </div>
+                  <div><div style={{fontSize:10,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Método de entrega</div>
+                    <select className="fs" value={f.metodoEntrega} onChange={e=>setDnModal(p=>({...p,metodoEntrega:e.target.value}))} style={{width:"100%"}}>
+                      <option value="retiro_oficina">🏢 Retiro en oficina</option>
+                      <option value="domicilio">🏠 Entrega a domicilio</option>
+                      <option value="transportista">🚚 Transportista / Agente</option>
+                    </select>
+                  </div>
+                </div>
+
+                {f.metodoEntrega==="domicilio"&&(
+                  <div style={{marginBottom:10}}>
+                    <div style={{fontSize:10,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Dirección de entrega</div>
+                    <input className="fi" value={f.direccionEntrega} onChange={e=>setDnModal(p=>({...p,direccionEntrega:e.target.value}))} placeholder="Av. Principal, Edif X, piso Y — Municipio, Estado"/>
+                  </div>
+                )}
+                {f.metodoEntrega==="transportista"&&(
+                  <div style={{marginBottom:10}}>
+                    <div style={{fontSize:10,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Transportista / Agente</div>
+                    <input className="fi" value={f.transportista} onChange={e=>setDnModal(p=>({...p,transportista:e.target.value}))} placeholder="MRW, Zoom, agente, etc."/>
+                  </div>
+                )}
+                <div style={{marginBottom:12}}>
+                  <div style={{fontSize:10,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Notas</div>
+                  <textarea className="fi" rows={2} value={f.notas} onChange={e=>setDnModal(p=>({...p,notas:e.target.value}))} placeholder="Observaciones de la entrega…" style={{resize:"vertical"}}/>
+                </div>
+
+                <div style={{background:"#F5F7FB",padding:10,borderRadius:6,marginBottom:10}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                    <div style={{fontSize:11,fontWeight:700,color:"var(--navy)"}}>📦 WR Seleccionados ({sel.length})</div>
+                    {sel.length>0&&<button className="btn-s" style={{fontSize:10,padding:"2px 8px"}} onClick={()=>setDnModal(p=>({...p,wrIds:[]}))}>Limpiar todos</button>}
+                  </div>
+                  {sel.length===0?(
+                    <div style={{fontSize:11,color:"var(--t3)",padding:"6px 0"}}>Sin WR — agrega abajo.</div>
+                  ):(
+                    <div style={{display:"flex",flexDirection:"column",gap:4}}>
+                      {sel.map(w=>(
+                        <div key={w.id} style={{display:"flex",alignItems:"center",gap:8,background:"#fff",padding:"4px 8px",borderRadius:4,border:"1px solid #E0E7EF",fontSize:11}}>
+                          <span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",minWidth:80}}>{w.id}</span>
+                          <span className={`st ${w.status?.cls||"s1"}`} style={{fontSize:9}}>{w.status?.label||"—"}</span>
+                          <span style={{flex:1,color:"var(--t2)"}}>{w.consignee||"—"}</span>
+                          <span style={{fontFamily:"'DM Mono',monospace",fontSize:10,color:"var(--t3)"}}>{w.tracking||"—"}</span>
+                          <button className="btn-s" style={{fontSize:9,padding:"2px 6px",color:"var(--red)",borderColor:"var(--red)"}} onClick={()=>setDnModal(p=>({...p,wrIds:p.wrIds.filter(id=>id!==w.id)}))}>✕</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div style={{marginBottom:6}}>
+                  <div style={{fontSize:11,fontWeight:700,color:"var(--t2)",marginBottom:4}}>➕ Agregar WR (elegibles: 20 Por Entrega, 25 Egresado)</div>
+                  <input className="fi" placeholder="Buscar por WR, consignee, tracking…" value={qRef} onChange={e=>setDnModal(p=>({...p,_q:e.target.value}))} style={{marginBottom:6}}/>
+                  <div style={{maxHeight:160,overflow:"auto",border:"1px solid #E0E7EF",borderRadius:4}}>
+                    {filtered.length===0?(
+                      <div style={{padding:10,color:"var(--t3)",fontSize:11,textAlign:"center"}}>No hay WR disponibles{qRef?` para "${qRef}"`:""}</div>
+                    ):filtered.map(w=>(
+                      <div key={w.id} style={{display:"flex",alignItems:"center",gap:8,padding:"4px 8px",borderBottom:"1px solid #EEF",fontSize:11,cursor:"pointer"}} onClick={()=>setDnModal(p=>({...p,wrIds:[...p.wrIds,w.id]}))}>
+                        <span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",minWidth:80}}>{w.id}</span>
+                        <span className={`st ${w.status?.cls||"s1"}`} style={{fontSize:9}}>{w.status?.label||"—"}</span>
+                        <span style={{flex:1,color:"var(--t2)"}}>{w.consignee||"—"}</span>
+                        <span style={{fontFamily:"'DM Mono',monospace",fontSize:10,color:"var(--t3)"}}>{w.tracking||"—"}</span>
+                        <span style={{color:"var(--cyan)",fontSize:10,fontWeight:700}}>+ agregar</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="mft" style={{display:"flex",justifyContent:"flex-end",gap:8}}>
+                <button className="btn-s" onClick={()=>setDnModal(null)}>Cancelar</button>
+                <button className="btn-p" onClick={dnSubmit}>{editing?"💾 Guardar cambios":"📝 Crear Nota de Entrega"}</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── Delivery Note — NOTA IMPRIMIBLE ─────────────────────────────────── */}
+      {dnPrint&&(()=>{
+        const dn=dnPrint;
+        const wrs=(dn.wrIds||[]).map(id=>wrList.find(w=>w.id===id)).filter(Boolean);
+        const totalCajas=wrs.reduce((s,w)=>s+(w.dims?.length||0),0);
+        const totalLb=wrs.reduce((s,w)=>s+(w.dims||[]).reduce((a,d)=>a+parseFloat(d.pkLb||d.pk*2.205||0),0),0);
+        const metodoLabel={retiro_oficina:"Retiro en oficina",domicilio:"Entrega a domicilio",transportista:"Transportista / Agente"};
+        return(
+          <div className="modal-bg">
+            <div className="modal" style={{maxWidth:900,width:"96%"}}>
+              <div className="mhd no-print">
+                <div className="mtitle">🖨️ Nota de Entrega — {dn.id}</div>
+                <div style={{display:"flex",gap:6}}>
+                  <button className="btn-p" style={{fontSize:11,padding:"4px 12px"}} onClick={()=>window.print()}>🖨️ Imprimir</button>
+                  <button className="mcl" onClick={()=>setDnPrint(null)}>✕</button>
+                </div>
+              </div>
+              <div className="mbd" style={{maxHeight:"78vh",overflow:"auto"}}>
+                <div className="dn-print" style={{background:"#fff",color:"#000",padding:"24px 28px",fontFamily:"Arial,Helvetica,sans-serif",fontSize:12}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",borderBottom:"2px solid #000",paddingBottom:10,marginBottom:14}}>
+                    <div>
+                      <div style={{fontSize:20,fontWeight:900,letterSpacing:2}}>ENEX</div>
+                      <div style={{fontSize:10}}>{empresaNombre||"Int'l Courier"}</div>
+                      <div style={{fontSize:9,color:"#555"}}>Nota de Entrega al Cliente</div>
+                    </div>
+                    <div style={{textAlign:"right"}}>
+                      <div style={{fontSize:11,fontWeight:700}}>N° {dn.id}</div>
+                      <div style={{fontSize:10}}>Fecha: {fmtDate(dn.fecha)} {fmtTime(dn.fecha)}</div>
+                      <div style={{fontSize:10}}>Usuario: {dn.usuario||"—"}</div>
+                      {dn.anulado&&<div style={{fontSize:11,fontWeight:900,color:"#C62828",marginTop:4,border:"2px solid #C62828",padding:"2px 6px",display:"inline-block"}}>ANULADA</div>}
+                    </div>
+                  </div>
+
+                  <table style={{width:"100%",fontSize:11,marginBottom:12}}>
+                    <tbody>
+                      <tr><td style={{fontWeight:700,width:140,paddingBottom:3}}>Consignatario:</td><td style={{paddingBottom:3}}>{dn.consignatario||"—"}</td></tr>
+                      <tr><td style={{fontWeight:700,paddingBottom:3}}>Receptor:</td><td style={{paddingBottom:3}}>{dn.receptorNombre||"—"}</td></tr>
+                      <tr><td style={{fontWeight:700,paddingBottom:3}}>Documento:</td><td style={{paddingBottom:3}}>{dn.receptorDocumento||"—"}</td></tr>
+                      <tr><td style={{fontWeight:700,paddingBottom:3}}>Teléfono:</td><td style={{paddingBottom:3}}>{dn.receptorTelefono||"—"}</td></tr>
+                      <tr><td style={{fontWeight:700,paddingBottom:3}}>Método:</td><td style={{paddingBottom:3}}>{metodoLabel[dn.metodoEntrega]||"—"}</td></tr>
+                      {dn.direccionEntrega&&<tr><td style={{fontWeight:700,paddingBottom:3,verticalAlign:"top"}}>Dirección:</td><td style={{paddingBottom:3}}>{dn.direccionEntrega}</td></tr>}
+                      {dn.transportista&&<tr><td style={{fontWeight:700,paddingBottom:3}}>Transportista:</td><td style={{paddingBottom:3}}>{dn.transportista}</td></tr>}
+                      {dn.notas&&<tr><td style={{fontWeight:700,paddingBottom:3,verticalAlign:"top"}}>Notas:</td><td style={{paddingBottom:3,whiteSpace:"pre-wrap"}}>{dn.notas}</td></tr>}
+                      {dn.anulado&&dn.motivoAnulacion&&<tr><td style={{fontWeight:700,color:"#C62828"}}>Motivo anulación:</td><td style={{color:"#C62828"}}>{dn.motivoAnulacion}</td></tr>}
+                    </tbody>
+                  </table>
+
+                  <div style={{fontSize:11,fontWeight:700,marginBottom:4}}>Detalle de la entrega ({wrs.length} WR · {totalCajas} cajas · {totalLb.toFixed(1)} lb)</div>
+                  <table style={{width:"100%",borderCollapse:"collapse",fontSize:10,marginBottom:16}}>
+                    <thead>
+                      <tr style={{background:"#EEE"}}>
+                        <th style={{border:"1px solid #999",padding:"4px 6px",textAlign:"left"}}>#</th>
+                        <th style={{border:"1px solid #999",padding:"4px 6px",textAlign:"left"}}>WR</th>
+                        <th style={{border:"1px solid #999",padding:"4px 6px",textAlign:"left"}}>Descripción</th>
+                        <th style={{border:"1px solid #999",padding:"4px 6px",textAlign:"left"}}>Tracking</th>
+                        <th style={{border:"1px solid #999",padding:"4px 6px",textAlign:"center"}}>Cajas</th>
+                        <th style={{border:"1px solid #999",padding:"4px 6px",textAlign:"right"}}>Peso (lb)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {wrs.map((w,i)=>{
+                        const c=(w.dims||[]).length;
+                        const lb=(w.dims||[]).reduce((a,d)=>a+parseFloat(d.pkLb||d.pk*2.205||0),0);
+                        const desc=(w.dims||[]).map(d=>d.descripcion).filter(Boolean).join(" · ")||w.notas||"—";
+                        return(
+                          <tr key={w.id}>
+                            <td style={{border:"1px solid #999",padding:"3px 6px"}}>{i+1}</td>
+                            <td style={{border:"1px solid #999",padding:"3px 6px",fontWeight:700}}>{w.id}</td>
+                            <td style={{border:"1px solid #999",padding:"3px 6px"}}>{desc.length>60?desc.slice(0,57)+"…":desc}</td>
+                            <td style={{border:"1px solid #999",padding:"3px 6px",fontFamily:"monospace"}}>{w.tracking||"—"}</td>
+                            <td style={{border:"1px solid #999",padding:"3px 6px",textAlign:"center"}}>{c}</td>
+                            <td style={{border:"1px solid #999",padding:"3px 6px",textAlign:"right"}}>{lb.toFixed(1)}</td>
+                          </tr>
+                        );
+                      })}
+                      {wrs.length===0&&(<tr><td colSpan={6} style={{border:"1px solid #999",padding:"8px 6px",textAlign:"center",color:"#999"}}>(sin WR)</td></tr>)}
+                      <tr style={{background:"#F8F8F8",fontWeight:700}}>
+                        <td colSpan={4} style={{border:"1px solid #999",padding:"4px 6px",textAlign:"right"}}>TOTALES:</td>
+                        <td style={{border:"1px solid #999",padding:"4px 6px",textAlign:"center"}}>{totalCajas}</td>
+                        <td style={{border:"1px solid #999",padding:"4px 6px",textAlign:"right"}}>{totalLb.toFixed(1)}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+
+                  <div style={{border:"1px solid #000",padding:"8px 10px",fontSize:10,background:"#FAFAFA",marginBottom:30}}>
+                    <b>DECLARACIÓN DE RECEPCIÓN:</b> El receptor declara haber recibido conforme, en buen estado y en la cantidad indicada, la mercancía descrita en esta nota. Cualquier discrepancia o daño visible debe ser reportado al momento de la firma. Una vez firmada, ENEX queda liberado de toda responsabilidad sobre la custodia de la mercancía listada.
+                  </div>
+
+                  <div style={{display:"flex",justifyContent:"space-between",gap:40,marginTop:40}}>
+                    <div style={{flex:1,textAlign:"center"}}>
+                      <div style={{borderTop:"1px solid #000",paddingTop:4,fontSize:10,fontWeight:700}}>Entrega ENEX</div>
+                      <div style={{fontSize:9,color:"#555",marginTop:2}}>Firma y sello</div>
+                    </div>
+                    <div style={{flex:1,textAlign:"center"}}>
+                      <div style={{borderTop:"1px solid #000",paddingTop:4,fontSize:10,fontWeight:700}}>Recibe conforme</div>
+                      <div style={{fontSize:9,color:"#555",marginTop:2}}>{dn.receptorNombre||"—"}{dn.receptorDocumento?` · ${dn.receptorDocumento}`:""}</div>
+                    </div>
                   </div>
                 </div>
               </div>
