@@ -238,6 +238,49 @@ export const dbDeleteConsolidacion = async (id) => {
   if (error) console.error('deleteConsolidacion:', error)
 }
 
+// ── CARGO RELEASES (Egresos) ─────────────────────────────────
+export const dbGetCargoReleases = async () => {
+  const { data, error } = await supabase.from('cargo_releases').select('*').order('fecha', {ascending:false})
+  if (error) { console.error('getCargoReleases:', error); return [] }
+  return data.map(r => ({
+    id: r.id,
+    fecha: r.fecha ? new Date(r.fecha) : new Date(),
+    wrIds: r.wr_ids || [],
+    agenteCarga: r.agente_carga || '',
+    contacto: r.contacto || '',
+    documento: r.documento || '',
+    vehiculo: r.vehiculo || '',
+    notas: r.notas || '',
+    usuario: r.usuario || '',
+    firmaDataUrl: r.firma_data_url || '',
+    anulado: r.anulado ?? false,
+    motivoAnulacion: r.motivo_anulacion || '',
+  }))
+}
+
+export const dbUpsertCargoRelease = async (cr) => {
+  const { error } = await supabase.from('cargo_releases').upsert({
+    id: cr.id,
+    fecha: cr.fecha instanceof Date ? cr.fecha.toISOString() : cr.fecha,
+    wr_ids: cr.wrIds || [],
+    agente_carga: cr.agenteCarga || '',
+    contacto: cr.contacto || '',
+    documento: cr.documento || '',
+    vehiculo: cr.vehiculo || '',
+    notas: cr.notas || '',
+    usuario: cr.usuario || '',
+    firma_data_url: cr.firmaDataUrl || '',
+    anulado: cr.anulado ?? false,
+    motivo_anulacion: cr.motivoAnulacion || '',
+  })
+  if (error) console.error('upsertCargoRelease:', error)
+}
+
+export const dbDeleteCargoRelease = async (id) => {
+  const { error } = await supabase.from('cargo_releases').delete().eq('id', id)
+  if (error) console.error('deleteCargoRelease:', error)
+}
+
 // ── CONFIGURACION (tipos de envio, pago, contenedor, paises) ─
 export const dbGetConfig = async (clave) => {
   const { data, error } = await supabase

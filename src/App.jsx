@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { dbGetClientes, dbUpsertCliente, dbDeleteCliente, dbGetWR, dbUpsertWR, dbDeleteWR, dbGetAgentes, dbUpsertAgente, dbDeleteAgente, dbGetOficinas, dbUpsertOficina, dbDeleteOficina, dbGetTarifas, dbUpsertTarifa, dbDeleteTarifa, dbGetConsolidaciones, dbUpsertConsolidacion, dbDeleteConsolidacion, dbLogActividad, dbGetActividad, dbGetConfig, dbSetConfig, dbGetScanLog, dbInsertScan, dbSetScanRegistered, dbDeleteScanIds } from "./supabase";
+import { dbGetClientes, dbUpsertCliente, dbDeleteCliente, dbGetWR, dbUpsertWR, dbDeleteWR, dbGetAgentes, dbUpsertAgente, dbDeleteAgente, dbGetOficinas, dbUpsertOficina, dbDeleteOficina, dbGetTarifas, dbUpsertTarifa, dbDeleteTarifa, dbGetConsolidaciones, dbUpsertConsolidacion, dbDeleteConsolidacion, dbGetCargoReleases, dbUpsertCargoRelease, dbDeleteCargoRelease, dbLogActividad, dbGetActividad, dbGetConfig, dbSetConfig, dbGetScanLog, dbInsertScan, dbSetScanRegistered, dbDeleteScanIds } from "./supabase";
 
 // ─── TEMA CLARO PROFESIONAL ───────────────────────────────────────────────────
 const S = `
@@ -1328,6 +1328,11 @@ export default function ENEXSystem(){
   const [rdSearch,setRdSearch]=useState("");
   const [rdTab,setRdTab]=useState("pendientes"); // pendientes | archivadas
   const [rdSelGuia,setRdSelGuia]=useState(""); // id de la guía seleccionada para recepción
+  // Cargo Release (egresos)
+  const [cargoReleases,setCargoReleases]=useState([]);
+  const [crModal,setCrModal]=useState(null); // null | {wrIds:[], agenteCarga, contacto, documento, vehiculo, notas, editId?}
+  const [crSearch,setCrSearch]=useState("");
+  const [crPrint,setCrPrint]=useState(null); // release a imprimir
   const [labelTipo,setLabelTipo]=useState("WR");
   const [openDays,setOpenDays]=useState({});
   const [actFilter,setActFilter]=useState("");
@@ -1401,10 +1406,10 @@ export default function ENEXSystem(){
   // ── SUPABASE: cargar datos al iniciar ────────────────────────────────────
   useEffect(()=>{
     const load=async()=>{
-      const [cls,wrs,ags,ofs,tfs,cons,acts,scans,sendT,payT,chargesT,contT,countriesT,
+      const [cls,wrs,ags,ofs,tfs,cons,acts,scans,crs,sendT,payT,chargesT,contT,countriesT,
              wrNumT,wrSecT,consolNumT,consolSecT,empSlugT,labelWRT,labelCsaT]=await Promise.all([
         dbGetClientes(),dbGetWR(),dbGetAgentes(),dbGetOficinas(),
-        dbGetTarifas(),dbGetConsolidaciones(),dbGetActividad(),dbGetScanLog(),
+        dbGetTarifas(),dbGetConsolidaciones(),dbGetActividad(),dbGetScanLog(),dbGetCargoReleases(),
         dbGetConfig('send_types'),dbGetConfig('pay_types'),dbGetConfig('charges'),
         dbGetConfig('container_types'),dbGetConfig('countries'),
         dbGetConfig('wr_num_tipo'),dbGetConfig('wr_sec_inicio'),
@@ -1434,6 +1439,7 @@ export default function ENEXSystem(){
       if(cons.length>0)setConsolList(cons);
       if(acts.length>0)setActLog(acts);
       if(scans.length>0)setScanLog(scans);
+      if(crs&&crs.length>0)setCargoReleases(crs);
       if(sendT&&sendT.length>0){
         setSendTypes(sendT);
         // Sincronizar forms que aún no tienen tipo de envío con el primero disponible
@@ -2502,6 +2508,7 @@ export default function ENEXSystem(){
               setShowNewWR(true);setSelWR(null);
             }}>✏️ Editar</button>}
             {hasPerm("borrar_wr")&&<button className="btn-s" style={{fontSize:10,padding:"4px 10px",color:"var(--red)",borderColor:"var(--red)"}} onClick={()=>{if(window.confirm(`¿Borrar WR ${selWR.id}? Esta acción no se puede deshacer.`)){setWrList(p=>p.filter(x=>x.id!==selWR.id));dbDeleteWR(selWR.id);logAction("Borró WR",selWR.id);setSelWR(null);}}}>🗑 Borrar</button>}
+            {crElegible(selWR)&&hasPerm("hacer_egreso")&&<button className="btn-s" style={{fontSize:10,padding:"4px 10px",background:"#E8F5E9",borderColor:"#81C784",color:"#2E7D32",fontWeight:700}} onClick={()=>{crOpenNew([selWR.id]);setSelWR(null);}} title="Registrar egreso individual de este WR">🚀 Egresar</button>}
             <button className="btn-p" style={{fontSize:10,padding:"4px 10px"}} onClick={()=>window.print()}>🖨 Imprimir</button>
             <button className="mcl" onClick={()=>setSelWR(null)}>✕</button>
           </div>
@@ -5589,6 +5596,90 @@ export default function ENEXSystem(){
     logAction(`Recibió guía ${guia.id} (bulk)`,`${cambiados} WR → Almacén`);
     window.alert(`✅ ${cambiados} WR marcados como recibidos (Almacén).\nUsa "Cerrar recepción de guía" cuando termines el checklist para pasarlos a Por Entrega.`);
   };
+  // ── CARGO RELEASE (Egreso) ──────────────────────────────────────────────────
+  // Un Cargo Release agrupa 1+ WRs entregados a un agente/transportista.
+  // Al crear: todos los WRs pasan a estado 25 Egresado. Elegible solo desde 20 Por Entrega
+  // (lo habitual) o 17 Almacén (egreso directo sin pasar por Por Entrega).
+  const crElegible=(w)=>["17","20"].includes(w.status?.code||"");
+  const crBuildId=()=>{
+    const d=new Date();
+    const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,"0"), dd=String(d.getDate()).padStart(2,"0");
+    const prefix=`ER-${y}${m}${dd}`;
+    const sameDay=cargoReleases.filter(c=>String(c.id).startsWith(prefix));
+    const n=String(sameDay.length+1).padStart(3,"0");
+    return `${prefix}-${n}`;
+  };
+  const crOpenNew=(preselectedIds=[])=>{
+    if(!hasPerm("hacer_egreso")){window.alert("Tu rol no tiene permiso para registrar egresos.");return;}
+    setCrModal({wrIds:preselectedIds,agenteCarga:"",contacto:"",documento:"",vehiculo:"",notas:"",editId:null});
+  };
+  const crOpenEdit=(cr)=>{
+    if(!hasPerm("editar_egreso")){window.alert("Tu rol no tiene permiso para editar egresos.");return;}
+    setCrModal({wrIds:cr.wrIds||[],agenteCarga:cr.agenteCarga||"",contacto:cr.contacto||"",documento:cr.documento||"",vehiculo:cr.vehiculo||"",notas:cr.notas||"",editId:cr.id});
+  };
+  const crSubmit=()=>{
+    const f=crModal; if(!f)return;
+    if(!f.agenteCarga.trim()){window.alert("El agente de carga es obligatorio.");return;}
+    if(!f.wrIds||f.wrIds.length===0){window.alert("Agrega al menos 1 WR al egreso.");return;}
+    const editing=!!f.editId;
+    const id=editing?f.editId:crBuildId();
+    const now=new Date();
+    const cr={
+      id,fecha:editing?(cargoReleases.find(c=>c.id===id)?.fecha||now):now,
+      wrIds:f.wrIds,
+      agenteCarga:f.agenteCarga.trim(),
+      contacto:f.contacto.trim(),
+      documento:f.documento.trim(),
+      vehiculo:f.vehiculo.trim(),
+      notas:f.notas.trim(),
+      usuario:currentUser.id||currentUser.email||"",
+      firmaDataUrl:"",
+      anulado:false,motivoAnulacion:"",
+    };
+    if(editing){
+      setCargoReleases(p=>p.map(c=>c.id===id?{...c,...cr}:c));
+    }else{
+      setCargoReleases(p=>[cr,...p]);
+      // Promover WRs → 25 Egresado
+      const st25=getStatus("25");
+      setWrList(p=>p.map(w=>{
+        if(!cr.wrIds.includes(w.id))return w;
+        const upd={...w,status:st25,historial:[...(w.historial||[]),{code:"25",label:"Egresado",fecha:now,user:currentUser.id,nota:`Egreso ${id} → ${cr.agenteCarga}`}]};
+        dbUpsertWR(upd);
+        return upd;
+      }));
+    }
+    dbUpsertCargoRelease(cr);
+    logAction(editing?"Editó egreso":"Creó egreso",`${id} · ${cr.wrIds.length} WR → ${cr.agenteCarga}`);
+    setCrModal(null);
+    if(!editing)window.alert(`✅ Egreso ${id} creado.\n${cr.wrIds.length} WR → Egresado (25).`);
+  };
+  const crAnular=(cr)=>{
+    if(!hasPerm("editar_egreso")){window.alert("Tu rol no tiene permiso.");return;}
+    const motivo=window.prompt(`Anular egreso ${cr.id}.\nMotivo (obligatorio):`);
+    if(!motivo)return;
+    const upd={...cr,anulado:true,motivoAnulacion:motivo};
+    setCargoReleases(p=>p.map(c=>c.id===cr.id?upd:c));
+    dbUpsertCargoRelease(upd);
+    // Revertir WRs a 20 Por Entrega
+    const st20=getStatus("20");
+    setWrList(p=>p.map(w=>{
+      if(!cr.wrIds.includes(w.id))return w;
+      if(w.status?.code!=="25")return w; // si ya avanzó, no revertir
+      const u={...w,status:st20,historial:[...(w.historial||[]),{code:"20",label:"Por Entrega",fecha:new Date(),user:currentUser.id,nota:`Egreso ${cr.id} anulado: ${motivo}`}]};
+      dbUpsertWR(u);
+      return u;
+    }));
+    logAction("Anuló egreso",`${cr.id} — ${motivo}`);
+  };
+  const crDelete=(cr)=>{
+    if(!hasPerm("borrar_egreso")){window.alert("Tu rol no tiene permiso para borrar egresos.");return;}
+    if(!window.confirm(`¿Borrar permanentemente el egreso ${cr.id}? Esto NO revierte los estados de los WR. Si quieres deshacer, usa "Anular" en vez de borrar.`))return;
+    setCargoReleases(p=>p.filter(c=>c.id!==cr.id));
+    dbDeleteCargoRelease(cr.id);
+    logAction("Borró egreso",cr.id);
+  };
+
   const renderRecepcionDest=()=>{
     const q=(rdSearch||"").toLowerCase().trim();
     // Guías activas (no archivadas): se muestran para selección manual o escaneo
@@ -5885,6 +5976,73 @@ export default function ENEXSystem(){
     );
   };
 
+  // ── CARGO RELEASE RENDER ────────────────────────────────────────────────────
+  const renderCargoRelease=()=>{
+    const q=(crSearch||"").toLowerCase().trim();
+    const activos=cargoReleases.filter(c=>!c.anulado);
+    const anulados=cargoReleases.filter(c=>c.anulado);
+    const lista=cargoReleases.filter(c=>!q||[c.id,c.agenteCarga,c.contacto,c.documento,c.vehiculo].some(v=>String(v||"").toLowerCase().includes(q)));
+    return(
+      <div className="page-scroll">
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
+          <div style={{flex:1}}>
+            <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:16,fontWeight:700,color:"var(--navy)"}}>🚀 Cargo Release (Egresos)</div>
+            <div style={{fontSize:11,color:"var(--t3)",marginTop:2}}>Liberación de carga a agente/transportista. Los WR pasan a Egresado (25). Estado elegible: 17 Almacén o 20 Por Entrega.</div>
+          </div>
+          <div style={{display:"flex",gap:6,fontSize:11}}>
+            <span style={{background:"#E8F5E9",color:"#2E7D32",padding:"4px 10px",borderRadius:10,fontWeight:700,border:"1px solid #A5D6A7"}}>✓ {activos.length} activos</span>
+            <span style={{background:"#FFF3E0",color:"#E65100",padding:"4px 10px",borderRadius:10,fontWeight:700,border:"1px solid #FFCC80"}}>✕ {anulados.length} anulados</span>
+          </div>
+          {hasPerm("hacer_egreso")&&<button className="btn-p" onClick={()=>crOpenNew()}>➕ Nuevo Egreso</button>}
+        </div>
+
+        <div className="card" style={{marginBottom:10}}>
+          <input className="fi" placeholder="Buscar por N° egreso, agente, contacto, documento, vehículo…"
+            value={crSearch} onChange={e=>setCrSearch(e.target.value)} style={{fontSize:12,width:"100%",padding:"8px 12px"}}/>
+        </div>
+
+        <div className="card" style={{padding:0,overflow:"hidden"}}>
+          {lista.length===0?(
+            <div style={{textAlign:"center",padding:60,color:"var(--t3)"}}>No hay egresos registrados.</div>
+          ):(
+            <table className="ct">
+              <thead><tr>
+                <th>N° Egreso</th><th>Fecha</th><th>Agente</th><th>Contacto</th><th>Vehículo</th>
+                <th style={{textAlign:"center"}}>WR</th><th>Usuario</th><th>Estado</th><th style={{width:200}}>Acciones</th>
+              </tr></thead>
+              <tbody>
+                {lista.map(c=>(
+                  <tr key={c.id} style={{background:c.anulado?"#FFF5F5":""}}>
+                    <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",background:"#EEF3FF",padding:"2px 6px",borderRadius:4,border:"1px solid #B8C8F0",fontSize:11}}>{c.id}</span></td>
+                    <td style={{fontFamily:"'DM Mono',monospace",fontSize:10}}>{fmtDate(c.fecha)} {fmtTime(c.fecha)}</td>
+                    <td style={{fontWeight:600,color:"var(--t1)"}}>{c.agenteCarga||"—"}</td>
+                    <td style={{fontSize:11,color:"var(--t2)"}}>{c.contacto||"—"}{c.documento?` · ${c.documento}`:""}</td>
+                    <td style={{fontFamily:"'DM Mono',monospace",fontSize:10,color:"var(--cyan)"}}>{c.vehiculo||"—"}</td>
+                    <td style={{textAlign:"center",fontWeight:700,color:"var(--navy)"}}>{(c.wrIds||[]).length}</td>
+                    <td style={{fontSize:11,color:"var(--t3)"}}>{c.usuario||"—"}</td>
+                    <td>{c.anulado
+                      ?<span style={{fontSize:10,fontWeight:700,color:"#C62828"}}>✕ Anulado</span>
+                      :<span style={{fontSize:10,fontWeight:700,color:"#2E7D32"}}>✓ Activo</span>}
+                      {c.anulado&&c.motivoAnulacion&&<div style={{fontSize:9,color:"#C62828",marginTop:2}}>{c.motivoAnulacion}</div>}
+                    </td>
+                    <td>
+                      <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+                        <button className="btn-s" style={{fontSize:10,padding:"3px 8px"}} onClick={()=>setCrPrint(c)} title="Ver / Imprimir nota">🖨️ Nota</button>
+                        {!c.anulado&&hasPerm("editar_egreso")&&<button className="btn-s" style={{fontSize:10,padding:"3px 8px"}} onClick={()=>crOpenEdit(c)}>✏️ Editar</button>}
+                        {!c.anulado&&hasPerm("editar_egreso")&&<button className="btn-s" style={{fontSize:10,padding:"3px 8px",background:"#FFF3E0",borderColor:"#FFB74D",color:"#E65100"}} onClick={()=>crAnular(c)}>✕ Anular</button>}
+                        {hasPerm("borrar_egreso")&&<button className="btn-d" style={{fontSize:10,padding:"3px 8px"}} onClick={()=>crDelete(c)}>🗑️</button>}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   // ── NAV ─────────────────────────────────────────────────────────────────────
   // Shortcut handler: abre Configuración preseleccionando un tab
   const goSettingsTab=(t)=>{setTab("settings");setCfgTab(t);};
@@ -5900,6 +6058,7 @@ export default function ENEXSystem(){
       {id:"reempaque",ic:"🔁",l:"Reempaque"},
       {id:"consolidation",ic:"🗂️",l:"Consolidación"},
       {id:"recepciondest",ic:"📬",l:"Recepción en Almacén"},
+      {id:"cargorelease",ic:"🚀",l:"Cargo Release"},
     ]},
     {label:"Gestión",items:[
       {id:"clients",ic:"👥",l:"Clientes & Usuarios"},
@@ -5927,7 +6086,7 @@ export default function ENEXSystem(){
     ]},
   ];
 
-  const PAGE_TITLES={dashboard:"Dashboard General",wr:"Warehouse Receipts",scan:"Recepción en Puerta",etiquetas:"Imprimir Etiquetas",clients:"Clientes & Usuarios",estadocuenta:"Estado de Cuenta",roles:"Roles & Permisos",consolidation:"Consolidación",tracking:"Tracking",pickup:"Pick-up",contabilidad:"Contabilidad",calculadora:"Calculadora de Envío",chat:"Chat Interno",docs:"Documentos",reports:"Reportes",alerts:"Alertas",settings:"Configuración",reempaque:"Reempaque",recepciondest:"Recepción en Destino"};
+  const PAGE_TITLES={dashboard:"Dashboard General",wr:"Warehouse Receipts",scan:"Recepción en Puerta",etiquetas:"Imprimir Etiquetas",clients:"Clientes & Usuarios",estadocuenta:"Estado de Cuenta",roles:"Roles & Permisos",consolidation:"Consolidación",tracking:"Tracking",pickup:"Pick-up",contabilidad:"Contabilidad",calculadora:"Calculadora de Envío",chat:"Chat Interno",docs:"Documentos",reports:"Reportes",alerts:"Alertas",settings:"Configuración",reempaque:"Reempaque",recepciondest:"Recepción en Destino",cargorelease:"Cargo Release (Egreso)"};
 
   const renderPage=()=>{
     switch(tab){
@@ -5947,6 +6106,7 @@ export default function ENEXSystem(){
       case "settings":     return renderSettings();
       case "reempaque":    return renderReempaque();
       case "recepciondest":return renderRecepcionDest();
+      case "cargorelease": return renderCargoRelease();
       default:             return <div className="page-scroll"><div className="card" style={{textAlign:"center",padding:60,color:"var(--t3)"}}>{PAGE_TITLES[tab]} — Módulo próximamente</div></div>;
     }
   };
@@ -6447,6 +6607,200 @@ export default function ENEXSystem(){
 
       {showNewCl&&<ClientModal agentes={agentes} oficinas={oficinas} autonomos={clients.filter(c=>c.tipo==="usuario"&&c.rol==="F")} allClients={clients} title="➕ Nuevo Registro" initial={{tipo:"cliente",clienteTipo:"matriz",primerNombre:"",segundoNombre:"",primerApellido:"",segundoApellido:"",cedula:"",dir:"",municipio:"",estado:"",pais:"",cp:"",tel1:"",tel2:"",email:"",casillero:"",rol:"I",password:""}} onClose={()=>setShowNewCl(false)} onSave={f=>{const esUser=f.tipo==="usuario";const prefix=esUser?"U":"C";const nextNum=clients.filter(c=>c.tipo===(esUser?"usuario":"cliente")).length+1;const newId=`${prefix}-${String(nextNum).padStart(3,"0")}`;const casillero=(!esUser&&!f.casillero)?newId:f.casillero;const newRec={...f,id:newId,casillero,clienteTipo:f.clienteTipo||"matriz"};setClients(p=>[...p,newRec]);dbUpsertCliente(newRec);setShowNewCl(false);logAction("Creó registro",`${newId} — ${f.primerNombre} ${f.primerApellido}`);}}/>}
       {showEditCl&&<ClientModal agentes={agentes} oficinas={oficinas} autonomos={clients.filter(c=>c.tipo==="usuario"&&c.rol==="F")} allClients={clients} title={`✏️ Editar — ${fullName(showEditCl)}`} initial={showEditCl} onClose={()=>setShowEditCl(null)} onSave={f=>{setClients(p=>p.map(c=>c.id===f.id?f:c));dbUpsertCliente({...f,clienteTipo:f.clienteTipo||"matriz"});logAction("Editó registro",`${f.id} — ${f.primerNombre} ${f.primerApellido}`);setShowEditCl(null);}}/>}
+
+      {/* ── Cargo Release — MODAL FORMULARIO ───────────────────────────────── */}
+      {crModal&&(()=>{
+        const f=crModal;
+        const editing=!!f.editId;
+        // WRs elegibles = 17 o 20, + los ya seleccionados (aunque estén en 25 por ser edit)
+        const elegibles=wrList.filter(w=>crElegible(w)||f.wrIds.includes(w.id));
+        const sel=f.wrIds.map(id=>wrList.find(w=>w.id===id)).filter(Boolean);
+        const qRef=f._q||"";
+        const filtered=elegibles.filter(w=>{
+          if(f.wrIds.includes(w.id))return false;
+          if(!qRef)return true;
+          const qq=qRef.toLowerCase();
+          return [w.id,w.consignee,w.shipper,w.tracking,w.proNumber].some(v=>String(v||"").toLowerCase().includes(qq));
+        }).slice(0,30);
+        const agentesCarga=agentes.filter(a=>a.tipo==="transporte"||a.tipoAgente==="transporte"||!a.tipoAgente);
+        return(
+          <div className="modal-bg" onClick={()=>{}}>
+            <div className="modal" style={{maxWidth:900,width:"94%"}} onClick={e=>e.stopPropagation()}>
+              <div className="mhd">
+                <div>
+                  <div className="mtitle">🚀 {editing?`Editar Egreso ${f.editId}`:"Nuevo Egreso (Cargo Release)"}</div>
+                  <div style={{fontSize:10,color:"var(--t3)",marginTop:2}}>Los WR seleccionados pasarán a <b>Egresado (25)</b> al guardar.</div>
+                </div>
+                <button className="mcl" onClick={()=>setCrModal(null)}>✕</button>
+              </div>
+              <div className="mbd" style={{maxHeight:"70vh",overflow:"auto"}}>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
+                  <div><div style={{fontSize:10,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Agente de carga *</div>
+                    <input className="fi" list="cr-agentes" value={f.agenteCarga} onChange={e=>setCrModal(p=>({...p,agenteCarga:e.target.value}))} placeholder="Nombre del agente/transportista…"/>
+                    <datalist id="cr-agentes">{agentesCarga.map(a=>(<option key={a.id||a.nombre} value={a.nombre||a.name||""}/>))}</datalist>
+                  </div>
+                  <div><div style={{fontSize:10,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Contacto (persona)</div>
+                    <input className="fi" value={f.contacto} onChange={e=>setCrModal(p=>({...p,contacto:e.target.value}))} placeholder="Ej: Luis Pérez · 0414-1234567"/>
+                  </div>
+                  <div><div style={{fontSize:10,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Documento/Cédula</div>
+                    <input className="fi" value={f.documento} onChange={e=>setCrModal(p=>({...p,documento:e.target.value}))} placeholder="V-12345678"/>
+                  </div>
+                  <div><div style={{fontSize:10,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Vehículo (placa/modelo)</div>
+                    <input className="fi" value={f.vehiculo} onChange={e=>setCrModal(p=>({...p,vehiculo:e.target.value}))} placeholder="AB1234 · Ford 350"/>
+                  </div>
+                </div>
+                <div style={{marginBottom:12}}>
+                  <div style={{fontSize:10,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Notas</div>
+                  <textarea className="fi" rows={2} value={f.notas} onChange={e=>setCrModal(p=>({...p,notas:e.target.value}))} placeholder="Observaciones del egreso…" style={{resize:"vertical"}}/>
+                </div>
+
+                <div style={{background:"#F5F7FB",padding:10,borderRadius:6,marginBottom:10}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                    <div style={{fontSize:11,fontWeight:700,color:"var(--navy)"}}>📦 WR Seleccionados ({sel.length})</div>
+                    {sel.length>0&&<button className="btn-s" style={{fontSize:10,padding:"2px 8px"}} onClick={()=>setCrModal(p=>({...p,wrIds:[]}))}>Limpiar todos</button>}
+                  </div>
+                  {sel.length===0?(
+                    <div style={{fontSize:11,color:"var(--t3)",padding:"6px 0"}}>Sin WR — agrega abajo.</div>
+                  ):(
+                    <div style={{display:"flex",flexDirection:"column",gap:4}}>
+                      {sel.map(w=>(
+                        <div key={w.id} style={{display:"flex",alignItems:"center",gap:8,background:"#fff",padding:"4px 8px",borderRadius:4,border:"1px solid #E0E7EF",fontSize:11}}>
+                          <span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",minWidth:80}}>{w.id}</span>
+                          <span className={`st ${w.status?.cls||"s1"}`} style={{fontSize:9}}>{w.status?.label||"—"}</span>
+                          <span style={{flex:1,color:"var(--t2)"}}>{w.consignee||"—"}</span>
+                          <span style={{fontFamily:"'DM Mono',monospace",fontSize:10,color:"var(--t3)"}}>{w.tracking||"—"}</span>
+                          <button className="btn-s" style={{fontSize:9,padding:"2px 6px",color:"var(--red)",borderColor:"var(--red)"}} onClick={()=>setCrModal(p=>({...p,wrIds:p.wrIds.filter(id=>id!==w.id)}))}>✕</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div style={{marginBottom:6}}>
+                  <div style={{fontSize:11,fontWeight:700,color:"var(--t2)",marginBottom:4}}>➕ Agregar WR (elegibles: 17 Almacén, 20 Por Entrega)</div>
+                  <input className="fi" placeholder="Buscar por WR, consignee, tracking…" value={qRef} onChange={e=>setCrModal(p=>({...p,_q:e.target.value}))} style={{marginBottom:6}}/>
+                  <div style={{maxHeight:160,overflow:"auto",border:"1px solid #E0E7EF",borderRadius:4}}>
+                    {filtered.length===0?(
+                      <div style={{padding:10,color:"var(--t3)",fontSize:11,textAlign:"center"}}>No hay WR disponibles{qRef?` para "${qRef}"`:""}</div>
+                    ):filtered.map(w=>(
+                      <div key={w.id} style={{display:"flex",alignItems:"center",gap:8,padding:"4px 8px",borderBottom:"1px solid #EEF",fontSize:11,cursor:"pointer"}} onClick={()=>setCrModal(p=>({...p,wrIds:[...p.wrIds,w.id]}))}>
+                        <span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",minWidth:80}}>{w.id}</span>
+                        <span className={`st ${w.status?.cls||"s1"}`} style={{fontSize:9}}>{w.status?.label||"—"}</span>
+                        <span style={{flex:1,color:"var(--t2)"}}>{w.consignee||"—"}</span>
+                        <span style={{fontFamily:"'DM Mono',monospace",fontSize:10,color:"var(--t3)"}}>{w.tracking||"—"}</span>
+                        <span style={{color:"var(--cyan)",fontSize:10,fontWeight:700}}>+ agregar</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="mft" style={{display:"flex",justifyContent:"flex-end",gap:8}}>
+                <button className="btn-s" onClick={()=>setCrModal(null)}>Cancelar</button>
+                <button className="btn-p" onClick={crSubmit}>{editing?"💾 Guardar cambios":"🚀 Crear Egreso"}</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── Cargo Release — NOTA IMPRIMIBLE ─────────────────────────────────── */}
+      {crPrint&&(()=>{
+        const cr=crPrint;
+        const wrs=(cr.wrIds||[]).map(id=>wrList.find(w=>w.id===id)).filter(Boolean);
+        const totalCajas=wrs.reduce((s,w)=>s+(w.dims?.length||0),0);
+        const totalLb=wrs.reduce((s,w)=>s+(w.dims||[]).reduce((a,d)=>a+parseFloat(d.pkLb||d.pk*2.205||0),0),0);
+        return(
+          <div className="modal-bg">
+            <div className="modal" style={{maxWidth:900,width:"96%"}}>
+              <div className="mhd no-print">
+                <div className="mtitle">🖨️ Nota de Egreso — {cr.id}</div>
+                <div style={{display:"flex",gap:6}}>
+                  <button className="btn-p" style={{fontSize:11,padding:"4px 12px"}} onClick={()=>window.print()}>🖨️ Imprimir</button>
+                  <button className="mcl" onClick={()=>setCrPrint(null)}>✕</button>
+                </div>
+              </div>
+              <div className="mbd" style={{maxHeight:"78vh",overflow:"auto"}}>
+                <div className="cr-print" style={{background:"#fff",color:"#000",padding:"24px 28px",fontFamily:"Arial,Helvetica,sans-serif",fontSize:12}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",borderBottom:"2px solid #000",paddingBottom:10,marginBottom:14}}>
+                    <div>
+                      <div style={{fontSize:20,fontWeight:900,letterSpacing:2}}>ENEX</div>
+                      <div style={{fontSize:10}}>{empresaNombre||"Int'l Courier"}</div>
+                      <div style={{fontSize:9,color:"#555"}}>Nota de Egreso / Cargo Release</div>
+                    </div>
+                    <div style={{textAlign:"right"}}>
+                      <div style={{fontSize:11,fontWeight:700}}>N° {cr.id}</div>
+                      <div style={{fontSize:10}}>Fecha: {fmtDate(cr.fecha)} {fmtTime(cr.fecha)}</div>
+                      <div style={{fontSize:10}}>Usuario: {cr.usuario||"—"}</div>
+                      {cr.anulado&&<div style={{fontSize:11,fontWeight:900,color:"#C62828",marginTop:4,border:"2px solid #C62828",padding:"2px 6px",display:"inline-block"}}>ANULADO</div>}
+                    </div>
+                  </div>
+
+                  <table style={{width:"100%",fontSize:11,marginBottom:12}}>
+                    <tbody>
+                      <tr><td style={{fontWeight:700,width:120,paddingBottom:3}}>Agente de carga:</td><td style={{paddingBottom:3}}>{cr.agenteCarga||"—"}</td></tr>
+                      <tr><td style={{fontWeight:700,paddingBottom:3}}>Contacto:</td><td style={{paddingBottom:3}}>{cr.contacto||"—"}</td></tr>
+                      <tr><td style={{fontWeight:700,paddingBottom:3}}>Documento:</td><td style={{paddingBottom:3}}>{cr.documento||"—"}</td></tr>
+                      <tr><td style={{fontWeight:700,paddingBottom:3}}>Vehículo:</td><td style={{paddingBottom:3}}>{cr.vehiculo||"—"}</td></tr>
+                      {cr.notas&&<tr><td style={{fontWeight:700,paddingBottom:3,verticalAlign:"top"}}>Notas:</td><td style={{paddingBottom:3,whiteSpace:"pre-wrap"}}>{cr.notas}</td></tr>}
+                      {cr.anulado&&cr.motivoAnulacion&&<tr><td style={{fontWeight:700,color:"#C62828"}}>Motivo anulación:</td><td style={{color:"#C62828"}}>{cr.motivoAnulacion}</td></tr>}
+                    </tbody>
+                  </table>
+
+                  <div style={{fontSize:11,fontWeight:700,marginBottom:4}}>Detalle de carga ({wrs.length} WR · {totalCajas} cajas · {totalLb.toFixed(1)} lb)</div>
+                  <table style={{width:"100%",borderCollapse:"collapse",fontSize:10,marginBottom:16}}>
+                    <thead>
+                      <tr style={{background:"#EEE"}}>
+                        <th style={{border:"1px solid #999",padding:"4px 6px",textAlign:"left"}}>#</th>
+                        <th style={{border:"1px solid #999",padding:"4px 6px",textAlign:"left"}}>WR</th>
+                        <th style={{border:"1px solid #999",padding:"4px 6px",textAlign:"left"}}>Consignatario</th>
+                        <th style={{border:"1px solid #999",padding:"4px 6px",textAlign:"left"}}>Tracking</th>
+                        <th style={{border:"1px solid #999",padding:"4px 6px",textAlign:"center"}}>Cajas</th>
+                        <th style={{border:"1px solid #999",padding:"4px 6px",textAlign:"right"}}>Peso (lb)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {wrs.map((w,i)=>{
+                        const c=(w.dims||[]).length;
+                        const lb=(w.dims||[]).reduce((a,d)=>a+parseFloat(d.pkLb||d.pk*2.205||0),0);
+                        return(
+                          <tr key={w.id}>
+                            <td style={{border:"1px solid #999",padding:"3px 6px"}}>{i+1}</td>
+                            <td style={{border:"1px solid #999",padding:"3px 6px",fontWeight:700}}>{w.id}</td>
+                            <td style={{border:"1px solid #999",padding:"3px 6px"}}>{w.consignee||"—"}</td>
+                            <td style={{border:"1px solid #999",padding:"3px 6px",fontFamily:"monospace"}}>{w.tracking||"—"}</td>
+                            <td style={{border:"1px solid #999",padding:"3px 6px",textAlign:"center"}}>{c}</td>
+                            <td style={{border:"1px solid #999",padding:"3px 6px",textAlign:"right"}}>{lb.toFixed(1)}</td>
+                          </tr>
+                        );
+                      })}
+                      {wrs.length===0&&(<tr><td colSpan={6} style={{border:"1px solid #999",padding:"8px 6px",textAlign:"center",color:"#999"}}>(sin WR)</td></tr>)}
+                      <tr style={{background:"#F8F8F8",fontWeight:700}}>
+                        <td colSpan={4} style={{border:"1px solid #999",padding:"4px 6px",textAlign:"right"}}>TOTALES:</td>
+                        <td style={{border:"1px solid #999",padding:"4px 6px",textAlign:"center"}}>{totalCajas}</td>
+                        <td style={{border:"1px solid #999",padding:"4px 6px",textAlign:"right"}}>{totalLb.toFixed(1)}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+
+                  <div style={{display:"flex",justifyContent:"space-between",gap:40,marginTop:40}}>
+                    <div style={{flex:1,textAlign:"center"}}>
+                      <div style={{borderTop:"1px solid #000",paddingTop:4,fontSize:10,fontWeight:700}}>Entrega ENEX</div>
+                      <div style={{fontSize:9,color:"#555",marginTop:2}}>Firma y sello</div>
+                    </div>
+                    <div style={{flex:1,textAlign:"center"}}>
+                      <div style={{borderTop:"1px solid #000",paddingTop:4,fontSize:10,fontWeight:700}}>Recibe (Agente de carga)</div>
+                      <div style={{fontSize:9,color:"#555",marginTop:2}}>{cr.agenteCarga||"—"}{cr.documento?` · ${cr.documento}`:""}</div>
+                    </div>
+                  </div>
+                  <div style={{marginTop:24,fontSize:9,color:"#777",textAlign:"center",borderTop:"1px dashed #999",paddingTop:6}}>
+                    La firma confirma recepción conforme de los WR listados. Cualquier discrepancia debe reportarse al momento de la entrega.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div></>
   );
 }
