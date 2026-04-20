@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { dbGetClientes, dbUpsertCliente, dbDeleteCliente, dbGetWR, dbUpsertWR, dbDeleteWR, dbGetAgentes, dbUpsertAgente, dbDeleteAgente, dbGetOficinas, dbUpsertOficina, dbDeleteOficina, dbGetTarifas, dbUpsertTarifa, dbDeleteTarifa, dbGetConsolidaciones, dbUpsertConsolidacion, dbDeleteConsolidacion, dbGetCargoReleases, dbUpsertCargoRelease, dbDeleteCargoRelease, dbGetDeliveryNotes, dbUpsertDeliveryNote, dbDeleteDeliveryNote, dbLogActividad, dbGetActividad, dbGetConfig, dbSetConfig, dbGetScanLog, dbInsertScan, dbSetScanRegistered, dbDeleteScanIds } from "./supabase";
+import { dbGetClientes, dbUpsertCliente, dbDeleteCliente, dbGetWR, dbUpsertWR, dbDeleteWR, dbGetAgentes, dbUpsertAgente, dbDeleteAgente, dbGetOficinas, dbUpsertOficina, dbDeleteOficina, dbGetTarifas, dbUpsertTarifa, dbDeleteTarifa, dbGetConsolidaciones, dbUpsertConsolidacion, dbDeleteConsolidacion, dbGetCargoReleases, dbUpsertCargoRelease, dbDeleteCargoRelease, dbGetDeliveryNotes, dbUpsertDeliveryNote, dbDeleteDeliveryNote, dbGetFacturas, dbUpsertFactura, dbDeleteFactura, dbGetPagos, dbUpsertPago, dbDeletePago, dbLogActividad, dbGetActividad, dbGetConfig, dbSetConfig, dbGetScanLog, dbInsertScan, dbSetScanRegistered, dbDeleteScanIds } from "./supabase";
 
 // ─── TEMA CLARO PROFESIONAL ───────────────────────────────────────────────────
 const S = `
@@ -472,8 +472,10 @@ const ALL_PERMS=[
   "ver_adicionales","crear_adicional","editar_adicional","borrar_adicional","sel_adicional",
   // Calculadora & Tarifas
   "calculadora","ver_tarifas","crear_tarifa","editar_tarifa","borrar_tarifa",
-  // Contabilidad
+  // Contabilidad — granulares (Lote 6)
   "facturar","ver_factura","registrar_cobro","ver_cuentas_cobrar",
+  "crear_factura","editar_factura","anular_factura","borrar_factura",
+  "registrar_pago","cobrar","anular_pago","nota_credito",
   // Admin
   "configuracion","gestionar_roles","registro_actividad","envio_masivo",
   "ver_bd_clientes","ver_bd_usuarios","paquetes_sin_reclamo",
@@ -507,6 +509,8 @@ const PERM_LBL={
   ver_adicionales:"Ver Adicionales",crear_adicional:"Crear Adicional",editar_adicional:"Editar Adicional",borrar_adicional:"Borrar Adicional",sel_adicional:"Seleccionar Adicional",
   calculadora:"Calculadora Envío",ver_tarifas:"Ver Tarifas",crear_tarifa:"Crear Tarifa",editar_tarifa:"Editar Tarifa",borrar_tarifa:"Borrar Tarifa",
   facturar:"Facturar",ver_factura:"Ver Factura",registrar_cobro:"Registrar Cobro",ver_cuentas_cobrar:"Cuentas x Cobrar",
+  crear_factura:"Crear Factura",editar_factura:"Editar Factura",anular_factura:"Anular Factura",borrar_factura:"Borrar Factura",
+  registrar_pago:"Registrar Pago",cobrar:"Cobrar",anular_pago:"Anular Pago",nota_credito:"Nota de Crédito",
   configuracion:"Configuración Sistema",gestionar_roles:"Gestionar Roles",registro_actividad:"Registro Actividad",envio_masivo:"Envío Masivo Email",
   ver_bd_clientes:"Ver BD Clientes",ver_bd_usuarios:"Ver BD Usuarios",paquetes_sin_reclamo:"Paquetes Sin Reclamo",
   ver_fotos:"Ver Fotos",subir_foto:"Subir Foto",todas_sucursales:"Todas las Sucursales",
@@ -523,7 +527,7 @@ const PERM_GROUPS=[
   {label:"Estado de Cuenta & Tracking",perms:["ver_estado_cuenta","ver_estado_cliente","ver_estado_agente","ver_estado_oficina","ver_tracking","rastrear","ver_prealerta","pre_tracking","pre_factura"]},
   {label:"Servicios & Tarifas",perms:["ver_servicios","crear_servicio","editar_servicio","borrar_servicio","sel_servicio","ver_adicionales","crear_adicional","editar_adicional","borrar_adicional","sel_adicional","calculadora","ver_tarifas","crear_tarifa","editar_tarifa","borrar_tarifa"]},
   {label:"Chat & Pick-up",perms:["chat_admin","chat_gerencia","chat_auxiliar","chat_operaciones","chat_agente","chat_cliente","ver_pickup","solicitar_pickup"]},
-  {label:"Contabilidad",perms:["facturar","ver_factura","registrar_cobro","ver_cuentas_cobrar","imp_factura"]},
+  {label:"Contabilidad",perms:["facturar","ver_factura","registrar_cobro","ver_cuentas_cobrar","imp_factura","crear_factura","editar_factura","anular_factura","borrar_factura","registrar_pago","cobrar","anular_pago","nota_credito"]},
   {label:"Administración",perms:["configuracion","gestionar_roles","registro_actividad","envio_masivo","ver_bd_clientes","ver_bd_usuarios","paquetes_sin_reclamo","ver_fotos","subir_foto","todas_sucursales"]},
 ];
 
@@ -1386,6 +1390,13 @@ export default function ENEXSystem(){
   const [contabTab,setContabTab]=useState("facturas");
   const [facturas,setFacturas]=useState([]);
   const [pagos,setPagos]=useState([]);
+  // Facturación v2 (Lote 6)
+  const [facModal,setFacModal]=useState(null);   // null | factura en edición
+  const [facPrint,setFacPrint]=useState(null);   // factura a imprimir
+  const [pagoModal,setPagoModal]=useState(null); // null | {facturaId, ...}
+  const [ncModal,setNcModal]=useState(null);     // null | {facturaOrigen, monto, motivo}
+  const [facFilter,setFacFilter]=useState({q:"",status:"",tipo:"",moneda:"",receptorTipo:""});
+  const [nextInvoiceNum,setNextInvoiceNum]=useState(1); // secuencial 7 dígitos
   const [cf,setCf]=useState(emptyConsol());
   const [puf,setPuf]=useState(emptyPickup());
   const [contScanVal,setContScanVal]=useState({});
@@ -1411,15 +1422,17 @@ export default function ENEXSystem(){
   // ── SUPABASE: cargar datos al iniciar ────────────────────────────────────
   useEffect(()=>{
     const load=async()=>{
-      const [cls,wrs,ags,ofs,tfs,cons,acts,scans,crs,dns,sendT,payT,chargesT,contT,countriesT,
-             wrNumT,wrSecT,consolNumT,consolSecT,empSlugT,labelWRT,labelCsaT]=await Promise.all([
+      const [cls,wrs,ags,ofs,tfs,cons,acts,scans,crs,dns,facs,pgs,sendT,payT,chargesT,contT,countriesT,
+             wrNumT,wrSecT,consolNumT,consolSecT,empSlugT,labelWRT,labelCsaT,facSecT]=await Promise.all([
         dbGetClientes(),dbGetWR(),dbGetAgentes(),dbGetOficinas(),
         dbGetTarifas(),dbGetConsolidaciones(),dbGetActividad(),dbGetScanLog(),dbGetCargoReleases(),dbGetDeliveryNotes(),
+        dbGetFacturas(),dbGetPagos(),
         dbGetConfig('send_types'),dbGetConfig('pay_types'),dbGetConfig('charges'),
         dbGetConfig('container_types'),dbGetConfig('countries'),
         dbGetConfig('wr_num_tipo'),dbGetConfig('wr_sec_inicio'),
         dbGetConfig('consol_num_tipo'),dbGetConfig('consol_sec_inicio'),
         dbGetConfig('empresa_slug'),dbGetConfig('label_wr_tipo'),dbGetConfig('label_csa_tipo'),
+        dbGetConfig('factura_sec_next'),
       ]);
       if(cls.length>0)setClients(cls);
       if(wrs.length>0){
@@ -1446,6 +1459,15 @@ export default function ENEXSystem(){
       if(scans.length>0)setScanLog(scans);
       if(crs&&crs.length>0)setCargoReleases(crs);
       if(dns&&dns.length>0)setDeliveryNotes(dns);
+      if(facs&&facs.length>0){
+        setFacturas(facs);
+        // Recalcular siguiente número como max(numero)+1 (defensivo: si el config quedó atrás)
+        const maxN=facs.reduce((m,f)=>Math.max(m,f.numero||0),0);
+        setNextInvoiceNum(Math.max(maxN+1, parseInt(facSecT)||1));
+      } else if(facSecT){
+        setNextInvoiceNum(parseInt(facSecT)||1);
+      }
+      if(pgs&&pgs.length>0)setPagos(pgs);
       if(sendT&&sendT.length>0){
         setSendTypes(sendT);
         // Sincronizar forms que aún no tienen tipo de envío con el primero disponible
@@ -5070,154 +5092,495 @@ export default function ENEXSystem(){
     </div>
   );
 
-  // ── CONTABILIDAD ──────────────────────────────────────────────────────────────
+  // ── CONTABILIDAD & FACTURACIÓN (Lote 6, rewrite) ────────────────────────────
+  // Paquetería internacional — solo USD o EUR, sin IVA, sin IGTF.
+  // Números de factura correlativos de 7 dígitos (0000001 ...).
+  // Receptor: cliente | agente | autonomo | oficina (snapshot al emitir).
+  // Estados: borrador | emitida | pagada_parcial | pagada | anulada.
+  // Pagos parciales permitidos; "Bs" solo va como nota referencial.
 
-  const buildFacturaNum=(seq)=>`FAC-${new Date().getFullYear()}-${String(seq).padStart(5,"0")}`;
+  const CUR_SYMBOL={USD:"$",EUR:"€"};
+  const PAY_METHODS=[
+    {k:"efectivo",l:"💵 Efectivo"},
+    {k:"zelle",l:"📲 Zelle"},
+    {k:"transferencia",l:"🏦 Transferencia"},
+    {k:"pos_usd",l:"💳 POS (USD)"},
+    {k:"pos_eur",l:"💳 POS (EUR)"},
+    {k:"otro",l:"➕ Otro"},
+  ];
+  const REC_TYPES=[
+    {k:"cliente",l:"Cliente (consignatario)"},
+    {k:"agente",l:"Agente"},
+    {k:"autonomo",l:"Autónomo"},
+    {k:"oficina",l:"Oficina"},
+  ];
+  const FAC_STATUS_LABEL={borrador:"📝 Borrador",emitida:"📤 Emitida",pagada_parcial:"⏳ Pago parcial",pagada:"✅ Pagada",anulada:"✕ Anulada"};
+  const FAC_STATUS_CLS={borrador:"s5",emitida:"s2",pagada_parcial:"s4",pagada:"s3",anulada:"s1"};
 
-  const generarFacturasGuia=(guia)=>{
-    // Una factura por cliente/consignatario en la guía
-    const allWR=guia.containers.flatMap(c=>c.wr);
-    const porCliente={};
-    allWR.forEach(w=>{
-      const key=w.casillero||w.consignee;
-      if(!porCliente[key])porCliente[key]={consignee:w.consignee,casillero:w.casillero,wrs:[]};
-      porCliente[key].wrs.push(w);
-    });
-    const nuevas=Object.values(porCliente).map((c,i)=>{
-      const subtotal=c.wrs.reduce((s,w)=>s+(w.valor||0),0);
-      const pesoLb=c.wrs.reduce((s,w)=>s+(w.pesoLb||0),0);
-      const ft3=c.wrs.reduce((s,w)=>s+(w.ft3||0),0);
-      const tarifa=TARIFAS_BASE[guia.tipoEnvio]||TARIFAS_BASE[SEND_TYPES[0]]||{porLb:1.8,porFt3:28,min:25};
-      const flete=parseFloat(Math.max(tarifa.min,Math.max(pesoLb*tarifa.porLb,ft3*tarifa.porFt3)).toFixed(2));
-      return {
-        id:buildFacturaNum(facturas.length+i+1),
-        guiaId:guia.id, fecha:new Date(),
-        consignee:c.consignee, casillero:c.casillero,
-        wrs:c.wrs, pesoLb:parseFloat(pesoLb.toFixed(1)), ft3:parseFloat(ft3.toFixed(2)),
-        valorDeclarado:parseFloat(subtotal.toFixed(2)),
-        flete, total:parseFloat((flete+subtotal*0.01).toFixed(2)), // flete + 1% seguro
-        status:"Pendiente", tipoPago:"",
+  const fmtMoney=(v,mon="USD")=>`${CUR_SYMBOL[mon]||"$"}${(parseFloat(v)||0).toFixed(2)}`;
+  const buildFacturaId=(num)=>String(num).padStart(7,"0");
+
+  // Busca datos del receptor (snapshot al emitir) según tipo+id
+  const lookupReceptor=(tipo,id)=>{
+    if(!id)return null;
+    if(tipo==="cliente"||tipo==="autonomo"){
+      const c=clients.find(x=>x.id===id);
+      if(!c)return null;
+      return{
+        nombre:[c.primerNombre,c.segundoNombre,c.primerApellido,c.segundoApellido].filter(Boolean).join(" "),
+        doc:c.cedula||"",
+        dir:[c.dir,c.municipio,c.estado,c.pais].filter(Boolean).join(", "),
+        tel:c.tel1||c.tel2||"",
+        email:c.email||"",
+        casillero:c.casillero||"",
       };
-    });
-    setFacturas(p=>[...nuevas,...p]);
-    logAction("Generó facturas",`Guía ${guia.id} → ${nuevas.length} facturas`);
-    setShowNewFactura(null);
+    }
+    if(tipo==="agente"){
+      const a=agentes.find(x=>x.id===id);
+      if(!a)return null;
+      return{nombre:a.nombre||a.name||"",doc:a.rif||a.cedula||"",dir:a.direccion||"",tel:a.telefono||"",email:a.email||"",casillero:""};
+    }
+    if(tipo==="oficina"){
+      const o=oficinas.find(x=>x.id===id);
+      if(!o)return null;
+      return{nombre:o.nombre||"",doc:o.rif||"",dir:o.direccion||"",tel:o.telefono||"",email:o.email||"",casillero:""};
+    }
+    return null;
   };
 
-  const registrarPago=(facId,monto,tipo)=>{
-    setFacturas(p=>p.map(f=>f.id===facId?{...f,status:"Pagada",tipoPago:tipo,fechaPago:new Date()}:f));
-    setPagos(p=>[{id:`PAG-${String(p.length+1).padStart(4,"0")}`,facturaId:facId,monto:parseFloat(monto),tipo,fecha:new Date()},...p]);
-    logAction("Registró pago",`Factura ${facId} · $${monto}`);
+  const emptyLinea=()=>({descripcion:"",cantidad:1,precio:0,total:0});
+  const emptyFactura=()=>({
+    id:"",numero:0,tipo:"factura",
+    fecha:new Date(),fechaEmision:null,status:"borrador",moneda:"USD",
+    receptorTipo:"cliente",receptorId:"",
+    receptorNombre:"",receptorDoc:"",receptorDir:"",receptorTel:"",receptorEmail:"",receptorCasillero:"",
+    lineas:[emptyLinea()],
+    subtotal:0,descuento:0,total:0,pagado:0,saldo:0,
+    wrIds:[],guiaIds:[],ncFacturaOrigen:"",
+    notas:"",condiciones:"Pago contado. Después de 15 días, aplica recargo por mora.",
+    usuario:currentUser.id||currentUser.email||"",motivoAnulacion:"",fechaAnulacion:null,
+  });
+
+  const recalcFactura=(f)=>{
+    const lineas=(f.lineas||[]).map(l=>({...l,total:(parseFloat(l.cantidad)||0)*(parseFloat(l.precio)||0)}));
+    const subtotal=lineas.reduce((s,l)=>s+l.total,0);
+    const descuento=parseFloat(f.descuento)||0;
+    const total=Math.max(0,subtotal-descuento);
+    const pagado=parseFloat(f.pagado)||0;
+    const saldo=Math.max(0,total-pagado);
+    return{...f,lineas,subtotal,total,saldo};
+  };
+
+  const facOpenNew=(prefill={})=>{
+    if(!hasPerm("crear_factura")&&!hasPerm("facturar")){window.alert("Tu rol no tiene permiso para crear facturas.");return;}
+    setFacModal(recalcFactura({...emptyFactura(),...prefill}));
+  };
+  const facOpenEdit=(f)=>{
+    if(f.status!=="borrador"&&f.status!=="emitida"){window.alert("Solo facturas en borrador o emitidas se pueden editar.");return;}
+    if(!hasPerm("editar_factura")&&!hasPerm("facturar")){window.alert("Tu rol no tiene permiso para editar facturas.");return;}
+    setFacModal({...f,_editing:true});
+  };
+  const facSaveBorrador=()=>{
+    const f=facModal; if(!f)return;
+    const isNew=!f._editing;
+    let fact=recalcFactura(f);
+    if(isNew){
+      fact={...fact,id:buildFacturaId(nextInvoiceNum),numero:nextInvoiceNum};
+    }
+    setFacturas(p=>{
+      const ex=p.find(x=>x.id===fact.id);
+      return ex?p.map(x=>x.id===fact.id?fact:x):[fact,...p];
+    });
+    dbUpsertFactura(fact);
+    if(isNew){
+      setNextInvoiceNum(n=>{const nn=n+1;dbSetConfig('factura_sec_next',String(nn));return nn;});
+    }
+    logAction(isNew?"Creó borrador factura":"Editó borrador factura",`${fact.id} · ${fmtMoney(fact.total,fact.moneda)} · ${fact.receptorNombre}`);
+    setFacModal(null);
+  };
+  const facEmitir=()=>{
+    const f=facModal; if(!f)return;
+    if(!f.receptorNombre.trim()){window.alert("Debes seleccionar o capturar un receptor.");return;}
+    if(!f.lineas||f.lineas.length===0||f.lineas.every(l=>!l.descripcion.trim())){window.alert("Agrega al menos 1 línea con descripción.");return;}
+    const isNew=!f._editing;
+    let fact=recalcFactura({...f,status:"emitida",fechaEmision:f.fechaEmision||new Date()});
+    if(isNew){
+      fact={...fact,id:buildFacturaId(nextInvoiceNum),numero:nextInvoiceNum};
+    }
+    setFacturas(p=>{
+      const ex=p.find(x=>x.id===fact.id);
+      return ex?p.map(x=>x.id===fact.id?fact:x):[fact,...p];
+    });
+    dbUpsertFactura(fact);
+    if(isNew){
+      setNextInvoiceNum(n=>{const nn=n+1;dbSetConfig('factura_sec_next',String(nn));return nn;});
+    }
+    logAction("Emitió factura",`${fact.id} · ${fmtMoney(fact.total,fact.moneda)} · ${fact.receptorNombre}`);
+    setFacModal(null);
+  };
+  const facAnular=(f)=>{
+    if(!hasPerm("anular_factura")&&!hasPerm("facturar")){window.alert("Tu rol no tiene permiso para anular facturas.");return;}
+    if(f.status==="anulada"){window.alert("Ya está anulada.");return;}
+    if(f.pagado>0){window.alert("No puedes anular una factura con pagos. Anula los pagos primero o emite una nota de crédito.");return;}
+    const motivo=window.prompt(`Anular factura ${f.id}.\nMotivo:`);
+    if(!motivo)return;
+    const upd={...f,status:"anulada",motivoAnulacion:motivo,fechaAnulacion:new Date()};
+    setFacturas(p=>p.map(x=>x.id===f.id?upd:x));
+    dbUpsertFactura(upd);
+    logAction("Anuló factura",`${f.id} — ${motivo}`);
+  };
+  const facDelete=(f)=>{
+    if(!hasPerm("borrar_factura")){window.alert("Tu rol no tiene permiso para borrar facturas.");return;}
+    if(f.status!=="borrador"){window.alert("Solo borradores pueden borrarse permanentemente. Usa Anular para facturas emitidas.");return;}
+    if(!window.confirm(`¿Borrar permanentemente el borrador ${f.id}?`))return;
+    setFacturas(p=>p.filter(x=>x.id!==f.id));
+    dbDeleteFactura(f.id);
+    logAction("Borró borrador factura",f.id);
+  };
+
+  // ── Pagos ──────────────────────────────────────────────────────────────────
+  const pagoBuildId=()=>{
+    const d=new Date();
+    const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,"0"), dd=String(d.getDate()).padStart(2,"0");
+    const prefix=`PG-${y}${m}${dd}`;
+    const sameDay=pagos.filter(p=>String(p.id).startsWith(prefix));
+    return`${prefix}-${String(sameDay.length+1).padStart(3,"0")}`;
+  };
+  const pagoOpen=(factura)=>{
+    if(!hasPerm("registrar_pago")&&!hasPerm("cobrar")){window.alert("Tu rol no tiene permiso para registrar pagos.");return;}
+    if(factura.status==="anulada"||factura.status==="borrador"){window.alert("Factura no está emitida o fue anulada.");return;}
+    setPagoModal({facturaId:factura.id,moneda:factura.moneda,monto:factura.saldo||factura.total,tipoPago:"efectivo",referencia:"",notaReferencial:"",fecha:new Date()});
+  };
+  const pagoSubmit=()=>{
+    const p=pagoModal; if(!p)return;
+    const monto=parseFloat(p.monto); if(!monto||monto<=0){window.alert("Monto inválido.");return;}
+    const fact=facturas.find(f=>f.id===p.facturaId); if(!fact)return;
+    if(monto>fact.saldo+0.01){window.alert(`El monto excede el saldo pendiente (${fmtMoney(fact.saldo,fact.moneda)}).`);return;}
+    const pago={
+      id:pagoBuildId(),facturaId:p.facturaId,fecha:p.fecha||new Date(),
+      monto,moneda:p.moneda||fact.moneda,tipoPago:p.tipoPago||"efectivo",
+      referencia:(p.referencia||"").trim(),notaReferencial:(p.notaReferencial||"").trim(),
+      anulado:false,motivoAnulacion:"",usuario:currentUser.id||currentUser.email||"",
+    };
+    setPagos(pr=>[pago,...pr]);
+    dbUpsertPago(pago);
+    // Actualizar factura
+    const nuevoPagado=(parseFloat(fact.pagado)||0)+monto;
+    const nuevoSaldo=Math.max(0,fact.total-nuevoPagado);
+    const nuevoStatus=nuevoSaldo<=0.001?"pagada":"pagada_parcial";
+    const upd={...fact,pagado:nuevoPagado,saldo:nuevoSaldo,status:nuevoStatus};
+    setFacturas(pr=>pr.map(f=>f.id===fact.id?upd:f));
+    dbUpsertFactura(upd);
+    logAction("Registró pago",`${pago.id} · ${fmtMoney(monto,pago.moneda)} → ${fact.id}`);
+    setPagoModal(null);
+  };
+  const pagoAnular=(pago)=>{
+    if(!hasPerm("anular_pago")&&!hasPerm("cobrar")){window.alert("Tu rol no tiene permiso para anular pagos.");return;}
+    if(pago.anulado){window.alert("Ya está anulado.");return;}
+    const motivo=window.prompt(`Anular pago ${pago.id}.\nMotivo:`);
+    if(!motivo)return;
+    const upd={...pago,anulado:true,motivoAnulacion:motivo};
+    setPagos(pr=>pr.map(p=>p.id===pago.id?upd:p));
+    dbUpsertPago(upd);
+    // Revertir monto en la factura
+    const fact=facturas.find(f=>f.id===pago.facturaId);
+    if(fact){
+      const nuevoPagado=Math.max(0,(parseFloat(fact.pagado)||0)-pago.monto);
+      const nuevoSaldo=Math.max(0,fact.total-nuevoPagado);
+      const nuevoStatus=nuevoPagado<=0.001?"emitida":(nuevoSaldo<=0.001?"pagada":"pagada_parcial");
+      const updF={...fact,pagado:nuevoPagado,saldo:nuevoSaldo,status:nuevoStatus};
+      setFacturas(pr=>pr.map(f=>f.id===fact.id?updF:f));
+      dbUpsertFactura(updF);
+    }
+    logAction("Anuló pago",`${pago.id} — ${motivo}`);
+  };
+
+  // ── Nota de crédito (crea una factura tipo "nota_credito" ligada a una origen) ─
+  const ncOpen=(facturaOrigen)=>{
+    if(!hasPerm("nota_credito")&&!hasPerm("facturar")){window.alert("Tu rol no tiene permiso.");return;}
+    if(facturaOrigen.status==="anulada"){window.alert("La factura origen está anulada.");return;}
+    setNcModal({facturaOrigenId:facturaOrigen.id,monto:facturaOrigen.saldo||facturaOrigen.total,motivo:"",notas:""});
+  };
+  const ncSubmit=()=>{
+    const m=ncModal; if(!m)return;
+    const orig=facturas.find(f=>f.id===m.facturaOrigenId); if(!orig)return;
+    const monto=parseFloat(m.monto); if(!monto||monto<=0){window.alert("Monto inválido.");return;}
+    if(monto>orig.total){window.alert("Monto excede el total de la factura origen.");return;}
+    const nc={
+      ...emptyFactura(),
+      id:buildFacturaId(nextInvoiceNum),numero:nextInvoiceNum,
+      tipo:"nota_credito",status:"emitida",
+      fecha:new Date(),fechaEmision:new Date(),
+      moneda:orig.moneda,
+      receptorTipo:orig.receptorTipo,receptorId:orig.receptorId,
+      receptorNombre:orig.receptorNombre,receptorDoc:orig.receptorDoc,receptorDir:orig.receptorDir,
+      receptorTel:orig.receptorTel,receptorEmail:orig.receptorEmail,receptorCasillero:orig.receptorCasillero,
+      lineas:[{descripcion:`Nota de crédito a factura ${orig.id}${m.motivo?` — ${m.motivo}`:""}`,cantidad:1,precio:-monto,total:-monto}],
+      subtotal:-monto,total:-monto,pagado:0,saldo:0,
+      ncFacturaOrigen:orig.id,notas:m.notas||"",
+      usuario:currentUser.id||currentUser.email||"",
+    };
+    setFacturas(p=>[nc,...p]);
+    dbUpsertFactura(nc);
+    setNextInvoiceNum(n=>{const nn=n+1;dbSetConfig('factura_sec_next',String(nn));return nn;});
+    // Ajustar saldo de la factura origen (reducir lo acreditado)
+    const nuevoPagado=(parseFloat(orig.pagado)||0)+monto; // se toma como "compensado"
+    const nuevoSaldo=Math.max(0,orig.total-nuevoPagado);
+    const nuevoStatus=nuevoSaldo<=0.001?"pagada":"pagada_parcial";
+    const updOrig={...orig,pagado:nuevoPagado,saldo:nuevoSaldo,status:nuevoStatus};
+    setFacturas(p=>p.map(f=>f.id===orig.id?updOrig:f));
+    dbUpsertFactura(updOrig);
+    logAction("Nota de crédito",`${nc.id} − ${fmtMoney(monto,nc.moneda)} → ${orig.id}`);
+    setNcModal(null);
+  };
+
+  // ── Generar factura desde una guía consolidada ─────────────────────────────
+  const facFromGuia=(guia)=>{
+    if(!hasPerm("crear_factura")&&!hasPerm("facturar")){window.alert("Tu rol no tiene permiso.");return;}
+    const allWR=(guia.containers||[]).flatMap(c=>c.wr||[]);
+    if(allWR.length===0){window.alert("La guía no tiene WR.");return;}
+    // Agrupar por cliente (casillero); una factura por cliente
+    const porCliente={};
+    allWR.forEach(w=>{
+      const key=w.clienteId||w.casillero||w.consignee||"sin_cliente";
+      if(!porCliente[key])porCliente[key]={clienteId:w.clienteId||"",casillero:w.casillero||"",consignee:w.consignee||"",wrs:[]};
+      porCliente[key].wrs.push(w);
+    });
+    const prev=facturas.length>0?facturas[0]:null;
+    let seq=nextInvoiceNum;
+    const nuevas=[];
+    Object.values(porCliente).forEach(grp=>{
+      const cli=grp.clienteId?clients.find(c=>c.id===grp.clienteId):null;
+      const rec=cli?lookupReceptor("cliente",cli.id):null;
+      const fleteTotal=grp.wrs.reduce((s,w)=>s+(parseFloat(w.cargos?.find?.(c=>c.concepto==="Flete"||c.tipo==="flete")?.monto)||0),0);
+      const lineas=[
+        {descripcion:`Flete internacional — Guía ${guia.id} (${grp.wrs.length} WR)`,cantidad:1,precio:fleteTotal,total:fleteTotal},
+      ];
+      const fact={
+        ...emptyFactura(),
+        id:buildFacturaId(seq),numero:seq,
+        tipo:"factura",status:"borrador",moneda:"USD",
+        fecha:new Date(),fechaEmision:null,
+        receptorTipo:"cliente",receptorId:cli?.id||"",
+        receptorNombre:rec?.nombre||grp.consignee,
+        receptorDoc:rec?.doc||"",receptorDir:rec?.dir||"",
+        receptorTel:rec?.tel||"",receptorEmail:rec?.email||"",
+        receptorCasillero:rec?.casillero||grp.casillero||"",
+        lineas,
+        wrIds:grp.wrs.map(w=>w.id),
+        guiaIds:[guia.id],
+        notas:`Factura auto-generada desde guía ${guia.id}. Revisa líneas antes de emitir.`,
+        usuario:currentUser.id||currentUser.email||"",
+      };
+      nuevas.push(recalcFactura(fact));
+      seq++;
+    });
+    setFacturas(p=>[...nuevas,...p]);
+    nuevas.forEach(f=>dbUpsertFactura(f));
+    setNextInvoiceNum(seq);
+    dbSetConfig('factura_sec_next',String(seq));
+    logAction("Generó borradores de guía",`${guia.id} → ${nuevas.length} facturas`);
+    window.alert(`✅ ${nuevas.length} borradores creados. Revisa y emite uno por uno desde "Facturas".`);
   };
 
   const renderContabilidad=()=>{
-    const CTABS=[{k:"facturas",l:"📄 Facturas",ic:"📄"},{k:"cxc",l:"💰 Por Cobrar",ic:"💰"},{k:"pagos",l:"✅ Pagos",ic:"✅"},{k:"generar",l:"⚡ Generar de Guía",ic:"⚡"},{k:"reporte",l:"📊 Reporte",ic:"📊"}];
-    const pendientes=facturas.filter(f=>f.status==="Pendiente");
-    const totalPendiente=pendientes.reduce((s,f)=>s+f.total,0).toFixed(2);
-    const totalCobrado=facturas.filter(f=>f.status==="Pagada").reduce((s,f)=>s+f.total,0).toFixed(2);
+    const CTABS=[
+      {k:"facturas",l:"📄 Facturas"},
+      {k:"cxc",l:"💰 Por Cobrar"},
+      {k:"pagos",l:"✅ Pagos"},
+      {k:"generar",l:"⚡ Generar de Guía"},
+      {k:"reporte",l:"📊 Reporte"},
+    ];
+    // Filtrar facturas (no incluye anuladas en stats principales)
+    const facsActivas=facturas.filter(f=>f.status!=="anulada");
+    // Stats por moneda (no se mezclan)
+    const sumByMon=(arr,field)=>{
+      const r={USD:0,EUR:0};
+      arr.forEach(f=>{const m=f.moneda||"USD";r[m]=(r[m]||0)+(parseFloat(f[field])||0);});
+      return r;
+    };
+    const totalPorCobrar=sumByMon(facsActivas.filter(f=>f.status==="emitida"||f.status==="pagada_parcial"),"saldo");
+    const totalPagado=sumByMon(facsActivas,"pagado");
+    const totalFacturado=sumByMon(facsActivas.filter(f=>f.status!=="borrador"&&f.tipo!=="nota_credito"),"total");
+    const fmtMonyBoth=(obj)=>{
+      const parts=[];
+      if(obj.USD)parts.push(`$${obj.USD.toFixed(2)}`);
+      if(obj.EUR)parts.push(`€${obj.EUR.toFixed(2)}`);
+      return parts.length?parts.join(" / "):"$0.00";
+    };
+
+    // Filtros para tab Facturas
+    const facFilt=facturas.filter(f=>{
+      if(facFilter.status&&f.status!==facFilter.status)return false;
+      if(facFilter.tipo&&f.tipo!==facFilter.tipo)return false;
+      if(facFilter.moneda&&f.moneda!==facFilter.moneda)return false;
+      if(facFilter.receptorTipo&&f.receptorTipo!==facFilter.receptorTipo)return false;
+      if(facFilter.q){
+        const q=facFilter.q.toLowerCase();
+        if(!`${f.id} ${f.receptorNombre||""} ${f.receptorDoc||""} ${f.receptorCasillero||""}`.toLowerCase().includes(q))return false;
+      }
+      return true;
+    });
 
     return (
       <div className="page-scroll">
         {/* Mini stats */}
         <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:16}}>
-          {[["📄","Total Facturas",facturas.length,"var(--navy)"],["💰","Por Cobrar",`$${totalPendiente}`,"var(--orange)"],["✅","Cobrado",`$${totalCobrado}`,"var(--green)"],["📋","Guías con factura",new Set(facturas.map(f=>f.guiaId)).size,"var(--cyan)"]].map(([ic,l,v,c])=>(
+          {[
+            ["📄","Total Facturas",facturas.length,"var(--navy)"],
+            ["💰","Por Cobrar",fmtMonyBoth(totalPorCobrar),"var(--orange)"],
+            ["✅","Pagado",fmtMonyBoth(totalPagado),"var(--green)"],
+            ["📊","Facturado",fmtMonyBoth(totalFacturado),"var(--cyan)"],
+          ].map(([ic,l,v,c])=>(
             <div key={l} style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,padding:"14px",boxShadow:"var(--shadow)"}}>
               <div style={{fontSize:18,marginBottom:6}}>{ic}</div>
-              <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:24,fontWeight:800,color:c}}>{v}</div>
+              <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:20,fontWeight:800,color:c}}>{v}</div>
               <div style={{fontSize:12,color:"var(--t2)",marginTop:2}}>{l}</div>
             </div>
           ))}
         </div>
 
-        {/* Tabs */}
+        {/* Tabs + botón nueva factura */}
         <div style={{display:"flex",gap:4,marginBottom:14,background:"var(--bg4)",borderRadius:8,padding:"3px",border:"1px solid var(--b1)"}}>
           {CTABS.map(t=><button key={t.k} onClick={()=>setContabTab(t.k)} style={{flex:1,padding:"7px 10px",borderRadius:6,border:"none",cursor:"pointer",fontSize:12,fontWeight:600,background:contabTab===t.k?"var(--navy)":"transparent",color:contabTab===t.k?"#fff":"var(--t2)"}}>{t.l}</button>)}
         </div>
 
         {/* ── FACTURAS ── */}
         {contabTab==="facturas"&&(
-          <div className="card" style={{padding:0}}>
-            {facturas.length===0?<div style={{textAlign:"center",padding:40,color:"var(--t3)"}}>No hay facturas generadas aún. Ve a "Generar de Guía".</div>:(
-              <table className="ct">
-                <thead><tr><th>N° Factura</th><th>Guía</th><th>Consignatario</th><th>WRs</th><th>Peso lb</th><th>Ft³</th><th>Val. Decl.</th><th>Flete</th><th>Total</th><th>Estado</th><th>Acc.</th></tr></thead>
-                <tbody>
-                  {facturas.map(f=>(
-                    <tr key={f.id}>
-                      <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",fontSize:12}}>{f.id}</span></td>
-                      <td style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:"var(--purple)"}}>{f.guiaId}</td>
-                      <td style={{fontWeight:600}}>{f.consignee}<div style={{fontSize:10,color:"var(--gold2)",fontFamily:"'DM Mono',monospace"}}>{f.casillero}</div></td>
-                      <td style={{textAlign:"center",fontWeight:700}}>{f.wrs.length}</td>
-                      <td style={{fontFamily:"'DM Mono',monospace",fontWeight:600}}>{f.pesoLb}lb</td>
-                      <td style={{fontFamily:"'DM Mono',monospace",color:"var(--sky)"}}>{f.ft3}</td>
-                      <td style={{fontFamily:"'DM Mono',monospace",color:"var(--t2)"}}>${f.valorDeclarado}</td>
-                      <td style={{fontFamily:"'DM Mono',monospace",fontWeight:600}}>${f.flete}</td>
-                      <td style={{fontFamily:"'DM Mono',monospace",fontWeight:800,color:"var(--green)",fontSize:13}}>${f.total}</td>
-                      <td><span className={`st ${f.status==="Pagada"?"s3":"s5"}`}><span className="st-dot"/>{f.status}</span></td>
-                      <td>
-                        {f.status==="Pendiente"&&(
-                          <button className="btn-p" style={{fontSize:10,padding:"3px 8px"}} onClick={()=>{
-                            const tipo=window.prompt("Tipo de pago (Efectivo, Zelle, Transferencia…):")||"Efectivo";
-                            registrarPago(f.id,f.total,tipo);
-                          }}>💵 Cobrar</button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-        )}
-
-        {/* ── CUENTAS POR COBRAR ── */}
-        {contabTab==="cxc"&&(
-          <div>
-            {pendientes.length===0?<div className="card" style={{textAlign:"center",padding:40,color:"var(--t3)"}}>No hay cuentas pendientes. ✅</div>:(
-              <div className="card" style={{padding:0}}>
-                <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",display:"flex",alignItems:"center",gap:10}}>
-                  <span style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:14,fontWeight:700,color:"var(--navy)"}}>💰 Cuentas por Cobrar</span>
-                  <span style={{fontSize:12,color:"var(--orange)",fontWeight:700,marginLeft:"auto"}}>Total pendiente: ${totalPendiente}</span>
-                </div>
+          <>
+            <div className="card" style={{marginBottom:10,display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+              <input className="fi" placeholder="Buscar por N°, receptor, doc, casillero…" value={facFilter.q} onChange={e=>setFacFilter(p=>({...p,q:e.target.value}))} style={{flex:1,minWidth:220,fontSize:12,padding:"6px 10px"}}/>
+              <select className="fi" value={facFilter.status} onChange={e=>setFacFilter(p=>({...p,status:e.target.value}))} style={{fontSize:12,padding:"6px 10px"}}>
+                <option value="">Todos los estados</option>
+                <option value="borrador">Borrador</option>
+                <option value="emitida">Emitida</option>
+                <option value="pagada_parcial">Pago parcial</option>
+                <option value="pagada">Pagada</option>
+                <option value="anulada">Anulada</option>
+              </select>
+              <select className="fi" value={facFilter.tipo} onChange={e=>setFacFilter(p=>({...p,tipo:e.target.value}))} style={{fontSize:12,padding:"6px 10px"}}>
+                <option value="">Todos los tipos</option>
+                <option value="factura">Factura</option>
+                <option value="proforma">Proforma</option>
+                <option value="nota_credito">Nota de crédito</option>
+              </select>
+              <select className="fi" value={facFilter.moneda} onChange={e=>setFacFilter(p=>({...p,moneda:e.target.value}))} style={{fontSize:12,padding:"6px 10px"}}>
+                <option value="">Todas las monedas</option>
+                <option value="USD">USD</option>
+                <option value="EUR">EUR</option>
+              </select>
+              <select className="fi" value={facFilter.receptorTipo} onChange={e=>setFacFilter(p=>({...p,receptorTipo:e.target.value}))} style={{fontSize:12,padding:"6px 10px"}}>
+                <option value="">Todos los receptores</option>
+                {REC_TYPES.map(r=><option key={r.k} value={r.k}>{r.l}</option>)}
+              </select>
+              {(hasPerm("crear_factura")||hasPerm("facturar"))&&<button className="btn-p" onClick={()=>facOpenNew()}>+ Nueva Factura</button>}
+            </div>
+            <div className="card" style={{padding:0}}>
+              {facFilt.length===0?<div style={{textAlign:"center",padding:40,color:"var(--t3)"}}>No hay facturas con esos filtros. {(hasPerm("crear_factura")||hasPerm("facturar"))&&<>Crea la primera con <b>+ Nueva Factura</b> o desde <b>Generar de Guía</b>.</>}</div>:(
                 <table className="ct">
-                  <thead><tr><th>Factura</th><th>Consignatario</th><th>Guía</th><th>Fecha</th><th>Total</th><th>Días</th><th>Acc.</th></tr></thead>
+                  <thead><tr>
+                    <th>N° Factura</th><th>Tipo</th><th>Fecha</th><th>Receptor</th>
+                    <th>Mon</th><th>Total</th><th>Pagado</th><th>Saldo</th><th>Estado</th><th style={{minWidth:160}}>Acciones</th>
+                  </tr></thead>
                   <tbody>
-                    {pendientes.map(f=>{
-                      const dias=Math.floor((new Date()-new Date(f.fecha))/(1000*60*60*24));
-                      return (
+                    {facFilt.map(f=>{
+                      const negativa=f.tipo==="nota_credito";
+                      return(
                         <tr key={f.id}>
-                          <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,fontSize:12,color:"var(--navy)"}}>{f.id}</span></td>
-                          <td style={{fontWeight:600}}>{f.consignee}<div style={{fontSize:10,color:"var(--gold2)",fontFamily:"'DM Mono',monospace"}}>{f.casillero}</div></td>
-                          <td style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:"var(--purple)"}}>{f.guiaId}</td>
+                          <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",fontSize:12}}>{f.id}</span>{f.ncFacturaOrigen&&<div style={{fontSize:9,color:"var(--purple)",fontFamily:"'DM Mono',monospace"}}>← {f.ncFacturaOrigen}</div>}</td>
+                          <td><span style={{fontSize:10,padding:"2px 6px",borderRadius:4,background:f.tipo==="nota_credito"?"var(--purple)":(f.tipo==="proforma"?"var(--gold2)":"var(--cyan)"),color:"#fff",fontWeight:700}}>{f.tipo==="nota_credito"?"NC":f.tipo==="proforma"?"PRF":"FAC"}</span></td>
                           <td style={{fontFamily:"'DM Mono',monospace",fontSize:11}}>{fmtDate(f.fecha)}</td>
-                          <td style={{fontFamily:"'DM Mono',monospace",fontWeight:800,color:"var(--orange)",fontSize:13}}>${f.total}</td>
-                          <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:dias>30?"var(--red)":dias>15?"var(--orange)":"var(--t1)"}}>{dias}d</span></td>
-                          <td><button className="btn-p" style={{fontSize:10,padding:"3px 8px"}} onClick={()=>{const tipo=window.prompt("Tipo de pago:")||"Efectivo";registrarPago(f.id,f.total,tipo);}}>💵 Cobrar</button></td>
+                          <td style={{fontWeight:600}}>{f.receptorNombre||"—"}<div style={{fontSize:10,color:"var(--gold2)",fontFamily:"'DM Mono',monospace"}}>{f.receptorCasillero||f.receptorDoc||""}</div></td>
+                          <td style={{textAlign:"center",fontWeight:700,fontSize:11}}>{f.moneda}</td>
+                          <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:negativa?"var(--purple)":"var(--navy)"}}>{fmtMoney(f.total,f.moneda)}</td>
+                          <td style={{fontFamily:"'DM Mono',monospace",fontWeight:600,color:"var(--green)"}}>{fmtMoney(f.pagado,f.moneda)}</td>
+                          <td style={{fontFamily:"'DM Mono',monospace",fontWeight:800,color:f.saldo>0?"var(--orange)":"var(--t3)"}}>{fmtMoney(f.saldo,f.moneda)}</td>
+                          <td><span className={`st ${FAC_STATUS_CLS[f.status]||"s5"}`}><span className="st-dot"/>{FAC_STATUS_LABEL[f.status]||f.status}</span></td>
+                          <td style={{whiteSpace:"nowrap"}}>
+                            <button className="btn-s" style={{fontSize:10,padding:"3px 6px",marginRight:4}} title="Ver / Imprimir" onClick={()=>setFacPrint(f)}>🖨️</button>
+                            {(f.status==="borrador"||f.status==="emitida")&&(hasPerm("editar_factura")||hasPerm("facturar"))&&<button className="btn-s" style={{fontSize:10,padding:"3px 6px",marginRight:4}} title="Editar" onClick={()=>facOpenEdit(f)}>✏️</button>}
+                            {(f.status==="emitida"||f.status==="pagada_parcial")&&(hasPerm("registrar_pago")||hasPerm("cobrar"))&&<button className="btn-p" style={{fontSize:10,padding:"3px 8px",marginRight:4}} title="Registrar pago" onClick={()=>pagoOpen(f)}>💵 Cobrar</button>}
+                            {f.status!=="borrador"&&f.tipo==="factura"&&(hasPerm("nota_credito")||hasPerm("facturar"))&&<button className="btn-s" style={{fontSize:10,padding:"3px 6px",marginRight:4,color:"var(--purple)",borderColor:"var(--purple)"}} title="Nota de crédito" onClick={()=>ncOpen(f)}>📝 NC</button>}
+                            {f.status!=="anulada"&&f.status!=="borrador"&&(hasPerm("anular_factura")||hasPerm("facturar"))&&<button className="btn-s" style={{fontSize:10,padding:"3px 6px",marginRight:4,color:"var(--red)",borderColor:"var(--red)"}} title="Anular" onClick={()=>facAnular(f)}>✕</button>}
+                            {f.status==="borrador"&&hasPerm("borrar_factura")&&<button className="btn-s" style={{fontSize:10,padding:"3px 6px",color:"var(--red)",borderColor:"var(--red)"}} title="Borrar borrador" onClick={()=>facDelete(f)}>🗑️</button>}
+                          </td>
                         </tr>
                       );
                     })}
                   </tbody>
                 </table>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          </>
         )}
+
+        {/* ── CUENTAS POR COBRAR ── */}
+        {contabTab==="cxc"&&(()=>{
+          const cxc=facturas.filter(f=>(f.status==="emitida"||f.status==="pagada_parcial")&&f.tipo!=="nota_credito")
+            .map(f=>({...f,_dias:Math.floor((new Date()-new Date(f.fechaEmision||f.fecha))/(1000*60*60*24))}))
+            .sort((a,b)=>b._dias-a._dias);
+          return(
+            <div>
+              {cxc.length===0?<div className="card" style={{textAlign:"center",padding:40,color:"var(--t3)"}}>No hay cuentas pendientes. ✅</div>:(
+                <div className="card" style={{padding:0}}>
+                  <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+                    <span style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:14,fontWeight:700,color:"var(--navy)"}}>💰 Cuentas por Cobrar</span>
+                    <span style={{fontSize:12,color:"var(--orange)",fontWeight:700,marginLeft:"auto"}}>Total pendiente: {fmtMonyBoth(totalPorCobrar)}</span>
+                  </div>
+                  <table className="ct">
+                    <thead><tr><th>Factura</th><th>Receptor</th><th>Emitida</th><th>Mon</th><th>Total</th><th>Pagado</th><th>Saldo</th><th>Días</th><th>Acc.</th></tr></thead>
+                    <tbody>
+                      {cxc.map(f=>{
+                        const dias=f._dias;
+                        return (
+                          <tr key={f.id}>
+                            <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,fontSize:12,color:"var(--navy)"}}>{f.id}</span></td>
+                            <td style={{fontWeight:600}}>{f.receptorNombre||"—"}<div style={{fontSize:10,color:"var(--gold2)",fontFamily:"'DM Mono',monospace"}}>{f.receptorCasillero||f.receptorDoc||""}</div></td>
+                            <td style={{fontFamily:"'DM Mono',monospace",fontSize:11}}>{fmtDate(f.fechaEmision||f.fecha)}</td>
+                            <td style={{textAlign:"center",fontWeight:700}}>{f.moneda}</td>
+                            <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)"}}>{fmtMoney(f.total,f.moneda)}</td>
+                            <td style={{fontFamily:"'DM Mono',monospace",fontWeight:600,color:"var(--green)"}}>{fmtMoney(f.pagado,f.moneda)}</td>
+                            <td style={{fontFamily:"'DM Mono',monospace",fontWeight:800,color:"var(--orange)"}}>{fmtMoney(f.saldo,f.moneda)}</td>
+                            <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:dias>30?"var(--red)":dias>15?"var(--orange)":"var(--t1)"}}>{dias}d</span></td>
+                            <td>
+                              <button className="btn-s" style={{fontSize:10,padding:"3px 6px",marginRight:4}} onClick={()=>setFacPrint(f)}>🖨️</button>
+                              {(hasPerm("registrar_pago")||hasPerm("cobrar"))&&<button className="btn-p" style={{fontSize:10,padding:"3px 8px"}} onClick={()=>pagoOpen(f)}>💵 Cobrar</button>}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* ── PAGOS REGISTRADOS ── */}
         {contabTab==="pagos"&&(
           <div className="card" style={{padding:0}}>
             {pagos.length===0?<div style={{textAlign:"center",padding:40,color:"var(--t3)"}}>No hay pagos registrados aún.</div>:(
               <table className="ct">
-                <thead><tr><th>N° Pago</th><th>Factura</th><th>Monto</th><th>Tipo Pago</th><th>Fecha</th></tr></thead>
+                <thead><tr><th>N° Pago</th><th>Factura</th><th>Mon</th><th>Monto</th><th>Tipo Pago</th><th>Referencia</th><th>Nota</th><th>Fecha</th><th>Estado</th><th>Acc.</th></tr></thead>
                 <tbody>
-                  {pagos.map(p=>(
-                    <tr key={p.id}>
-                      <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700,fontSize:12,color:"var(--navy)"}}>{p.id}</td>
-                      <td style={{fontFamily:"'DM Mono',monospace",fontSize:11}}>{p.facturaId}</td>
-                      <td style={{fontFamily:"'DM Mono',monospace",fontWeight:800,color:"var(--green)",fontSize:13}}>${p.monto}</td>
-                      <td style={{fontWeight:600}}>{p.tipo}</td>
-                      <td style={{fontFamily:"'DM Mono',monospace",fontSize:11}}>{fmtDate(p.fecha)} {fmtTime(p.fecha)}</td>
-                    </tr>
-                  ))}
+                  {pagos.map(p=>{
+                    const tipoLbl=(PAY_METHODS.find(m=>m.k===p.tipoPago)||{l:p.tipoPago||"—"}).l;
+                    return(
+                      <tr key={p.id} style={p.anulado?{opacity:.55,textDecoration:"line-through"}:{}}>
+                        <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700,fontSize:12,color:"var(--navy)"}}>{p.id}</td>
+                        <td style={{fontFamily:"'DM Mono',monospace",fontSize:11}}>{p.facturaId}</td>
+                        <td style={{textAlign:"center",fontWeight:700}}>{p.moneda||"USD"}</td>
+                        <td style={{fontFamily:"'DM Mono',monospace",fontWeight:800,color:"var(--green)",fontSize:13}}>{fmtMoney(p.monto,p.moneda)}</td>
+                        <td style={{fontWeight:600,fontSize:11}}>{tipoLbl}</td>
+                        <td style={{fontFamily:"'DM Mono',monospace",fontSize:10,color:"var(--t2)"}}>{p.referencia||"—"}</td>
+                        <td style={{fontSize:10,color:"var(--t2)",maxWidth:180,whiteSpace:"normal"}}>{p.notaReferencial||"—"}</td>
+                        <td style={{fontFamily:"'DM Mono',monospace",fontSize:11}}>{fmtDate(p.fecha)} {fmtTime(p.fecha)}</td>
+                        <td>{p.anulado?<span className="st s1"><span className="st-dot"/>Anulado</span>:<span className="st s3"><span className="st-dot"/>Activo</span>}</td>
+                        <td>{!p.anulado&&(hasPerm("anular_pago")||hasPerm("cobrar"))&&<button className="btn-s" style={{fontSize:10,padding:"3px 6px",color:"var(--red)",borderColor:"var(--red)"}} onClick={()=>pagoAnular(p)}>✕ Anular</button>}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             )}
@@ -5227,14 +5590,14 @@ export default function ENEXSystem(){
         {/* ── GENERAR DE GUÍA ── */}
         {contabTab==="generar"&&(
           <div>
-            <div style={{fontSize:13,color:"var(--t2)",marginBottom:12}}>Selecciona una guía consolidada para generar las facturas por consignatario.</div>
+            <div style={{fontSize:13,color:"var(--t2)",marginBottom:12}}>Selecciona una guía consolidada para generar borradores de factura por consignatario. Luego revisa cada borrador y emítelo.</div>
             {consolList.length===0?<div className="card" style={{textAlign:"center",padding:40,color:"var(--t3)"}}>No hay guías consolidadas. Primero crea un embarque en Consolidación.</div>:(
               <div className="card" style={{padding:0}}>
                 <table className="ct">
-                  <thead><tr><th>N° Guía</th><th>Destino</th><th>Fecha</th><th>WR</th><th>Tipo Envío</th><th>Ya facturada</th><th>Acc.</th></tr></thead>
+                  <thead><tr><th>N° Guía</th><th>Destino</th><th>Fecha</th><th>WR</th><th>Tipo Envío</th><th>Borradores ya creados</th><th>Acc.</th></tr></thead>
                   <tbody>
                     {consolList.map(g=>{
-                      const yaFact=facturas.some(f=>f.guiaId===g.id);
+                      const yaFact=facturas.filter(f=>(f.guiaIds||[]).includes(g.id));
                       return (
                         <tr key={g.id}>
                           <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",fontSize:12}}>{g.id}</span></td>
@@ -5242,10 +5605,9 @@ export default function ENEXSystem(){
                           <td style={{fontFamily:"'DM Mono',monospace",fontSize:11}}>{fmtDate(g.fecha)}</td>
                           <td style={{textAlign:"center",fontWeight:700}}>{g.totalWR}</td>
                           <td><TypeBadge t={g.tipoEnvio}/></td>
-                          <td>{yaFact?<span className="st s3"><span className="st-dot"/>Sí</span>:<span className="st s5"><span className="st-dot"/>No</span>}</td>
+                          <td>{yaFact.length>0?<span style={{fontSize:11,fontWeight:700,color:"var(--green)"}}>{yaFact.length} factura(s)</span>:<span style={{fontSize:11,color:"var(--t3)"}}>—</span>}</td>
                           <td>
-                            {!yaFact&&<button className="btn-p" style={{fontSize:10,padding:"3px 10px"}} onClick={()=>generarFacturasGuia(g)}>⚡ Generar Facturas</button>}
-                            {yaFact&&<span style={{fontSize:11,color:"var(--t3)"}}>Ya generada</span>}
+                            {(hasPerm("crear_factura")||hasPerm("facturar"))&&<button className="btn-p" style={{fontSize:10,padding:"3px 10px"}} onClick={()=>facFromGuia(g)}>⚡ Generar Borradores</button>}
                           </td>
                         </tr>
                       );
@@ -5259,38 +5621,84 @@ export default function ENEXSystem(){
 
         {/* ── REPORTE ── */}
         {contabTab==="reporte"&&(()=>{
+          // Reporte 1: por mes (separado por moneda)
           const porMes={};
-          facturas.forEach(f=>{const k=fmtDate(f.fecha).slice(3);if(!porMes[k])porMes[k]={mes:k,facturas:0,total:0,cobrado:0};porMes[k].facturas++;porMes[k].total+=f.total;if(f.status==="Pagada")porMes[k].cobrado+=f.total;});
-          const meses=Object.values(porMes);
+          facsActivas.filter(f=>f.tipo!=="nota_credito").forEach(f=>{
+            const k=fmtDate(f.fecha).slice(3); // MM/YYYY
+            const mon=f.moneda||"USD";
+            const id=`${k}__${mon}`;
+            if(!porMes[id])porMes[id]={mes:k,moneda:mon,facturas:0,total:0,pagado:0,saldo:0};
+            porMes[id].facturas++;
+            porMes[id].total+=parseFloat(f.total)||0;
+            porMes[id].pagado+=parseFloat(f.pagado)||0;
+            porMes[id].saldo+=parseFloat(f.saldo)||0;
+          });
+          const meses=Object.values(porMes).sort((a,b)=>(b.mes+b.moneda).localeCompare(a.mes+a.moneda));
+          // Reporte 2: por receptor (deudores)
+          const porReceptor={};
+          facsActivas.filter(f=>(f.status==="emitida"||f.status==="pagada_parcial")&&f.tipo!=="nota_credito").forEach(f=>{
+            const key=`${f.receptorTipo}__${f.receptorId||f.receptorNombre}__${f.moneda}`;
+            if(!porReceptor[key])porReceptor[key]={tipo:f.receptorTipo,nombre:f.receptorNombre||"—",casillero:f.receptorCasillero||"",moneda:f.moneda||"USD",facturas:0,total:0,pagado:0,saldo:0};
+            porReceptor[key].facturas++;
+            porReceptor[key].total+=parseFloat(f.total)||0;
+            porReceptor[key].pagado+=parseFloat(f.pagado)||0;
+            porReceptor[key].saldo+=parseFloat(f.saldo)||0;
+          });
+          const deudores=Object.values(porReceptor).sort((a,b)=>b.saldo-a.saldo);
           return (
-            <div>
-              {meses.length===0?<div className="card" style={{textAlign:"center",padding:40,color:"var(--t3)"}}>No hay datos para reportar aún.</div>:(
-                <div className="card" style={{padding:0}}>
-                  <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",fontFamily:"Arial,Helvetica,sans-serif",fontSize:14,fontWeight:700,color:"var(--navy)"}}>📊 Reporte de Ingresos por Período</div>
+            <div style={{display:"flex",flexDirection:"column",gap:14}}>
+              <div className="card" style={{padding:0}}>
+                <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",fontFamily:"Arial,Helvetica,sans-serif",fontSize:14,fontWeight:700,color:"var(--navy)"}}>📊 Ingresos por Período (separado por moneda)</div>
+                {meses.length===0?<div style={{textAlign:"center",padding:30,color:"var(--t3)"}}>No hay datos para reportar aún.</div>:(
                   <table className="ct">
-                    <thead><tr><th>Período</th><th>Facturas</th><th>Total Facturado</th><th>Total Cobrado</th><th>Pendiente</th><th>% Cobrado</th></tr></thead>
+                    <thead><tr><th>Período</th><th>Mon</th><th>Facturas</th><th>Total Facturado</th><th>Pagado</th><th>Saldo</th><th>% Cobrado</th></tr></thead>
                     <tbody>
-                      {meses.map(m=>(
-                        <tr key={m.mes}>
-                          <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700}}>{m.mes}</td>
-                          <td style={{textAlign:"center",fontWeight:700}}>{m.facturas}</td>
-                          <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)"}}>${m.total.toFixed(2)}</td>
-                          <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--green)"}}>${m.cobrado.toFixed(2)}</td>
-                          <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--orange)"}}>${(m.total-m.cobrado).toFixed(2)}</td>
-                          <td>
-                            <div style={{display:"flex",alignItems:"center",gap:8}}>
-                              <div style={{flex:1,height:8,background:"var(--bg4)",borderRadius:4,overflow:"hidden"}}>
-                                <div style={{height:"100%",background:"var(--green)",width:`${Math.round((m.cobrado/m.total)*100)}%`,borderRadius:4}}/>
+                      {meses.map(m=>{
+                        const pct=m.total>0?Math.round((m.pagado/m.total)*100):0;
+                        return(
+                          <tr key={m.mes+"_"+m.moneda}>
+                            <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700}}>{m.mes}</td>
+                            <td style={{textAlign:"center",fontWeight:700}}>{m.moneda}</td>
+                            <td style={{textAlign:"center",fontWeight:700}}>{m.facturas}</td>
+                            <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)"}}>{fmtMoney(m.total,m.moneda)}</td>
+                            <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--green)"}}>{fmtMoney(m.pagado,m.moneda)}</td>
+                            <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--orange)"}}>{fmtMoney(m.saldo,m.moneda)}</td>
+                            <td>
+                              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                                <div style={{flex:1,height:8,background:"var(--bg4)",borderRadius:4,overflow:"hidden"}}>
+                                  <div style={{height:"100%",background:"var(--green)",width:`${pct}%`,borderRadius:4}}/>
+                                </div>
+                                <span style={{fontFamily:"'DM Mono',monospace",fontSize:11,fontWeight:700,color:"var(--green)",minWidth:36}}>{pct}%</span>
                               </div>
-                              <span style={{fontFamily:"'DM Mono',monospace",fontSize:11,fontWeight:700,color:"var(--green)",minWidth:36}}>{Math.round((m.cobrado/m.total)*100)}%</span>
-                            </div>
-                          </td>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+              <div className="card" style={{padding:0}}>
+                <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",fontFamily:"Arial,Helvetica,sans-serif",fontSize:14,fontWeight:700,color:"var(--navy)"}}>👥 Quién debe cuánto</div>
+                {deudores.length===0?<div style={{textAlign:"center",padding:30,color:"var(--t3)"}}>No hay deudores. ✅</div>:(
+                  <table className="ct">
+                    <thead><tr><th>Tipo</th><th>Receptor</th><th>Mon</th><th>Facturas</th><th>Total</th><th>Pagado</th><th>Saldo</th></tr></thead>
+                    <tbody>
+                      {deudores.map((d,i)=>(
+                        <tr key={i}>
+                          <td style={{fontSize:11,fontWeight:700,color:"var(--purple)"}}>{(REC_TYPES.find(r=>r.k===d.tipo)||{l:d.tipo}).l}</td>
+                          <td style={{fontWeight:600}}>{d.nombre}<div style={{fontSize:10,color:"var(--gold2)",fontFamily:"'DM Mono',monospace"}}>{d.casillero||""}</div></td>
+                          <td style={{textAlign:"center",fontWeight:700}}>{d.moneda}</td>
+                          <td style={{textAlign:"center",fontWeight:700}}>{d.facturas}</td>
+                          <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)"}}>{fmtMoney(d.total,d.moneda)}</td>
+                          <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--green)"}}>{fmtMoney(d.pagado,d.moneda)}</td>
+                          <td style={{fontFamily:"'DM Mono',monospace",fontWeight:800,color:"var(--orange)"}}>{fmtMoney(d.saldo,d.moneda)}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           );
         })()}
@@ -7204,6 +7612,400 @@ export default function ENEXSystem(){
                     <div style={{flex:1,textAlign:"center"}}>
                       <div style={{borderTop:"1px solid #000",paddingTop:4,fontSize:10,fontWeight:700}}>Recibe conforme</div>
                       <div style={{fontSize:9,color:"#555",marginTop:2}}>{dn.receptorNombre||"—"}{dn.receptorDocumento?` · ${dn.receptorDocumento}`:""}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── Factura Modal (borrador / editar / emitir) ── */}
+      {facModal&&(()=>{
+        const f=facModal;
+        const addLinea=()=>setFacModal(p=>({...p,lineas:[...(p.lineas||[]),{descripcion:"",cantidad:1,precio:0,total:0}]}));
+        const updLinea=(i,k,v)=>setFacModal(p=>{
+          const L=[...(p.lineas||[])];
+          L[i]={...L[i],[k]:v};
+          L[i].total=(parseFloat(L[i].cantidad)||0)*(parseFloat(L[i].precio)||0);
+          const subtotal=L.reduce((s,l)=>s+l.total,0);
+          const desc=parseFloat(p.descuento)||0;
+          const total=Math.max(0,subtotal-desc);
+          const pagado=parseFloat(p.pagado)||0;
+          const saldo=Math.max(0,total-pagado);
+          return{...p,lineas:L,subtotal,total,saldo};
+        });
+        const delLinea=(i)=>setFacModal(p=>{
+          const L=(p.lineas||[]).filter((_,j)=>j!==i);
+          const subtotal=L.reduce((s,l)=>s+(parseFloat(l.total)||0),0);
+          const desc=parseFloat(p.descuento)||0;
+          const total=Math.max(0,subtotal-desc);
+          const pagado=parseFloat(p.pagado)||0;
+          const saldo=Math.max(0,total-pagado);
+          return{...p,lineas:L.length?L:[{descripcion:"",cantidad:1,precio:0,total:0}],subtotal,total,saldo};
+        });
+        const setRec=(tipo,id)=>{
+          const r=lookupReceptor(tipo,id);
+          setFacModal(p=>({...p,receptorTipo:tipo,receptorId:id,
+            receptorNombre:r?.nombre||"",receptorDoc:r?.doc||"",receptorDir:r?.dir||"",
+            receptorTel:r?.tel||"",receptorEmail:r?.email||"",receptorCasillero:r?.casillero||""}));
+        };
+        // Opciones de receptor según tipo
+        const recOptions=f.receptorTipo==="cliente"||f.receptorTipo==="autonomo"
+          ?clients.map(c=>({id:c.id,label:`${[c.primerNombre,c.primerApellido].filter(Boolean).join(" ")} · ${c.casillero||""} · ${c.cedula||""}`}))
+          :f.receptorTipo==="agente"
+            ?agentes.map(a=>({id:a.id,label:`${a.nombre||a.name||""} · ${a.rif||""}`}))
+            :f.receptorTipo==="oficina"
+              ?oficinas.map(o=>({id:o.id,label:`${o.nombre||""} · ${o.rif||""}`}))
+              :[];
+        return(
+          <div className="modal-backdrop">
+            <div className="modal" style={{width:900,maxHeight:"92vh",overflow:"auto"}}>
+              <div className="mh">
+                <div>
+                  <div style={{fontSize:15,fontWeight:700,color:"var(--navy)"}}>
+                    {f._editing?"✏️ Editar factura":"📄 Nueva factura"}
+                    {f.id&&<span style={{fontFamily:"'DM Mono',monospace",marginLeft:10,color:"var(--navy)"}}>{f.id}</span>}
+                    {!f.id&&<span style={{fontFamily:"'DM Mono',monospace",marginLeft:10,color:"var(--t3)"}}>#{buildFacturaId(nextInvoiceNum)}</span>}
+                  </div>
+                  <div style={{fontSize:11,color:"var(--t3)"}}>Tipo: {f.tipo==="proforma"?"Proforma":"Factura"} · {f.status==="borrador"?"Borrador":FAC_STATUS_LABEL[f.status]}</div>
+                </div>
+                <button className="mcl" onClick={()=>setFacModal(null)}>✕</button>
+              </div>
+              <div className="mb" style={{padding:14}}>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:10,marginBottom:10}}>
+                  <div>
+                    <label className="fl">Tipo documento</label>
+                    <select className="fi" value={f.tipo} onChange={e=>setFacModal(p=>({...p,tipo:e.target.value}))}>
+                      <option value="factura">Factura</option>
+                      <option value="proforma">Proforma</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="fl">Moneda</label>
+                    <select className="fi" value={f.moneda} onChange={e=>setFacModal(p=>({...p,moneda:e.target.value}))}>
+                      <option value="USD">USD ($)</option>
+                      <option value="EUR">EUR (€)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="fl">Tipo de receptor</label>
+                    <select className="fi" value={f.receptorTipo} onChange={e=>setFacModal(p=>({...p,receptorTipo:e.target.value,receptorId:"",receptorNombre:"",receptorDoc:"",receptorDir:"",receptorTel:"",receptorEmail:"",receptorCasillero:""}))}>
+                      {REC_TYPES.map(r=><option key={r.k} value={r.k}>{r.l}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="fl">Fecha</label>
+                    <input className="fi" type="date" value={new Date(f.fecha).toISOString().slice(0,10)} onChange={e=>setFacModal(p=>({...p,fecha:new Date(e.target.value+"T12:00:00")}))}/>
+                  </div>
+                </div>
+
+                <div style={{marginBottom:10}}>
+                  <label className="fl">Seleccionar {(REC_TYPES.find(r=>r.k===f.receptorTipo)||{l:""}).l}</label>
+                  <select className="fi" value={f.receptorId} onChange={e=>setRec(f.receptorTipo,e.target.value)}>
+                    <option value="">— Selecciona —</option>
+                    {recOptions.map(o=><option key={o.id} value={o.id}>{o.label}</option>)}
+                  </select>
+                </div>
+
+                <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr",gap:10,marginBottom:10}}>
+                  <div>
+                    <label className="fl">Nombre / Razón social</label>
+                    <input className="fi" value={f.receptorNombre} onChange={e=>setFacModal(p=>({...p,receptorNombre:e.target.value}))}/>
+                  </div>
+                  <div>
+                    <label className="fl">Documento / RIF</label>
+                    <input className="fi" value={f.receptorDoc} onChange={e=>setFacModal(p=>({...p,receptorDoc:e.target.value}))}/>
+                  </div>
+                  <div>
+                    <label className="fl">Casillero</label>
+                    <input className="fi" value={f.receptorCasillero} onChange={e=>setFacModal(p=>({...p,receptorCasillero:e.target.value}))}/>
+                  </div>
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr",gap:10,marginBottom:10}}>
+                  <div>
+                    <label className="fl">Dirección</label>
+                    <input className="fi" value={f.receptorDir} onChange={e=>setFacModal(p=>({...p,receptorDir:e.target.value}))}/>
+                  </div>
+                  <div>
+                    <label className="fl">Teléfono</label>
+                    <input className="fi" value={f.receptorTel} onChange={e=>setFacModal(p=>({...p,receptorTel:e.target.value}))}/>
+                  </div>
+                  <div>
+                    <label className="fl">Email</label>
+                    <input className="fi" value={f.receptorEmail} onChange={e=>setFacModal(p=>({...p,receptorEmail:e.target.value}))}/>
+                  </div>
+                </div>
+
+                <div style={{marginTop:12,marginBottom:6,display:"flex",alignItems:"center",gap:10}}>
+                  <div style={{fontSize:13,fontWeight:700,color:"var(--navy)"}}>Líneas</div>
+                  <button className="btn-s" style={{fontSize:10,padding:"2px 8px"}} onClick={addLinea}>+ Agregar línea</button>
+                </div>
+                <table className="ct" style={{width:"100%"}}>
+                  <thead><tr><th style={{width:"50%"}}>Descripción</th><th style={{width:80}}>Cantidad</th><th style={{width:100}}>Precio</th><th style={{width:100}}>Total</th><th style={{width:40}}></th></tr></thead>
+                  <tbody>
+                    {(f.lineas||[]).map((l,i)=>(
+                      <tr key={i}>
+                        <td><input className="fi" value={l.descripcion} onChange={e=>updLinea(i,"descripcion",e.target.value)} placeholder="Descripción del servicio/producto"/></td>
+                        <td><input className="fi" type="number" step="0.01" value={l.cantidad} onChange={e=>updLinea(i,"cantidad",e.target.value)}/></td>
+                        <td><input className="fi" type="number" step="0.01" value={l.precio} onChange={e=>updLinea(i,"precio",e.target.value)}/></td>
+                        <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700,textAlign:"right"}}>{fmtMoney(l.total,f.moneda)}</td>
+                        <td><button className="btn-s" style={{fontSize:9,padding:"2px 6px",color:"var(--red)",borderColor:"var(--red)"}} onClick={()=>delLinea(i)}>✕</button></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginTop:14}}>
+                  <div>
+                    <label className="fl">Notas</label>
+                    <textarea className="fi" rows={3} value={f.notas||""} onChange={e=>setFacModal(p=>({...p,notas:e.target.value}))} style={{resize:"vertical"}}/>
+                    <label className="fl" style={{marginTop:8}}>Condiciones</label>
+                    <textarea className="fi" rows={2} value={f.condiciones||""} onChange={e=>setFacModal(p=>({...p,condiciones:e.target.value}))} style={{resize:"vertical"}}/>
+                  </div>
+                  <div>
+                    <div style={{background:"var(--bg4)",padding:12,borderRadius:8,border:"1px solid var(--b1)"}}>
+                      <div style={{display:"flex",justifyContent:"space-between",marginBottom:6,fontSize:12}}>
+                        <span>Subtotal:</span><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700}}>{fmtMoney(f.subtotal||0,f.moneda)}</span>
+                      </div>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6,fontSize:12}}>
+                        <span>Descuento:</span>
+                        <input className="fi" type="number" step="0.01" value={f.descuento||0} onChange={e=>setFacModal(p=>{
+                          const desc=parseFloat(e.target.value)||0;
+                          const total=Math.max(0,(parseFloat(p.subtotal)||0)-desc);
+                          const saldo=Math.max(0,total-(parseFloat(p.pagado)||0));
+                          return{...p,descuento:desc,total,saldo};
+                        })} style={{width:100,fontFamily:"'DM Mono',monospace",textAlign:"right"}}/>
+                      </div>
+                      <div style={{display:"flex",justifyContent:"space-between",paddingTop:8,borderTop:"2px solid var(--navy)",fontSize:15,fontWeight:800,color:"var(--navy)"}}>
+                        <span>TOTAL:</span><span style={{fontFamily:"'DM Mono',monospace"}}>{fmtMoney(f.total||0,f.moneda)}</span>
+                      </div>
+                      {(f.pagado||0)>0&&<>
+                        <div style={{display:"flex",justifyContent:"space-between",marginTop:6,fontSize:11,color:"var(--green)"}}>
+                          <span>Pagado:</span><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700}}>{fmtMoney(f.pagado,f.moneda)}</span>
+                        </div>
+                        <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"var(--orange)",fontWeight:700}}>
+                          <span>Saldo:</span><span style={{fontFamily:"'DM Mono',monospace"}}>{fmtMoney(f.saldo,f.moneda)}</span>
+                        </div>
+                      </>}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="mf" style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
+                <button className="btn-s" onClick={()=>setFacModal(null)}>Cancelar</button>
+                {f.status==="borrador"&&<button className="btn-s" onClick={facSaveBorrador}>💾 Guardar borrador</button>}
+                {(f.status==="borrador"||f.status==="emitida")&&<button className="btn-p" onClick={facEmitir}>📤 {f.status==="emitida"?"Actualizar emitida":"Emitir"}</button>}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── Pago Modal ── */}
+      {pagoModal&&(()=>{
+        const p=pagoModal;
+        const fact=facturas.find(x=>x.id===p.facturaId);
+        if(!fact)return null;
+        return(
+          <div className="modal-backdrop">
+            <div className="modal" style={{width:560}}>
+              <div className="mh">
+                <div>
+                  <div style={{fontSize:15,fontWeight:700,color:"var(--navy)"}}>💵 Registrar pago</div>
+                  <div style={{fontSize:11,color:"var(--t3)"}}>Factura {fact.id} · Saldo {fmtMoney(fact.saldo,fact.moneda)}</div>
+                </div>
+                <button className="mcl" onClick={()=>setPagoModal(null)}>✕</button>
+              </div>
+              <div className="mb" style={{padding:14}}>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+                  <div>
+                    <label className="fl">Monto ({fact.moneda})</label>
+                    <input className="fi" type="number" step="0.01" value={p.monto} onChange={e=>setPagoModal(x=>({...x,monto:e.target.value}))}/>
+                  </div>
+                  <div>
+                    <label className="fl">Fecha</label>
+                    <input className="fi" type="date" value={new Date(p.fecha).toISOString().slice(0,10)} onChange={e=>setPagoModal(x=>({...x,fecha:new Date(e.target.value+"T12:00:00")}))}/>
+                  </div>
+                </div>
+                <div style={{marginBottom:10}}>
+                  <label className="fl">Tipo de pago</label>
+                  <select className="fi" value={p.tipoPago} onChange={e=>setPagoModal(x=>({...x,tipoPago:e.target.value}))}>
+                    {PAY_METHODS.map(m=><option key={m.k} value={m.k}>{m.l}</option>)}
+                  </select>
+                </div>
+                <div style={{marginBottom:10}}>
+                  <label className="fl">Referencia</label>
+                  <input className="fi" value={p.referencia} onChange={e=>setPagoModal(x=>({...x,referencia:e.target.value}))} placeholder="Nº confirmación, últimos 4 dígitos, etc."/>
+                </div>
+                <div>
+                  <label className="fl">Nota referencial <span style={{color:"var(--t3)",fontWeight:400}}>(ej: "Recibido 100€ equivalente a $108 al cambio del día" o "Pago en Bs. 40,00 Bs/USD")</span></label>
+                  <textarea className="fi" rows={2} value={p.notaReferencial} onChange={e=>setPagoModal(x=>({...x,notaReferencial:e.target.value}))} style={{resize:"vertical"}}/>
+                </div>
+              </div>
+              <div className="mf" style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
+                <button className="btn-s" onClick={()=>setPagoModal(null)}>Cancelar</button>
+                <button className="btn-p" onClick={pagoSubmit}>💵 Registrar pago</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── Nota de Crédito Modal ── */}
+      {ncModal&&(()=>{
+        const orig=facturas.find(x=>x.id===ncModal.facturaOrigenId);
+        if(!orig)return null;
+        return(
+          <div className="modal-backdrop">
+            <div className="modal" style={{width:520}}>
+              <div className="mh">
+                <div>
+                  <div style={{fontSize:15,fontWeight:700,color:"var(--purple)"}}>📝 Nota de Crédito</div>
+                  <div style={{fontSize:11,color:"var(--t3)"}}>Factura origen: {orig.id} · Total {fmtMoney(orig.total,orig.moneda)} · Pagado {fmtMoney(orig.pagado,orig.moneda)}</div>
+                </div>
+                <button className="mcl" onClick={()=>setNcModal(null)}>✕</button>
+              </div>
+              <div className="mb" style={{padding:14}}>
+                <div style={{marginBottom:10}}>
+                  <label className="fl">Monto a acreditar ({orig.moneda})</label>
+                  <input className="fi" type="number" step="0.01" value={ncModal.monto} onChange={e=>setNcModal(x=>({...x,monto:e.target.value}))}/>
+                </div>
+                <div style={{marginBottom:10}}>
+                  <label className="fl">Motivo (aparece en la línea)</label>
+                  <input className="fi" value={ncModal.motivo} onChange={e=>setNcModal(x=>({...x,motivo:e.target.value}))} placeholder="Ej: Descuento por retraso, devolución parcial…"/>
+                </div>
+                <div>
+                  <label className="fl">Notas internas</label>
+                  <textarea className="fi" rows={2} value={ncModal.notas} onChange={e=>setNcModal(x=>({...x,notas:e.target.value}))} style={{resize:"vertical"}}/>
+                </div>
+              </div>
+              <div className="mf" style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
+                <button className="btn-s" onClick={()=>setNcModal(null)}>Cancelar</button>
+                <button className="btn-p" style={{background:"var(--purple)"}} onClick={ncSubmit}>📝 Emitir NC</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── Factura Print Modal ── */}
+      {facPrint&&(()=>{
+        const f=facPrint;
+        const pagosAplic=pagos.filter(p=>p.facturaId===f.id&&!p.anulado);
+        return(
+          <div className="modal-backdrop" style={{overflow:"auto"}}>
+            <div className="modal" style={{width:820,maxHeight:"94vh",display:"flex",flexDirection:"column"}}>
+              <div className="mh">
+                <div style={{fontSize:14,fontWeight:700,color:"var(--navy)"}}>
+                  {f.tipo==="nota_credito"?"📝 Nota de Crédito":f.tipo==="proforma"?"📋 Proforma":"📄 Factura"} · {f.id}
+                  {f.status==="anulada"&&<span style={{marginLeft:10,color:"var(--red)",fontWeight:800}}>ANULADA</span>}
+                </div>
+                <div style={{display:"flex",gap:6}}>
+                  {hasPerm("imp_factura")&&<button className="btn-p" style={{fontSize:11,padding:"4px 10px"}} onClick={()=>window.print()}>🖨️ Imprimir</button>}
+                  <button className="mcl" onClick={()=>setFacPrint(null)}>✕</button>
+                </div>
+              </div>
+              <div className="mb" style={{padding:24,overflow:"auto",background:"#fff",color:"#000"}}>
+                <div id="print-area" style={{fontFamily:"Arial,Helvetica,sans-serif",color:"#000",fontSize:12}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",borderBottom:"2px solid #000",paddingBottom:10,marginBottom:14}}>
+                    <div>
+                      <div style={{fontSize:24,fontWeight:900,letterSpacing:3}}>ENEX</div>
+                      <div style={{fontSize:11}}>{empresaNombre||"Int'l Courier"}</div>
+                      <div style={{fontSize:10,color:"#555"}}>Paquetería Internacional</div>
+                    </div>
+                    <div style={{textAlign:"right"}}>
+                      <div style={{fontSize:13,fontWeight:800}}>{f.tipo==="nota_credito"?"NOTA DE CRÉDITO":f.tipo==="proforma"?"PROFORMA":"FACTURA"}</div>
+                      <div style={{fontSize:14,fontWeight:900,fontFamily:"'DM Mono',monospace"}}>Nº {f.id}</div>
+                      <div style={{fontSize:10,marginTop:4}}>Fecha: {fmtDate(f.fecha)}</div>
+                      {f.fechaEmision&&<div style={{fontSize:10}}>Emisión: {fmtDate(f.fechaEmision)}</div>}
+                      <div style={{fontSize:10}}>Moneda: {f.moneda}</div>
+                      {f.ncFacturaOrigen&&<div style={{fontSize:10,color:"#7209b7"}}>Ref. factura: {f.ncFacturaOrigen}</div>}
+                    </div>
+                  </div>
+
+                  <div style={{border:"1px solid #999",padding:"8px 10px",marginBottom:12,background:"#FAFAFA"}}>
+                    <div style={{fontSize:10,fontWeight:700,color:"#555",marginBottom:4}}>RECEPTOR ({(REC_TYPES.find(r=>r.k===f.receptorTipo)||{l:f.receptorTipo}).l})</div>
+                    <div style={{fontSize:13,fontWeight:700}}>{f.receptorNombre||"—"}</div>
+                    <div style={{fontSize:10,display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginTop:4}}>
+                      {f.receptorDoc&&<div><b>Documento:</b> {f.receptorDoc}</div>}
+                      {f.receptorCasillero&&<div><b>Casillero:</b> {f.receptorCasillero}</div>}
+                      {f.receptorTel&&<div><b>Teléfono:</b> {f.receptorTel}</div>}
+                      {f.receptorEmail&&<div><b>Email:</b> {f.receptorEmail}</div>}
+                      {f.receptorDir&&<div style={{gridColumn:"1 / span 2"}}><b>Dirección:</b> {f.receptorDir}</div>}
+                    </div>
+                  </div>
+
+                  <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,marginBottom:10}}>
+                    <thead>
+                      <tr style={{background:"#EEE"}}>
+                        <th style={{border:"1px solid #999",padding:"5px 6px",textAlign:"left"}}>Descripción</th>
+                        <th style={{border:"1px solid #999",padding:"5px 6px",textAlign:"center",width:60}}>Cant</th>
+                        <th style={{border:"1px solid #999",padding:"5px 6px",textAlign:"right",width:90}}>Precio</th>
+                        <th style={{border:"1px solid #999",padding:"5px 6px",textAlign:"right",width:100}}>Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(f.lineas||[]).map((l,i)=>(
+                        <tr key={i}>
+                          <td style={{border:"1px solid #999",padding:"4px 6px"}}>{l.descripcion||"—"}</td>
+                          <td style={{border:"1px solid #999",padding:"4px 6px",textAlign:"center"}}>{l.cantidad}</td>
+                          <td style={{border:"1px solid #999",padding:"4px 6px",textAlign:"right",fontFamily:"monospace"}}>{fmtMoney(l.precio,f.moneda)}</td>
+                          <td style={{border:"1px solid #999",padding:"4px 6px",textAlign:"right",fontFamily:"monospace",fontWeight:700}}>{fmtMoney(l.total,f.moneda)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+
+                  <div style={{display:"flex",justifyContent:"flex-end",marginBottom:14}}>
+                    <table style={{fontSize:11,minWidth:280}}>
+                      <tbody>
+                        <tr><td style={{padding:"2px 8px"}}>Subtotal:</td><td style={{padding:"2px 8px",textAlign:"right",fontFamily:"monospace"}}>{fmtMoney(f.subtotal,f.moneda)}</td></tr>
+                        {(f.descuento||0)>0&&<tr><td style={{padding:"2px 8px"}}>Descuento:</td><td style={{padding:"2px 8px",textAlign:"right",fontFamily:"monospace"}}>−{fmtMoney(f.descuento,f.moneda)}</td></tr>}
+                        <tr style={{fontWeight:900,borderTop:"2px solid #000"}}><td style={{padding:"6px 8px",fontSize:13}}>TOTAL:</td><td style={{padding:"6px 8px",textAlign:"right",fontFamily:"monospace",fontSize:14}}>{fmtMoney(f.total,f.moneda)}</td></tr>
+                        {(f.pagado||0)>0&&<tr style={{color:"#0B6B2F"}}><td style={{padding:"2px 8px"}}>Pagado:</td><td style={{padding:"2px 8px",textAlign:"right",fontFamily:"monospace",fontWeight:700}}>{fmtMoney(f.pagado,f.moneda)}</td></tr>}
+                        {f.saldo>0.001&&<tr style={{color:"#C96703",fontWeight:800}}><td style={{padding:"2px 8px"}}>Saldo:</td><td style={{padding:"2px 8px",textAlign:"right",fontFamily:"monospace"}}>{fmtMoney(f.saldo,f.moneda)}</td></tr>}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {pagosAplic.length>0&&<div style={{marginBottom:14}}>
+                    <div style={{fontSize:11,fontWeight:700,marginBottom:4}}>Pagos aplicados ({pagosAplic.length})</div>
+                    <table style={{width:"100%",borderCollapse:"collapse",fontSize:10}}>
+                      <thead><tr style={{background:"#EEE"}}>
+                        <th style={{border:"1px solid #999",padding:"3px 6px",textAlign:"left"}}>Nº Pago</th>
+                        <th style={{border:"1px solid #999",padding:"3px 6px",textAlign:"left"}}>Fecha</th>
+                        <th style={{border:"1px solid #999",padding:"3px 6px",textAlign:"left"}}>Tipo</th>
+                        <th style={{border:"1px solid #999",padding:"3px 6px",textAlign:"left"}}>Ref.</th>
+                        <th style={{border:"1px solid #999",padding:"3px 6px",textAlign:"right"}}>Monto</th>
+                      </tr></thead>
+                      <tbody>
+                        {pagosAplic.map(p=>(
+                          <tr key={p.id}>
+                            <td style={{border:"1px solid #999",padding:"3px 6px",fontFamily:"monospace"}}>{p.id}</td>
+                            <td style={{border:"1px solid #999",padding:"3px 6px"}}>{fmtDate(p.fecha)}</td>
+                            <td style={{border:"1px solid #999",padding:"3px 6px"}}>{(PAY_METHODS.find(m=>m.k===p.tipoPago)||{l:p.tipoPago}).l}</td>
+                            <td style={{border:"1px solid #999",padding:"3px 6px"}}>{p.referencia||"—"}{p.notaReferencial?` · ${p.notaReferencial}`:""}</td>
+                            <td style={{border:"1px solid #999",padding:"3px 6px",textAlign:"right",fontFamily:"monospace",fontWeight:700}}>{fmtMoney(p.monto,p.moneda)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>}
+
+                  {f.notas&&<div style={{marginBottom:10,fontSize:10,whiteSpace:"pre-wrap"}}><b>Notas:</b> {f.notas}</div>}
+                  {f.condiciones&&<div style={{marginBottom:10,fontSize:10,whiteSpace:"pre-wrap",color:"#555"}}><b>Condiciones:</b> {f.condiciones}</div>}
+                  {f.status==="anulada"&&f.motivoAnulacion&&<div style={{marginBottom:10,fontSize:11,color:"#C62828",fontWeight:700}}>Motivo anulación: {f.motivoAnulacion}</div>}
+
+                  <div style={{display:"flex",justifyContent:"space-between",gap:40,marginTop:40}}>
+                    <div style={{flex:1,textAlign:"center"}}>
+                      <div style={{borderTop:"1px solid #000",paddingTop:4,fontSize:10,fontWeight:700}}>ENEX</div>
+                      <div style={{fontSize:9,color:"#555",marginTop:2}}>Firma y sello</div>
+                    </div>
+                    <div style={{flex:1,textAlign:"center"}}>
+                      <div style={{borderTop:"1px solid #000",paddingTop:4,fontSize:10,fontWeight:700}}>Cliente</div>
+                      <div style={{fontSize:9,color:"#555",marginTop:2}}>{f.receptorNombre||"—"}</div>
                     </div>
                   </div>
                 </div>

@@ -332,6 +332,124 @@ export const dbDeleteDeliveryNote = async (id) => {
   if (error) console.error('deleteDeliveryNote:', error)
 }
 
+// ── FACTURAS ──────────────────────────────────────────────────
+export const dbGetFacturas = async () => {
+  const { data, error } = await supabase.from('facturas').select('*').order('numero', {ascending:false})
+  if (error) { console.error('getFacturas:', error); return [] }
+  return data.map(r => ({
+    id: r.id,
+    numero: r.numero || 0,
+    tipo: r.tipo || 'factura',
+    fecha: r.fecha ? new Date(r.fecha) : new Date(),
+    fechaEmision: r.fecha_emision ? new Date(r.fecha_emision) : null,
+    status: r.status || 'borrador',
+    moneda: r.moneda || 'USD',
+    receptorTipo: r.receptor_tipo || 'cliente',
+    receptorId: r.receptor_id || '',
+    receptorNombre: r.receptor_nombre || '',
+    receptorDoc: r.receptor_doc || '',
+    receptorDir: r.receptor_dir || '',
+    receptorTel: r.receptor_tel || '',
+    receptorEmail: r.receptor_email || '',
+    receptorCasillero: r.receptor_casillero || '',
+    lineas: r.lineas || [],
+    subtotal: parseFloat(r.subtotal) || 0,
+    descuento: parseFloat(r.descuento) || 0,
+    total: parseFloat(r.total) || 0,
+    pagado: parseFloat(r.pagado) || 0,
+    saldo: parseFloat(r.saldo) || 0,
+    wrIds: r.wr_ids || [],
+    guiaIds: r.guia_ids || [],
+    ncFacturaOrigen: r.nc_factura_origen || '',
+    notas: r.notas || '',
+    condiciones: r.condiciones || '',
+    usuario: r.usuario || '',
+    motivoAnulacion: r.motivo_anulacion || '',
+    fechaAnulacion: r.fecha_anulacion ? new Date(r.fecha_anulacion) : null,
+  }))
+}
+
+export const dbUpsertFactura = async (f) => {
+  const { error } = await supabase.from('facturas').upsert({
+    id: f.id,
+    numero: f.numero || 0,
+    tipo: f.tipo || 'factura',
+    fecha: f.fecha instanceof Date ? f.fecha.toISOString() : f.fecha,
+    fecha_emision: f.fechaEmision instanceof Date ? f.fechaEmision.toISOString() : (f.fechaEmision || null),
+    status: f.status || 'borrador',
+    moneda: f.moneda || 'USD',
+    receptor_tipo: f.receptorTipo || 'cliente',
+    receptor_id: f.receptorId || '',
+    receptor_nombre: f.receptorNombre || '',
+    receptor_doc: f.receptorDoc || '',
+    receptor_dir: f.receptorDir || '',
+    receptor_tel: f.receptorTel || '',
+    receptor_email: f.receptorEmail || '',
+    receptor_casillero: f.receptorCasillero || '',
+    lineas: f.lineas || [],
+    subtotal: f.subtotal || 0,
+    descuento: f.descuento || 0,
+    total: f.total || 0,
+    pagado: f.pagado || 0,
+    saldo: f.saldo || 0,
+    wr_ids: f.wrIds || [],
+    guia_ids: f.guiaIds || [],
+    nc_factura_origen: f.ncFacturaOrigen || '',
+    notas: f.notas || '',
+    condiciones: f.condiciones || '',
+    usuario: f.usuario || '',
+    motivo_anulacion: f.motivoAnulacion || '',
+    fecha_anulacion: f.fechaAnulacion instanceof Date ? f.fechaAnulacion.toISOString() : (f.fechaAnulacion || null),
+  })
+  if (error) console.error('upsertFactura:', error)
+}
+
+export const dbDeleteFactura = async (id) => {
+  const { error } = await supabase.from('facturas').delete().eq('id', id)
+  if (error) console.error('deleteFactura:', error)
+}
+
+// ── PAGOS ─────────────────────────────────────────────────────
+export const dbGetPagos = async () => {
+  const { data, error } = await supabase.from('pagos').select('*').order('fecha', {ascending:false})
+  if (error) { console.error('getPagos:', error); return [] }
+  return data.map(r => ({
+    id: r.id,
+    facturaId: r.factura_id || '',
+    fecha: r.fecha ? new Date(r.fecha) : new Date(),
+    monto: parseFloat(r.monto) || 0,
+    moneda: r.moneda || 'USD',
+    tipoPago: r.tipo_pago || 'efectivo',
+    referencia: r.referencia || '',
+    notaReferencial: r.nota_referencial || '',
+    anulado: r.anulado ?? false,
+    motivoAnulacion: r.motivo_anulacion || '',
+    usuario: r.usuario || '',
+  }))
+}
+
+export const dbUpsertPago = async (p) => {
+  const { error } = await supabase.from('pagos').upsert({
+    id: p.id,
+    factura_id: p.facturaId || '',
+    fecha: p.fecha instanceof Date ? p.fecha.toISOString() : p.fecha,
+    monto: p.monto || 0,
+    moneda: p.moneda || 'USD',
+    tipo_pago: p.tipoPago || 'efectivo',
+    referencia: p.referencia || '',
+    nota_referencial: p.notaReferencial || '',
+    anulado: p.anulado ?? false,
+    motivo_anulacion: p.motivoAnulacion || '',
+    usuario: p.usuario || '',
+  })
+  if (error) console.error('upsertPago:', error)
+}
+
+export const dbDeletePago = async (id) => {
+  const { error } = await supabase.from('pagos').delete().eq('id', id)
+  if (error) console.error('deletePago:', error)
+}
+
 // ── CONFIGURACION (tipos de envio, pago, contenedor, paises) ─
 export const dbGetConfig = async (clave) => {
   const { data, error } = await supabase
