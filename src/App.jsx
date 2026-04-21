@@ -16,7 +16,7 @@ const S = `
   --shadow:0 1px 4px rgba(0,0,0,0.08);--shadow2:0 4px 16px rgba(0,0,0,0.12);
 }
 html,body{height:100%;overflow:hidden;margin:0;padding:0}
-body{background:var(--bg);color:var(--t1);font-family:Arial,Helvetica,sans-serif;font-size:14px}
+body{background:var(--bg);color:var(--t1);font-family:Arial,Helvetica,sans-serif;font-size:16px}
 #root{height:100%}
 ::-webkit-scrollbar{width:6px;height:6px}
 ::-webkit-scrollbar-track{background:var(--bg3)}
@@ -35,37 +35,37 @@ input.fi:not([type="email"]):not([type="password"]):not([type="number"]){text-tr
   display:flex;flex-direction:column;overflow:hidden;
 }
 .sb-logo{padding:16px 14px 12px;border-bottom:1px solid rgba(255,255,255,0.1);flex-shrink:0;display:flex;align-items:center;gap:9px}
-.sb-mark{width:34px;height:34px;border-radius:8px;background:linear-gradient(135deg,#C8971C,#E5AE3A);display:flex;align-items:center;justify-content:center;font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:900;color:#1A2B4A;flex-shrink:0}
-.sb-name{font-family:Arial,Helvetica,sans-serif;font-size:18px;font-weight:700;letter-spacing:2px;color:#FFFFFF}
+.sb-mark{width:34px;height:34px;border-radius:8px;background:linear-gradient(135deg,#C8971C,#E5AE3A);display:flex;align-items:center;justify-content:center;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:900;color:#1A2B4A;flex-shrink:0}
+.sb-name{font-family:Arial,Helvetica,sans-serif;font-size:20px;font-weight:700;letter-spacing:2px;color:#FFFFFF}
 .sb-name span{color:#E5AE3A}
-.sb-sub{font-size:8px;color:#E5AE3A;letter-spacing:2.5px;text-transform:uppercase;opacity:.8}
+.sb-sub{font-size:10px;color:#E5AE3A;letter-spacing:2.5px;text-transform:uppercase;opacity:.8}
 .sb-nav{flex:1;padding:8px 6px;overflow-y:auto}
-.sb-lbl{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.35);padding:10px 9px 3px;font-weight:700}
-.ni{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:7px;cursor:pointer;transition:all .12s;font-size:13px;font-weight:500;color:rgba(255,255,255,0.7);border:1px solid transparent;margin-bottom:2px}
+.sb-lbl{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.35);padding:10px 9px 3px;font-weight:700}
+.ni{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:7px;cursor:pointer;transition:all .12s;font-size:15px;font-weight:500;color:rgba(255,255,255,0.7);border:1px solid transparent;margin-bottom:2px}
 .ni:hover{background:rgba(255,255,255,0.1);color:#fff}
 .ni.on{background:rgba(200,151,28,0.2);border-color:rgba(200,151,28,0.4);color:#E5AE3A}
-.ni-ic{font-size:14px;width:16px;text-align:center;flex-shrink:0}
-.ni-lbl{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
-.n-bx{margin-left:auto;background:#E5AE3A;color:#1A2B4A;font-size:9px;font-weight:800;padding:1px 6px;border-radius:4px;flex-shrink:0}
+.ni-ic{font-size:16px;width:16px;text-align:center;flex-shrink:0}
+.ni-lbl{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px}
+.n-bx{margin-left:auto;background:#E5AE3A;color:#1A2B4A;font-size:11px;font-weight:800;padding:1px 6px;border-radius:4px;flex-shrink:0}
 .n-bx.r{background:#CC2233;color:#fff}
 .sb-foot{padding:9px;border-top:1px solid rgba(255,255,255,0.1);flex-shrink:0}
 .u-row{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:7px;background:rgba(255,255,255,0.08);cursor:pointer}
 .u-row:hover{background:rgba(255,255,255,0.14)}
-.u-av{width:30px;height:30px;border-radius:7px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;background:#E5AE3A;color:#1A2B4A}
-.u-nm{font-size:12px;font-weight:600;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.u-rl{font-size:10px;color:rgba(255,255,255,0.4)}
+.u-av{width:30px;height:30px;border-radius:7px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;background:#E5AE3A;color:#1A2B4A}
+.u-nm{font-size:14px;font-weight:600;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.u-rl{font-size:12px;color:rgba(255,255,255,0.4)}
 
 /* ── MAIN ────────────────────────────────────────────────────────────────── */
 .main{flex:1;min-width:0;height:100vh;display:flex;flex-direction:column;overflow:hidden}
 
 /* ── TOPBAR ──────────────────────────────────────────────────────────────── */
 .topbar{height:50px;background:var(--bg2);border-bottom:1px solid var(--b1);display:flex;align-items:center;padding:0 18px;gap:10px;flex-shrink:0;box-shadow:var(--shadow)}
-.tb-ttl{font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:700;flex:1;color:var(--navy);letter-spacing:.3px}
+.tb-ttl{font-family:Arial,Helvetica,sans-serif;font-size:18px;font-weight:700;flex:1;color:var(--navy);letter-spacing:.3px}
 .tb-srch{display:flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--b1);border-radius:7px;padding:5px 10px;transition:border .12s}
 .tb-srch:focus-within{border-color:var(--gold2)}
-.tb-srch input{background:none;border:none;outline:none;color:var(--t1);font-size:12px;width:180px}
+.tb-srch input{background:none;border:none;outline:none;color:var(--t1);font-size:14px;width:180px}
 .tb-srch input::placeholder{color:var(--t3)}
-.tb-ic{width:30px;height:30px;border-radius:6px;background:var(--bg3);border:1px solid var(--b1);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;position:relative;flex-shrink:0;transition:background .12s}
+.tb-ic{width:30px;height:30px;border-radius:6px;background:var(--bg3);border:1px solid var(--b1);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px;position:relative;flex-shrink:0;transition:background .12s}
 .tb-ic:hover{background:var(--bg4)}
 .tb-dot{position:absolute;top:4px;right:4px;width:5px;height:5px;border-radius:50%;background:var(--red)}
 
@@ -82,10 +82,10 @@ input.fi:not([type="email"]):not([type="password"]):not([type="number"]){text-tr
 }
 .stat:hover{border-color:var(--gold2);box-shadow:var(--shadow2);transform:translateY(-1px)}
 .stat.active{border-color:var(--gold2);background:rgba(176,125,16,0.06)}
-.stat-ic{font-size:18px;margin-bottom:5px}
-.stat-v{font-family:Arial,Helvetica,sans-serif;font-size:26px;font-weight:700;color:var(--navy);line-height:1}
-.stat-l{font-size:11px;color:var(--t2);margin-top:3px;white-space:nowrap}
-.stat-d{font-size:10px;margin-top:4px}
+.stat-ic{font-size:20px;margin-bottom:5px}
+.stat-v{font-family:Arial,Helvetica,sans-serif;font-size:28px;font-weight:700;color:var(--navy);line-height:1}
+.stat-l{font-size:13px;color:var(--t2);margin-top:3px;white-space:nowrap}
+.stat-d{font-size:12px;margin-top:4px}
 .stat-d.up{color:var(--green)}.stat-d.dn{color:var(--red)}.stat-d.neu{color:var(--t3)}
 .stat-bar{position:absolute;bottom:0;left:0;right:0;height:3px;border-radius:0 0 10px 10px}
 
@@ -95,40 +95,40 @@ input.fi:not([type="email"]):not([type="password"]):not([type="number"]){text-tr
 /* ── WR PANEL ────────────────────────────────────────────────────────────── */
 .wr-panel{display:flex;flex-direction:column;background:var(--bg2);border:1px solid var(--b1);border-radius:12px;min-width:0;overflow:hidden;box-shadow:var(--shadow)}
 .wr-toolbar{display:flex;align-items:center;gap:7px;padding:8px 12px;border-bottom:1px solid var(--b2);flex-shrink:0;background:var(--bg3)}
-.wr-ttl{font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:700;white-space:nowrap;color:var(--navy)}
-.wr-cnt{font-size:9.5px;color:var(--t3);background:var(--bg4);padding:2px 7px;border-radius:4px;border:1px solid var(--b1)}
+.wr-ttl{font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:700;white-space:nowrap;color:var(--navy)}
+.wr-cnt{font-size:11.5px;color:var(--t3);background:var(--bg4);padding:2px 7px;border-radius:4px;border:1px solid var(--b1)}
 .flex1{flex:1}
 
 /* search param */
 .srch-adv{display:flex;align-items:center;gap:0;border:1px solid var(--b1);border-radius:7px;overflow:hidden;background:var(--bg2);flex-shrink:0}
-.srch-param{background:var(--bg4);border:none;border-right:1px solid var(--b1);outline:none;color:var(--t2);font-size:10.5px;padding:5px 8px;cursor:pointer;height:30px}
-.srch-adv input{border:none;outline:none;color:var(--t1);font-size:11px;padding:5px 10px;width:160px;background:transparent}
+.srch-param{background:var(--bg4);border:none;border-right:1px solid var(--b1);outline:none;color:var(--t2);font-size:12.5px;padding:5px 8px;cursor:pointer;height:30px}
+.srch-adv input{border:none;outline:none;color:var(--t1);font-size:13px;padding:5px 10px;width:160px;background:transparent}
 .srch-adv input::placeholder{color:var(--t3)}
 
 .unit-tog{display:flex;align-items:center;gap:3px;background:var(--bg4);border-radius:5px;padding:2px 7px;border:1px solid var(--b1);flex-shrink:0}
-.unit-tog span{font-size:9px;color:var(--t3)}
-.utb{padding:2px 7px;border-radius:4px;font-size:9.5px;font-weight:600;cursor:pointer;border:none;transition:all .1s;background:none;color:var(--t2)}
+.unit-tog span{font-size:11px;color:var(--t3)}
+.utb{padding:2px 7px;border-radius:4px;font-size:11.5px;font-weight:600;cursor:pointer;border:none;transition:all .1s;background:none;color:var(--t2)}
 .utb.on{background:var(--navy);color:#fff}
 
-.st-sel{background:var(--bg4);border:1px solid var(--b1);border-radius:6px;padding:4px 7px;color:var(--t1);font-size:10px;outline:none;cursor:pointer;flex-shrink:0;max-width:160px}
+.st-sel{background:var(--bg4);border:1px solid var(--b1);border-radius:6px;padding:4px 7px;color:var(--t1);font-size:12px;outline:none;cursor:pointer;flex-shrink:0;max-width:160px}
 
 /* BUTTONS */
-.btn-p{padding:8px 18px;border-radius:7px;background:var(--navy);color:#fff;font-size:12px;font-weight:700;border:2px solid var(--navy3);cursor:pointer;white-space:nowrap;flex-shrink:0;transition:all .12s;box-shadow:0 2px 6px rgba(26,43,74,0.25)}
+.btn-p{padding:8px 18px;border-radius:7px;background:var(--navy);color:#fff;font-size:14px;font-weight:700;border:2px solid var(--navy3);cursor:pointer;white-space:nowrap;flex-shrink:0;transition:all .12s;box-shadow:0 2px 6px rgba(26,43,74,0.25)}
 .btn-p:hover{background:var(--navy2);box-shadow:0 4px 12px rgba(26,43,74,0.35);transform:translateY(-1px)}
-.btn-s{padding:5px 10px;border-radius:6px;background:var(--bg3);color:var(--t1);font-size:11px;font-weight:600;border:1px solid var(--b1);cursor:pointer;white-space:nowrap;transition:background .12s}
+.btn-s{padding:5px 10px;border-radius:6px;background:var(--bg3);color:var(--t1);font-size:13px;font-weight:600;border:1px solid var(--b1);cursor:pointer;white-space:nowrap;transition:background .12s}
 .btn-s:hover{background:var(--bg4)}
-.btn-g{padding:5px 10px;border-radius:6px;background:rgba(26,138,74,0.1);color:var(--green);font-size:11px;font-weight:600;border:1px solid rgba(26,138,74,0.25);cursor:pointer}
-.btn-d{padding:5px 10px;border-radius:6px;background:rgba(204,34,51,0.08);color:var(--red);font-size:11px;font-weight:600;border:1px solid rgba(204,34,51,0.2);cursor:pointer}
-.btn-c{padding:5px 10px;border-radius:6px;background:rgba(0,128,204,0.1);color:var(--cyan);font-size:11px;font-weight:600;border:1px solid rgba(0,128,204,0.25);cursor:pointer}
+.btn-g{padding:5px 10px;border-radius:6px;background:rgba(26,138,74,0.1);color:var(--green);font-size:13px;font-weight:600;border:1px solid rgba(26,138,74,0.25);cursor:pointer}
+.btn-d{padding:5px 10px;border-radius:6px;background:rgba(204,34,51,0.08);color:var(--red);font-size:13px;font-weight:600;border:1px solid rgba(204,34,51,0.2);cursor:pointer}
+.btn-c{padding:5px 10px;border-radius:6px;background:rgba(0,128,204,0.1);color:var(--cyan);font-size:13px;font-weight:600;border:1px solid rgba(0,128,204,0.25);cursor:pointer}
 
 /* ── TABLE ───────────────────────────────────────────────────────────────── */
 .wr-scroll{overflow:auto;flex:1;min-height:0}
-.wt{width:100%;border-collapse:collapse;font-size:12.5px;white-space:nowrap}
+.wt{width:100%;border-collapse:collapse;font-size:14.5px;white-space:nowrap}
 .wt thead{position:sticky;top:0;z-index:5}
-.wt th{background:var(--navy);color:rgba(255,255,255,0.85);font-size:10px;letter-spacing:.7px;text-transform:uppercase;font-weight:700;padding:9px 10px;border-bottom:2px solid var(--navy3);text-align:left;cursor:pointer;user-select:none;white-space:nowrap}
+.wt th{background:var(--navy);color:rgba(255,255,255,0.85);font-size:12px;letter-spacing:.7px;text-transform:uppercase;font-weight:700;padding:9px 10px;border-bottom:2px solid var(--navy3);text-align:left;cursor:pointer;user-select:none;white-space:nowrap}
 .wt th:hover{color:#fff}
 .wt th:first-child{position:sticky;left:0;z-index:6;background:var(--navy)}
-.wt td{padding:9px 10px;color:var(--t1);border-bottom:1px solid var(--b2);vertical-align:middle;white-space:nowrap;font-size:12.5px}
+.wt td{padding:9px 10px;color:var(--t1);border-bottom:1px solid var(--b2);vertical-align:middle;white-space:nowrap;font-size:14.5px}
 .wt td:first-child{position:sticky;left:0;z-index:2;background:var(--bg2)}
 .wt tbody tr{transition:background .08s}
 .wt tbody tr:hover td{background:#EEF3FF;cursor:pointer}
@@ -138,35 +138,35 @@ input.fi:not([type="email"]):not([type="password"]):not([type="number"]){text-tr
 .wt tbody tr:last-child td{border-bottom:none}
 
 /* cells */
-.c-wr{display:inline-block;font-family:'DM Mono',monospace;font-weight:700;font-size:12px;background:#fff;border:2px solid #1A2B4A;color:#1A2B4A;padding:3px 9px;border-radius:5px;letter-spacing:.5px;white-space:nowrap}
-.c-route{font-size:10px;color:var(--t3);margin-top:3px}
+.c-wr{display:inline-block;font-family:'DM Mono',monospace;font-weight:700;font-size:14px;background:#fff;border:2px solid #1A2B4A;color:#1A2B4A;padding:3px 9px;border-radius:5px;letter-spacing:.5px;white-space:nowrap}
+.c-route{font-size:12px;color:var(--t3);margin-top:3px}
+.c-name{color:var(--t1);font-weight:600;font-size:15px}
+.c-cas{font-family:'DM Mono',monospace;font-size:12px;color:var(--gold2);margin-top:2px}
+.c-trk{font-family:'DM Mono',monospace;font-size:13px;color:var(--cyan)}
+.c-val{font-family:'DM Mono',monospace;font-size:14px;font-weight:700;color:var(--green)}
+.c-wt{font-family:'DM Mono',monospace;font-size:14px;color:var(--t1);font-weight:600}
+.c-wtvol{font-family:'DM Mono',monospace;font-size:14px;color:var(--orange);font-weight:700}
+.c-ft3{font-family:'DM Mono',monospace;font-size:13px;color:var(--sky)}
+.c-m3{font-family:'DM Mono',monospace;font-size:13px;color:var(--teal)}
+.c-note{font-size:14px;color:var(--orange);max-width:120px;overflow:hidden;text-overflow:ellipsis;display:block}
+.c-dt{font-family:'DM Mono',monospace;font-size:14px;color:var(--t1);font-weight:600}
+.c-tm{font-family:'DM Mono',monospace;font-size:12px;color:var(--t3);margin-top:2px}
+.br-b{font-size:12px;background:var(--bg4);padding:2px 7px;border-radius:4px;color:var(--t2);border:1px solid var(--b1)}
 .c-name{color:var(--t1);font-weight:600;font-size:13px}
-.c-cas{font-family:'DM Mono',monospace;font-size:10px;color:var(--gold2);margin-top:2px}
-.c-trk{font-family:'DM Mono',monospace;font-size:11px;color:var(--cyan)}
-.c-val{font-family:'DM Mono',monospace;font-size:12px;font-weight:700;color:var(--green)}
-.c-wt{font-family:'DM Mono',monospace;font-size:12px;color:var(--t1);font-weight:600}
-.c-wtvol{font-family:'DM Mono',monospace;font-size:12px;color:var(--orange);font-weight:700}
-.c-ft3{font-family:'DM Mono',monospace;font-size:11px;color:var(--sky)}
-.c-m3{font-family:'DM Mono',monospace;font-size:11px;color:var(--teal)}
-.c-note{font-size:12px;color:var(--orange);max-width:120px;overflow:hidden;text-overflow:ellipsis;display:block}
+.c-cas{font-family:'DM Mono',monospace;font-size:10.5px;color:var(--gold2);margin-top:1px}
+.c-trk{font-family:'DM Mono',monospace;font-size:12px;color:var(--cyan)}
+.c-val{font-family:'DM Mono',monospace;font-size:12.5px;font-weight:700;color:var(--green)}
+.c-wt{font-family:'DM Mono',monospace;font-size:12px;color:var(--t1)}
+.c-wtvol{font-family:'DM Mono',monospace;font-size:12px;color:var(--orange);font-weight:600}
+.c-ft3{font-family:'DM Mono',monospace;font-size:11.5px;color:var(--sky)}
+.c-m3{font-family:'DM Mono',monospace;font-size:11.5px;color:var(--teal)}
+.c-note{font-size:12px;color:var(--orange);max-width:110px;overflow:hidden;text-overflow:ellipsis;display:block}
 .c-dt{font-family:'DM Mono',monospace;font-size:12px;color:var(--t1);font-weight:600}
-.c-tm{font-family:'DM Mono',monospace;font-size:10px;color:var(--t3);margin-top:2px}
-.br-b{font-size:10px;background:var(--bg4);padding:2px 7px;border-radius:4px;color:var(--t2);border:1px solid var(--b1)}
-.c-name{color:var(--t1);font-weight:600;font-size:11px}
-.c-cas{font-family:'DM Mono',monospace;font-size:8.5px;color:var(--gold2);margin-top:1px}
-.c-trk{font-family:'DM Mono',monospace;font-size:10px;color:var(--cyan)}
-.c-val{font-family:'DM Mono',monospace;font-size:10.5px;font-weight:700;color:var(--green)}
-.c-wt{font-family:'DM Mono',monospace;font-size:10px;color:var(--t1)}
-.c-wtvol{font-family:'DM Mono',monospace;font-size:10px;color:var(--orange);font-weight:600}
-.c-ft3{font-family:'DM Mono',monospace;font-size:9.5px;color:var(--sky)}
-.c-m3{font-family:'DM Mono',monospace;font-size:9.5px;color:var(--teal)}
-.c-note{font-size:10px;color:var(--orange);max-width:110px;overflow:hidden;text-overflow:ellipsis;display:block}
-.c-dt{font-family:'DM Mono',monospace;font-size:10px;color:var(--t1);font-weight:600}
-.c-tm{font-family:'DM Mono',monospace;font-size:9px;color:var(--t3);margin-top:1px}
-.br-b{font-size:9px;background:var(--bg4);padding:2px 6px;border-radius:4px;color:var(--t2);border:1px solid var(--b1)}
+.c-tm{font-family:'DM Mono',monospace;font-size:11px;color:var(--t3);margin-top:1px}
+.br-b{font-size:11px;background:var(--bg4);padding:2px 6px;border-radius:4px;color:var(--t2);border:1px solid var(--b1)}
 
 /* carrier badges */
-.car{display:inline-flex;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:700;border:1px solid}
+.car{display:inline-flex;padding:3px 8px;border-radius:4px;font-size:13px;font-weight:700;border:1px solid}
 .car-ups{background:#FFF3E0;border-color:#E6A020;color:#8B5E00}
 .car-fedex{background:#F3E8FF;border-color:#8B5CF6;color:#5B3FB5}
 .car-dhl{background:#FFFDE7;border-color:#D4A017;color:#7A5C00}
@@ -174,7 +174,7 @@ input.fi:not([type="email"]):not([type="password"]):not([type="number"]){text-tr
 .car-def{background:var(--bg4);border-color:var(--b1);color:var(--t2)}
 
 /* status */
-.st{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;white-space:nowrap}
+.st{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:12px;font-size:13px;font-weight:700;white-space:nowrap}
 .st-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
 .s1{background:#FEF9E7;color:#8B6914;border:1px solid #F0C040}.s1 .st-dot{background:#C8971C}
 .s2{background:#E8F4FD;color:#1A6090;border:1px solid #90C8F0}.s2 .st-dot{background:#0080CC}
@@ -184,7 +184,7 @@ input.fi:not([type="email"]):not([type="password"]):not([type="number"]){text-tr
 .s6{background:#F0EAFE;color:#4A2A90;border:1px solid #C0A0F0}.s6 .st-dot{background:#5B3FB5}
 
 /* type badges */
-.type-b{display:inline-flex;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:700;border:1px solid;white-space:nowrap}
+.type-b{display:inline-flex;padding:3px 8px;border-radius:4px;font-size:13px;font-weight:700;border:1px solid;white-space:nowrap}
 .t-ae{background:#E8F4FD;color:#1A6090;border-color:#90C8F0}
 .t-ae2{background:#EEF8FE;color:#2A7AAA;border-color:#B0D8F0}
 .t-mf{background:#E8F8EE;color:#1A6040;border-color:#80D0A0}
@@ -192,37 +192,37 @@ input.fi:not([type="email"]):not([type="password"]):not([type="number"]){text-tr
 .t-tr{background:#FEF0E8;color:#8B4000;border-color:#F0B880}
 
 /* icon buttons */
-.ic-b{width:22px;height:22px;border-radius:4px;border:1px solid var(--b1);background:var(--bg3);display:inline-flex;align-items:center;justify-content:center;font-size:11px;cursor:pointer;transition:all .1s}
+.ic-b{width:22px;height:22px;border-radius:4px;border:1px solid var(--b1);background:var(--bg3);display:inline-flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;transition:all .1s}
 .ic-b:hover{background:var(--bg4)}
 .ic-b.has{background:#E8F8EE;border-color:#80D0A0;color:var(--green)}
 
 /* dim popup */
 .pos-rel{position:relative}
-.dim-txt{font-size:12px;color:var(--t1);font-weight:600}
-.dim-sub{font-size:10px;color:var(--t3);margin-top:2px}
-.dim-btn{background:var(--bg3);border:1px solid var(--b1);border-radius:5px;color:var(--t2);font-size:11px;padding:4px 10px;cursor:pointer;transition:all .1s;font-weight:600}
+.dim-txt{font-size:14px;color:var(--t1);font-weight:600}
+.dim-sub{font-size:12px;color:var(--t3);margin-top:2px}
+.dim-btn{background:var(--bg3);border:1px solid var(--b1);border-radius:5px;color:var(--t2);font-size:13px;padding:4px 10px;cursor:pointer;transition:all .1s;font-weight:600}
 .dim-btn:hover{border-color:var(--gold2);color:var(--gold2)}
 .dim-pop{
   position:absolute;z-index:99;background:var(--bg2);border:1px solid var(--b1);
   border-radius:10px;padding:14px 16px;min-width:380px;
   box-shadow:0 8px 32px rgba(0,0,0,0.18);left:0;top:calc(100% + 6px);
 }
-.dim-pop-ttl{font-size:12px;font-weight:700;color:var(--navy);margin-bottom:10px;font-family:Arial,Helvetica,sans-serif;letter-spacing:.5px}
-.dr{display:grid;grid-template-columns:24px 72px 72px 72px 72px 80px;gap:4px;font-size:11px;padding:5px 0;border-bottom:1px solid var(--b2)}
+.dim-pop-ttl{font-size:14px;font-weight:700;color:var(--navy);margin-bottom:10px;font-family:Arial,Helvetica,sans-serif;letter-spacing:.5px}
+.dr{display:grid;grid-template-columns:24px 72px 72px 72px 72px 80px;gap:4px;font-size:13px;padding:5px 0;border-bottom:1px solid var(--b2)}
 .dr:last-child{border-bottom:none}
-.dh{color:var(--t3);font-size:9px;text-transform:uppercase;letter-spacing:.8px;font-weight:600}
+.dh{color:var(--t3);font-size:11px;text-transform:uppercase;letter-spacing:.8px;font-weight:600}
 .dv{font-family:'DM Mono',monospace;color:var(--t1);font-weight:500}
 
 /* ── PAGINATION ──────────────────────────────────────────────────────────── */
 .pag{display:flex;align-items:center;justify-content:center;gap:4px;padding:8px 12px;border-top:1px solid var(--b2);flex-shrink:0;background:var(--bg3)}
-.pag-btn{width:28px;height:28px;border-radius:6px;border:1px solid var(--b1);background:var(--bg2);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;font-weight:600;color:var(--t2);transition:all .1s}
+.pag-btn{width:28px;height:28px;border-radius:6px;border:1px solid var(--b1);background:var(--bg2);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;font-weight:600;color:var(--t2);transition:all .1s}
 .pag-btn:hover{background:var(--bg4);color:var(--t1)}
 .pag-btn.on{background:var(--navy);color:#fff;border-color:var(--navy)}
 .pag-btn:disabled{opacity:.4;cursor:default}
-.pag-info{font-size:11px;color:var(--t3);padding:0 8px}
+.pag-info{font-size:13px;color:var(--t3);padding:0 8px}
 
 /* ── ROLE BADGES ─────────────────────────────────────────────────────────── */
-.rb{display:inline-flex;align-items:center;gap:2px;padding:2px 7px;border-radius:4px;font-size:8.5px;font-weight:800;letter-spacing:.3px;white-space:nowrap}
+.rb{display:inline-flex;align-items:center;gap:2px;padding:2px 7px;border-radius:4px;font-size:10.5px;font-weight:800;letter-spacing:.3px;white-space:nowrap}
 .rA{background:#FDE8EA;color:#8B1420;border:1px solid #F0A0A8}
 .rB{background:#F0EAFE;color:#4A2A90;border:1px solid #C0A0F0}
 .rC{background:#E8F4FD;color:#1A6090;border:1px solid #90C8F0}
@@ -240,78 +240,78 @@ input.fi:not([type="email"]):not([type="password"]):not([type="number"]){text-tr
 /* ── RIGHT PANEL ─────────────────────────────────────────────────────────── */
 .rp{display:flex;flex-direction:column;gap:10px;overflow-y:auto;min-height:0}
 .card{background:var(--bg2);border:1px solid var(--b1);border-radius:10px;padding:13px;flex-shrink:0;box-shadow:var(--shadow)}
-.card-tt{font-size:12.5px;font-weight:700;color:var(--navy);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;font-family:Arial,Helvetica,sans-serif}
-.card-sub{font-size:9px;padding:2px 6px;border-radius:4px;font-weight:700;background:#FDE8EA;color:var(--red)}
-.card-lnk{font-size:10px;color:var(--gold2);cursor:pointer}
+.card-tt{font-size:14.5px;font-weight:700;color:var(--navy);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;font-family:Arial,Helvetica,sans-serif}
+.card-sub{font-size:11px;padding:2px 6px;border-radius:4px;font-weight:700;background:#FDE8EA;color:var(--red)}
+.card-lnk{font-size:12px;color:var(--gold2);cursor:pointer}
 .alt-row{display:flex;gap:8px;padding:7px 0;border-bottom:1px solid var(--b2);cursor:pointer}
 .alt-row:last-child{border-bottom:none;padding-bottom:0}
-.alt-ic{font-size:14px;flex-shrink:0;margin-top:1px}
-.alt-t{font-size:11px;font-weight:700}.alt-b{font-size:9.5px;margin-top:1px;opacity:.8}
+.alt-ic{font-size:16px;flex-shrink:0;margin-top:1px}
+.alt-t{font-size:13px;font-weight:700}.alt-b{font-size:11.5px;margin-top:1px;opacity:.8}
 .alt-e .alt-t{color:var(--red)}.alt-e .alt-b{color:var(--red)}
 .alt-w .alt-t{color:var(--orange)}.alt-w .alt-b{color:var(--orange)}
 .alt-i .alt-t{color:var(--cyan)}.alt-i .alt-b{color:var(--cyan)}
 .alt-ok .alt-t{color:var(--green)}.alt-ok .alt-b{color:var(--green)}
 .pb-row{margin-bottom:8px}.pb-row:last-child{margin-bottom:0}
-.pb-hd{display:flex;justify-content:space-between;font-size:10px;margin-bottom:3px}
+.pb-hd{display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px}
 .pb-l{color:var(--t2)}.pb-v{font-family:'DM Mono',monospace;font-weight:600;color:var(--navy)}
 .pb-bg{height:5px;background:var(--bg4);border-radius:3px;overflow:hidden}
 .pb-fill{height:100%;border-radius:3px;transition:width .4s ease}
 .cl-row{display:flex;align-items:center;gap:7px;padding:6px 0;border-bottom:1px solid var(--b2)}
 .cl-row:last-child{border-bottom:none;padding-bottom:0}
-.cl-av{width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;background:var(--navy);color:#fff}
-.cl-nm{font-size:11px;font-weight:600;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.cl-cas{font-size:9px;color:var(--gold2);font-family:'DM Mono',monospace}
+.cl-av{width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;background:var(--navy);color:#fff}
+.cl-nm{font-size:13px;font-weight:600;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cl-cas{font-size:11px;color:var(--gold2);font-family:'DM Mono',monospace}
 
 /* ── TABS ────────────────────────────────────────────────────────────────── */
 .tabs{display:flex;gap:2px;background:var(--bg4);border:1px solid var(--b1);border-radius:8px;padding:3px;margin-bottom:14px;flex-wrap:nowrap;overflow-x:auto}
-.tab{padding:6px 12px;border-radius:5px;cursor:pointer;font-size:11px;font-weight:600;color:var(--t2);transition:all .12s;white-space:nowrap;display:flex;align-items:center;gap:5px;flex-shrink:0}
+.tab{padding:6px 12px;border-radius:5px;cursor:pointer;font-size:13px;font-weight:600;color:var(--t2);transition:all .12s;white-space:nowrap;display:flex;align-items:center;gap:5px;flex-shrink:0}
 .tab:hover{color:var(--t1)}.tab.on{background:var(--bg2);color:var(--navy);border:1px solid var(--b1);box-shadow:var(--shadow)}
-.t-cnt{background:var(--navy);color:#fff;font-size:8px;font-weight:800;padding:1px 5px;border-radius:4px}
+.t-cnt{background:var(--navy);color:#fff;font-size:10px;font-weight:800;padding:1px 5px;border-radius:4px}
 
 /* ── CLIENT TABLE ────────────────────────────────────────────────────────── */
 .ct-wrap{overflow-x:auto}
-.ct{width:100%;border-collapse:collapse;font-size:12.5px}
-.ct th{text-align:left;font-size:10px;letter-spacing:.8px;text-transform:uppercase;color:rgba(255,255,255,0.85);padding:9px 11px;border-bottom:2px solid var(--navy3);font-weight:700;background:var(--navy);white-space:nowrap}
-.ct td{padding:11px 11px;color:var(--t1);border-bottom:1px solid var(--b2);font-size:12.5px}
+.ct{width:100%;border-collapse:collapse;font-size:14.5px}
+.ct th{text-align:left;font-size:12px;letter-spacing:.8px;text-transform:uppercase;color:rgba(255,255,255,0.85);padding:9px 11px;border-bottom:2px solid var(--navy3);font-weight:700;background:var(--navy);white-space:nowrap}
+.ct td{padding:11px 11px;color:var(--t1);border-bottom:1px solid var(--b2);font-size:14.5px}
 .ct tr{transition:background .1s}.ct tr:hover td{background:#EEF3FF;cursor:pointer}.ct tr:last-child td{border-bottom:none}
-.cn{color:var(--t1);font-weight:600;font-size:13px}
-.cid{font-family:'DM Mono',monospace;font-size:11px;color:var(--gold2)}
+.cn{color:var(--t1);font-weight:600;font-size:15px}
+.cid{font-family:'DM Mono',monospace;font-size:13px;color:var(--gold2)}
 
 /* ── ROLES ────────────────────────────────────────────────────────────────── */
 .role-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
 .role-card{background:var(--bg2);border:1px solid var(--b1);border-radius:10px;padding:14px;box-shadow:var(--shadow)}
 .rc-hd{display:flex;align-items:flex-start;gap:8px;margin-bottom:8px}
-.rc-icon{font-size:22px;flex-shrink:0}
-.rc-desc{font-size:10px;color:var(--t2);line-height:1.55;margin-bottom:9px}
+.rc-icon{font-size:24px;flex-shrink:0}
+.rc-desc{font-size:12px;color:var(--t2);line-height:1.55;margin-bottom:9px}
 .rc-perms{display:flex;flex-wrap:wrap;gap:3px}
-.perm{font-size:8.5px;padding:2px 5px;border-radius:3px;font-weight:600}
+.perm{font-size:10.5px;padding:2px 5px;border-radius:3px;font-weight:600}
 .perm.yes{background:#E8F8EE;color:var(--green);border:1px solid #80D0A0}
 .perm.no{background:var(--bg4);color:var(--t3)}
 .rc-subs{margin-top:8px;padding-top:8px;border-top:1px solid var(--b2)}
-.rc-si{display:flex;align-items:center;gap:6px;padding:3px 0;font-size:10px;color:var(--t2)}
+.rc-si{display:flex;align-items:center;gap:6px;padding:3px 0;font-size:12px;color:var(--t2)}
 
 /* ── WR DETAIL ────────────────────────────────────────────────────────────── */
 .wr-doc{background:var(--bg3);border:1px solid var(--b1);border-radius:12px;padding:20px}
 .wr-doc-hd{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;padding-bottom:8px;border-bottom:2px solid var(--navy)}
-.wr-co{font-family:Arial,Helvetica,sans-serif;font-size:26px;font-weight:800;color:var(--navy);letter-spacing:3px}
-.wr-co-info{font-size:10px;color:var(--t2);line-height:1.9;margin-top:3px}
-.wr-num-d{font-family:'DM Mono',monospace;font-size:16px;font-weight:700;color:var(--navy);letter-spacing:2px;text-align:right}
-.wr-num-meta{font-size:10px;color:var(--t2);line-height:1.9;margin-top:3px;text-align:right}
+.wr-co{font-family:Arial,Helvetica,sans-serif;font-size:28px;font-weight:800;color:var(--navy);letter-spacing:3px}
+.wr-co-info{font-size:12px;color:var(--t2);line-height:1.9;margin-top:3px}
+.wr-num-d{font-family:'DM Mono',monospace;font-size:18px;font-weight:700;color:var(--navy);letter-spacing:2px;text-align:right}
+.wr-num-meta{font-size:12px;color:var(--t2);line-height:1.9;margin-top:3px;text-align:right}
 .w2c{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
 .wb{background:var(--bg2);border:1px solid var(--b1);border-radius:8px;padding:12px}
-.wb-t{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--navy);font-weight:700;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--b2)}
+.wb-t{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--navy);font-weight:700;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--b2)}
 .wf{margin-bottom:6px}
-.wfl{font-size:8px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
-.wfv{font-size:12px;color:var(--t1);font-weight:500;margin-top:2px}
-.wr-legal{font-size:9px;color:var(--t3);line-height:1.7;border-top:1px solid var(--b1);padding-top:10px;margin-top:10px}
+.wfl{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+.wfv{font-size:14px;color:var(--t1);font-weight:500;margin-top:2px}
+.wr-legal{font-size:11px;color:var(--t3);line-height:1.7;border-top:1px solid var(--b1);padding-top:10px;margin-top:10px}
 .wr-sigs{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:12px}
-.wr-sig{border-top:2px solid var(--navy);padding-top:8px;font-size:9px;color:var(--t3);text-align:center}
+.wr-sig{border-top:2px solid var(--navy);padding-top:8px;font-size:11px;color:var(--t3);text-align:center}
 
 /* ── FORMS ────────────────────────────────────────────────────────────────── */
-.sdiv{font-family:Arial,Helvetica,sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--navy);padding:10px 0 6px;border-bottom:2px solid var(--navy);margin-bottom:12px}
+.sdiv{font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--navy);padding:10px 0 6px;border-bottom:2px solid var(--navy);margin-bottom:12px}
 .fg{display:flex;flex-direction:column;gap:4px}
-.fl{font-size:9px;color:var(--t2);letter-spacing:.5px;font-weight:600;text-transform:uppercase}
-.fi,.fs,.ft{background:var(--bg2);border:1px solid var(--b1);border-radius:7px;padding:8px 11px;color:var(--t1);font-size:12px;outline:none;width:100%;transition:border .12s,box-shadow .12s}
+.fl{font-size:11px;color:var(--t2);letter-spacing:.5px;font-weight:600;text-transform:uppercase}
+.fi,.fs,.ft{background:var(--bg2);border:1px solid var(--b1);border-radius:7px;padding:8px 11px;color:var(--t1);font-size:14px;outline:none;width:100%;transition:border .12s,box-shadow .12s}
 .fi:focus,.fs:focus,.ft:focus{border-color:var(--gold2);box-shadow:0 0 0 3px rgba(176,125,16,0.1)}
 .fi::placeholder,.ft::placeholder{color:var(--t3)}
 .fs option{background:var(--bg2)}
@@ -323,11 +323,11 @@ input.fi:not([type="email"]):not([type="password"]):not([type="number"]){text-tr
 .fi-search{position:relative}
 .fi-search input{padding-right:60px}
 .fi-search-res{position:absolute;top:calc(100% + 3px);left:0;right:0;background:var(--bg2);border:1px solid var(--b1);border-radius:8px;box-shadow:var(--shadow2);z-index:50;max-height:180px;overflow-y:auto}
-.fi-search-item{padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--b2);font-size:12px;color:var(--t1)}
+.fi-search-item{padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--b2);font-size:14px;color:var(--t1)}
 .fi-search-item:hover{background:#EEF3FF}
 .fi-search-item:last-child{border-bottom:none}
-.fi-search-cas{font-size:10px;color:var(--gold2);font-family:'DM Mono',monospace;margin-left:8px}
-.fi-search-new{padding:8px 12px;font-size:11px;color:var(--cyan);cursor:pointer;font-style:italic}
+.fi-search-cas{font-size:12px;color:var(--gold2);font-family:'DM Mono',monospace;margin-left:8px}
+.fi-search-new{padding:8px 12px;font-size:13px;color:var(--cyan);cursor:pointer;font-style:italic}
 
 /* ── MODAL ────────────────────────────────────────────────────────────────── */
 .ov{position:fixed;inset:0;background:rgba(26,43,74,0.5);z-index:500;display:flex;align-items:flex-start;justify-content:center;padding:14px;overflow-y:auto;backdrop-filter:blur(4px)}
@@ -335,14 +335,14 @@ input.fi:not([type="email"]):not([type="password"]):not([type="number"]){text-tr
 .msm{max-width:520px}.mmd{max-width:820px}.mlg{max-width:1060px}.mxl{max-width:1280px}
 @keyframes mfi{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 .mhd{display:flex;align-items:center;gap:10px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--b1)}
-.mt{font-family:Arial,Helvetica,sans-serif;font-size:19px;font-weight:700;flex:1;color:var(--navy)}
-.mcl{width:28px;height:28px;border-radius:6px;background:var(--bg4);border:1px solid var(--b1);color:var(--t2);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all .12s}
+.mt{font-family:Arial,Helvetica,sans-serif;font-size:21px;font-weight:700;flex:1;color:var(--navy)}
+.mcl{width:28px;height:28px;border-radius:6px;background:var(--bg4);border:1px solid var(--b1);color:var(--t2);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all .12s}
 .mcl:hover{background:var(--bg5);color:var(--t1)}
 .mft{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;padding-top:14px;border-top:1px solid var(--b1)}
 
 /* ── SCAN ─────────────────────────────────────────────────────────────────── */
 .scan-row{display:flex;gap:8px}
-.scan-btn{padding:7px 14px;border-radius:7px;background:var(--navy);border:none;color:#fff;font-size:11px;font-weight:700;cursor:pointer;transition:all .12s;white-space:nowrap}
+.scan-btn{padding:7px 14px;border-radius:7px;background:var(--navy);border:none;color:#fff;font-size:13px;font-weight:700;cursor:pointer;transition:all .12s;white-space:nowrap}
 .scan-btn:hover{background:var(--navy2)}
 
 /* ── ALERTS ───────────────────────────────────────────────────────────────── */
@@ -352,17 +352,17 @@ input.fi:not([type="email"]):not([type="password"]):not([type="number"]){text-tr
 .alt.err{background:#FEE8EA;border-color:#F0A0A8;color:var(--red)}
 .alt.info{background:#E8F4FD;border-color:#90C8F0;color:var(--cyan)}
 .alt.ok{background:#E8F8EE;border-color:#80D0A0;color:var(--green)}
-.alt-t2{font-size:11px;font-weight:700}.alt-b2{font-size:10px;opacity:.8;margin-top:2px}
-.alt-ic2{font-size:14px;flex-shrink:0;margin-top:1px}
+.alt-t2{font-size:13px;font-weight:700}.alt-b2{font-size:12px;opacity:.8;margin-top:2px}
+.alt-ic2{font-size:16px;flex-shrink:0;margin-top:1px}
 
 /* ── WR NUMBER BUILDER ───────────────────────────────────────────────────── */
 .wr-builder{background:var(--bg4);border:1px solid var(--b1);border-radius:10px;padding:14px;margin-bottom:16px}
-.wr-preview{font-family:'DM Mono',monospace;font-size:22px;font-weight:700;letter-spacing:4px;text-align:center;padding:12px;background:var(--bg2);border-radius:8px;margin-bottom:10px;border:2px solid var(--navy);color:var(--navy)}
+.wr-preview{font-family:'DM Mono',monospace;font-size:24px;font-weight:700;letter-spacing:4px;text-align:center;padding:12px;background:var(--bg2);border-radius:8px;margin-bottom:10px;border:2px solid var(--navy);color:var(--navy)}
 .seg{display:inline-block;padding:2px 6px;border-radius:4px;margin:0 2px}
 .sc{background:#E8F4FD;color:var(--cyan)}
 .sk{background:#E8F8EE;color:var(--green)}
 .sn{background:#FEF9E7;color:var(--gold2)}
-.seg-leg{display:flex;gap:14px;justify-content:center;font-size:9px;color:var(--t3);margin-bottom:12px}
+.seg-leg{display:flex;gap:14px;justify-content:center;font-size:11px;color:var(--t3);margin-bottom:12px}
 
 /* ── ETIQUETA TÉRMICA 4×6 pulgadas ────────────────────────────────────────── */
 .label-wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:center;padding:8px}
@@ -373,25 +373,25 @@ input.fi:not([type="email"]):not([type="password"]):not([type="number"]){text-tr
   overflow:hidden;page-break-inside:avoid;display:flex;flex-direction:column;
 }
 .label-head{border-bottom:2px solid #000;text-align:center;padding:6px 10px}
-.label-co{font-family:Arial,Helvetica,sans-serif;font-size:22px;font-weight:800;letter-spacing:3px;color:#000}
-.label-sub{font-size:8px;letter-spacing:2px;text-transform:uppercase;color:#444;margin-top:1px}
+.label-co{font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:800;letter-spacing:3px;color:#000}
+.label-sub{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#444;margin-top:1px}
 .label-wr{border-bottom:1px solid #000;padding:6px 10px;display:flex;align-items:center;justify-content:space-between}
-.label-wr-num{font-family:'DM Mono',monospace;font-size:12px;font-weight:800;color:#000;letter-spacing:.5px}
-.label-wr-dt{font-size:9px;color:#333;text-align:right}
-.label-caja{border-bottom:2px solid #000;text-align:center;font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:800;padding:4px;letter-spacing:2px;color:#000}
+.label-wr-num{font-family:'DM Mono',monospace;font-size:14px;font-weight:800;color:#000;letter-spacing:.5px}
+.label-wr-dt{font-size:11px;color:#333;text-align:right}
+.label-caja{border-bottom:2px solid #000;text-align:center;font-family:Arial,Helvetica,sans-serif;font-size:26px;font-weight:800;padding:4px;letter-spacing:2px;color:#000}
 .label-body{padding:8px 10px;flex:1}
 .label-row{display:flex;gap:6px;margin-bottom:5px;align-items:flex-start}
-.label-lbl{font-size:8px;color:#555;text-transform:uppercase;letter-spacing:.8px;font-weight:700;min-width:70px;margin-top:1px;flex-shrink:0}
-.label-val{font-size:11px;color:#000;font-weight:600;line-height:1.3}
+.label-lbl{font-size:10px;color:#555;text-transform:uppercase;letter-spacing:.8px;font-weight:700;min-width:70px;margin-top:1px;flex-shrink:0}
+.label-val{font-size:13px;color:#000;font-weight:600;line-height:1.3}
 .label-divider{border:none;border-top:1px dashed #888;margin:6px 0}
 .label-dims{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-bottom:6px}
 .label-dim{border:1px solid #000;border-radius:3px;padding:4px 5px;text-align:center}
-.label-dim-v{font-family:'DM Mono',monospace;font-size:12px;font-weight:700;color:#000}
-.label-dim-l{font-size:7.5px;color:#555;text-transform:uppercase;letter-spacing:.5px;margin-top:1px}
+.label-dim-v{font-family:'DM Mono',monospace;font-size:14px;font-weight:700;color:#000}
+.label-dim-l{font-size:9.5px;color:#555;text-transform:uppercase;letter-spacing:.5px;margin-top:1px}
 .label-barcode{padding:8px 10px;text-align:center;border-top:1px dashed #888;margin-top:auto}
 .label-bc-bars{display:flex;align-items:flex-end;justify-content:center;gap:1px;height:44px;margin-bottom:4px}
-.label-bc-code{font-family:'DM Mono',monospace;font-size:9px;color:#000;letter-spacing:1px;font-weight:600}
-.label-tipo{display:inline-flex;padding:2px 8px;border-radius:3px;font-size:9px;font-weight:700;border:1px solid #000;color:#000}
+.label-bc-code{font-family:'DM Mono',monospace;font-size:11px;color:#000;letter-spacing:1px;font-weight:600}
+.label-tipo{display:inline-flex;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:700;border:1px solid #000;color:#000}
 @media print{
   .label-overlay-bg,.label-print-btn,.mcl,.btn-s,.btn-p{display:none!important}
   .label{border:1px solid #000;page-break-inside:avoid;break-inside:avoid}
@@ -824,7 +824,7 @@ const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[
     </div>
   ):(
     <div className="pos-rel">
-      <button className="dim-btn" style={{padding:"4px 10px",fontSize:11,fontWeight:600,background:"#E8F0FE",borderColor:"#90B8F0",color:"var(--navy)"}} onClick={e=>{e.stopPropagation();onDimToggle();}}>
+      <button className="dim-btn" style={{padding:"4px 10px",fontSize:13,fontWeight:600,background:"#E8F0FE",borderColor:"#90B8F0",color:"var(--navy)"}} onClick={e=>{e.stopPropagation();onDimToggle();}}>
         📦 {w.dims.length} cajas {dimOpen?"▲":"▼"}
       </button>
       {dimOpen&&(
@@ -844,21 +844,21 @@ const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[
             </div>
           ))}
           {/* TOTALES */}
-          <div style={{marginTop:10,paddingTop:10,borderTop:"2px solid var(--b1)",display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,fontSize:11}}>
+          <div style={{marginTop:10,paddingTop:10,borderTop:"2px solid var(--b1)",display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,fontSize:13}}>
             <div style={{background:"var(--bg4)",borderRadius:6,padding:"6px 8px"}}>
-              <div style={{color:"var(--t3)",fontSize:9,marginBottom:2}}>TOTAL PESO</div>
+              <div style={{color:"var(--t3)",fontSize:11,marginBottom:2}}>TOTAL PESO</div>
               <div style={{fontWeight:700,color:"var(--navy)",fontFamily:"'DM Mono',monospace"}}>{isLb?`${w.pesoLb}lb`:`${w.pesoKg}kg`}</div>
             </div>
             <div style={{background:"#FEF0E8",borderRadius:6,padding:"6px 8px"}}>
-              <div style={{color:"var(--t3)",fontSize:9,marginBottom:2}}>TOTAL P.VOL.</div>
+              <div style={{color:"var(--t3)",fontSize:11,marginBottom:2}}>TOTAL P.VOL.</div>
               <div style={{fontWeight:700,color:"var(--orange)",fontFamily:"'DM Mono',monospace"}}>{isLb?`${w.volLb}lb`:`${w.volKg}kg`}</div>
             </div>
             <div style={{background:"#EEF4FE",borderRadius:6,padding:"6px 8px"}}>
-              <div style={{color:"var(--t3)",fontSize:9,marginBottom:2}}>FT³</div>
+              <div style={{color:"var(--t3)",fontSize:11,marginBottom:2}}>FT³</div>
               <div style={{fontWeight:700,color:"var(--sky)",fontFamily:"'DM Mono',monospace"}}>{w.ft3}</div>
             </div>
             <div style={{background:"#E8F6F4",borderRadius:6,padding:"6px 8px"}}>
-              <div style={{color:"var(--t3)",fontSize:9,marginBottom:2}}>M³</div>
+              <div style={{color:"var(--t3)",fontSize:11,marginBottom:2}}>M³</div>
               <div style={{fontWeight:700,color:"var(--teal)",fontFamily:"'DM Mono',monospace"}}>{w.m3}</div>
             </div>
           </div>
@@ -868,10 +868,27 @@ const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[
   );
   return (
     <tr className={sel?"sel":""} onClick={onClick}>
+      {/* 1. TIPO ENVÍO (confirmación) — primera columna */}
+      <td onClick={e=>e.stopPropagation()} style={{minWidth:110,padding:"4px 6px"}}>
+        {w.tipoEnvio
+          ?<div style={{display:"inline-flex",alignItems:"center",gap:4}}>
+              <TypeBadge t={w.tipoEnvio}/>
+              {onAssignTipo&&<span onClick={()=>{if(window.confirm(`¿Quitar tipo de envío del WR ${w.id}?${w.status?.code==="3"?"\n\nTambién se revertirá la confirmación.":""}`))onAssignTipo(w,"");}} title="Quitar tipo de envío" style={{cursor:"pointer",fontSize:14,color:"var(--red)",padding:"0 4px",lineHeight:1,fontWeight:700}}>✕</span>}
+            </div>
+          :(onAssignTipo&&sendTypes.length>0
+            ?<select value="" onChange={e=>{if(e.target.value)onAssignTipo(w,e.target.value);}} title="Confirmar tipo de envío" style={{fontSize:12,padding:"2px 4px",border:"1px dashed var(--navy)",borderRadius:4,background:"var(--bg3)",color:"var(--navy)",fontWeight:600,cursor:"pointer",minWidth:100}}>
+                <option value="">— Asignar —</option>
+                {sendTypes.map(t=><option key={t} value={t}>{t}</option>)}
+              </select>
+            :<span style={{color:"var(--t3)"}}>—</span>)}
+      </td>
+      {/* 2. N° WR */}
       <td>
         <div className="c-wr">{w.id}</div>
         <div className="c-route">{w.origCity} → {w.destCity}</div>
       </td>
+      {/* 3. ESTADO */}
+      <td style={{minWidth:130,padding:"4px 6px"}} title={w.status?.label||""}><StBadge st={w.status}/></td>
       <td style={{textAlign:"center",fontWeight:700,color:"var(--navy)"}}>{w.cajas}</td>
       <td>{(()=>{
         const cl=clients.find(c=>c.id===w.clienteId)||clients.find(c=>c.casillero===w.casillero);
@@ -882,38 +899,30 @@ const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[
         else if(ct==="oficina"||ct==="vendedor_oficina"){const of=oficinas.find(o=>o.id===cl?.oficinaId);label=(ct==="oficina"?"🏢":"🛒")+" "+(of?.nombre||of?.codigo||"⚠️ Sin oficina");sub=ct==="vendedor_oficina"?"Vend. Oficina":"Oficina";}
         else if(ct==="autonomo"){const au=clients.find(c=>c.id===cl?.autonomoId);label="🧑‍💻 "+(au?`${au.primerNombre} ${au.primerApellido}`:"⚠️ Sin autónomo");sub="Autónomo";}
         else{label=w.branch||"—";}
-        return <div><div style={{fontSize:10,fontWeight:700,color:"var(--navy)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:120}}>{label}</div>{sub&&<div style={{fontSize:9,color:"var(--t3)"}}>{sub}</div>}</div>;
+        return <div><div style={{fontSize:12,fontWeight:700,color:"var(--navy)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:120}}>{label}</div>{sub&&<div style={{fontSize:11,color:"var(--t3)"}}>{sub}</div>}</div>;
       })()}</td>
       <td><div className="c-dt">{fmtDate(w.fecha)}</div><div className="c-tm">{fmtTime(w.fecha)}</div></td>
       <td><div className="c-name">{w.consignee}</div><div className="c-cas">{w.casillero}</div></td>
       <td style={{maxWidth:72,overflow:"hidden",textOverflow:"ellipsis"}}>
-        <span style={{fontWeight:700,fontSize:11,color:"var(--navy)"}}>{w.carrier||"—"}</span>
+        <span style={{fontWeight:700,fontSize:13,color:"var(--navy)"}}>{w.carrier||"—"}</span>
       </td>
       <td><span className="c-trk">{w.tracking||"—"}</span></td>
       <td style={{minWidth:200,maxWidth:260,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{w.descripcion||"—"}</td>
-      <td style={{fontFamily:"'DM Mono',monospace",fontSize:10,color:"var(--t1)",maxWidth:100,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={w.factura||""}>{w.factura?w.factura:"—"}</td>
+      <td style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--t1)",maxWidth:100,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={w.factura||""}>{w.factura?w.factura:"—"}</td>
       <td style={{textAlign:"right"}}><span className="c-val">${w.valor?.toFixed(2)||"0.00"}</span></td>
       <td>{dimCell}</td>
       <td style={{textAlign:"right"}}><span className="c-wt">{showPeso}</span></td>
       <td style={{textAlign:"right"}}><span className="c-wtvol">{showVol}</span></td>
       <td style={{textAlign:"right"}}><span className="c-ft3">{w.ft3||"—"}</span></td>
       <td style={{textAlign:"right"}}><span className="c-m3">{w.m3||"—"}</span></td>
-      <td style={{minWidth:130,padding:"4px 6px"}} title={w.status?.label||""}><StBadge st={w.status}/></td>
       <td><span className="c-note">{w.notas||"—"}</span></td>
-      <td onClick={e=>e.stopPropagation()} style={{minWidth:110,padding:"4px 6px"}}>
-        {w.tipoEnvio
-          ?<div style={{display:"inline-flex",alignItems:"center",gap:4}}>
-              <TypeBadge t={w.tipoEnvio}/>
-              {onAssignTipo&&<span onClick={()=>{if(window.confirm(`¿Quitar tipo de envío del WR ${w.id}?${w.status?.code==="3"?"\n\nTambién se revertirá la confirmación.":""}`))onAssignTipo(w,"");}} title="Quitar tipo de envío" style={{cursor:"pointer",fontSize:12,color:"var(--red)",padding:"0 4px",lineHeight:1,fontWeight:700}}>✕</span>}
-            </div>
-          :(onAssignTipo&&sendTypes.length>0
-            ?<select value="" onChange={e=>{if(e.target.value)onAssignTipo(w,e.target.value);}} title="Confirmar tipo de envío" style={{fontSize:10,padding:"2px 4px",border:"1px dashed var(--navy)",borderRadius:4,background:"var(--bg3)",color:"var(--navy)",fontWeight:600,cursor:"pointer",minWidth:100}}>
-                <option value="">— Asignar —</option>
-                {sendTypes.map(t=><option key={t} value={t}>{t}</option>)}
-              </select>
-            :<span style={{color:"var(--t3)"}}>—</span>)}
+      {/* FOTO — link directo a imagen (Supabase Storage se conecta en bloque C) */}
+      <td style={{textAlign:"center"}} onClick={e=>e.stopPropagation()}>
+        {w.foto
+          ?<a href={typeof w.foto==="string"?w.foto:"#"} target="_blank" rel="noopener noreferrer" title="Ver foto del paquete" style={{textDecoration:"none",fontSize:18,cursor:"pointer"}}
+             onClick={ev=>{if(typeof w.foto!=="string"){ev.preventDefault();alert("La vista de fotos se habilita al completar el módulo C (Supabase Storage).");}}}>📷</a>
+          :<span className="ic-b" style={{color:"var(--t4)"}}>—</span>}
       </td>
-      <td style={{textAlign:"center"}}><span className={`ic-b ${w.foto?"has":""}`}>{w.foto?"📷":"—"}</span></td>
       <td style={{textAlign:"center"}}><span className={`ic-b ${w.prealerta?"has":""}`}>{w.prealerta?"📎":"—"}</span></td>
     </tr>
   );
@@ -935,7 +944,9 @@ const WRTable=({rows,selId,onSelect,unitL,unitW,onSort,sortCol,sortDir,dimOpen,o
         <table className="wt">
           <thead>
             <tr>
+              <th style={{minWidth:110}}>Tipo Envío</th>
               <SortTh col="id">N° WR</SortTh>
+              <th style={{minWidth:130}}>Estado</th>
               <SortTh col="cajas" align="center">Cajas</SortTh>
               <SortTh col="branch">Branch</SortTh>
               <SortTh col="fecha">Fecha / Hora</SortTh>
@@ -950,16 +961,14 @@ const WRTable=({rows,selId,onSelect,unitL,unitW,onSort,sortCol,sortDir,dimOpen,o
               <th style={{textAlign:"right",minWidth:80}}>Peso Vol.</th>
               <th style={{textAlign:"right",minWidth:60}}>Ft³</th>
               <th style={{textAlign:"right",minWidth:60}}>M³</th>
-              <th style={{minWidth:130}}>Estado</th>
               <th style={{minWidth:200}}>Notas</th>
-              <th style={{minWidth:110}}>Tipo Envío</th>
-              <th style={{textAlign:"center",width:40}}>📷</th>
+              <th style={{textAlign:"center",width:48}}>📷 Foto</th>
               <th style={{textAlign:"center",width:65}}>Pre-Alerta</th>
             </tr>
           </thead>
           <tbody>
             {pageRows.length===0?(
-              <tr><td colSpan={19} style={{textAlign:"center",padding:40,color:"var(--t3)"}}>No se encontraron registros.</td></tr>
+              <tr><td colSpan={20} style={{textAlign:"center",padding:40,color:"var(--t3)"}}>No se encontraron registros.</td></tr>
             ):pageRows.map(w=>(
               <WRRow key={w.id} w={w} sel={selId===w.id} onClick={()=>onSelect(w)}
                 unitL={unitL} unitW={unitW} clients={clients} agentes={agentes} oficinas={oficinas} empresaNombre={empresaNombre}
@@ -981,7 +990,7 @@ const WRTable=({rows,selId,onSelect,unitL,unitW,onSort,sortCol,sortDir,dimOpen,o
         <span className="pag-info">
           {((page-1)*PAGE_SIZE)+1}–{Math.min(page*PAGE_SIZE,rows.length)} de {rows.length} registros
         </span>
-        <span style={{fontSize:10,color:"var(--t3)",marginLeft:4}}>| 50 por página</span>
+        <span style={{fontSize:12,color:"var(--t3)",marginLeft:4}}>| 50 por página</span>
       </div>
     </>
   );
@@ -1087,7 +1096,7 @@ const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomo
                 {v:"matriz",l:"🏛️ Casa Matriz"},
               ].map(op=>(
                 <button key={op.v} className={`btn-${(f.clienteTipo||"matriz")===op.v?"p":"s"}`}
-                  style={{fontSize:11,padding:"5px 10px"}}
+                  style={{fontSize:13,padding:"5px 10px"}}
                   onClick={()=>ff("clienteTipo",op.v)}>{op.l}</button>
               ))}
             </div>
@@ -1105,7 +1114,7 @@ const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomo
                   <option value="">— Selecciona un Autónomo —</option>
                   {autonomos.map(a=><option key={a.id} value={a.id}>{a.id} — {a.primerNombre} {a.primerApellido}</option>)}
                 </select>
-                {autonomos.length===0&&<div style={{fontSize:10,color:"var(--t3)",marginTop:4}}>No hay autónomos registrados en el sistema aún.</div>}
+                {autonomos.length===0&&<div style={{fontSize:12,color:"var(--t3)",marginTop:4}}>No hay autónomos registrados en el sistema aún.</div>}
               </div>
             )}
             {["oficina","vendedor_oficina"].includes(f.clienteTipo||"")&&oficinas.length>0&&(
@@ -1137,7 +1146,7 @@ const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomo
           <div className="fg"><div className="fl">Contraseña {f.tipo==="usuario"?"*":"(acceso al sistema)"}</div>
             <input className="fi" type="password" value={f.password||""} onChange={e=>ff("password",e.target.value)} placeholder="Mínimo 6 caracteres"/>
           </div>
-          <div className="fg"><div className="fl" style={{fontSize:10,color:"var(--t3)"}}>{f.tipo==="usuario"?"El usuario podrá cambiarla al ingresar.":"Déjalo en blanco si el cliente no accede al sistema."}</div></div>
+          <div className="fg"><div className="fl" style={{fontSize:12,color:"var(--t3)"}}>{f.tipo==="usuario"?"El usuario podrá cambiarla al ingresar.":"Déjalo en blanco si el cliente no accede al sistema."}</div></div>
         </div>
         <div className="sdiv">DIRECCIÓN COMPLETA</div>
         <div className="fgrid g2" style={{marginBottom:10}}>
@@ -1153,7 +1162,7 @@ const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomo
           <div className="fg"><div className="fl">Teléfono 2</div><input className="fi" value={f.tel2} onChange={e=>ff("tel2",e.target.value)}/></div>
           <div className="fg"><div className="fl">Email *</div><input className="fi" type="email" value={f.email} onChange={e=>ff("email",e.target.value)} placeholder="correo@email.com"/></div>
         </div>
-        {emailErr&&<div style={{background:"#FEE2E2",border:"1px solid #FCA5A5",borderRadius:6,padding:"8px 12px",marginBottom:8,color:"#DC2626",fontSize:12,fontWeight:600}}>⚠️ {emailErr}</div>}
+        {emailErr&&<div style={{background:"#FEE2E2",border:"1px solid #FCA5A5",borderRadius:6,padding:"8px 12px",marginBottom:8,color:"#DC2626",fontSize:14,fontWeight:600}}>⚠️ {emailErr}</div>}
         <div className="mft"><button className="btn-s" onClick={onClose}>Cancelar</button><button className="btn-p" onClick={()=>{
           // Validar email duplicado
           const emailLower=(f.email||"").trim().toLowerCase();
@@ -1174,7 +1183,7 @@ const ListEditor=({title,items,onAdd,onDelete,placeholder,mono})=>{
   const [v,setV]=useState("");
   return (
     <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,padding:"14px 16px",marginBottom:14}}>
-      <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:13,fontWeight:700,color:"var(--navy)",marginBottom:10}}>{title}</div>
+      <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:15,fontWeight:700,color:"var(--navy)",marginBottom:10}}>{title}</div>
       <div style={{display:"flex",gap:8,marginBottom:10}}>
         <input className="fi" style={{flex:1,fontFamily:mono?"'DM Mono',monospace":"inherit",textTransform:"uppercase"}}
           value={v} onChange={e=>setV(e.target.value.toUpperCase())}
@@ -1184,9 +1193,9 @@ const ListEditor=({title,items,onAdd,onDelete,placeholder,mono})=>{
       </div>
       <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
         {items.map((it,i)=>(
-          <div key={i} style={{display:"inline-flex",alignItems:"center",gap:6,background:"var(--bg4)",border:"1px solid var(--b1)",borderRadius:6,padding:"4px 10px",fontSize:12}}>
+          <div key={i} style={{display:"inline-flex",alignItems:"center",gap:6,background:"var(--bg4)",border:"1px solid var(--b1)",borderRadius:6,padding:"4px 10px",fontSize:14}}>
             <span style={{fontFamily:mono?"'DM Mono',monospace":"inherit",fontWeight:600,color:"var(--t1)"}}>{it}</span>
-            <span onClick={()=>onDelete(i)} style={{color:"var(--red)",cursor:"pointer",fontSize:14,fontWeight:700,lineHeight:1}}>×</span>
+            <span onClick={()=>onDelete(i)} style={{color:"var(--red)",cursor:"pointer",fontSize:16,fontWeight:700,lineHeight:1}}>×</span>
           </div>
         ))}
       </div>
@@ -1215,18 +1224,18 @@ const TimelineWR=({w,applyStatus,trkCanUpdate,statusAllowed,CU})=>{
             </div>
             <div style={{paddingBottom:8,flex:1}}>
               <div style={{display:"flex",alignItems:"center",gap:8}}>
-                <span style={{fontSize:12,fontWeight:current?700:600,color:current?"var(--navy)":done?"var(--t1)":"var(--t3)"}}>{st.code} · {st.label}</span>
-                {current&&<span style={{fontSize:9,background:"var(--navy)",color:"#fff",padding:"1px 6px",borderRadius:4,fontWeight:700}}>ACTUAL</span>}
+                <span style={{fontSize:14,fontWeight:current?700:600,color:current?"var(--navy)":done?"var(--t1)":"var(--t3)"}}>{st.code} · {st.label}</span>
+                {current&&<span style={{fontSize:11,background:"var(--navy)",color:"#fff",padding:"1px 6px",borderRadius:4,fontWeight:700}}>ACTUAL</span>}
               </div>
-              {entry&&<div style={{fontSize:10,color:"var(--t3)",marginTop:2,fontFamily:"'DM Mono',monospace"}}>{fmtDate(entry.fecha)} {fmtTime(entry.fecha)} · {entry.user}{entry.nota?` · ${entry.nota}`:""}</div>}
-              {!entry&&done&&!current&&<div style={{fontSize:10,color:"var(--t3)",marginTop:2,fontFamily:"'DM Mono',monospace"}}>—</div>}
+              {entry&&<div style={{fontSize:12,color:"var(--t3)",marginTop:2,fontFamily:"'DM Mono',monospace"}}>{fmtDate(entry.fecha)} {fmtTime(entry.fecha)} · {entry.user}{entry.nota?` · ${entry.nota}`:""}</div>}
+              {!entry&&done&&!current&&<div style={{fontSize:12,color:"var(--t3)",marginTop:2,fontFamily:"'DM Mono',monospace"}}>—</div>}
             </div>
             {/* Acción rápida */}
             {trkCanUpdate&&statusAllowed(st)&&!current&&(
               <button onClick={()=>{
                 const nota=window.prompt(`Nota para estado "${st.label}" (opcional):`)||"";
                 applyStatus(w,st,nota);
-              }} style={{alignSelf:"center",fontSize:10,padding:"2px 8px",borderRadius:4,border:"1px solid var(--b1)",background:"var(--bg3)",cursor:"pointer",color:"var(--t2)",flexShrink:0,marginBottom:6}}>
+              }} style={{alignSelf:"center",fontSize:12,padding:"2px 8px",borderRadius:4,border:"1px solid var(--b1)",background:"var(--bg3)",cursor:"pointer",color:"var(--t2)",flexShrink:0,marginBottom:6}}>
                 Aplicar
               </button>
             )}
@@ -1512,16 +1521,16 @@ export default function ENEXSystem(){
       <style>{S}</style>
       <div style={{background:"white",borderRadius:16,padding:40,width:340,boxShadow:"0 8px 40px rgba(0,0,0,.3)"}}>
         <div style={{textAlign:"center",marginBottom:24}}>
-          <div style={{fontSize:28,fontWeight:800,color:"var(--navy)"}}>ENEX</div>
-          <div style={{fontSize:13,color:"var(--t3)"}}>International Courier — Sistema</div>
+          <div style={{fontSize:30,fontWeight:800,color:"var(--navy)"}}>ENEX</div>
+          <div style={{fontSize:15,color:"var(--t3)"}}>International Courier — Sistema</div>
         </div>
         <div style={{display:"flex",flexDirection:"column",gap:12}}>
           <input className="fi" placeholder="Correo electrónico" value={loginEmail} onChange={e=>setLoginEmail(e.target.value)} onKeyDown={e=>e.key==="Enter"&&doLogin()}/>
           <input className="fi" type="password" placeholder="Contraseña" value={loginPass} onChange={e=>setLoginPass(e.target.value)} onKeyDown={e=>e.key==="Enter"&&doLogin()}/>
-          {loginErr&&<div style={{color:"var(--red)",fontSize:12,textAlign:"center"}}>{loginErr}</div>}
+          {loginErr&&<div style={{color:"var(--red)",fontSize:14,textAlign:"center"}}>{loginErr}</div>}
           <button className="btn-p" onClick={doLogin} style={{marginTop:8}}>Ingresar</button>
         </div>
-        <div style={{fontSize:10,color:"var(--t3)",marginTop:16,textAlign:"center"}}>Demo: admin@enex.com / admin123</div>
+        <div style={{fontSize:12,color:"var(--t3)",marginTop:16,textAlign:"center"}}>Demo: admin@enex.com / admin123</div>
       </div>
     </div>
   );
@@ -1866,7 +1875,7 @@ export default function ENEXSystem(){
           {SEARCH_PARAMS.map(p=><option key={p}>{p}</option>)}
         </select>
         <input placeholder={`Buscar por ${searchParam}…`} value={search} onChange={e=>{setSearch(e.target.value);setPage(1);}}/>
-        {search&&<span style={{paddingRight:6,cursor:"pointer",color:"var(--t3)",fontSize:13}} onClick={()=>setSearch("")}>✕</span>}
+        {search&&<span style={{paddingRight:6,cursor:"pointer",color:"var(--t3)",fontSize:15}} onClick={()=>setSearch("")}>✕</span>}
       </div>
       <div className="flex1"/>
       {/* Unidades */}
@@ -1952,7 +1961,7 @@ export default function ENEXSystem(){
                 <div key={l} className="pb-row">
                   <div className="pb-hd">
                     <span className="pb-l">{l}</span>
-                    <span className="pb-v">{v} <span style={{color:"var(--t3)",fontSize:9}}>{pct}%</span></span>
+                    <span className="pb-v">{v} <span style={{color:"var(--t3)",fontSize:11}}>{pct}%</span></span>
                   </div>
                   <div className="pb-bg"><div className="pb-fill" style={{width:`${pct}%`,background:c}}/></div>
                 </div>
@@ -2004,7 +2013,7 @@ export default function ENEXSystem(){
     return (
     <div className="page-scroll">
       <div className="card" style={{marginBottom:14}}>
-        <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:14,fontWeight:700,color:"var(--navy)",marginBottom:12}}>📡 Recepción en Puerta — Control de Paquetería</div>
+        <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:16,fontWeight:700,color:"var(--navy)",marginBottom:12}}>📡 Recepción en Puerta — Control de Paquetería</div>
         <div style={{display:"grid",gridTemplateColumns:"220px 1fr auto",gap:8,marginBottom:8}}>
           <div className="fg">
             <div className="fl">Carrier / Transportista</div>
@@ -2012,7 +2021,7 @@ export default function ENEXSystem(){
           </div>
           <div className="fg">
             <div className="fl">Tracking — Escanear o escribir</div>
-            <input className="fi" style={{fontFamily:"'DM Mono',monospace",fontSize:14,letterSpacing:1}}
+            <input className="fi" style={{fontFamily:"'DM Mono',monospace",fontSize:16,letterSpacing:1}}
               placeholder="Escanear o escribir tracking…" value={scanV} onChange={e=>setScanV(e.target.value.toUpperCase())}
               onKeyDown={e=>{if(e.key==="Enter")doScan();}}/>
           </div>
@@ -2021,27 +2030,27 @@ export default function ENEXSystem(){
             <button className="scan-btn" onClick={doScan}>📡 Registrar</button>
           </div>
         </div>
-        <div style={{fontSize:10,color:"var(--t3)"}}>Presiona <strong>Enter</strong> o el botón. Al crear el WR el tracking pasa automáticamente al historial de la derecha.</div>
+        <div style={{fontSize:12,color:"var(--t3)"}}>Presiona <strong>Enter</strong> o el botón. Al crear el WR el tracking pasa automáticamente al historial de la derecha.</div>
       </div>
 
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
         {/* IZQUIERDA — PENDIENTES */}
         <div className="card">
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
-            <span style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:13,fontWeight:700,color:"var(--navy)"}}>⏳ Pendientes de WR</span>
-            {pending.length>0&&<span style={{fontSize:10,background:"#FDE8EA",padding:"2px 8px",borderRadius:4,border:"1px solid #F0A0A8",color:"var(--red)",fontWeight:700}}>{pending.length}</span>}
+            <span style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:15,fontWeight:700,color:"var(--navy)"}}>⏳ Pendientes de WR</span>
+            {pending.length>0&&<span style={{fontSize:12,background:"#FDE8EA",padding:"2px 8px",borderRadius:4,border:"1px solid #F0A0A8",color:"var(--red)",fontWeight:700}}>{pending.length}</span>}
           </div>
           {pending.length===0
-            ?<div style={{textAlign:"center",padding:"24px 0",color:"var(--t3)",fontSize:11}}>Sin pendientes ✅</div>
+            ?<div style={{textAlign:"center",padding:"24px 0",color:"var(--t3)",fontSize:13}}>Sin pendientes ✅</div>
             :<table className="ct">
               <thead><tr><th>#</th><th>Carrier</th><th>Tracking</th><th>Hora</th><th></th></tr></thead>
               <tbody>{pending.map((s,i)=>(
                 <tr key={i}>
-                  <td style={{color:"var(--t3)",fontSize:10}}>{i+1}</td>
-                  <td style={{color:"var(--t1)",fontWeight:700,fontSize:11}}>{s.carrier||"—"}</td>
-                  <td style={{fontFamily:"'DM Mono',monospace",color:"var(--cyan)",fontSize:11,fontWeight:600}}>{s.tracking}</td>
-                  <td style={{fontFamily:"'DM Mono',monospace",fontSize:10}}>{fmtTime(s.ts)}</td>
-                  <td>{hasPerm("crear_wr")?<button className="btn-p" style={{fontSize:10,padding:"3px 8px"}} onClick={()=>{setWrf(p=>({...p,cajas:[{...p.cajas[0],carrier:s.carrier||"",tracking:s.tracking},...p.cajas.slice(1)]}));setShowNewWR(true);}}>WR →</button>:<span style={{fontSize:10,color:"var(--t4)"}}>—</span>}</td>
+                  <td style={{color:"var(--t3)",fontSize:12}}>{i+1}</td>
+                  <td style={{color:"var(--t1)",fontWeight:700,fontSize:13}}>{s.carrier||"—"}</td>
+                  <td style={{fontFamily:"'DM Mono',monospace",color:"var(--cyan)",fontSize:13,fontWeight:600}}>{s.tracking}</td>
+                  <td style={{fontFamily:"'DM Mono',monospace",fontSize:12}}>{fmtTime(s.ts)}</td>
+                  <td>{hasPerm("crear_wr")?<button className="btn-p" style={{fontSize:12,padding:"3px 8px"}} onClick={()=>{setWrf(p=>({...p,cajas:[{...p.cajas[0],carrier:s.carrier||"",tracking:s.tracking},...p.cajas.slice(1)]}));setShowNewWR(true);}}>WR →</button>:<span style={{fontSize:12,color:"var(--t4)"}}>—</span>}</td>
                 </tr>
               ))}</tbody>
             </table>
@@ -2051,31 +2060,31 @@ export default function ENEXSystem(){
         {/* DERECHA — HISTORIAL COLAPSABLE POR DÍA */}
         <div className="card">
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
-            <span style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:13,fontWeight:700,color:"var(--navy)"}}>✅ Historial por Día</span>
-            {history.length>0&&<span style={{fontSize:10,background:"#E8F8EE",padding:"2px 8px",borderRadius:4,border:"1px solid #80D0A0",color:"var(--green)",fontWeight:700}}>{history.length} registrados</span>}
+            <span style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:15,fontWeight:700,color:"var(--navy)"}}>✅ Historial por Día</span>
+            {history.length>0&&<span style={{fontSize:12,background:"#E8F8EE",padding:"2px 8px",borderRadius:4,border:"1px solid #80D0A0",color:"var(--green)",fontWeight:700}}>{history.length} registrados</span>}
           </div>
           {Object.keys(histByDay).length===0
-            ?<div style={{textAlign:"center",padding:"24px 0",color:"var(--t3)",fontSize:11}}>Sin registros aún</div>
+            ?<div style={{textAlign:"center",padding:"24px 0",color:"var(--t3)",fontSize:13}}>Sin registros aún</div>
             :Object.entries(histByDay).map(([day,items])=>{
               const open=openDays[day]===true; // default closed
               return (
                 <div key={day} style={{marginBottom:8,border:"1px solid var(--b1)",borderRadius:8,overflow:"hidden"}}>
                   {/* Header clickeable */}
                   <div onClick={()=>toggleDay(day)} style={{background:"var(--bg4)",padding:"8px 12px",display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer",borderBottom:open?"1px solid var(--b1)":"none"}}>
-                    <span style={{fontWeight:700,fontSize:12,color:"var(--navy)"}}>
+                    <span style={{fontWeight:700,fontSize:14,color:"var(--navy)"}}>
                       📅 {day} — {items.length} paquetes {open?"▲":"▼"}
                     </span>
-                    {hasPerm("borrar_rp")&&<button className="btn-d" style={{fontSize:9,padding:"2px 8px"}} onClick={e=>{e.stopPropagation();const ids=items.map(s=>s.id).filter(Boolean);setScanLog(p=>p.filter(s=>fmtDate(s.ts)!==day||!s.registered));dbDeleteScanIds(ids);}}>🗑 Borrar día</button>}
+                    {hasPerm("borrar_rp")&&<button className="btn-d" style={{fontSize:11,padding:"2px 8px"}} onClick={e=>{e.stopPropagation();const ids=items.map(s=>s.id).filter(Boolean);setScanLog(p=>p.filter(s=>fmtDate(s.ts)!==day||!s.registered));dbDeleteScanIds(ids);}}>🗑 Borrar día</button>}
                   </div>
                   {open&&(
-                    <table className="ct" style={{fontSize:10}}>
+                    <table className="ct" style={{fontSize:12}}>
                       <thead><tr><th>#</th><th>Carrier</th><th>Tracking</th><th>Hora</th></tr></thead>
                       <tbody>{items.map((s,i)=>(
                         <tr key={i}>
                           <td style={{color:"var(--t3)"}}>{i+1}</td>
                           <td style={{fontWeight:600,color:"var(--t2)"}}>{s.carrier||"—"}</td>
-                          <td style={{fontFamily:"'DM Mono',monospace",color:"var(--t2)",fontSize:10}}>{s.tracking}</td>
-                          <td style={{fontFamily:"'DM Mono',monospace",fontSize:9}}>{fmtTime(s.ts)}</td>
+                          <td style={{fontFamily:"'DM Mono',monospace",color:"var(--t2)",fontSize:12}}>{s.tracking}</td>
+                          <td style={{fontFamily:"'DM Mono',monospace",fontSize:11}}>{fmtTime(s.ts)}</td>
                         </tr>
                       ))}</tbody>
                     </table>
@@ -2130,21 +2139,21 @@ export default function ENEXSystem(){
                 return (
                 <tr key={c.id}>
                   <td><span className="cid">{c.id}</span></td>
-                  <td><span style={{fontSize:9,padding:"2px 6px",borderRadius:4,fontWeight:700,background:c.tipo==="usuario"?"#F0EAFE":"#E8F8EE",color:c.tipo==="usuario"?"var(--purple)":"var(--green)",border:"1px solid",borderColor:c.tipo==="usuario"?"#C0A0F0":"#80D0A0"}}>{c.tipo==="usuario"?"👤 Sistema":"🏠 Cliente"}</span></td>
+                  <td><span style={{fontSize:11,padding:"2px 6px",borderRadius:4,fontWeight:700,background:c.tipo==="usuario"?"#F0EAFE":"#E8F8EE",color:c.tipo==="usuario"?"var(--purple)":"var(--green)",border:"1px solid",borderColor:c.tipo==="usuario"?"#C0A0F0":"#80D0A0"}}>{c.tipo==="usuario"?"👤 Sistema":"🏠 Cliente"}</span></td>
                   <td><span className="cn">{fullName(c)}</span></td>
-                  <td style={{fontFamily:"'DM Mono',monospace",fontSize:10,color:"var(--gold2)",fontWeight:600}}>{c.cedula}</td>
-                  <td style={{fontFamily:"'DM Mono',monospace",fontSize:10,color:"var(--gold2)",fontWeight:700}}>{c.casillero||"—"}</td>
-                  <td style={{fontSize:10,maxWidth:180,overflow:"hidden",textOverflow:"ellipsis"}}>{c.dir}</td>
-                  <td style={{fontSize:10}}>{c.municipio}</td>
-                  <td style={{fontSize:10}}>{c.estado}</td>
-                  <td style={{fontSize:10}}>{c.pais}</td>
-                  <td style={{fontFamily:"'DM Mono',monospace",fontSize:10}}>{c.cp||"—"}</td>
-                  <td style={{fontSize:10,whiteSpace:"nowrap"}}>{c.tel1}</td>
-                  <td style={{fontSize:10,color:"var(--t3)",whiteSpace:"nowrap"}}>{c.tel2||"—"}</td>
-                  <td style={{fontSize:10,color:"var(--cyan)"}}>{c.email}</td>
+                  <td style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--gold2)",fontWeight:600}}>{c.cedula}</td>
+                  <td style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--gold2)",fontWeight:700}}>{c.casillero||"—"}</td>
+                  <td style={{fontSize:12,maxWidth:180,overflow:"hidden",textOverflow:"ellipsis"}}>{c.dir}</td>
+                  <td style={{fontSize:12}}>{c.municipio}</td>
+                  <td style={{fontSize:12}}>{c.estado}</td>
+                  <td style={{fontSize:12}}>{c.pais}</td>
+                  <td style={{fontFamily:"'DM Mono',monospace",fontSize:12}}>{c.cp||"—"}</td>
+                  <td style={{fontSize:12,whiteSpace:"nowrap"}}>{c.tel1}</td>
+                  <td style={{fontSize:12,color:"var(--t3)",whiteSpace:"nowrap"}}>{c.tel2||"—"}</td>
+                  <td style={{fontSize:12,color:"var(--cyan)"}}>{c.email}</td>
                   <td><RoleBadge code={c.rol}/></td>
-                  <td>{ct?<span style={{fontSize:9,padding:"2px 7px",borderRadius:4,fontWeight:700,background:CT_COLOR[ct]||"var(--bg4)",color:CT_TEXT[ct]||"var(--t2)",border:"1px solid currentColor",whiteSpace:"nowrap"}}>{ctLabel}</span>:<span style={{color:"var(--t4)",fontSize:10}}>—</span>}</td>
-                  <td style={{fontSize:10,color:parentName&&parentName.startsWith("⚠️")?"var(--red)":ct==="matriz"?"var(--t3)":"var(--t1)",fontWeight:ct==="matriz"?400:600,whiteSpace:"nowrap"}}>{parentName}</td>
+                  <td>{ct?<span style={{fontSize:11,padding:"2px 7px",borderRadius:4,fontWeight:700,background:CT_COLOR[ct]||"var(--bg4)",color:CT_TEXT[ct]||"var(--t2)",border:"1px solid currentColor",whiteSpace:"nowrap"}}>{ctLabel}</span>:<span style={{color:"var(--t4)",fontSize:12}}>—</span>}</td>
+                  <td style={{fontSize:12,color:parentName&&parentName.startsWith("⚠️")?"var(--red)":ct==="matriz"?"var(--t3)":"var(--t1)",fontWeight:ct==="matriz"?400:600,whiteSpace:"nowrap"}}>{parentName}</td>
                   {(hasPerm("editar_cliente")||hasPerm("borrar_cliente"))&&<td><div style={{display:"flex",gap:3}}>
                     {hasPerm("editar_cliente")&&<span className="ic-b" onClick={()=>setShowEditCl(c)}>✏️</span>}
                     {hasPerm("borrar_cliente")&&<span className="ic-b" style={{color:"var(--red)"}} onClick={()=>{if(window.confirm(`¿Borrar "${fullName(c)}"? Esta acción no se puede deshacer.`)){setClients(p=>p.filter(x=>x.id!==c.id));dbDeleteCliente(c.id);logAction("Borró registro",`${c.id} — ${fullName(c)}`);}}}>🗑</span>}
@@ -2177,21 +2186,21 @@ export default function ENEXSystem(){
               onMouseEnter={e=>{if(selRole!==r.code)e.currentTarget.style.borderColor="var(--t3)"}}
               onMouseLeave={e=>{if(selRole!==r.code)e.currentTarget.style.borderColor="var(--b1)"}}>
               <div style={{display:"flex",alignItems:"center",gap:10}}>
-                <span style={{fontSize:20}}>{r.icon}</span>
+                <span style={{fontSize:22}}>{r.icon}</span>
                 <div style={{flex:1}}>
                   <div style={{display:"flex",alignItems:"center",gap:6}}>
-                    <span className={`rb ${r.color}`} style={{fontSize:11}}>{r.code}</span>
-                    <span style={{fontWeight:700,fontSize:13,color:"var(--t1)"}}>{r.name}</span>
-                    {r.subs&&<span style={{fontSize:10,color:"var(--t3)"}}>+{r.subs.length} sub</span>}
+                    <span className={`rb ${r.color}`} style={{fontSize:13}}>{r.code}</span>
+                    <span style={{fontWeight:700,fontSize:15,color:"var(--t1)"}}>{r.name}</span>
+                    {r.subs&&<span style={{fontSize:12,color:"var(--t3)"}}>+{r.subs.length} sub</span>}
                   </div>
-                  <div style={{fontSize:11,color:"var(--t3)",marginTop:2}}>{r.perms?.length||0} permisos</div>
+                  <div style={{fontSize:13,color:"var(--t3)",marginTop:2}}>{r.perms?.length||0} permisos</div>
                 </div>
-                <span style={{fontSize:12,color:"var(--t3)"}}>{selRole===r.code?"▲":"▼"}</span>
+                <span style={{fontSize:14,color:"var(--t3)"}}>{selRole===r.code?"▲":"▼"}</span>
               </div>
-              {selRole===r.code&&<div style={{fontSize:11,color:"var(--t2)",marginTop:8,paddingTop:8,borderTop:"1px solid var(--b2)",lineHeight:1.6}}>{r.desc}</div>}
+              {selRole===r.code&&<div style={{fontSize:13,color:"var(--t2)",marginTop:8,paddingTop:8,borderTop:"1px solid var(--b2)",lineHeight:1.6}}>{r.desc}</div>}
               {r.subs&&selRole===r.code&&(
                 <div style={{display:"flex",gap:4,marginTop:6,flexWrap:"wrap"}}>
-                  {r.subs.map(s=><div key={s} style={{display:"flex",alignItems:"center",gap:4,background:"var(--bg4)",borderRadius:5,padding:"3px 8px",fontSize:11}}><RoleChip code={s}/><span style={{color:"var(--t2)"}}>{ROLE_DEFS[s]?.name}</span></div>)}
+                  {r.subs.map(s=><div key={s} style={{display:"flex",alignItems:"center",gap:4,background:"var(--bg4)",borderRadius:5,padding:"3px 8px",fontSize:13}}><RoleChip code={s}/><span style={{color:"var(--t2)"}}>{ROLE_DEFS[s]?.name}</span></div>)}
                 </div>
               )}
             </div>
@@ -2202,12 +2211,12 @@ export default function ENEXSystem(){
         {selRole?(
           <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:12,overflow:"hidden"}}>
             <div style={{padding:"14px 16px",background:"var(--navy)",display:"flex",alignItems:"center",gap:12}}>
-              <span style={{fontSize:24}}>{ROLE_DEFS[selRole]?.icon}</span>
+              <span style={{fontSize:26}}>{ROLE_DEFS[selRole]?.icon}</span>
               <div>
-                <div style={{color:"#fff",fontFamily:"Arial,Helvetica,sans-serif",fontSize:18,fontWeight:700}}>{ROLE_DEFS[selRole]?.code} — {ROLE_DEFS[selRole]?.name}</div>
-                <div style={{color:"rgba(255,255,255,.6)",fontSize:12,marginTop:2}}>{ROLE_DEFS[selRole]?.desc}</div>
+                <div style={{color:"#fff",fontFamily:"Arial,Helvetica,sans-serif",fontSize:20,fontWeight:700}}>{ROLE_DEFS[selRole]?.code} — {ROLE_DEFS[selRole]?.name}</div>
+                <div style={{color:"rgba(255,255,255,.6)",fontSize:14,marginTop:2}}>{ROLE_DEFS[selRole]?.desc}</div>
               </div>
-              <div style={{marginLeft:"auto",background:"rgba(229,174,58,.2)",border:"1px solid rgba(229,174,58,.4)",borderRadius:6,padding:"4px 12px",color:"#E5AE3A",fontFamily:"Arial,Helvetica,sans-serif",fontSize:14,fontWeight:700}}>
+              <div style={{marginLeft:"auto",background:"rgba(229,174,58,.2)",border:"1px solid rgba(229,174,58,.4)",borderRadius:6,padding:"4px 12px",color:"#E5AE3A",fontFamily:"Arial,Helvetica,sans-serif",fontSize:16,fontWeight:700}}>
                 {ROLE_DEFS[selRole]?.perms.length} / {ALL_PERMS.length} permisos
               </div>
             </div>
@@ -2217,7 +2226,7 @@ export default function ENEXSystem(){
                 const hasAny=gPerms.some(p=>ROLE_DEFS[selRole]?.perms?.includes(p));
                 return (
                   <div key={g.label} style={{marginBottom:16}}>
-                    <div style={{fontSize:10,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",color:hasAny?"var(--navy)":"var(--t4)",marginBottom:8,paddingBottom:4,borderBottom:`2px solid ${hasAny?"var(--navy)":"var(--b2)"}`}}>
+                    <div style={{fontSize:12,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",color:hasAny?"var(--navy)":"var(--t4)",marginBottom:8,paddingBottom:4,borderBottom:`2px solid ${hasAny?"var(--navy)":"var(--b2)"}`}}>
                       {g.label}
                     </div>
                     <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
@@ -2226,7 +2235,7 @@ export default function ENEXSystem(){
                         return (
                           <span key={p} style={{
                             display:"inline-flex",alignItems:"center",gap:4,
-                            padding:"3px 9px",borderRadius:5,fontSize:11,fontWeight:600,
+                            padding:"3px 9px",borderRadius:5,fontSize:13,fontWeight:600,
                             background:has?"#E8F8EE":"var(--bg4)",
                             color:has?"var(--green)":"var(--t3)",
                             border:`1px solid ${has?"#80D0A0":"var(--b2)"}`,
@@ -2243,8 +2252,8 @@ export default function ENEXSystem(){
           </div>
         ):(
           <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:8,color:"var(--t3)",padding:60}}>
-            <span style={{fontSize:40}}>🔐</span>
-            <div style={{fontSize:14,fontWeight:600}}>Selecciona un rol para ver sus permisos</div>
+            <span style={{fontSize:42}}>🔐</span>
+            <div style={{fontSize:16,fontWeight:600}}>Selecciona un rol para ver sus permisos</div>
           </div>
         )}
       </div>
@@ -2263,7 +2272,7 @@ export default function ENEXSystem(){
 
         {/* N° WR AUTOMÁTICO */}
         <div className="wr-builder">
-          <div style={{fontSize:10,fontWeight:700,letterSpacing:2,textTransform:"uppercase",color:"var(--navy)",marginBottom:8}}>
+          <div style={{fontSize:12,fontWeight:700,letterSpacing:2,textTransform:"uppercase",color:"var(--navy)",marginBottom:8}}>
             NÚMERO DE WR — GENERADO AUTOMÁTICAMENTE
             <span style={{marginLeft:10,fontWeight:400,color:"var(--t3)",textTransform:"none",letterSpacing:0}}>
               {wrNumTipo===1?"Tipo 1: Secuencia":wrNumTipo===2?"Tipo 2: Empresa + Oficinas + Secuencia":"Tipo 3: País + Ciudad + Secuencia"}
@@ -2290,7 +2299,7 @@ export default function ENEXSystem(){
           {wrNumTipo===1&&<div className="seg-leg"><span>🟡 Secuencia</span></div>}
           {wrNumTipo===2&&<div className="seg-leg"><span>🟢 Empresa</span><span>🔵 Oficina Origen</span><span>🔵 Oficina Destino</span><span>🟡 Secuencia</span></div>}
           {(wrNumTipo===3||!wrNumTipo)&&<div className="seg-leg"><span>🔵 País Origen</span><span>🟢 Ciudad Origen</span><span>🔵 País Destino</span><span>🟢 Ciudad Destino</span><span>🟡 Secuencia</span></div>}
-          <div style={{display:"flex",gap:8,justifyContent:"center",fontSize:11,color:"var(--t2)",marginTop:4}}>
+          <div style={{display:"flex",gap:8,justifyContent:"center",fontSize:13,color:"var(--t2)",marginTop:4}}>
             <span>🏢 <strong>{OFFICE_CONFIG.branch}</strong></span>
           </div>
         </div>
@@ -2317,7 +2326,7 @@ export default function ENEXSystem(){
                     {clientResults.map(c=>(
                       <div key={c.id} className="fi-search-item" onClick={()=>selectClient(c)}>
                         {fullName(c)} <span className="fi-search-cas">{c.casillero}</span>
-                        <span style={{fontSize:9,color:"var(--t3)",marginLeft:6}}>{c.cedula}</span>
+                        <span style={{fontSize:11,color:"var(--t3)",marginLeft:6}}>{c.cedula}</span>
                       </div>
                     ))}
                     <div className="fi-search-new" onClick={()=>setClientResults([])}>+ Registrar como nuevo cliente después</div>
@@ -2325,7 +2334,7 @@ export default function ENEXSystem(){
                 )}
               </div>
               <div className="fg"><div className="fl">Nombre (si no está registrado)</div><input className="fi" value={wrf.consignee} onChange={e=>sw("consignee",e.target.value)} placeholder="Nombre completo"/></div>
-              <div className="fg"><div className="fl">N° Casillero</div><input className="fi" value={wrf.casillero} onChange={e=>sw("casillero",e.target.value)} placeholder="NX-0000" style={{fontFamily:"'DM Mono',monospace",fontWeight:800,fontSize:14,color:"var(--navy)",letterSpacing:1,background:"#EEF3FF",border:"2px solid #B8C8F0"}}/></div>
+              <div className="fg"><div className="fl">N° Casillero</div><input className="fi" value={wrf.casillero} onChange={e=>sw("casillero",e.target.value)} placeholder="NX-0000" style={{fontFamily:"'DM Mono',monospace",fontWeight:800,fontSize:16,color:"var(--navy)",letterSpacing:1,background:"#EEF3FF",border:"2px solid #B8C8F0"}}/></div>
             </div>
           </div>
         </div>
@@ -2342,7 +2351,7 @@ export default function ENEXSystem(){
           <div className="fg"><div className="fl">Tipo de Pago</div><select className="fs" value={wrf.tipoPago} onChange={e=>sw("tipoPago",e.target.value)}>{PAY_TYPES.map(t=><option key={t}>{t}</option>)}</select></div>
           <div className="fg">
             <div className="fl">Pertenece a</div>
-            <div className="fi ro" style={{fontSize:11}}>
+            <div className="fi ro" style={{fontSize:13}}>
               {(()=>{
                 const cl=wrf.clienteId?clients.find(c=>c.id===wrf.clienteId):null;
                 const ct=cl?.clienteTipo||"";
@@ -2369,15 +2378,15 @@ export default function ENEXSystem(){
 
         {/* UNIDADES */}
         <div style={{display:"flex",gap:10,marginBottom:14,padding:"8px 14px",background:"var(--bg4)",borderRadius:8,border:"1px solid var(--b1)",alignItems:"center"}}>
-          <span style={{fontSize:11,fontWeight:600,color:"var(--navy)"}}>Unidades de medida:</span>
+          <span style={{fontSize:13,fontWeight:600,color:"var(--navy)"}}>Unidades de medida:</span>
           <div style={{display:"flex",gap:4}}>
-            <button type="button" className={`btn-${wrf.unitDim==="in"?"p":"s"}`} style={{padding:"4px 10px",fontSize:11}} onClick={()=>setWrf(p=>({...p,unitDim:"in"}))}>pulg.</button>
-            <button type="button" className={`btn-${wrf.unitDim==="cm"?"p":"s"}`} style={{padding:"4px 10px",fontSize:11}} onClick={()=>setWrf(p=>({...p,unitDim:"cm"}))}>cm</button>
+            <button type="button" className={`btn-${wrf.unitDim==="in"?"p":"s"}`} style={{padding:"4px 10px",fontSize:13}} onClick={()=>setWrf(p=>({...p,unitDim:"in"}))}>pulg.</button>
+            <button type="button" className={`btn-${wrf.unitDim==="cm"?"p":"s"}`} style={{padding:"4px 10px",fontSize:13}} onClick={()=>setWrf(p=>({...p,unitDim:"cm"}))}>cm</button>
           </div>
-          <span style={{fontSize:11,fontWeight:600,color:"var(--navy)",marginLeft:12}}>Unidades de peso:</span>
+          <span style={{fontSize:13,fontWeight:600,color:"var(--navy)",marginLeft:12}}>Unidades de peso:</span>
           <div style={{display:"flex",gap:4}}>
-            <button type="button" className={`btn-${wrf.unitPeso==="lb"?"p":"s"}`} style={{padding:"4px 10px",fontSize:11}} onClick={()=>setWrf(p=>({...p,unitPeso:"lb"}))}>lb</button>
-            <button type="button" className={`btn-${wrf.unitPeso==="kg"?"p":"s"}`} style={{padding:"4px 10px",fontSize:11}} onClick={()=>setWrf(p=>({...p,unitPeso:"kg"}))}>kg</button>
+            <button type="button" className={`btn-${wrf.unitPeso==="lb"?"p":"s"}`} style={{padding:"4px 10px",fontSize:13}} onClick={()=>setWrf(p=>({...p,unitPeso:"lb"}))}>lb</button>
+            <button type="button" className={`btn-${wrf.unitPeso==="kg"?"p":"s"}`} style={{padding:"4px 10px",fontSize:13}} onClick={()=>setWrf(p=>({...p,unitPeso:"kg"}))}>kg</button>
           </div>
         </div>
 
@@ -2389,12 +2398,12 @@ export default function ENEXSystem(){
             <div key={idx} style={{border:"2px solid var(--navy)",borderRadius:10,marginBottom:12,overflow:"hidden"}}>
               {/* Header registro */}
               <div style={{background:"var(--navy)",padding:"8px 14px",display:"flex",alignItems:"center",gap:10}}>
-                <span style={{color:"#E5AE3A",fontFamily:"'DM Mono',monospace",fontWeight:800,fontSize:13}}>
+                <span style={{color:"#E5AE3A",fontFamily:"'DM Mono',monospace",fontWeight:800,fontSize:15}}>
                   📦 REGISTRO {idx+1} {wrf.cajas.length>1?`de ${wrf.cajas.length}`:""}
                 </span>
                 <div style={{flex:1}}/>
                 {wrf.cajas.length>1&&(
-                  <button onClick={()=>removeCaja(idx)} style={{background:"rgba(204,34,51,0.3)",border:"1px solid rgba(204,34,51,0.5)",color:"#FF8888",borderRadius:5,padding:"3px 10px",cursor:"pointer",fontSize:11,fontWeight:600}}>
+                  <button onClick={()=>removeCaja(idx)} style={{background:"rgba(204,34,51,0.3)",border:"1px solid rgba(204,34,51,0.5)",color:"#FF8888",borderRadius:5,padding:"3px 10px",cursor:"pointer",fontSize:13,fontWeight:600}}>
                     🗑 Eliminar registro
                   </button>
                 )}
@@ -2412,11 +2421,11 @@ export default function ENEXSystem(){
                     return (
                       <div key={ti} style={{background:"var(--bg4)",borderRadius:7,padding:"8px 10px",border:"1px solid var(--b1)"}}>
                         <div className="fl" style={{marginBottom:4}}>Transportista {ti+1}{ti>0?" (opc.)":""}</div>
-                        <input className="fi" style={{marginBottom:6,fontSize:11,textTransform:"uppercase",fontWeight:600}} value={caja[cfield]||""} onChange={e=>swCaja(idx,cfield,e.target.value.toUpperCase())} placeholder={ti===0?"UPS, FEDEX…":"Opcional"}/>
+                        <input className="fi" style={{marginBottom:6,fontSize:13,textTransform:"uppercase",fontWeight:600}} value={caja[cfield]||""} onChange={e=>swCaja(idx,cfield,e.target.value.toUpperCase())} placeholder={ti===0?"UPS, FEDEX…":"Opcional"}/>
                         <div className="fl" style={{marginBottom:4}}>Tracking {ti+1}</div>
                         <div style={{display:"flex",gap:4}}>
-                          <input className="fi" style={{fontFamily:"'DM Mono',monospace",fontSize:11,flex:1}} value={caja[tfield]||""} onChange={e=>swCaja(idx,tfield,e.target.value)} placeholder="Escanear…"/>
-                          {ti===0&&<button className="scan-btn" style={{padding:"5px 8px",fontSize:11}}>📡</button>}
+                          <input className="fi" style={{fontFamily:"'DM Mono',monospace",fontSize:13,flex:1}} value={caja[tfield]||""} onChange={e=>swCaja(idx,tfield,e.target.value)} placeholder="Escanear…"/>
+                          {ti===0&&<button className="scan-btn" style={{padding:"5px 8px",fontSize:13}}>📡</button>}
                         </div>
                       </div>
                     );
@@ -2434,25 +2443,25 @@ export default function ENEXSystem(){
                 <div style={{display:"grid",gridTemplateColumns:"60px 120px 1fr 1fr 1fr 1fr 1fr 1fr 1fr",gap:8,marginBottom:10}}>
                   <div className="fg">
                     <div className="fl">Cantidad</div>
-                    <input className="fi" type="number" min="1" value={caja.cantidad||1} onChange={e=>swCaja(idx,"cantidad",e.target.value)} style={{textAlign:"center",fontWeight:800,fontSize:14,color:"var(--navy)"}}/>
+                    <input className="fi" type="number" min="1" value={caja.cantidad||1} onChange={e=>swCaja(idx,"cantidad",e.target.value)} style={{textAlign:"center",fontWeight:800,fontSize:16,color:"var(--navy)"}}/>
                   </div>
                   <div className="fg">
                     <div className="fl">Embalaje</div>
-                    <input className="fi" value={caja.tipoEmbalaje} onChange={e=>swCaja(idx,"tipoEmbalaje",e.target.value)} placeholder="Ej: Caja, Paleta…" style={{fontSize:11}}/>
+                    <input className="fi" value={caja.tipoEmbalaje} onChange={e=>swCaja(idx,"tipoEmbalaje",e.target.value)} placeholder="Ej: Caja, Paleta…" style={{fontSize:13}}/>
                   </div>
                   <div className="fg"><div className="fl">Largo</div><input className="fi" type="number" value={caja.largo} onChange={e=>swCaja(idx,"largo",e.target.value)}/></div>
                   <div className="fg"><div className="fl">Ancho</div><input className="fi" type="number" value={caja.ancho} onChange={e=>swCaja(idx,"ancho",e.target.value)}/></div>
                   <div className="fg"><div className="fl">Alto</div><input className="fi" type="number" value={caja.alto} onChange={e=>swCaja(idx,"alto",e.target.value)}/></div>
                   <div className="fg"><div className="fl">Peso ({wrf.unitPeso})</div><input className="fi" type="number" value={caja.pesoLb} onChange={e=>swCaja(idx,"pesoLb",e.target.value)}/></div>
-                  <div className="fg"><div className="fl">P.Vol.lb 🔄</div><div className="fi ro" style={{color:"var(--orange)",fontWeight:700,fontSize:12}}>{hasVol?cc.volLb:"—"}</div></div>
-                  <div className="fg"><div className="fl">P.Vol.kg 🔄</div><div className="fi ro" style={{color:"var(--orange)",fontSize:11}}>{hasVol?cc.volKg:"—"}</div></div>
-                  <div className="fg"><div className="fl">Ft³ 🔄</div><div className="fi ro" style={{color:"var(--sky)",fontWeight:600,fontSize:11}}>{hasVol?cc.ft3:"—"}</div></div>
+                  <div className="fg"><div className="fl">P.Vol.lb 🔄</div><div className="fi ro" style={{color:"var(--orange)",fontWeight:700,fontSize:14}}>{hasVol?cc.volLb:"—"}</div></div>
+                  <div className="fg"><div className="fl">P.Vol.kg 🔄</div><div className="fi ro" style={{color:"var(--orange)",fontSize:13}}>{hasVol?cc.volKg:"—"}</div></div>
+                  <div className="fg"><div className="fl">Ft³ 🔄</div><div className="fi ro" style={{color:"var(--sky)",fontWeight:600,fontSize:13}}>{hasVol?cc.ft3:"—"}</div></div>
                 </div>
 
                 {/* Descripción */}
                 <div className="fg">
                   <div className="fl">Descripción de la Mercancía</div>
-                  <textarea className="fi" value={caja.descripcion} onChange={e=>swCaja(idx,"descripcion",e.target.value)} placeholder="Descripción detallada de la mercancía: tipo de producto, materiales, uso, etc." rows={3} style={{resize:"vertical",minHeight:64,fontFamily:"inherit",fontSize:12,lineHeight:1.5}}/>
+                  <textarea className="fi" value={caja.descripcion} onChange={e=>swCaja(idx,"descripcion",e.target.value)} placeholder="Descripción detallada de la mercancía: tipo de producto, materiales, uso, etc." rows={3} style={{resize:"vertical",minHeight:64,fontFamily:"inherit",fontSize:14,lineHeight:1.5}}/>
                 </div>
               </div>
             </div>
@@ -2460,18 +2469,18 @@ export default function ENEXSystem(){
         })}
 
         {/* BOTÓN NUEVA CAJA */}
-        <button onClick={addCaja} style={{width:"100%",padding:"12px",border:"2px dashed var(--navy)",borderRadius:10,background:"rgba(26,43,74,0.04)",color:"var(--navy)",fontSize:13,fontWeight:700,cursor:"pointer",marginBottom:14,transition:"all .15s",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
-          <span style={{fontSize:18}}>📦</span> + Agregar
+        <button onClick={addCaja} style={{width:"100%",padding:"12px",border:"2px dashed var(--navy)",borderRadius:10,background:"rgba(26,43,74,0.04)",color:"var(--navy)",fontSize:15,fontWeight:700,cursor:"pointer",marginBottom:14,transition:"all .15s",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+          <span style={{fontSize:20}}>📦</span> + Agregar
         </button>
 
         {/* TOTALES */}
         {wrf.cajas.length>0&&(
           <div style={{background:"var(--bg4)",border:"1px solid var(--b1)",borderRadius:8,padding:"10px 14px",marginBottom:14,display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:8}}>
-            <div style={{fontWeight:700,color:"var(--navy)",fontSize:10,textTransform:"uppercase",letterSpacing:1,gridColumn:"1/-1",marginBottom:4}}>TOTALES DEL WR — {wrf.cajas.length} {wrf.cajas.length===1?"caja":"cajas"}</div>
+            <div style={{fontWeight:700,color:"var(--navy)",fontSize:12,textTransform:"uppercase",letterSpacing:1,gridColumn:"1/-1",marginBottom:4}}>TOTALES DEL WR — {wrf.cajas.length} {wrf.cajas.length===1?"caja":"cajas"}</div>
             {[["Peso total lb",`${totalPesoLb} lb`,"var(--t1)"],["Peso total kg",`${totalPesoKg} kg`,"var(--t2)"],["P.Vol. lb",`${totalVolLb} lb`,"var(--orange)"],["P.Vol. kg",`${totalVolKg} kg`,"var(--orange)"],["Ft³",String(totalFt3),"var(--sky)"],["M³",String(totalM3),"var(--teal)"]].map(([l,v,c])=>(
               <div key={l} style={{background:"var(--bg2)",borderRadius:6,padding:"7px 10px",border:"1px solid var(--b1)"}}>
-                <div style={{fontSize:9,color:"var(--t3)",fontWeight:600,textTransform:"uppercase",letterSpacing:.8,marginBottom:3}}>{l}</div>
-                <div style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:c,fontSize:13}}>{v}</div>
+                <div style={{fontSize:11,color:"var(--t3)",fontWeight:600,textTransform:"uppercase",letterSpacing:.8,marginBottom:3}}>{l}</div>
+                <div style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:c,fontSize:15}}>{v}</div>
               </div>
             ))}
           </div>
@@ -2483,7 +2492,7 @@ export default function ENEXSystem(){
           <div className="fg"><div className="fl">Notas y Observaciones</div><textarea className="ft" value={wrf.notas} onChange={e=>sw("notas",e.target.value)} placeholder="Frágil, NO VOLTEAR, manejo especial…"/></div>
           <div className="fg"><div className="fl">Cargos Aplicables</div>
             <div style={{display:"flex",flexWrap:"wrap",gap:5,marginTop:4}}>
-              {CHARGES_OPT.map(c=><button key={c} className={`btn-${wrf.cargos.includes(c)?"p":"s"}`} style={{fontSize:10,padding:"4px 9px"}} onClick={()=>sw("cargos",wrf.cargos.includes(c)?wrf.cargos.filter(x=>x!==c):[...wrf.cargos,c])}>{c}</button>)}
+              {CHARGES_OPT.map(c=><button key={c} className={`btn-${wrf.cargos.includes(c)?"p":"s"}`} style={{fontSize:12,padding:"4px 9px"}} onClick={()=>sw("cargos",wrf.cargos.includes(c)?wrf.cargos.filter(x=>x!==c):[...wrf.cargos,c])}>{c}</button>)}
             </div>
           </div>
         </div>
@@ -2512,7 +2521,7 @@ export default function ENEXSystem(){
         <div className="mhd">
           <div className="mt">📋 Warehouse Receipt</div>
           <div style={{display:"flex",gap:6}}>
-            {hasPerm("editar_wr")&&<button className="btn-s" style={{fontSize:10,padding:"4px 10px"}} onClick={()=>{
+            {hasPerm("editar_wr")&&<button className="btn-s" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>{
               setEditWR(selWR);
               // Reconstruir cajas desde dims (almacenadas en cm y kg) → convertir a pulg/lb para el form
               const _rawCajas=selWR.dims&&selWR.dims.length>0
@@ -2535,18 +2544,18 @@ export default function ENEXSystem(){
               });
               setShowNewWR(true);setSelWR(null);
             }}>✏️ Editar</button>}
-            {hasPerm("borrar_wr")&&<button className="btn-s" style={{fontSize:10,padding:"4px 10px",color:"var(--red)",borderColor:"var(--red)"}} onClick={()=>{if(window.confirm(`¿Borrar WR ${selWR.id}? Esta acción no se puede deshacer.`)){setWrList(p=>p.filter(x=>x.id!==selWR.id));dbDeleteWR(selWR.id);logAction("Borró WR",selWR.id);setSelWR(null);}}}>🗑 Borrar</button>}
-            {crElegible(selWR)&&hasPerm("hacer_egreso")&&<button className="btn-s" style={{fontSize:10,padding:"4px 10px",background:"#E8F5E9",borderColor:"#81C784",color:"#2E7D32",fontWeight:700}} onClick={()=>{crOpenNew([selWR.id]);setSelWR(null);}} title="Registrar egreso individual de este WR">🚀 Egresar</button>}
-            {dnElegible(selWR)&&hasPerm("entregar")&&<button className="btn-s" style={{fontSize:10,padding:"4px 10px",background:"#E3F2FD",borderColor:"#64B5F6",color:"#1565C0",fontWeight:700}} onClick={()=>{dnOpenNew([selWR.id]);setSelWR(null);}} title="Registrar entrega al cliente">📝 Entregar</button>}
-            <button className="btn-p" style={{fontSize:10,padding:"4px 10px"}} onClick={()=>window.print()}>🖨 Imprimir</button>
+            {hasPerm("borrar_wr")&&<button className="btn-s" style={{fontSize:12,padding:"4px 10px",color:"var(--red)",borderColor:"var(--red)"}} onClick={()=>{if(window.confirm(`¿Borrar WR ${selWR.id}? Esta acción no se puede deshacer.`)){setWrList(p=>p.filter(x=>x.id!==selWR.id));dbDeleteWR(selWR.id);logAction("Borró WR",selWR.id);setSelWR(null);}}}>🗑 Borrar</button>}
+            {crElegible(selWR)&&hasPerm("hacer_egreso")&&<button className="btn-s" style={{fontSize:12,padding:"4px 10px",background:"#E8F5E9",borderColor:"#81C784",color:"#2E7D32",fontWeight:700}} onClick={()=>{crOpenNew([selWR.id]);setSelWR(null);}} title="Registrar egreso individual de este WR">🚀 Egresar</button>}
+            {dnElegible(selWR)&&hasPerm("entregar")&&<button className="btn-s" style={{fontSize:12,padding:"4px 10px",background:"#E3F2FD",borderColor:"#64B5F6",color:"#1565C0",fontWeight:700}} onClick={()=>{dnOpenNew([selWR.id]);setSelWR(null);}} title="Registrar entrega al cliente">📝 Entregar</button>}
+            <button className="btn-p" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>window.print()}>🖨 Imprimir</button>
             <button className="mcl" onClick={()=>setSelWR(null)}>✕</button>
           </div>
         </div>
         {/* Barra de confirmación por tipo de envío */}
         {canEdit&&(
           <div className="no-print" style={{display:"flex",alignItems:"center",gap:10,padding:"8px 14px",background:"var(--bg4)",borderBottom:"1px solid var(--b1)",flexWrap:"wrap"}}>
-            <div style={{fontSize:10,fontWeight:700,color:"var(--t3)",textTransform:"uppercase",letterSpacing:.5}}>Tipo de Envío:</div>
-            <select className="fs" style={{fontSize:11,padding:"4px 8px",minWidth:180}} value={selWR.tipoEnvio||""}
+            <div style={{fontSize:12,fontWeight:700,color:"var(--t3)",textTransform:"uppercase",letterSpacing:.5}}>Tipo de Envío:</div>
+            <select className="fs" style={{fontSize:13,padding:"4px 8px",minWidth:180}} value={selWR.tipoEnvio||""}
               onChange={e=>{
                 const v=e.target.value;
                 if(v===selWR.tipoEnvio)return;
@@ -2561,10 +2570,10 @@ export default function ENEXSystem(){
               {SEND_TYPES.map(t=><option key={t} value={t}>{t}</option>)}
             </select>
             {selWR.tipoEnvio
-              ?<span style={{fontSize:10,color:"var(--teal)",fontWeight:600}}>✓ {selWR.status?.code==="3"?"Confirmado":"Tipo asignado"}</span>
-              :<span style={{fontSize:10,color:"var(--orange)",fontWeight:600}}>⚠️ Asigna un tipo para confirmar el WR</span>}
+              ?<span style={{fontSize:12,color:"var(--teal)",fontWeight:600}}>✓ {selWR.status?.code==="3"?"Confirmado":"Tipo asignado"}</span>
+              :<span style={{fontSize:12,color:"var(--orange)",fontWeight:600}}>⚠️ Asigna un tipo para confirmar el WR</span>}
             {selWR.status?.code==="3"&&hasPerm("desconfirmar")&&(
-              <button className="btn-s" style={{fontSize:10,padding:"4px 10px",color:"var(--orange)",borderColor:"var(--orange)",marginLeft:"auto"}}
+              <button className="btn-s" style={{fontSize:12,padding:"4px 10px",color:"var(--orange)",borderColor:"var(--orange)",marginLeft:"auto"}}
                 onClick={()=>revertirConfirmacion(selWR)}
                 title="Devolver este WR al estado anterior (antes de confirmar)">↩️ Revertir Confirmación</button>
             )}
@@ -2581,7 +2590,7 @@ export default function ENEXSystem(){
               </div>
             </div>
             <div style={{textAlign:"right"}}>
-              <div style={{fontSize:9,letterSpacing:2,textTransform:"uppercase",color:"var(--t2)",marginBottom:2}}>Warehouse Receipt</div>
+              <div style={{fontSize:11,letterSpacing:2,textTransform:"uppercase",color:"var(--t2)",marginBottom:2}}>Warehouse Receipt</div>
               <div style={{display:"flex",alignItems:"flex-end",justifyContent:"flex-end",marginBottom:4}}><WRBarcode value={selWR.id} height={36} width={2}/></div>
               <div className="wr-num-d">{selWR.id}</div>
               <div className="wr-num-meta">
@@ -2601,9 +2610,9 @@ export default function ENEXSystem(){
             </div>
             <div className="wb">
               <div className="wb-t">📥 Consignatario / Consignee</div>
-              <div className="wf"><div className="wfl">Nombre</div><div className="wfv" style={{fontWeight:700,fontSize:13}}>{selWR.consignee||"—"}</div></div>
-              <div className="wf"><div className="wfl">Casillero</div><div className="wfv" style={{color:"var(--gold2)",fontWeight:700,fontSize:13}}>#{selWR.casillero||"—"}</div></div>
-              {_destAddr&&<div className="wf"><div className="wfl">Dirección</div><div className="wfv" style={{fontSize:11}}>{_destAddr}</div></div>}
+              <div className="wf"><div className="wfl">Nombre</div><div className="wfv" style={{fontWeight:700,fontSize:15}}>{selWR.consignee||"—"}</div></div>
+              <div className="wf"><div className="wfl">Casillero</div><div className="wfv" style={{color:"var(--gold2)",fontWeight:700,fontSize:15}}>#{selWR.casillero||"—"}</div></div>
+              {_destAddr&&<div className="wf"><div className="wfl">Dirección</div><div className="wfv" style={{fontSize:13}}>{_destAddr}</div></div>}
               <div className="wf"><div className="wfl">Ciudad Destino</div><div className="wfv" style={{fontWeight:600,color:"var(--navy)"}}>{selWR.destCity||"—"} · {selWR.destCountry||"—"}</div></div>
               {_cl?.tel1&&<div className="wf"><div className="wfl">Teléfono</div><div className="wfv">{_cl.tel1}</div></div>}
               {_cl?.email&&<div className="wf"><div className="wfl">Email</div><div className="wfv">{_cl.email}</div></div>}
@@ -2614,7 +2623,7 @@ export default function ENEXSystem(){
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 2fr",gap:12}}>
               <div>
                 <div className="wb-t">💳 Tipo de Pago</div>
-                <div style={{fontWeight:600,fontSize:12,color:"var(--t1)"}}>{selWR.tipoPago||"—"}</div>
+                <div style={{fontWeight:600,fontSize:14,color:"var(--t1)"}}>{selWR.tipoPago||"—"}</div>
               </div>
               <div>
                 <div className="wb-t">✈️ Tipo de Envío</div>
@@ -2622,11 +2631,11 @@ export default function ENEXSystem(){
               </div>
               <div>
                 <div className="wb-t">⚡ Cargos Aplicables</div>
-                <div style={{fontSize:11,color:"var(--t2)"}}>{selWR.cargos&&selWR.cargos.length>0?selWR.cargos.join(", "):"—"}</div>
+                <div style={{fontSize:13,color:"var(--t2)"}}>{selWR.cargos&&selWR.cargos.length>0?selWR.cargos.join(", "):"—"}</div>
               </div>
               <div>
                 <div className="wb-t">📝 Notas y Observaciones</div>
-                <div style={{fontSize:12,color:"var(--orange)",fontWeight:500,minHeight:32}}>{selWR.notas||"—"}</div>
+                <div style={{fontSize:14,color:"var(--orange)",fontWeight:500,minHeight:32}}>{selWR.notas||"—"}</div>
               </div>
             </div>
           </div>
@@ -2636,7 +2645,7 @@ export default function ENEXSystem(){
               <>
                 <div style={{display:"grid",gridTemplateColumns:"24px 1fr 1fr 1fr 1fr 1fr 1fr 1fr 2fr 1fr",gap:4,marginBottom:4,padding:"4px 0",borderBottom:"2px solid var(--navy)"}}>
                   {["#","Dims (in)","Peso lb","P.Vol lb","Ft³","M³","Peso kg","P.Vol kg","Tracking","Carrier"].map(h=>(
-                    <div key={h} style={{fontSize:8,color:"var(--navy)",fontWeight:700,textTransform:"uppercase",letterSpacing:.7}}>{h}</div>
+                    <div key={h} style={{fontSize:10,color:"var(--navy)",fontWeight:700,textTransform:"uppercase",letterSpacing:.7}}>{h}</div>
                   ))}
                 </div>
                 {selWR.dims.map((d,i)=>{
@@ -2646,19 +2655,19 @@ export default function ENEXSystem(){
                   return (
                     <div key={i} style={{borderBottom:"1px solid var(--b2)",paddingBottom:6,marginBottom:4}}>
                       <div style={{display:"grid",gridTemplateColumns:"24px 1fr 1fr 1fr 1fr 1fr 1fr 1fr 2fr 1fr",gap:4,padding:"4px 0",alignItems:"center"}}>
-                        <div style={{fontWeight:700,color:"var(--navy)",fontSize:11}}>{i+1}</div>
-                        <div style={{fontFamily:"'DM Mono',monospace",fontSize:10}}>{toIn(d.l)}×{toIn(d.a)}×{toIn(d.h)}"</div>
-                        <div style={{fontFamily:"'DM Mono',monospace",fontSize:11,fontWeight:600}}>{toLb(d.pk)}</div>
-                        <div style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:"var(--orange)",fontWeight:700}}>{dv.volLb}</div>
-                        <div style={{fontFamily:"'DM Mono',monospace",fontSize:10,color:"var(--sky)"}}>{dv.ft3}</div>
-                        <div style={{fontFamily:"'DM Mono',monospace",fontSize:10,color:"var(--teal)"}}>{dv.m3}</div>
-                        <div style={{fontFamily:"'DM Mono',monospace",fontSize:10,color:"var(--t2)"}}>{d.pk?.toFixed?.(2)||"—"}</div>
-                        <div style={{fontFamily:"'DM Mono',monospace",fontSize:10,color:"var(--orange)"}}>{dv.volKg}</div>
-                        <div style={{fontFamily:"'DM Mono',monospace",fontSize:10,color:"var(--cyan)",fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{trk}</div>
-                        <div style={{fontWeight:700,fontSize:11,color:"var(--navy)"}}>{car}</div>
+                        <div style={{fontWeight:700,color:"var(--navy)",fontSize:13}}>{i+1}</div>
+                        <div style={{fontFamily:"'DM Mono',monospace",fontSize:12}}>{toIn(d.l)}×{toIn(d.a)}×{toIn(d.h)}"</div>
+                        <div style={{fontFamily:"'DM Mono',monospace",fontSize:13,fontWeight:600}}>{toLb(d.pk)}</div>
+                        <div style={{fontFamily:"'DM Mono',monospace",fontSize:13,color:"var(--orange)",fontWeight:700}}>{dv.volLb}</div>
+                        <div style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--sky)"}}>{dv.ft3}</div>
+                        <div style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--teal)"}}>{dv.m3}</div>
+                        <div style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--t2)"}}>{d.pk?.toFixed?.(2)||"—"}</div>
+                        <div style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--orange)"}}>{dv.volKg}</div>
+                        <div style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--cyan)",fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{trk}</div>
+                        <div style={{fontWeight:700,fontSize:13,color:"var(--navy)"}}>{car}</div>
                       </div>
-                      {d.descripcion&&<div style={{fontSize:10,color:"var(--t2)",paddingLeft:28,marginTop:2}}>📦 {d.descripcion}</div>}
-                      {d.factura&&<div style={{fontSize:10,color:"var(--t3)",paddingLeft:28}}>Factura: {d.factura}</div>}
+                      {d.descripcion&&<div style={{fontSize:12,color:"var(--t2)",paddingLeft:28,marginTop:2}}>📦 {d.descripcion}</div>}
+                      {d.factura&&<div style={{fontSize:12,color:"var(--t3)",paddingLeft:28}}>Factura: {d.factura}</div>}
                     </div>
                   );
                 })}
@@ -2687,12 +2696,12 @@ export default function ENEXSystem(){
                 if(sts.length===0)return null;
                 return(
                   <div key={grp.label} style={{marginBottom:8}}>
-                    <div style={{fontSize:9,fontWeight:700,color:"var(--t3)",marginBottom:4,textTransform:"uppercase",letterSpacing:.5}}>{grp.label}</div>
+                    <div style={{fontSize:11,fontWeight:700,color:"var(--t3)",marginBottom:4,textTransform:"uppercase",letterSpacing:.5}}>{grp.label}</div>
                     <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
                       {sts.map(s=>(
                         <button key={s.code}
                           className={`btn-${selWR.status?.code===s.code?"p":"s"}`}
-                          style={{fontSize:9,padding:"3px 8px"}}
+                          style={{fontSize:11,padding:"3px 8px"}}
                           onClick={()=>{
                             // Flujo especial: Entregado → preguntar cobro
                             if(s.code==="21"){
@@ -2744,7 +2753,7 @@ export default function ENEXSystem(){
                   </div>
                 );
               })}
-              <div style={{fontSize:9,color:"var(--t3)",marginTop:4}}>Los estados 5→16 (tránsito) se actualizan desde la Guía Consolidada → cascada automática.</div>
+              <div style={{fontSize:11,color:"var(--t3)",marginTop:4}}>Los estados 5→16 (tránsito) se actualizan desde la Guía Consolidada → cascada automática.</div>
             </div>
           )}
           <div className="wr-legal">
@@ -2753,15 +2762,15 @@ export default function ENEXSystem(){
           {/* Sección de entrega */}
           <div style={{display:"grid",gridTemplateColumns:"1fr 1.5fr 1fr",gap:12,margin:"10px 0 6px"}}>
             <div style={{borderTop:"2px solid var(--navy)",paddingTop:8}}>
-              <div style={{fontSize:9,color:"var(--t3)",marginBottom:2,textTransform:"uppercase",letterSpacing:.5}}>Entregado por</div>
-              <div style={{fontFamily:"'DM Mono',monospace",fontSize:11,fontWeight:600,color:"var(--navy)"}}>{selWR.shipper||"—"}</div>
+              <div style={{fontSize:11,color:"var(--t3)",marginBottom:2,textTransform:"uppercase",letterSpacing:.5}}>Entregado por</div>
+              <div style={{fontFamily:"'DM Mono',monospace",fontSize:13,fontWeight:600,color:"var(--navy)"}}>{selWR.shipper||"—"}</div>
             </div>
             <div style={{borderTop:"2px solid var(--navy)",paddingTop:8}}>
-              <div style={{fontSize:9,color:"var(--t3)",marginBottom:2,textTransform:"uppercase",letterSpacing:.5}}>Nombre completo del receptor</div>
+              <div style={{fontSize:11,color:"var(--t3)",marginBottom:2,textTransform:"uppercase",letterSpacing:.5}}>Nombre completo del receptor</div>
               <div style={{height:20,borderBottom:"1px solid var(--b1)"}}/>
             </div>
             <div style={{borderTop:"2px solid var(--navy)",paddingTop:8}}>
-              <div style={{fontSize:9,color:"var(--t3)",marginBottom:2,textTransform:"uppercase",letterSpacing:.5}}>Fecha y Hora de entrega</div>
+              <div style={{fontSize:11,color:"var(--t3)",marginBottom:2,textTransform:"uppercase",letterSpacing:.5}}>Fecha y Hora de entrega</div>
               <div style={{height:20,borderBottom:"1px solid var(--b1)"}}/>
             </div>
           </div>
@@ -2774,9 +2783,9 @@ export default function ENEXSystem(){
         {/* ══ DOCUMENTO DE IMPRESIÓN — solo visible con window.print() ══ */}
         <div className="wr-print-only">
           {(()=>{
-            const P={fontFamily:"Arial,Helvetica,sans-serif",fontSize:11,color:"#000",lineHeight:1.4};
-            const TH={border:"1px solid #888",padding:"3px 6px",background:"#ccc",fontSize:10,fontWeight:700,textAlign:"left"};
-            const TD={border:"1px solid #888",padding:"4px 6px",fontSize:11,verticalAlign:"top"};
+            const P={fontFamily:"Arial,Helvetica,sans-serif",fontSize:13,color:"#000",lineHeight:1.4};
+            const TH={border:"1px solid #888",padding:"3px 6px",background:"#ccc",fontSize:12,fontWeight:700,textAlign:"left"};
+            const TD={border:"1px solid #888",padding:"4px 6px",fontSize:13,verticalAlign:"top"};
             const _cl2=clients.find(c=>c.id===selWR.clienteId);
             const _da=[_cl2?.dir,_cl2?.municipio,_cl2?.estado,_cl2?.pais].filter(Boolean).join(", ");
             const _oc2=oficinas.find(o=>(o.ciudad||"").toUpperCase().startsWith((selWR.origCity||"").toUpperCase()))||_origOff;
@@ -2787,20 +2796,20 @@ export default function ENEXSystem(){
               <table style={{width:"100%",borderCollapse:"collapse",marginBottom:2}}><tbody><tr>
                 {/* izquierda: empresa */}
                 <td style={{verticalAlign:"top",paddingRight:16,width:"52%"}}>
-                  <div style={{fontSize:32,fontWeight:900,letterSpacing:3,lineHeight:1,marginBottom:4,fontFamily:"Arial Black,Arial,sans-serif"}}>{getHeaderName(selWR,clients,agentes,oficinas,empresaNombre)}</div>
-                  <div style={{fontSize:11,marginBottom:2}}>{_oc2?.ciudad||selWR.origCity||""}{_oc2?.pais?`, ${_oc2.pais}`:""}</div>
-                  {_oc2?.email&&<div style={{fontSize:10,marginTop:2}}>{_oc2.email}</div>}
-                  {_oc2?.tel&&<div style={{fontSize:10}}>Phone: {_oc2.tel}</div>}
-                  <div style={{fontSize:9,color:"#666",marginTop:6}}>Powered by {empresaNombre} Courier System</div>
+                  <div style={{fontSize:34,fontWeight:900,letterSpacing:3,lineHeight:1,marginBottom:4,fontFamily:"Arial Black,Arial,sans-serif"}}>{getHeaderName(selWR,clients,agentes,oficinas,empresaNombre)}</div>
+                  <div style={{fontSize:13,marginBottom:2}}>{_oc2?.ciudad||selWR.origCity||""}{_oc2?.pais?`, ${_oc2.pais}`:""}</div>
+                  {_oc2?.email&&<div style={{fontSize:12,marginTop:2}}>{_oc2.email}</div>}
+                  {_oc2?.tel&&<div style={{fontSize:12}}>Phone: {_oc2.tel}</div>}
+                  <div style={{fontSize:11,color:"#666",marginTop:6}}>Powered by {empresaNombre} Courier System</div>
                 </td>
                 {/* derecha: WR # + barcode real */}
                 <td style={{verticalAlign:"top",textAlign:"right",width:"48%"}}>
-                  <div style={{fontSize:10,color:"#555",marginBottom:1}}>Warehouse Receipt #:</div>
-                  <div style={{fontSize:28,fontWeight:900,fontFamily:"'Courier New',monospace",letterSpacing:2,lineHeight:1,marginBottom:3}}>{selWR.id}</div>
+                  <div style={{fontSize:12,color:"#555",marginBottom:1}}>Warehouse Receipt #:</div>
+                  <div style={{fontSize:30,fontWeight:900,fontFamily:"'Courier New',monospace",letterSpacing:2,lineHeight:1,marginBottom:3}}>{selWR.id}</div>
                   <div style={{display:"flex",justifyContent:"flex-end",marginBottom:2}}>
                     <WRBarcode value={selWR.id} height={45} width={2}/>
                   </div>
-                  <div style={{fontSize:9,color:"#444",marginTop:3}}>
+                  <div style={{fontSize:11,color:"#444",marginTop:3}}>
                     Printed: {fmtDate(selWR.fecha)} {fmtTime(selWR.fecha)} | Received By: {_usuarioNombre}
                   </div>
                 </td>
@@ -2815,13 +2824,13 @@ export default function ENEXSystem(){
                 <tr>
                   <td style={{...TD,borderRight:"none",borderTop:"none",minHeight:70}}>
                     <div style={{fontWeight:700}}>{selWR.shipper||"—"}</div>
-                    {selWR.remitenteDir&&<div style={{fontSize:10,marginTop:2}}>{selWR.remitenteDir}</div>}
+                    {selWR.remitenteDir&&<div style={{fontSize:12,marginTop:2}}>{selWR.remitenteDir}</div>}
                   </td>
                   <td style={{...TD,borderTop:"none"}}>
-                    <div style={{fontWeight:700,fontSize:12}}>{selWR.consignee||"—"}</div>
-                    <div style={{fontSize:10,fontWeight:700,color:"#333",marginTop:2}}>#{selWR.casillero||"—"}</div>
-                    {_da&&<div style={{fontSize:10,marginTop:2}}>{_da}</div>}
-                    <div style={{fontSize:10,marginTop:4}}>{selWR.destCity||"—"}, {(selWR.destCountry||"").replace(/[^\w\s]/gi,"").trim()}</div>
+                    <div style={{fontWeight:700,fontSize:14}}>{selWR.consignee||"—"}</div>
+                    <div style={{fontSize:12,fontWeight:700,color:"#333",marginTop:2}}>#{selWR.casillero||"—"}</div>
+                    {_da&&<div style={{fontSize:12,marginTop:2}}>{_da}</div>}
+                    <div style={{fontSize:12,marginTop:4}}>{selWR.destCity||"—"}, {(selWR.destCountry||"").replace(/[^\w\s]/gi,"").trim()}</div>
                   </td>
                 </tr>
               </tbody></table>
@@ -2830,10 +2839,10 @@ export default function ENEXSystem(){
               <table style={{width:"100%",borderCollapse:"collapse",marginBottom:0}}><tbody>
                 <tr>
                   <td style={{...TD,borderTop:"none",width:"55%",padding:"3px 6px"}}>
-                    <div style={{fontSize:8,color:"#555"}}>Payment Type | Shipment Type | # Casillero | Insurance | Tipo Cliente</div>
-                    <div style={{fontSize:11,fontWeight:600}}>{selWR.tipoPago||"—"} | {selWR.tipoEnvio||"POR DEFINIR"} | # {selWR.casillero||"—"} | | {(()=>{const c=_cl2;if(!c)return"—";if(c.clienteTipo==="matriz")return"Matriz";if(c.clienteTipo==="agente")return"Agente";return c.clienteTipo||"Cliente";})()}</div>
+                    <div style={{fontSize:10,color:"#555"}}>Payment Type | Shipment Type | # Casillero | Insurance | Tipo Cliente</div>
+                    <div style={{fontSize:13,fontWeight:600}}>{selWR.tipoPago||"—"} | {selWR.tipoEnvio||"POR DEFINIR"} | # {selWR.casillero||"—"} | | {(()=>{const c=_cl2;if(!c)return"—";if(c.clienteTipo==="matriz")return"Matriz";if(c.clienteTipo==="agente")return"Agente";return c.clienteTipo||"Cliente";})()}</div>
                   </td>
-                  <td style={{...TD,borderTop:"none",borderLeft:"none",fontSize:14,fontWeight:700}}>
+                  <td style={{...TD,borderTop:"none",borderLeft:"none",fontSize:16,fontWeight:700}}>
                     Ciudad Destino: {selWR.destCity||"—"}
                   </td>
                 </tr>
@@ -2842,7 +2851,7 @@ export default function ENEXSystem(){
               {/* ── NOTAS ── */}
               <table style={{width:"100%",borderCollapse:"collapse",marginBottom:0}}><tbody>
                 <tr><td style={{...TD,borderTop:"none",minHeight:36,padding:"4px 6px"}}>
-                  <span style={{fontWeight:700,fontSize:10}}>Notas:</span>{selWR.notas?" "+selWR.notas:""}
+                  <span style={{fontWeight:700,fontSize:12}}>Notas:</span>{selWR.notas?" "+selWR.notas:""}
                 </td></tr>
               </tbody></table>
 
@@ -2870,7 +2879,7 @@ export default function ENEXSystem(){
                   const isLast=pi===totalPages-1;
                   return(
                   <div key={pi} style={pi>0?{pageBreakBefore:"always",paddingTop:"0.45in"}:{}}>
-                    {pi>0&&<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",borderBottom:"2px solid #000",paddingBottom:4,marginBottom:6,fontSize:10}}>
+                    {pi>0&&<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",borderBottom:"2px solid #000",paddingBottom:4,marginBottom:6,fontSize:12}}>
                       <span style={{fontWeight:700}}>{empresaNombre}</span>
                       <span>WR# {selWR.id}</span>
                       <span>{selWR.consignee} | #{selWR.casillero}</span>
@@ -2889,12 +2898,12 @@ export default function ENEXSystem(){
                             <td style={{...TD,verticalAlign:"top"}}>{idx+1}</td>
                             <td style={{...TD,verticalAlign:"top"}}>
                               {hasDims?<div>{toIn(d.l)}x{toIn(d.a)}x{toIn(d.h)}</div>:<div style={{color:"#999"}}>—</div>}
-                              {d.carrier&&<div style={{fontSize:9,color:"#555"}}>{d.carrier}</div>}
+                              {d.carrier&&<div style={{fontSize:11,color:"#555"}}>{d.carrier}</div>}
                             </td>
-                            <td style={{...TD,fontSize:10,verticalAlign:"top",fontFamily:"'Courier New',monospace"}}>
+                            <td style={{...TD,fontSize:12,verticalAlign:"top",fontFamily:"'Courier New',monospace"}}>
                               {d.tracking&&<div>{d.tracking}</div>}
-                              {d.descripcion&&<div style={{fontSize:10,fontFamily:"Arial",color:"#222"}}>{d.descripcion}</div>}
-                              {d.factura&&<div style={{fontSize:9,fontFamily:"Arial",color:"#555"}}>Fact: {d.factura}</div>}
+                              {d.descripcion&&<div style={{fontSize:12,fontFamily:"Arial",color:"#222"}}>{d.descripcion}</div>}
+                              {d.factura&&<div style={{fontSize:11,fontFamily:"Arial",color:"#555"}}>Fact: {d.factura}</div>}
                             </td>
                             <td style={{...TD,textAlign:"right",fontWeight:700}}>{d.pk?toLb(d.pk):"—"}</td>
                             <td style={{...TD,textAlign:"right"}}>{hasDims?dv.volLb:"—"}</td>
@@ -2923,26 +2932,26 @@ export default function ENEXSystem(){
               <table style={{width:"100%",borderCollapse:"collapse",marginTop:4}}><tbody>
                 <tr>
                   <td style={{...TD,width:"33%",borderRight:"none"}}>
-                    <div style={{fontSize:9,color:"#555"}}>Entregado por:</div>
+                    <div style={{fontSize:11,color:"#555"}}>Entregado por:</div>
                     <div style={{fontWeight:700}}>{selWR.shipper||"—"}</div>
                   </td>
                   <td style={{...TD,width:"34%",borderRight:"none"}}>
-                    <div style={{fontSize:9,color:"#555"}}>Nombre Completo</div>
+                    <div style={{fontSize:11,color:"#555"}}>Nombre Completo</div>
                     <div style={{height:18}}/>
                   </td>
                   <td style={{...TD,width:"33%"}}>
-                    <div style={{fontSize:9,color:"#555"}}>Fecha y Hora</div>
+                    <div style={{fontSize:11,color:"#555"}}>Fecha y Hora</div>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",height:18}}>
                       <span/>
-                      <span style={{fontSize:9,color:"#555"}}>Pag: 1/1</span>
+                      <span style={{fontSize:11,color:"#555"}}>Pag: 1/1</span>
                     </div>
                   </td>
                 </tr>
               </tbody></table>
 
               {/* ── TEXTO LEGAL ── */}
-              <div style={{fontSize:9,lineHeight:1.6,color:"#333",textAlign:"center",marginTop:8,borderTop:"1px solid #ccc",paddingTop:6}}>
-                <div style={{fontWeight:700,marginBottom:3,fontSize:10}}>NOTA: SE ESTA ENTREGANDO ESTA CAJA COMPLETAMENTE SELLADA.</div>
+              <div style={{fontSize:11,lineHeight:1.6,color:"#333",textAlign:"center",marginTop:8,borderTop:"1px solid #ccc",paddingTop:6}}>
+                <div style={{fontWeight:700,marginBottom:3,fontSize:12}}>NOTA: SE ESTA ENTREGANDO ESTA CAJA COMPLETAMENTE SELLADA.</div>
                 Certifico que este envío no contiene dinero, narcóticos, armas o dispositivos explosivos no autorizados. {empresaNombre} no se hace responsable de los artículos no retirados en los treinta (30) días siguientes a su recepción. Nuestra responsabilidad en caso de siniestros durante el transporte aéreo o marítimo, extravío o robos será de $100 dólares por recibo de almacén, si el cliente no asegura la carga. Estoy de acuerdo con que este envío está sujeto a los controles de seguridad de la compañía y otras regulaciones gubernamentales. SHIPPER autoriza a {empresaNombre} a que inspeccione toda la carga ofrecida del comercio aéreo a partir de la fecha de esta notificación de acuerdo con su Programa de Seguridad Standart de Transporte Aéreo Indirecto (IACSSP) aprobado por la TSA. Al recibir este documento y girar instrucciones de envío, da fe de haber leído, entendido y estar totalmente de acuerdo con los términos y regulaciones.
               </div>
 
@@ -2952,7 +2961,7 @@ export default function ENEXSystem(){
 
         <div className="mft">
           <button className="btn-s" onClick={()=>setSelWR(null)}>Cerrar</button>
-          <button className="btn-g" style={{fontSize:10,padding:"4px 10px"}}>📧 Enviar al Cliente</button>
+          <button className="btn-g" style={{fontSize:12,padding:"4px 10px"}}>📧 Enviar al Cliente</button>
         </div>
       </div>
     </div>
@@ -2965,7 +2974,7 @@ export default function ENEXSystem(){
         <div className="mhd">
           <div className="mt">{showStatModal.ic} {showStatModal.label} — {showStatModal.rows.length} registros</div>
           <div style={{display:"flex",gap:6}}>
-            <button className="btn-p" style={{fontSize:10,padding:"4px 10px"}} onClick={()=>window.print()}>🖨 Imprimir lista</button>
+            <button className="btn-p" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>window.print()}>🖨 Imprimir lista</button>
             <button className="mcl" onClick={()=>setShowStatModal(null)}>✕</button>
           </div>
         </div>
@@ -3098,12 +3107,12 @@ export default function ENEXSystem(){
       <div className="page-scroll">
         {/* BÚSQUEDA */}
         <div className="card" style={{marginBottom:14,maxWidth:700}}>
-          <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:14,fontWeight:700,color:"var(--navy)",marginBottom:12}}>
+          <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:16,fontWeight:700,color:"var(--navy)",marginBottom:12}}>
             👤 Estado de Cuenta — Búsqueda de Cliente
           </div>
           <div style={{position:"relative"}}>
             <div style={{display:"flex",gap:8}}>
-              <input className="fi" style={{flex:1,fontSize:13}} value={ecSearch}
+              <input className="fi" style={{flex:1,fontSize:15}} value={ecSearch}
                 onChange={e=>buscarCliente(e.target.value)}
                 placeholder="Buscar por nombre, casillero, email o teléfono…"/>
               {ecCliente&&<button className="btn-s" onClick={()=>{setEcCliente(null);setEcSearch("");setEcResults([]);}}>✕ Limpiar</button>}
@@ -3115,10 +3124,10 @@ export default function ENEXSystem(){
                     style={{padding:"10px 14px",cursor:"pointer",borderBottom:"1px solid var(--b2)",display:"flex",alignItems:"center",gap:10}}
                     onMouseEnter={e=>e.currentTarget.style.background="#EEF3FF"}
                     onMouseLeave={e=>e.currentTarget.style.background=""}>
-                    <div style={{width:32,height:32,borderRadius:8,background:"var(--navy)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:12,flexShrink:0}}>{initials(c)}</div>
+                    <div style={{width:32,height:32,borderRadius:8,background:"var(--navy)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:14,flexShrink:0}}>{initials(c)}</div>
                     <div>
-                      <div style={{fontWeight:600,color:"var(--t1)",fontSize:13}}>{fullName(c)}</div>
-                      <div style={{fontSize:11,color:"var(--t3)"}}>{c.casillero} · {c.email} · {c.tel1}</div>
+                      <div style={{fontWeight:600,color:"var(--t1)",fontSize:15}}>{fullName(c)}</div>
+                      <div style={{fontSize:13,color:"var(--t3)"}}>{c.casillero} · {c.email} · {c.tel1}</div>
                     </div>
                   </div>
                 ))}
@@ -3131,10 +3140,10 @@ export default function ENEXSystem(){
           <>
             {/* HEADER CLIENTE */}
             <div style={{display:"grid",gridTemplateColumns:"auto 1fr auto",gap:16,marginBottom:14,background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:12,padding:"16px 20px",boxShadow:"var(--shadow)",alignItems:"center"}}>
-              <div style={{width:56,height:56,borderRadius:12,background:"var(--navy)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:20}}>{initials(ecCliente)}</div>
+              <div style={{width:56,height:56,borderRadius:12,background:"var(--navy)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:22}}>{initials(ecCliente)}</div>
               <div>
-                <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:20,fontWeight:700,color:"var(--navy)"}}>{fullName(ecCliente)}</div>
-                <div style={{display:"flex",gap:16,marginTop:4,fontSize:11,color:"var(--t2)",flexWrap:"wrap"}}>
+                <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:22,fontWeight:700,color:"var(--navy)"}}>{fullName(ecCliente)}</div>
+                <div style={{display:"flex",gap:16,marginTop:4,fontSize:13,color:"var(--t2)",flexWrap:"wrap"}}>
                   <span>📦 Casillero: <strong style={{color:"var(--gold2)",fontFamily:"'DM Mono',monospace"}}>{ecCliente.casillero}</strong></span>
                   <span>📧 {ecCliente.email}</span>
                   <span>📞 {ecCliente.tel1}</span>
@@ -3142,8 +3151,8 @@ export default function ENEXSystem(){
                 </div>
               </div>
               <div style={{display:"flex",gap:8,flexShrink:0}}>
-                {hasPerm("crear_wr")&&<button className="btn-p" style={{fontSize:11,padding:"6px 12px"}} onClick={()=>openWRModalForClient(ecCliente)}>+ Nuevo WR</button>}
-                {hasPerm("crear_reempaque")&&<button className="btn-s" style={{fontSize:11,padding:"6px 12px"}} onClick={()=>setRpqCliModal({cliente:ecCliente,selectedIds:[]})}>🔁 Reempaque</button>}
+                {hasPerm("crear_wr")&&<button className="btn-p" style={{fontSize:13,padding:"6px 12px"}} onClick={()=>openWRModalForClient(ecCliente)}>+ Nuevo WR</button>}
+                {hasPerm("crear_reempaque")&&<button className="btn-s" style={{fontSize:13,padding:"6px 12px"}} onClick={()=>setRpqCliModal({cliente:ecCliente,selectedIds:[]})}>🔁 Reempaque</button>}
               </div>
             </div>
 
@@ -3158,9 +3167,9 @@ export default function ENEXSystem(){
                 {ic:"💵",v:`$${totalValorC}`,l:"Valor Total"},
               ].map((s,i)=>(
                 <div key={i} style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,padding:"10px 13px",boxShadow:"var(--shadow)"}}>
-                  <div style={{fontSize:15,marginBottom:4}}>{s.ic}</div>
-                  <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:18,fontWeight:700,color:"var(--navy)"}}>{s.v}</div>
-                  <div style={{fontSize:10,color:"var(--t2)",marginTop:2}}>{s.l}</div>
+                  <div style={{fontSize:17,marginBottom:4}}>{s.ic}</div>
+                  <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:20,fontWeight:700,color:"var(--navy)"}}>{s.v}</div>
+                  <div style={{fontSize:12,color:"var(--t2)",marginTop:2}}>{s.l}</div>
                 </div>
               ))}
             </div>
@@ -3188,11 +3197,11 @@ export default function ENEXSystem(){
                       }).length;
                       return (
                         <button key={f.k} onClick={()=>setEcFiltro(f.k)}
-                          style={{padding:"4px 10px",borderRadius:5,border:"none",cursor:"pointer",fontSize:11,fontWeight:600,
+                          style={{padding:"4px 10px",borderRadius:5,border:"none",cursor:"pointer",fontSize:13,fontWeight:600,
                             background:ecFiltro===f.k?"var(--navy)":"transparent",
                             color:ecFiltro===f.k?"#fff":"var(--t2)",transition:"all .1s",display:"flex",alignItems:"center",gap:4}}>
                           {f.l}
-                          <span style={{background:ecFiltro===f.k?"rgba(255,255,255,.2)":"var(--bg5)",borderRadius:3,padding:"0 5px",fontSize:9,fontWeight:800}}>{cnt}</span>
+                          <span style={{background:ecFiltro===f.k?"rgba(255,255,255,.2)":"var(--bg5)",borderRadius:3,padding:"0 5px",fontSize:11,fontWeight:800}}>{cnt}</span>
                         </button>
                       );
                     })}
@@ -3208,17 +3217,17 @@ export default function ENEXSystem(){
                     <option value="">Todos los años</option>
                     {anios.map(a=><option key={a} value={a}>{a}</option>)}
                   </select>
-                  <span style={{fontSize:10,color:"var(--t3)",padding:"2px 8px",background:"var(--bg4)",border:"1px solid var(--b1)",borderRadius:4}}>{wrCliente.length} registros</span>
-                  <button className="btn-p" style={{fontSize:10,padding:"4px 10px"}} onClick={()=>window.print()}>🖨 Imprimir</button>
+                  <span style={{fontSize:12,color:"var(--t3)",padding:"2px 8px",background:"var(--bg4)",border:"1px solid var(--b1)",borderRadius:4}}>{wrCliente.length} registros</span>
+                  <button className="btn-p" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>window.print()}>🖨 Imprimir</button>
                 </div>
               </div>
 
               <div style={{overflowX:"auto"}}>
-                <table style={{width:"100%",borderCollapse:"collapse",fontSize:10.5,whiteSpace:"nowrap"}}>
+                <table style={{width:"100%",borderCollapse:"collapse",fontSize:12.5,whiteSpace:"nowrap"}}>
                   <thead>
                     <tr style={{background:"var(--navy)"}}>
                       {["N° WR","Cajas","Peso lb","P.Vol lb","Ft³","M³","Recibido","Confirmado","Consolidado","Enviado","Alm. Destino","Entregado","N° Guía","Tipo Envío","Contenido","Valor"].map(h=>(
-                        <th key={h} style={{color:"rgba(255,255,255,.8)",fontSize:9,letterSpacing:.8,textTransform:"uppercase",fontWeight:700,padding:"7px 8px",textAlign:"left",borderBottom:"2px solid var(--navy3)",whiteSpace:"nowrap"}}>{h}</th>
+                        <th key={h} style={{color:"rgba(255,255,255,.8)",fontSize:11,letterSpacing:.8,textTransform:"uppercase",fontWeight:700,padding:"7px 8px",textAlign:"left",borderBottom:"2px solid var(--navy3)",whiteSpace:"nowrap"}}>{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -3233,7 +3242,7 @@ export default function ENEXSystem(){
                         onMouseLeave={e=>{Array.from(e.currentTarget.cells).forEach(c=>c.style.background="");}}>
                         {/* N° WR — clickeable para abrir detalle */}
                         <td style={{padding:"7px 8px"}}>
-                          <div onClick={()=>setSelWR(w)} style={{fontFamily:"'DM Mono',monospace",fontWeight:700,fontSize:11,color:"var(--navy)",background:"#EEF3FF",padding:"2px 6px",borderRadius:4,border:"1px solid #B8C8F0",display:"inline-block",cursor:"pointer",textDecoration:"underline"}}
+                          <div onClick={()=>setSelWR(w)} style={{fontFamily:"'DM Mono',monospace",fontWeight:700,fontSize:13,color:"var(--navy)",background:"#EEF3FF",padding:"2px 6px",borderRadius:4,border:"1px solid #B8C8F0",display:"inline-block",cursor:"pointer",textDecoration:"underline"}}
                             onMouseEnter={e=>e.currentTarget.style.background="#D8E8FF"}
                             onMouseLeave={e=>e.currentTarget.style.background="#EEF3FF"}>
                             {w.id}
@@ -3245,14 +3254,14 @@ export default function ENEXSystem(){
                         <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",fontWeight:600,color:"var(--orange)"}}>{w.volLb||"—"}lb</td>
                         <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",color:"var(--sky)"}}>{w.ft3}</td>
                         <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",color:"var(--teal)"}}>{w.m3}</td>
-                        <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",fontSize:10}}>{getStatusDate(w,"recibido")}</td>
-                        <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",fontSize:10,color:getStatusDate(w,"confirmado")==="—"?"var(--t3)":"var(--t1)"}}>{getStatusDate(w,"confirmado")}</td>
-                        <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",fontSize:10,color:getStatusDate(w,"consolidado")==="—"?"var(--t3)":"var(--t1)"}}>{getStatusDate(w,"consolidado")}</td>
-                        <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",fontSize:10,color:getStatusDate(w,"enviado")==="—"?"var(--t3)":"var(--t1)"}}>{getStatusDate(w,"enviado")}</td>
-                        <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",fontSize:10,color:getStatusDate(w,"almacen_dest")==="—"?"var(--t3)":"var(--t1)"}}>{getStatusDate(w,"almacen_dest")}</td>
-                        <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",fontSize:10,color:getStatusDate(w,"entregado")==="—"?"var(--t3)":"var(--green)",fontWeight:getStatusDate(w,"entregado")==="—"?400:700}}>{getStatusDate(w,"entregado")}</td>
+                        <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",fontSize:12}}>{getStatusDate(w,"recibido")}</td>
+                        <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",fontSize:12,color:getStatusDate(w,"confirmado")==="—"?"var(--t3)":"var(--t1)"}}>{getStatusDate(w,"confirmado")}</td>
+                        <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",fontSize:12,color:getStatusDate(w,"consolidado")==="—"?"var(--t3)":"var(--t1)"}}>{getStatusDate(w,"consolidado")}</td>
+                        <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",fontSize:12,color:getStatusDate(w,"enviado")==="—"?"var(--t3)":"var(--t1)"}}>{getStatusDate(w,"enviado")}</td>
+                        <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",fontSize:12,color:getStatusDate(w,"almacen_dest")==="—"?"var(--t3)":"var(--t1)"}}>{getStatusDate(w,"almacen_dest")}</td>
+                        <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",fontSize:12,color:getStatusDate(w,"entregado")==="—"?"var(--t3)":"var(--green)",fontWeight:getStatusDate(w,"entregado")==="—"?400:700}}>{getStatusDate(w,"entregado")}</td>
                         {/* N° Guía — generado al consolidar, NO es el tracking del carrier */}
-                        <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",fontSize:10,color:"var(--purple)",fontWeight:600}}>{getNumGuia(w)}</td>
+                        <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--purple)",fontWeight:600}}>{getNumGuia(w)}</td>
                         <td style={{padding:"7px 8px"}}><TypeBadge t={w.tipoEnvio}/></td>
                         <td style={{padding:"7px 8px",maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",color:"var(--t2)"}}>{w.descripcion||"—"}</td>
                         <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--green)"}}>${w.valor?.toFixed(2)||"0.00"}</td>
@@ -3262,7 +3271,7 @@ export default function ENEXSystem(){
                   {wrCliente.length>0&&(
                     <tfoot>
                       <tr style={{background:"var(--bg4)",borderTop:"2px solid var(--navy)"}}>
-                        <td colSpan={2} style={{padding:"8px",fontWeight:700,fontSize:11,color:"var(--navy)"}}>TOTALES</td>
+                        <td colSpan={2} style={{padding:"8px",fontWeight:700,fontSize:13,color:"var(--navy)"}}>TOTALES</td>
                         <td style={{padding:"8px",fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--t1)"}}>{totalPesoLbC}lb</td>
                         <td style={{padding:"8px",fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--orange)"}}>{totalVolLbC}lb</td>
                         <td style={{padding:"8px",fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--sky)"}}>{totalFt3C}</td>
@@ -3296,7 +3305,7 @@ export default function ENEXSystem(){
                   <div className="mt">🔁 Reempaque — {fullName(cli)}</div>
                   <button className="mcl" onClick={()=>setRpqCliModal(null)}>✕</button>
                 </div>
-                <div style={{padding:"0 14px 10px",fontSize:11,color:"var(--t2)"}}>Selecciona los WR de este cliente que se agruparán. Se creará un nuevo WR y los seleccionados quedarán marcados como REEMPACADO.</div>
+                <div style={{padding:"0 14px 10px",fontSize:13,color:"var(--t2)"}}>Selecciona los WR de este cliente que se agruparán. Se creará un nuevo WR y los seleccionados quedarán marcados como REEMPACADO.</div>
                 <div style={{maxHeight:"55vh",overflow:"auto",margin:"0 14px",border:"1px solid var(--b1)",borderRadius:8}}>
                   <table className="wt">
                     <thead><tr>
@@ -3321,7 +3330,7 @@ export default function ENEXSystem(){
                   </table>
                 </div>
                 <div className="mft">
-                  <div style={{fontSize:11,color:"var(--t2)",marginRight:"auto"}}>Seleccionados: <strong>{ids.length}</strong></div>
+                  <div style={{fontSize:13,color:"var(--t2)",marginRight:"auto"}}>Seleccionados: <strong>{ids.length}</strong></div>
                   <button className="btn-s" onClick={()=>setRpqCliModal(null)}>Cancelar</button>
                   <button className="btn-p" disabled={ids.length===0} style={{opacity:ids.length===0?.5:1}} onClick={()=>{
                     const sel=[...ids];
@@ -3434,8 +3443,8 @@ export default function ENEXSystem(){
       {/* HEADER */}
       <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
         <div style={{flex:1}}>
-          <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:16,fontWeight:700,color:"var(--navy)"}}>🗂️ Consolidación de Embarques</div>
-          <div style={{fontSize:11,color:"var(--t3)",marginTop:2}}>Agrupa WR confirmados en contenedores y genera el embarque.</div>
+          <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:18,fontWeight:700,color:"var(--navy)"}}>🗂️ Consolidación de Embarques</div>
+          <div style={{fontSize:13,color:"var(--t3)",marginTop:2}}>Agrupa WR confirmados en contenedores y genera el embarque.</div>
         </div>
         <button className="btn-p" onClick={()=>setShowNewConsol(true)}>+ Nuevo Embarque</button>
       </div>
@@ -3462,8 +3471,8 @@ export default function ENEXSystem(){
                 const curPhaseIdx=currentGuidePhaseIdx(stActual?.code||"4");
                 return (
                 <tr key={c.id}>
-                  <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",background:"#EEF3FF",padding:"2px 6px",borderRadius:4,border:"1px solid #B8C8F0",fontSize:11}}>{c.id}</span></td>
-                  <td style={{fontFamily:"'DM Mono',monospace",fontSize:10}}>{fmtDate(c.fecha)}</td>
+                  <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",background:"#EEF3FF",padding:"2px 6px",borderRadius:4,border:"1px solid #B8C8F0",fontSize:13}}>{c.id}</span></td>
+                  <td style={{fontFamily:"'DM Mono',monospace",fontSize:12}}>{fmtDate(c.fecha)}</td>
                   <td style={{fontWeight:600,color:"var(--t1)"}}>{c.destino}</td>
                   <td><TypeBadge t={c.tipoEnvio}/></td>
                   <td style={{textAlign:"center",fontWeight:700}}>{c.containers.length}</td>
@@ -3471,14 +3480,14 @@ export default function ENEXSystem(){
                   <td style={{textAlign:"center"}}>{c.totalCajas}</td>
                   <td style={{fontFamily:"'DM Mono',monospace",color:"var(--t1)",fontWeight:600}}>{c.totalLb}lb</td>
                   <td style={{fontFamily:"'DM Mono',monospace",color:"var(--sky)"}}>{c.totalFt3}</td>
-                  <td style={{fontFamily:"'DM Mono',monospace",fontSize:10,color:"var(--cyan)"}}>{c.numVuelo||"—"}</td>
-                  <td style={{fontFamily:"'DM Mono',monospace",fontSize:10,color:"var(--purple)"}}>{c.awb||c.bl||"—"}</td>
-                  <td style={{fontFamily:"'DM Mono',monospace",fontSize:10}}>{c.fechaSalida||"—"}</td>
+                  <td style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--cyan)"}}>{c.numVuelo||"—"}</td>
+                  <td style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--purple)"}}>{c.awb||c.bl||"—"}</td>
+                  <td style={{fontFamily:"'DM Mono',monospace",fontSize:12}}>{c.fechaSalida||"—"}</td>
                   <td style={{minWidth:320,padding:"6px 8px"}}>
                     {/* Estado actual destacado */}
                     <div style={{marginBottom:6,display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
                       <StBadge st={stActual||{cls:"s3",label:c.status||"En preparación"}}/>
-                      <span style={{fontSize:10,color:"var(--t3)"}}>
+                      <span style={{fontSize:12,color:"var(--t3)"}}>
                         {curPhaseIdx>=0?`Fase ${curPhaseIdx+1}/7`:"Pre-consolidado"}
                       </span>
                     </div>
@@ -3500,12 +3509,12 @@ export default function ENEXSystem(){
                             style={{
                               flex:1,cursor:editable?"pointer":"not-allowed",padding:"4px 2px",textAlign:"center",
                               background:bg,color,borderRadius:4,opacity:editable?1:.6,
-                              fontSize:9,fontWeight:isCur?700:600,
+                              fontSize:11,fontWeight:isCur?700:600,
                               border:isCur?"1.5px solid var(--navy)":"1px solid transparent",
                               transition:"all .15s",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",
                             }}>
-                            <span style={{display:"block",fontSize:11,lineHeight:1}}>{ph.icon}</span>
-                            <span style={{display:"block",fontSize:8,marginTop:1,lineHeight:1}}>{ph.short}</span>
+                            <span style={{display:"block",fontSize:13,lineHeight:1}}>{ph.icon}</span>
+                            <span style={{display:"block",fontSize:10,marginTop:1,lineHeight:1}}>{ph.short}</span>
                           </span>
                         );
                       })}
@@ -3513,7 +3522,7 @@ export default function ENEXSystem(){
                   </td>
                   <td style={{minWidth:170}}>
                     <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
-                      <button className="btn-c" style={{fontSize:10,padding:"3px 8px"}} onClick={()=>setShowLabels({
+                      <button className="btn-c" style={{fontSize:12,padding:"3px 8px"}} onClick={()=>setShowLabels({
                         wr:{id:c.id,origCity:OFFICE_CONFIG.origCity,origCountry:"USA 🇺🇸",destCity:c.destino,destCountry:"Venezuela 🇻🇪",
                           consignee:"CONSOLIDADO",casillero:"—",fecha:c.fecha,branch:OFFICE_CONFIG.branch,tipoEnvio:c.tipoEnvio,
                           shipper:"ENEX",cajas:c.totalCajas,pesoLb:c.totalLb,volLb:c.totalVolLb,ft3:c.totalFt3,m3:c.totalM3},
@@ -3521,14 +3530,14 @@ export default function ENEXSystem(){
                         remitente:"ENEX",tipoEnvio:c.tipoEnvio,
                       })}>🏷️ Etiquetas</button>
                       {hasPerm("editar_guia")&&(
-                        <button className="btn-s" style={{fontSize:10,padding:"3px 8px"}} title="Editar guía"
+                        <button className="btn-s" style={{fontSize:12,padding:"3px 8px"}} title="Editar guía"
                           onClick={()=>{setCf({
                             destino:c.destino,tipoEnvio:c.tipoEnvio,fechaSalida:c.fechaSalida||"",numVuelo:c.numVuelo||"",
                             awb:c.awb||"",bl:c.bl||"",notas:c.notas||"",containers:c.containers||[],
                           });setEditConsolId(c.id);setShowNewConsol(true);}}>✏️ Editar</button>
                       )}
                       {hasPerm("borrar_guia")&&(
-                        <button className="btn-s" style={{fontSize:10,padding:"3px 8px",color:"var(--red)",borderColor:"var(--red)"}} title="Borrar guía"
+                        <button className="btn-s" style={{fontSize:12,padding:"3px 8px",color:"var(--red)",borderColor:"var(--red)"}} title="Borrar guía"
                           onClick={()=>{
                             if(!window.confirm(`¿Borrar guía consolidada ${c.id}?\nLos WR asociados quedarán libres (estado Confirmado).`))return;
                             // Liberar WR asociados → volver a estado "3" Confirmado
@@ -3609,7 +3618,7 @@ export default function ENEXSystem(){
             <div className="sdiv">WR CONFIRMADOS DISPONIBLES — clic para agregar al contenedor activo</div>
             <div style={{background:"var(--bg4)",border:"1px solid var(--b1)",borderRadius:8,padding:"8px 12px",marginBottom:14,maxHeight:160,overflowY:"auto"}}>
               {wrList.filter(w=>w.status?.code==="3"&&!cf.containers.some(c=>c.wr.some(r=>r.id===w.id))).length===0?(
-                <div style={{color:"var(--t3)",fontSize:11,padding:"8px 0"}}>No hay WR confirmados disponibles.</div>
+                <div style={{color:"var(--t3)",fontSize:13,padding:"8px 0"}}>No hay WR confirmados disponibles.</div>
               ):wrList.filter(w=>w.status?.code==="3"&&!cf.containers.some(c=>c.wr.some(r=>r.id===w.id))).map(w=>(
                 <div key={w.id} onClick={()=>{
                     // Add to last container (or first)
@@ -3620,10 +3629,10 @@ export default function ENEXSystem(){
                   style={{display:"inline-flex",alignItems:"center",gap:6,margin:"3px",padding:"5px 10px",background:"#fff",border:"2px solid #1A8A4A",borderRadius:6,cursor:"pointer",transition:"all .12s"}}
                   onMouseEnter={e=>{e.currentTarget.style.background="#E8F8EE";e.currentTarget.style.transform="scale(1.02)";}}
                   onMouseLeave={e=>{e.currentTarget.style.background="#fff";e.currentTarget.style.transform="";}}>
-                  <span style={{fontFamily:"'DM Mono',monospace",fontWeight:800,color:"var(--navy)",fontSize:12}}>{w.id}</span>
-                  <span style={{color:"var(--t2)",fontSize:11}}>{w.consignee}</span>
-                  <span style={{color:"var(--t3)",fontSize:10,background:"var(--bg4)",padding:"1px 5px",borderRadius:3}}>{w.cajas}cj · {w.pesoLb}lb</span>
-                  <span style={{color:"var(--green)",fontSize:12}}>+</span>
+                  <span style={{fontFamily:"'DM Mono',monospace",fontWeight:800,color:"var(--navy)",fontSize:14}}>{w.id}</span>
+                  <span style={{color:"var(--t2)",fontSize:13}}>{w.consignee}</span>
+                  <span style={{color:"var(--t3)",fontSize:12,background:"var(--bg4)",padding:"1px 5px",borderRadius:3}}>{w.cajas}cj · {w.pesoLb}lb</span>
+                  <span style={{color:"var(--green)",fontSize:14}}>+</span>
                 </div>
               ))}
             </div>
@@ -3640,7 +3649,7 @@ export default function ENEXSystem(){
                 <div key={ci} style={{border:"2px solid var(--navy)",borderRadius:10,marginBottom:12,overflow:"hidden"}}>
                   {/* Header container */}
                   <div style={{background:"var(--navy)",padding:"8px 14px",display:"flex",alignItems:"center",gap:10}}>
-                    <span style={{color:"#E5AE3A",fontFamily:"Arial,Helvetica,sans-serif",fontWeight:800,fontSize:14}}>
+                    <span style={{color:"#E5AE3A",fontFamily:"Arial,Helvetica,sans-serif",fontWeight:800,fontSize:16}}>
                       📦 CONTENEDOR {ci+1}
                     </span>
                     <select value={cont.tipo} onChange={e=>{
@@ -3654,22 +3663,22 @@ export default function ENEXSystem(){
                           ...(dims?{largo:dims.l,ancho:dims.a,alto:dims.h}:{})
                         }:c)}));
                       }}
-                      style={{background:"rgba(255,255,255,.15)",border:"1px solid rgba(255,255,255,.3)",borderRadius:5,color:"#fff",padding:"3px 8px",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                      style={{background:"rgba(255,255,255,.15)",border:"1px solid rgba(255,255,255,.3)",borderRadius:5,color:"#fff",padding:"3px 8px",fontSize:14,fontWeight:700,cursor:"pointer"}}>
                       <option value="" style={{background:"var(--navy)"}}>— Seleccionar tipo —</option>
                       {CONTAINER_TYPES.map(t=><option key={t.code} value={t.code} style={{background:"var(--navy)"}}>{t.name}</option>)}
                     </select>
-                    <span style={{fontSize:11,color:"rgba(255,255,255,.6)"}}>{cont.tipo?(contType?.dim||"Manual"):"Selecciona un tipo"}</span>
+                    <span style={{fontSize:13,color:"rgba(255,255,255,.6)"}}>{cont.tipo?(contType?.dim||"Manual"):"Selecciona un tipo"}</span>
                     <div style={{flex:1}}/>
-                    <span style={{fontSize:11,color:"#E5AE3A",fontWeight:600}}>{cont.wr.length} WR · {contWRCajas} cajas · {contWRPeso}lb</span>
+                    <span style={{fontSize:13,color:"#E5AE3A",fontWeight:600}}>{cont.wr.length} WR · {contWRCajas} cajas · {contWRPeso}lb</span>
                     {cf.containers.length>1&&(
-                      <button onClick={()=>removeContainer(ci)} style={{background:"rgba(204,34,51,.3)",border:"1px solid rgba(204,34,51,.5)",color:"#FF8888",borderRadius:5,padding:"2px 8px",cursor:"pointer",fontSize:11}}>🗑</button>
+                      <button onClick={()=>removeContainer(ci)} style={{background:"rgba(204,34,51,.3)",border:"1px solid rgba(204,34,51,.5)",color:"#FF8888",borderRadius:5,padding:"2px 8px",cursor:"pointer",fontSize:13}}>🗑</button>
                     )}
                   </div>
 
                   <div style={{padding:"12px 14px"}}>
                     {/* Barra de capacidad */}
                     <div style={{marginBottom:10}}>
-                      <div style={{display:"flex",justifyContent:"space-between",fontSize:10,marginBottom:3}}>
+                      <div style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:3}}>
                         <span style={{color:"var(--t2)"}}>Capacidad usada</span>
                         <span style={{fontFamily:"'DM Mono',monospace",fontWeight:600,color:pct>90?"var(--red)":pct>70?"var(--orange)":"var(--green)"}}>{contWRPeso}lb / {maxLb||"—"}lb ({maxLb?pct:0}%)</span>
                       </div>
@@ -3694,7 +3703,7 @@ export default function ENEXSystem(){
                     <div style={{marginBottom:8}}>
                       <div className="fl" style={{marginBottom:4}}>Escanear o escribir N° WR</div>
                       <div style={{display:"flex",gap:8}}>
-                        <input className="fi" style={{fontFamily:"'DM Mono',monospace",flex:1,fontWeight:600,fontSize:13}}
+                        <input className="fi" style={{fontFamily:"'DM Mono',monospace",flex:1,fontWeight:600,fontSize:15}}
                           autoFocus={ci===cf.containers.length-1}
                           value={contScanVal[ci]||""}
                           onChange={e=>handleContScan(ci,e.target.value)}
@@ -3702,25 +3711,25 @@ export default function ENEXSystem(){
                           placeholder="Escanear o escribir N° WR…"/>
                         <button className="scan-btn" onClick={()=>doContScan(ci)}>📡 Agregar</button>
                       </div>
-                      {contScanErr[ci]&&<div style={{fontSize:10,color:"var(--red)",marginTop:4}}>⚠️ {contScanErr[ci]}</div>}
+                      {contScanErr[ci]&&<div style={{fontSize:12,color:"var(--red)",marginTop:4}}>⚠️ {contScanErr[ci]}</div>}
                     </div>
 
                     {/* WR en este contenedor */}
                     {cont.wr.length>0&&(
                       <div style={{border:"1px solid var(--b1)",borderRadius:7,overflow:"hidden"}}>
-                        <table className="ct" style={{fontSize:10}}>
+                        <table className="ct" style={{fontSize:12}}>
                           <thead><tr><th>#</th><th>N° WR</th><th>Consignatario</th><th>Cajas</th><th>Peso lb</th><th>Ft³</th><th>Descripción</th><th></th></tr></thead>
                           <tbody>
                             {cont.wr.map((w,wi)=>(
                               <tr key={w.id}>
                                 <td style={{color:"var(--t3)"}}>{wi+1}</td>
-                                <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",fontSize:10}}>{w.id}</span></td>
+                                <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",fontSize:12}}>{w.id}</span></td>
                                 <td style={{fontWeight:600}}>{w.consignee}</td>
                                 <td style={{textAlign:"center"}}>{w.cajas}</td>
                                 <td style={{fontFamily:"'DM Mono',monospace",fontWeight:600}}>{w.pesoLb}lb</td>
                                 <td style={{fontFamily:"'DM Mono',monospace",color:"var(--sky)"}}>{w.ft3}</td>
                                 <td style={{color:"var(--t2)"}}>{w.descripcion||"—"}</td>
-                                <td><span style={{cursor:"pointer",color:"var(--red)",fontSize:12}} onClick={()=>{
+                                <td><span style={{cursor:"pointer",color:"var(--red)",fontSize:14}} onClick={()=>{
                                   scCont(ci,"wr",cont.wr.filter(r=>r.id!==w.id));
                                   setWrList(p=>p.map(x=>x.id===w.id?{...x,status:WR_STATUSES.find(s=>s.code==="3")||x.status}:x));
                                 }}>✕</span></td>
@@ -3736,8 +3745,8 @@ export default function ENEXSystem(){
             })}
 
             {/* BOTÓN AGREGAR CONTENEDOR */}
-            <button onClick={addContainer} style={{width:"100%",padding:"10px",border:"2px dashed var(--navy)",borderRadius:10,background:"rgba(26,43,74,.04)",color:"var(--navy)",fontSize:13,fontWeight:700,cursor:"pointer",marginBottom:14,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
-              <span style={{fontSize:16}}>📦</span> + Agregar
+            <button onClick={addContainer} style={{width:"100%",padding:"10px",border:"2px dashed var(--navy)",borderRadius:10,background:"rgba(26,43,74,.04)",color:"var(--navy)",fontSize:15,fontWeight:700,cursor:"pointer",marginBottom:14,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+              <span style={{fontSize:18}}>📦</span> + Agregar
             </button>
 
             {/* TOTALES */}
@@ -3749,11 +3758,11 @@ export default function ENEXSystem(){
               const tCajas=allWR.reduce((s,w)=>s+(w.cajas||1),0);
               return tWR>0?(
                 <div style={{background:"var(--bg4)",border:"1px solid var(--b1)",borderRadius:8,padding:"10px 14px",marginBottom:14,display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8}}>
-                  <div style={{fontWeight:700,color:"var(--navy)",fontSize:10,textTransform:"uppercase",letterSpacing:1,gridColumn:"1/-1",marginBottom:4}}>TOTALES DEL EMBARQUE</div>
+                  <div style={{fontWeight:700,color:"var(--navy)",fontSize:12,textTransform:"uppercase",letterSpacing:1,gridColumn:"1/-1",marginBottom:4}}>TOTALES DEL EMBARQUE</div>
                   {[["WR incluidos",tWR,"var(--navy)"],["Total cajas",tCajas,"var(--t1)"],["Peso total",`${tLb}lb`,"var(--t1)"],["Ft³ total",String(tFt3),"var(--sky)"]].map(([l,v,c])=>(
                     <div key={l} style={{background:"var(--bg2)",borderRadius:6,padding:"7px 10px",border:"1px solid var(--b1)"}}>
-                      <div style={{fontSize:9,color:"var(--t3)",fontWeight:600,textTransform:"uppercase",letterSpacing:.8,marginBottom:3}}>{l}</div>
-                      <div style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:c,fontSize:14}}>{v}</div>
+                      <div style={{fontSize:11,color:"var(--t3)",fontWeight:600,textTransform:"uppercase",letterSpacing:.8,marginBottom:3}}>{l}</div>
+                      <div style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:c,fontSize:16}}>{v}</div>
                     </div>
                   ))}
                 </div>
@@ -3780,8 +3789,8 @@ export default function ENEXSystem(){
     return (
     <div className="page-scroll">
       <div className="card" style={{maxWidth:640}}>
-        <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:15,fontWeight:700,color:"var(--navy)",marginBottom:4}}>🖨️ Impresión</div>
-        <div style={{fontSize:11,color:"var(--t3)",marginBottom:10}}>Etiquetas de caja, guía consolidada, notas de entrega, egresos y recibos (próximamente).</div>
+        <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:17,fontWeight:700,color:"var(--navy)",marginBottom:4}}>🖨️ Impresión</div>
+        <div style={{fontSize:13,color:"var(--t3)",marginBottom:10}}>Etiquetas de caja, guía consolidada, notas de entrega, egresos y recibos (próximamente).</div>
         {/* Selector tipo de impresión */}
         <div style={{display:"flex",gap:6,marginBottom:12,flexWrap:"wrap"}}>
           <button className={`btn-${etqMode==="wr"?"p":"s"}`} style={{flex:"1 1 160px"}} onClick={()=>{_etqMode("wr");setEtqSearch("");}}>📦 Etiquetas WR</button>
@@ -3795,10 +3804,10 @@ export default function ENEXSystem(){
         {etqMode==="wr"&&etqSearch.length>1&&(wrList||[]).filter(w=>w.id.toLowerCase().includes(etqSearch.toLowerCase())||(w.consignee||"").toLowerCase().includes(etqSearch.toLowerCase())).slice(0,20).map(w=>(
           <div key={w.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:8,border:"1px solid var(--b1)",marginBottom:6,cursor:"pointer",background:"var(--bg3)"}}
             onClick={()=>setShowLabels({wr:w,dims:w.dims||[],remitente:w.shipper||"",tipoEnvio:w.tipoEnvio||""})}>
-            <div style={{fontFamily:"'DM Mono',monospace",fontWeight:700,fontSize:12,color:"var(--navy)"}}>{w.id}</div>
-            <div style={{flex:1}}><div style={{fontWeight:600,fontSize:13}}>{w.consignee}</div><div style={{fontSize:11,color:"var(--t3)"}}>{w.casillero} · {w.cajas} cajas</div></div>
+            <div style={{fontFamily:"'DM Mono',monospace",fontWeight:700,fontSize:14,color:"var(--navy)"}}>{w.id}</div>
+            <div style={{flex:1}}><div style={{fontWeight:600,fontSize:15}}>{w.consignee}</div><div style={{fontSize:13,color:"var(--t3)"}}>{w.casillero} · {w.cajas} cajas</div></div>
             <StBadge st={w.status}/>
-            <span style={{color:"var(--cyan)",fontSize:12,fontWeight:600}}>🏷️ Imprimir</span>
+            <span style={{color:"var(--cyan)",fontSize:14,fontWeight:600}}>🏷️ Imprimir</span>
           </div>
         ))}
         {etqMode==="guia"&&etqSearch.length>1&&(consolList||[]).filter(g=>{
@@ -3807,18 +3816,18 @@ export default function ENEXSystem(){
         }).slice(0,20).map(g=>(
           <div key={g.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:8,border:"1px solid var(--b1)",marginBottom:6,cursor:"pointer",background:"var(--bg3)"}}
             onClick={()=>setShowConsolLabels({guia:g,containers:g.containers||[],remitente:empresaNombre||"ENEX"})}>
-            <div style={{fontFamily:"'DM Mono',monospace",fontWeight:700,fontSize:12,color:"var(--purple)"}}>{g.id}</div>
+            <div style={{fontFamily:"'DM Mono',monospace",fontWeight:700,fontSize:14,color:"var(--purple)"}}>{g.id}</div>
             <div style={{flex:1}}>
-              <div style={{fontWeight:600,fontSize:13}}>{g.destino||"—"} · {g.tipoEnvio||"—"}</div>
-              <div style={{fontSize:11,color:"var(--t3)"}}>{(g.containers||[]).length} cont. · {g.totalWR||0} WR · {g.totalCajas||0} cajas</div>
+              <div style={{fontWeight:600,fontSize:15}}>{g.destino||"—"} · {g.tipoEnvio||"—"}</div>
+              <div style={{fontSize:13,color:"var(--t3)"}}>{(g.containers||[]).length} cont. · {g.totalWR||0} WR · {g.totalCajas||0} cajas</div>
             </div>
-            <span style={{fontSize:10,color:"var(--t2)",fontWeight:600,background:"var(--bg4)",padding:"3px 7px",borderRadius:4,border:"1px solid var(--b1)"}}>{g.status||"—"}</span>
-            <span style={{color:"var(--cyan)",fontSize:12,fontWeight:600}}>🏷️ Imprimir</span>
+            <span style={{fontSize:12,color:"var(--t2)",fontWeight:600,background:"var(--bg4)",padding:"3px 7px",borderRadius:4,border:"1px solid var(--b1)"}}>{g.status||"—"}</span>
+            <span style={{color:"var(--cyan)",fontSize:14,fontWeight:600}}>🏷️ Imprimir</span>
           </div>
         ))}
-        {etqSearch.length<=1&&<div style={{color:"var(--t3)",fontSize:12,textAlign:"center",padding:20}}>Escribe al menos 2 caracteres para buscar</div>}
-        {etqSearch.length>1&&etqMode==="wr"&&(wrList||[]).filter(w=>w.id.toLowerCase().includes(etqSearch.toLowerCase())||(w.consignee||"").toLowerCase().includes(etqSearch.toLowerCase())).length===0&&<div style={{color:"var(--t3)",fontSize:12,textAlign:"center",padding:20}}>No se encontraron WR.</div>}
-        {etqSearch.length>1&&etqMode==="guia"&&(consolList||[]).filter(g=>{const q=etqSearch.toLowerCase();return String(g.id||"").toLowerCase().includes(q)||String(g.destino||"").toLowerCase().includes(q)||String(g.tipoEnvio||"").toLowerCase().includes(q);}).length===0&&<div style={{color:"var(--t3)",fontSize:12,textAlign:"center",padding:20}}>No se encontraron guías consolidadas.</div>}
+        {etqSearch.length<=1&&<div style={{color:"var(--t3)",fontSize:14,textAlign:"center",padding:20}}>Escribe al menos 2 caracteres para buscar</div>}
+        {etqSearch.length>1&&etqMode==="wr"&&(wrList||[]).filter(w=>w.id.toLowerCase().includes(etqSearch.toLowerCase())||(w.consignee||"").toLowerCase().includes(etqSearch.toLowerCase())).length===0&&<div style={{color:"var(--t3)",fontSize:14,textAlign:"center",padding:20}}>No se encontraron WR.</div>}
+        {etqSearch.length>1&&etqMode==="guia"&&(consolList||[]).filter(g=>{const q=etqSearch.toLowerCase();return String(g.id||"").toLowerCase().includes(q)||String(g.destino||"").toLowerCase().includes(q)||String(g.tipoEnvio||"").toLowerCase().includes(q);}).length===0&&<div style={{color:"var(--t3)",fontSize:14,textAlign:"center",padding:20}}>No se encontraron guías consolidadas.</div>}
       </div>
     </div>
     );
@@ -3849,7 +3858,7 @@ export default function ENEXSystem(){
         <div style={{display:"flex",gap:4,marginBottom:16,flexWrap:"wrap"}}>
           {CFG_TABS.map(t=>(
             <button key={t.k} onClick={()=>{setCfgTab(t.k);if(t.k!=="actividad")setActFilter("");}}
-              style={{padding:"7px 14px",borderRadius:8,border:"1px solid var(--b1)",cursor:"pointer",fontSize:12,fontWeight:600,
+              style={{padding:"7px 14px",borderRadius:8,border:"1px solid var(--b1)",cursor:"pointer",fontSize:14,fontWeight:600,
                 background:cfgTab===t.k?"var(--navy)":"var(--bg2)",
                 color:cfgTab===t.k?"#fff":"var(--t2)",transition:"all .1s"}}>
               {t.ic} {t.l}
@@ -3862,8 +3871,8 @@ export default function ENEXSystem(){
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
             {/* WR */}
             <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,padding:"16px"}}>
-              <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:14,fontWeight:700,color:"var(--navy)",marginBottom:4}}>📦 Numeración de WR</div>
-              <div style={{fontSize:11,color:"var(--t3)",marginBottom:12}}>Selecciona el tipo y el número de inicio de secuencia.</div>
+              <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:16,fontWeight:700,color:"var(--navy)",marginBottom:4}}>📦 Numeración de WR</div>
+              <div style={{fontSize:13,color:"var(--t3)",marginBottom:12}}>Selecciona el tipo y el número de inicio de secuencia.</div>
               {[
                 {v:1,l:"Tipo 1 — 7 dígitos secuenciales",ex:"0000001"},
                 {v:2,l:"Tipo 2 — Indicativo + Oficina Origen + Oficina Destino + Secuencia",ex:`${empresaSlug}01MIA01VLN0000001`},
@@ -3872,9 +3881,9 @@ export default function ENEXSystem(){
                 <div key={t.v} onClick={()=>setWrNumTipo(t.v)} style={{padding:"10px 12px",borderRadius:8,border:`2px solid ${wrNumTipo===t.v?"var(--navy)":"var(--b1)"}`,background:wrNumTipo===t.v?"#EEF3FF":"var(--bg3)",marginBottom:8,cursor:"pointer"}}>
                   <div style={{display:"flex",alignItems:"center",gap:8}}>
                     <div style={{width:16,height:16,borderRadius:"50%",border:`2px solid ${wrNumTipo===t.v?"var(--navy)":"var(--b1)"}`,background:wrNumTipo===t.v?"var(--navy)":"transparent",flexShrink:0}}/>
-                    <div style={{fontWeight:600,fontSize:12,color:"var(--t1)"}}>{t.l}</div>
+                    <div style={{fontWeight:600,fontSize:14,color:"var(--t1)"}}>{t.l}</div>
                   </div>
-                  <div style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:"var(--cyan)",marginTop:4,marginLeft:24}}>Ej: {t.ex}</div>
+                  <div style={{fontFamily:"'DM Mono',monospace",fontSize:13,color:"var(--cyan)",marginTop:4,marginLeft:24}}>Ej: {t.ex}</div>
                 </div>
               ))}
               {wrNumTipo===2&&(
@@ -3887,15 +3896,15 @@ export default function ENEXSystem(){
                 <div className="fl">Número de inicio de secuencia</div>
                 <input className="fi" type="number" min="1" style={{maxWidth:150,fontFamily:"'DM Mono',monospace",fontWeight:700}} value={wrSecInicio} onChange={e=>setWrSecInicio(parseInt(e.target.value)||1)}/>
               </div>
-              <div style={{marginTop:10,padding:"8px 12px",background:"var(--bg4)",borderRadius:6,fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--navy)",fontWeight:700}}>
+              <div style={{marginTop:10,padding:"8px 12px",background:"var(--bg4)",borderRadius:6,fontFamily:"'DM Mono',monospace",fontSize:14,color:"var(--navy)",fontWeight:700}}>
                 Próximo WR: {buildWRNum(_wrOrigCode,_wrDestCode,_wrNextSeq,wrNumTipo,wrSecInicio,empresaSlug)}
               </div>
             </div>
 
             {/* GUÍA CONSOLIDADA */}
             <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,padding:"16px"}}>
-              <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:14,fontWeight:700,color:"var(--navy)",marginBottom:4}}>🗂️ Numeración de Guía Consolidada</div>
-              <div style={{fontSize:11,color:"var(--t3)",marginBottom:12}}>Selecciona el tipo y el número de inicio de secuencia.</div>
+              <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:16,fontWeight:700,color:"var(--navy)",marginBottom:4}}>🗂️ Numeración de Guía Consolidada</div>
+              <div style={{fontSize:13,color:"var(--t3)",marginBottom:12}}>Selecciona el tipo y el número de inicio de secuencia.</div>
               {[
                 {v:1,l:"Tipo 1 — 7 dígitos secuenciales",ex:"0000001"},
                 {v:2,l:"Tipo 2 — Oficina Origen + Oficina Destino + Secuencia",ex:"01VLN01CCS0000001"},
@@ -3904,39 +3913,39 @@ export default function ENEXSystem(){
                 <div key={t.v} onClick={()=>setConsolNumTipo(t.v)} style={{padding:"10px 12px",borderRadius:8,border:`2px solid ${consolNumTipo===t.v?"var(--navy)":"var(--b1)"}`,background:consolNumTipo===t.v?"#EEF3FF":"var(--bg3)",marginBottom:8,cursor:"pointer"}}>
                   <div style={{display:"flex",alignItems:"center",gap:8}}>
                     <div style={{width:16,height:16,borderRadius:"50%",border:`2px solid ${consolNumTipo===t.v?"var(--navy)":"var(--b1)"}`,background:consolNumTipo===t.v?"var(--navy)":"transparent",flexShrink:0}}/>
-                    <div style={{fontWeight:600,fontSize:12,color:"var(--t1)"}}>{t.l}</div>
+                    <div style={{fontWeight:600,fontSize:14,color:"var(--t1)"}}>{t.l}</div>
                   </div>
-                  <div style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:"var(--cyan)",marginTop:4,marginLeft:24}}>Ej: {t.ex}</div>
+                  <div style={{fontFamily:"'DM Mono',monospace",fontSize:13,color:"var(--cyan)",marginTop:4,marginLeft:24}}>Ej: {t.ex}</div>
                 </div>
               ))}
               <div className="fg" style={{marginTop:8}}>
                 <div className="fl">Número de inicio de secuencia</div>
                 <input className="fi" type="number" min="1" style={{maxWidth:150,fontFamily:"'DM Mono',monospace",fontWeight:700}} value={consolSecInicio} onChange={e=>setConsolSecInicio(parseInt(e.target.value)||1)}/>
               </div>
-              <div style={{marginTop:10,padding:"8px 12px",background:"var(--bg4)",borderRadius:6,fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--navy)",fontWeight:700}}>
+              <div style={{marginTop:10,padding:"8px 12px",background:"var(--bg4)",borderRadius:6,fontFamily:"'DM Mono',monospace",fontSize:14,color:"var(--navy)",fontWeight:700}}>
                 Próxima Guía: {buildConsolNum(offCode(oficinas.find(o=>(o.ciudad||"").toUpperCase().startsWith(OFFICE_CONFIG.origCity.toUpperCase()))||oficinas[0]),offCode(oficinas.find(o=>(o.ciudad||"").toUpperCase().startsWith(OFFICE_CONFIG.destCity.toUpperCase()))||oficinas[oficinas.length-1]||oficinas[0]),(()=>{if(consolList.length===0)return 1;const nums=consolList.map(c=>{const m=String(c.id||"").match(/(\d+)(?=[^0-9]*$)/);return m?parseInt(m[1]):0;});return Math.max(...nums)+1;})(),consolNumTipo,consolSecInicio,"Marítimo")}
               </div>
             </div>
 
             {/* ETIQUETAS */}
             <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,padding:"16px",gridColumn:"1/-1"}}>
-              <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:14,fontWeight:700,color:"var(--navy)",marginBottom:12}}>🏷️ Tipo de Etiqueta Predeterminada</div>
+              <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:16,fontWeight:700,color:"var(--navy)",marginBottom:12}}>🏷️ Tipo de Etiqueta Predeterminada</div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
                 <div>
-                  <div style={{fontSize:12,fontWeight:700,color:"var(--t2)",marginBottom:8}}>📦 Etiqueta WR</div>
+                  <div style={{fontSize:14,fontWeight:700,color:"var(--t2)",marginBottom:8}}>📦 Etiqueta WR</div>
                   {[{v:1,l:"4×6 pulg. — Tipo 1 Básica (7 franjas)"},{v:2,l:"4×6 pulg. — Tipo 2 Completa (5 franjas + QR)"},{v:3,l:"4×2 pulg. — Tipo 3 Básica (3 franjas)"},{v:4,l:"4×2 pulg. — Tipo 4 Completa (3 franjas)"}].map(t=>(
                     <div key={t.v} onClick={()=>setLabelWRTipo(t.v)} style={{padding:"8px 12px",borderRadius:6,border:`2px solid ${labelWRTipo===t.v?"var(--navy)":"var(--b1)"}`,background:labelWRTipo===t.v?"#EEF3FF":"var(--bg3)",marginBottom:6,cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>
                       <div style={{width:14,height:14,borderRadius:"50%",border:`2px solid ${labelWRTipo===t.v?"var(--navy)":"var(--b1)"}`,background:labelWRTipo===t.v?"var(--navy)":"transparent",flexShrink:0}}/>
-                      <div style={{fontSize:12,fontWeight:600}}>{t.l}</div>
+                      <div style={{fontSize:14,fontWeight:600}}>{t.l}</div>
                     </div>
                   ))}
                 </div>
                 <div>
-                  <div style={{fontSize:12,fontWeight:700,color:"var(--t2)",marginBottom:8}}>🗂️ Etiqueta Guía Consolidada</div>
+                  <div style={{fontSize:14,fontWeight:700,color:"var(--t2)",marginBottom:8}}>🗂️ Etiqueta Guía Consolidada</div>
                   {[{v:1,l:"4×6 pulg. — Tipo 1 Grande (5 franjas)"},{v:2,l:"4×2 pulg. — Tipo 2 Compacta"}].map(t=>(
                     <div key={t.v} onClick={()=>setLabelCSATipo(t.v)} style={{padding:"8px 12px",borderRadius:6,border:`2px solid ${labelCSATipo===t.v?"var(--navy)":"var(--b1)"}`,background:labelCSATipo===t.v?"#EEF3FF":"var(--bg3)",marginBottom:6,cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>
                       <div style={{width:14,height:14,borderRadius:"50%",border:`2px solid ${labelCSATipo===t.v?"var(--navy)":"var(--b1)"}`,background:labelCSATipo===t.v?"var(--navy)":"transparent",flexShrink:0}}/>
-                      <div style={{fontSize:12,fontWeight:600}}>{t.l}</div>
+                      <div style={{fontSize:14,fontWeight:600}}>{t.l}</div>
                     </div>
                   ))}
                 </div>
@@ -3947,7 +3956,7 @@ export default function ENEXSystem(){
               </div>
             </div>
             <div style={{display:"flex",justifyContent:"flex-end",marginTop:16}}>
-              <button className="btn-p" style={{padding:"9px 24px",fontSize:13}} onClick={()=>{
+              <button className="btn-p" style={{padding:"9px 24px",fontSize:15}} onClick={()=>{
                 dbSetConfig('wr_num_tipo',wrNumTipo);
                 dbSetConfig('wr_sec_inicio',wrSecInicio);
                 dbSetConfig('consol_num_tipo',consolNumTipo);
@@ -3981,8 +3990,8 @@ export default function ENEXSystem(){
         {/* ── CARGOS ADICIONALES ── */}
         {cfgTab==="cargos"&&(
           <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,padding:"14px 16px",marginBottom:14}}>
-            <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:13,fontWeight:700,color:"var(--navy)",marginBottom:8}}>💲 Cargos Adicionales</div>
-            <div style={{fontSize:11,color:"var(--t3)",marginBottom:10}}>Los cargos adicionales se gestionan junto con Servicios. Ambas listas se usan en la creación de WR.</div>
+            <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:15,fontWeight:700,color:"var(--navy)",marginBottom:8}}>💲 Cargos Adicionales</div>
+            <div style={{fontSize:13,color:"var(--t3)",marginBottom:10}}>Los cargos adicionales se gestionan junto con Servicios. Ambas listas se usan en la creación de WR.</div>
             <ListEditor title="" items={CHARGES_OPT}
               onAdd={v=>{const n=[...CHARGES_OPT,v];setChargesOpt(n);dbSetConfig('charges',n);}}
               onDelete={i=>{const n=CHARGES_OPT.filter((_,j)=>j!==i);setChargesOpt(n);dbSetConfig('charges',n);}}
@@ -4001,7 +4010,7 @@ export default function ENEXSystem(){
         {/* ── TIPOS DE CONTENEDOR ── */}
         {cfgTab==="contenedores"&&(
           <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,padding:"14px 16px",marginBottom:14}}>
-            <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:13,fontWeight:700,color:"var(--navy)",marginBottom:12}}>📦 Tipos de Contenedor</div>
+            <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:15,fontWeight:700,color:"var(--navy)",marginBottom:12}}>📦 Tipos de Contenedor</div>
             {/* Agregar / Editar */}
             <div style={{display:"grid",gridTemplateColumns:"100px 1fr 1fr 120px auto",gap:8,marginBottom:12,alignItems:"flex-end"}}>
               <div className="fg"><div className="fl">Código</div><input className="fi" style={{fontFamily:"'DM Mono',monospace",fontWeight:700}} value={cfgNewCont.code} onChange={e=>setCfgNewCont(p=>({...p,code:e.target.value.toUpperCase()}))} placeholder="EH"/></div>
@@ -4021,7 +4030,7 @@ export default function ENEXSystem(){
                   setContainerTypes(n);dbSetConfig('container_types',n);
                   setCfgNewCont({code:"",name:"",dim:"",maxLb:""});
                 }}>{cfgEditContIdx!==null?"💾 Guardar":"+ Agregar"}</button>
-                {cfgEditContIdx!==null&&<button className="btn-s" style={{padding:"8px 10px",fontSize:11}} onClick={()=>{setCfgEditContIdx(null);setCfgNewCont({code:"",name:"",dim:"",maxLb:""});}}>✕</button>}
+                {cfgEditContIdx!==null&&<button className="btn-s" style={{padding:"8px 10px",fontSize:13}} onClick={()=>{setCfgEditContIdx(null);setCfgNewCont({code:"",name:"",dim:"",maxLb:""});}}>✕</button>}
               </div>
             </div>
             {/* Lista */}
@@ -4031,13 +4040,13 @@ export default function ENEXSystem(){
                 {CONTAINER_TYPES.length===0&&<tr><td colSpan={5} style={{textAlign:"center",padding:24,color:"var(--t3)"}}>No hay tipos de contenedor registrados.</td></tr>}
                 {CONTAINER_TYPES.map((c,i)=>(
                   <tr key={i} style={{background:cfgEditContIdx===i?"#EEF3FF":""}}>
-                    <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:800,color:"var(--navy)",fontSize:13}}>{c.code}</span></td>
+                    <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:800,color:"var(--navy)",fontSize:15}}>{c.code}</span></td>
                     <td style={{fontWeight:600}}>{c.name}</td>
-                    <td style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:"var(--t2)"}}>{c.dim}</td>
+                    <td style={{fontFamily:"'DM Mono',monospace",fontSize:13,color:"var(--t2)"}}>{c.dim}</td>
                     <td style={{fontFamily:"'DM Mono',monospace",fontWeight:600}}>{(c.maxLb||0).toLocaleString()}lb</td>
                     <td><div style={{display:"flex",gap:4}}>
-                      <button className="btn-s" style={{fontSize:10,padding:"2px 8px"}} onClick={()=>{setCfgNewCont({code:c.code,name:c.name,dim:c.dim,maxLb:c.maxLb});setCfgEditContIdx(i);}}>✏️ Editar</button>
-                      <button className="btn-d" style={{fontSize:10,padding:"2px 8px"}} onClick={()=>{const n=CONTAINER_TYPES.filter((_,j)=>j!==i);setContainerTypes(n);dbSetConfig('container_types',n);if(cfgEditContIdx===i){setCfgEditContIdx(null);setCfgNewCont({code:"",name:"",dim:"",maxLb:""});}}}>🗑</button>
+                      <button className="btn-s" style={{fontSize:12,padding:"2px 8px"}} onClick={()=>{setCfgNewCont({code:c.code,name:c.name,dim:c.dim,maxLb:c.maxLb});setCfgEditContIdx(i);}}>✏️ Editar</button>
+                      <button className="btn-d" style={{fontSize:12,padding:"2px 8px"}} onClick={()=>{const n=CONTAINER_TYPES.filter((_,j)=>j!==i);setContainerTypes(n);dbSetConfig('container_types',n);if(cfgEditContIdx===i){setCfgEditContIdx(null);setCfgNewCont({code:"",name:"",dim:"",maxLb:""});}}}>🗑</button>
                     </div></td>
                   </tr>
                 ))}
@@ -4051,13 +4060,13 @@ export default function ENEXSystem(){
           <div style={{display:"grid",gridTemplateColumns:"300px 1fr",gap:14}}>
             {/* Lista de países */}
             <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,overflow:"hidden"}}>
-              <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",fontFamily:"Arial,Helvetica,sans-serif",fontSize:13,fontWeight:700,color:"var(--navy)"}}>🌎 Países</div>
+              <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",fontFamily:"Arial,Helvetica,sans-serif",fontSize:15,fontWeight:700,color:"var(--navy)"}}>🌎 Países</div>
               {/* Agregar país */}
               <div style={{padding:"10px 12px",borderBottom:"1px solid var(--b1)"}}>
                 <div style={{display:"grid",gridTemplateColumns:"60px 1fr auto",gap:6,alignItems:"flex-end"}}>
-                  <div className="fg"><div className="fl" style={{fontSize:9}}>Código</div><input className="fi" style={{fontFamily:"'DM Mono',monospace",fontSize:11}} value={cfgNewPais.dial} onChange={e=>setCfgNewPais(p=>({...p,dial:e.target.value}))} placeholder="57"/></div>
-                  <div className="fg"><div className="fl" style={{fontSize:9}}>País + Bandera</div><input className="fi" style={{fontSize:11}} value={cfgNewPais.name} onChange={e=>setCfgNewPais(p=>({...p,name:e.target.value}))} placeholder="Colombia 🇨🇴"/></div>
-                  <button className="btn-p" style={{padding:"6px 10px",fontSize:11,alignSelf:"flex-end"}} onClick={()=>{
+                  <div className="fg"><div className="fl" style={{fontSize:11}}>Código</div><input className="fi" style={{fontFamily:"'DM Mono',monospace",fontSize:13}} value={cfgNewPais.dial} onChange={e=>setCfgNewPais(p=>({...p,dial:e.target.value}))} placeholder="57"/></div>
+                  <div className="fg"><div className="fl" style={{fontSize:11}}>País + Bandera</div><input className="fi" style={{fontSize:13}} value={cfgNewPais.name} onChange={e=>setCfgNewPais(p=>({...p,name:e.target.value}))} placeholder="Colombia 🇨🇴"/></div>
+                  <button className="btn-p" style={{padding:"6px 10px",fontSize:13,alignSelf:"flex-end"}} onClick={()=>{
                     if(cfgNewPais.dial&&cfgNewPais.name){
                       const n=[...COUNTRIES,{dial:cfgNewPais.dial,name:cfgNewPais.name,cities:[]}];
                       setCountries(n);dbSetConfig('countries',n);
@@ -4072,10 +4081,10 @@ export default function ENEXSystem(){
                     style={{padding:"9px 14px",cursor:"pointer",borderBottom:"1px solid var(--b2)",display:"flex",alignItems:"center",gap:8,
                       background:cfgSelPais===i?"#EEF3FF":"",borderLeft:cfgSelPais===i?"3px solid var(--navy)":"3px solid transparent"}}>
                     <div style={{flex:1}}>
-                      <div style={{fontWeight:600,fontSize:12}}>{c.name}</div>
-                      <div style={{fontFamily:"'DM Mono',monospace",fontSize:10,color:"var(--t3)"}}>+{c.dial} · {c.cities.length} ciudades</div>
+                      <div style={{fontWeight:600,fontSize:14}}>{c.name}</div>
+                      <div style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--t3)"}}>+{c.dial} · {c.cities.length} ciudades</div>
                     </div>
-                    <span onClick={e=>{e.stopPropagation();const n=COUNTRIES.filter((_,j)=>j!==i);setCountries(n);dbSetConfig('countries',n);if(cfgSelPais>=i)setCfgSelPais(Math.max(0,cfgSelPais-1));}} style={{color:"var(--red)",cursor:"pointer",fontSize:13,fontWeight:700}}>×</span>
+                    <span onClick={e=>{e.stopPropagation();const n=COUNTRIES.filter((_,j)=>j!==i);setCountries(n);dbSetConfig('countries',n);if(cfgSelPais>=i)setCfgSelPais(Math.max(0,cfgSelPais-1));}} style={{color:"var(--red)",cursor:"pointer",fontSize:15,fontWeight:700}}>×</span>
                   </div>
                 ))}
               </div>
@@ -4083,15 +4092,15 @@ export default function ENEXSystem(){
 
             {/* Ciudades del país seleccionado */}
             <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,overflow:"hidden"}}>
-              <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",fontFamily:"Arial,Helvetica,sans-serif",fontSize:13,fontWeight:700,color:"var(--navy)"}}>
+              <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",fontFamily:"Arial,Helvetica,sans-serif",fontSize:15,fontWeight:700,color:"var(--navy)"}}>
                 🏙️ Ciudades — {COUNTRIES[cfgSelPais]?.name||"Selecciona un país"}
               </div>
               {COUNTRIES[cfgSelPais]&&(
                 <>
                   <div style={{padding:"10px 12px",borderBottom:"1px solid var(--b1)"}}>
                     <div style={{display:"grid",gridTemplateColumns:"80px 1fr auto",gap:6,alignItems:"flex-end"}}>
-                      <div className="fg"><div className="fl" style={{fontSize:9}}>Código</div><input className="fi" style={{fontFamily:"'DM Mono',monospace",fontWeight:700}} value={cfgNewCity.code} onChange={e=>setCfgNewCity(p=>({...p,code:e.target.value.toUpperCase()}))} placeholder="MED"/></div>
-                      <div className="fg"><div className="fl" style={{fontSize:9}}>Nombre Ciudad</div><input className="fi" value={cfgNewCity.name} onChange={e=>setCfgNewCity(p=>({...p,name:e.target.value}))} placeholder="Medellín"/></div>
+                      <div className="fg"><div className="fl" style={{fontSize:11}}>Código</div><input className="fi" style={{fontFamily:"'DM Mono',monospace",fontWeight:700}} value={cfgNewCity.code} onChange={e=>setCfgNewCity(p=>({...p,code:e.target.value.toUpperCase()}))} placeholder="MED"/></div>
+                      <div className="fg"><div className="fl" style={{fontSize:11}}>Nombre Ciudad</div><input className="fi" value={cfgNewCity.name} onChange={e=>setCfgNewCity(p=>({...p,name:e.target.value}))} placeholder="Medellín"/></div>
                       <button className="btn-p" style={{padding:"6px 12px",alignSelf:"flex-end"}} onClick={()=>{
                         if(cfgNewCity.code&&cfgNewCity.name){
                           const n=COUNTRIES.map((c,i)=>i===cfgSelPais?{...c,cities:[...c.cities,{code:cfgNewCity.code,name:cfgNewCity.name}]}:c);
@@ -4103,13 +4112,13 @@ export default function ENEXSystem(){
                   </div>
                   <div style={{padding:"8px 12px",display:"flex",flexWrap:"wrap",gap:6}}>
                     {(COUNTRIES[cfgSelPais]?.cities||[]).map((c,ci)=>(
-                      <div key={ci} style={{display:"inline-flex",alignItems:"center",gap:5,background:"var(--bg4)",border:"1px solid var(--b1)",borderRadius:6,padding:"4px 10px",fontSize:12}}>
-                        <span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",fontSize:11}}>{c.code}</span>
+                      <div key={ci} style={{display:"inline-flex",alignItems:"center",gap:5,background:"var(--bg4)",border:"1px solid var(--b1)",borderRadius:6,padding:"4px 10px",fontSize:14}}>
+                        <span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",fontSize:13}}>{c.code}</span>
                         <span style={{color:"var(--t2)"}}>{c.name}</span>
-                        <span onClick={()=>{const n=COUNTRIES.map((co,i)=>i===cfgSelPais?{...co,cities:co.cities.filter((_,j)=>j!==ci)}:co);setCountries(n);dbSetConfig('countries',n);}} style={{color:"var(--red)",cursor:"pointer",fontSize:14,fontWeight:700}}>×</span>
+                        <span onClick={()=>{const n=COUNTRIES.map((co,i)=>i===cfgSelPais?{...co,cities:co.cities.filter((_,j)=>j!==ci)}:co);setCountries(n);dbSetConfig('countries',n);}} style={{color:"var(--red)",cursor:"pointer",fontSize:16,fontWeight:700}}>×</span>
                       </div>
                     ))}
-                    {(COUNTRIES[cfgSelPais]?.cities||[]).length===0&&<div style={{color:"var(--t3)",fontSize:11,padding:"8px 0"}}>No hay ciudades registradas.</div>}
+                    {(COUNTRIES[cfgSelPais]?.cities||[]).length===0&&<div style={{color:"var(--t3)",fontSize:13,padding:"8px 0"}}>No hay ciudades registradas.</div>}
                   </div>
                 </>
               )}
@@ -4122,8 +4131,8 @@ export default function ENEXSystem(){
         {cfgTab==="agentes"&&(
           <div>
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
-              <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:15,fontWeight:700,color:"var(--navy)",flex:1}}>🤝 Agentes registrados</div>
-              {hasPerm("crear_agente")&&<button className="btn-p" style={{fontSize:11}} onClick={()=>{setAgForm({nombre:"",ciudad:"",pais:"",tel:"",email:"",contacto:"",notas:""});setShowNewAgente(true);}}>+ Nuevo Agente</button>}
+              <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:17,fontWeight:700,color:"var(--navy)",flex:1}}>🤝 Agentes registrados</div>
+              {hasPerm("crear_agente")&&<button className="btn-p" style={{fontSize:13}} onClick={()=>{setAgForm({nombre:"",ciudad:"",pais:"",tel:"",email:"",contacto:"",notas:""});setShowNewAgente(true);}}>+ Nuevo Agente</button>}
             </div>
             <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,overflow:"hidden"}}>
               <table className="ct">
@@ -4136,12 +4145,12 @@ export default function ENEXSystem(){
                     <tr key={a.id}>
                       <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",background:"#EEF3FF",padding:"2px 8px",borderRadius:4,border:"1px solid #B8C8F0"}}>{a.codigo}</span></td>
                       <td style={{fontWeight:600}}>{a.nombre}</td>
-                      <td style={{fontSize:11}}>{a.ciudad||"—"}</td>
-                      <td style={{fontSize:11}}>{a.pais||"—"}</td>
-                      <td style={{fontSize:11,fontFamily:"'DM Mono',monospace"}}>{a.tel||"—"}</td>
-                      <td style={{fontSize:11,color:"var(--cyan)"}}>{a.email||"—"}</td>
-                      <td style={{fontSize:11}}>{a.contacto||"—"}</td>
-                      <td><span style={{fontSize:9,padding:"2px 8px",borderRadius:4,fontWeight:700,background:a.activo?"#E8F8EE":"#FEE8E8",color:a.activo?"var(--green)":"var(--red)",border:"1px solid",borderColor:a.activo?"#80D0A0":"#F0A0A0"}}>{a.activo?"✅ Activo":"❌ Inactivo"}</span></td>
+                      <td style={{fontSize:13}}>{a.ciudad||"—"}</td>
+                      <td style={{fontSize:13}}>{a.pais||"—"}</td>
+                      <td style={{fontSize:13,fontFamily:"'DM Mono',monospace"}}>{a.tel||"—"}</td>
+                      <td style={{fontSize:13,color:"var(--cyan)"}}>{a.email||"—"}</td>
+                      <td style={{fontSize:13}}>{a.contacto||"—"}</td>
+                      <td><span style={{fontSize:11,padding:"2px 8px",borderRadius:4,fontWeight:700,background:a.activo?"#E8F8EE":"#FEE8E8",color:a.activo?"var(--green)":"var(--red)",border:"1px solid",borderColor:a.activo?"#80D0A0":"#F0A0A0"}}>{a.activo?"✅ Activo":"❌ Inactivo"}</span></td>
                       <td><div style={{display:"flex",gap:4}}>
                         {hasPerm("editar_agente")&&<span className="ic-b" onClick={()=>{setAgForm(a);setEditAgente(a);setShowNewAgente(true);}}>✏️</span>}
                         {hasPerm("borrar_agente")&&<span className="ic-b" style={{color:"var(--red)"}} onClick={()=>{if(!window.confirm(`¿Borrar agente ${a.codigo} — ${a.nombre}?`))return;setAgentes(p=>p.filter(x=>x.id!==a.id));dbDeleteAgente(a.id);logAction("Borró agente",`${a.codigo} — ${a.nombre}`);}}>🗑</span>}
@@ -4195,8 +4204,8 @@ export default function ENEXSystem(){
         {cfgTab==="oficinas"&&(
           <div>
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
-              <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:15,fontWeight:700,color:"var(--navy)",flex:1}}>🏢 Oficinas / Sucursales</div>
-              {hasPerm("crear_oficina")&&<button className="btn-p" style={{fontSize:11}} onClick={()=>{setOfForm({nombre:"",ciudad:"",pais:"",tel:"",email:"",contacto:"",notas:"",tipo:"Matriz"});setShowNewOficina(true);}}>+ Nueva Oficina</button>}
+              <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:17,fontWeight:700,color:"var(--navy)",flex:1}}>🏢 Oficinas / Sucursales</div>
+              {hasPerm("crear_oficina")&&<button className="btn-p" style={{fontSize:13}} onClick={()=>{setOfForm({nombre:"",ciudad:"",pais:"",tel:"",email:"",contacto:"",notas:"",tipo:"Matriz"});setShowNewOficina(true);}}>+ Nueva Oficina</button>}
             </div>
             <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,overflow:"hidden"}}>
               <table className="ct">
@@ -4209,19 +4218,19 @@ export default function ENEXSystem(){
                     <tr key={o.id}>
                       <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--purple)",background:"#F3EFFE",padding:"2px 8px",borderRadius:4,border:"1px solid #C0A0F0"}}>{o.codigo}</span></td>
                       <td style={{fontWeight:600}}>{o.nombre}</td>
-                      <td><span style={{fontSize:9,padding:"2px 10px",borderRadius:4,fontWeight:700,
+                      <td><span style={{fontSize:11,padding:"2px 10px",borderRadius:4,fontWeight:700,
                         background:o.tipo==="Asociado"?"#FEF0E8":"#EEF3FF",
                         color:o.tipo==="Asociado"?"var(--orange)":"var(--navy)",
                         border:"1px solid",
                         borderColor:o.tipo==="Asociado"?"#F0B880":"#B8C8F0"}}>
                         {o.tipo==="Asociado"?"🤝 Asociado":"🏛️ Matriz"}
                       </span></td>
-                      <td style={{fontSize:11}}>{o.ciudad||"—"}</td>
-                      <td style={{fontSize:11}}>{o.pais||"—"}</td>
-                      <td style={{fontSize:11,fontFamily:"'DM Mono',monospace"}}>{o.tel||"—"}</td>
-                      <td style={{fontSize:11,color:"var(--cyan)"}}>{o.email||"—"}</td>
-                      <td style={{fontSize:11}}>{o.contacto||"—"}</td>
-                      <td><span style={{fontSize:9,padding:"2px 8px",borderRadius:4,fontWeight:700,background:o.activo?"#E8F8EE":"#FEE8E8",color:o.activo?"var(--green)":"var(--red)",border:"1px solid",borderColor:o.activo?"#80D0A0":"#F0A0A0"}}>{o.activo?"✅ Activo":"❌ Inactivo"}</span></td>
+                      <td style={{fontSize:13}}>{o.ciudad||"—"}</td>
+                      <td style={{fontSize:13}}>{o.pais||"—"}</td>
+                      <td style={{fontSize:13,fontFamily:"'DM Mono',monospace"}}>{o.tel||"—"}</td>
+                      <td style={{fontSize:13,color:"var(--cyan)"}}>{o.email||"—"}</td>
+                      <td style={{fontSize:13}}>{o.contacto||"—"}</td>
+                      <td><span style={{fontSize:11,padding:"2px 8px",borderRadius:4,fontWeight:700,background:o.activo?"#E8F8EE":"#FEE8E8",color:o.activo?"var(--green)":"var(--red)",border:"1px solid",borderColor:o.activo?"#80D0A0":"#F0A0A0"}}>{o.activo?"✅ Activo":"❌ Inactivo"}</span></td>
                       <td><div style={{display:"flex",gap:4}}>
                         {hasPerm("editar_oficina")&&<span className="ic-b" onClick={()=>{setOfForm(o);setEditOficina(o);setShowNewOficina(true);}}>✏️</span>}
                         {hasPerm("borrar_oficina")&&<span className="ic-b" style={{color:"var(--red)"}} onClick={()=>{if(!window.confirm(`¿Borrar oficina ${o.codigo} — ${o.nombre}?`))return;setOficinas(p=>p.filter(x=>x.id!==o.id));dbDeleteOficina(o.id);logAction("Borró oficina",`${o.codigo} — ${o.nombre}`);}}>🗑</span>}
@@ -4242,7 +4251,7 @@ export default function ENEXSystem(){
                       <div style={{display:"flex",gap:8,marginTop:4}}>
                         {["Matriz","Asociado"].map(t=>(
                           <button key={t} className={`btn-${(ofForm.tipo||"Matriz")===t?"p":"s"}`}
-                            style={{flex:1,fontSize:11}}
+                            style={{flex:1,fontSize:13}}
                             onClick={()=>setOfForm(p=>({...p,tipo:t}))}>
                             {t==="Matriz"?"🏛️ Matriz (Oficina Propia)":"🤝 Asociado (Franquiciado)"}
                           </button>
@@ -4290,8 +4299,8 @@ export default function ENEXSystem(){
           return(
           <div>
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
-              <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:15,fontWeight:700,color:"var(--navy)",flex:1}}>💰 Tarifas por Ruta y Tipo de Envío</div>
-              {hasPerm("crear_tarifa")&&<button className="btn-p" style={{fontSize:11}} onClick={()=>{
+              <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:17,fontWeight:700,color:"var(--navy)",flex:1}}>💰 Tarifas por Ruta y Tipo de Envío</div>
+              {hasPerm("crear_tarifa")&&<button className="btn-p" style={{fontSize:13}} onClick={()=>{
                 setTafForm({paisOrig:"",ciudadOrig:"",paisDest:"",ciudadDest:"",tipoEnvio:SEND_TYPES[0]||"",porLb:"",porFt3:"",min:"",moneda:"USD"});
                 setEditTarifa(null);setShowNewTarifa(true);
               }}>+ Nueva Tarifa</button>}
@@ -4310,13 +4319,13 @@ export default function ENEXSystem(){
                     const monto=esAereo?`${sy}${t.porLb}/lb`:esMaritimo?`${sy}${t.porFt3}/ft³`:`${sy}${t.porLb}/lb`;
                     return(
                     <tr key={t.id}>
-                      <td style={{fontWeight:600,fontSize:11}}>{t.paisOrig}-{t.ciudadOrig}</td>
-                      <td style={{fontWeight:600,fontSize:11}}>{t.paisDest}-{t.ciudadDest}</td>
+                      <td style={{fontWeight:600,fontSize:13}}>{t.paisOrig}-{t.ciudadOrig}</td>
+                      <td style={{fontWeight:600,fontSize:13}}>{t.paisDest}-{t.ciudadDest}</td>
                       <td><TypeBadge t={t.tipoEnvio}/></td>
                       <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:esAereo?"var(--green)":"var(--sky)"}}>{monto}</td>
                       <td style={{fontFamily:"'DM Mono',monospace",color:"var(--orange)"}}>{sy}{t.min}</td>
-                      <td style={{fontSize:11}}>{t.moneda}</td>
-                      <td><span style={{fontSize:9,padding:"2px 8px",borderRadius:4,fontWeight:700,background:t.activo?"#E8F8EE":"#FEE8E8",color:t.activo?"var(--green)":"var(--red)",border:"1px solid",borderColor:t.activo?"#80D0A0":"#F0A0A0"}}>{t.activo?"✅ Activa":"❌ Inactiva"}</span></td>
+                      <td style={{fontSize:13}}>{t.moneda}</td>
+                      <td><span style={{fontSize:11,padding:"2px 8px",borderRadius:4,fontWeight:700,background:t.activo?"#E8F8EE":"#FEE8E8",color:t.activo?"var(--green)":"var(--red)",border:"1px solid",borderColor:t.activo?"#80D0A0":"#F0A0A0"}}>{t.activo?"✅ Activa":"❌ Inactiva"}</span></td>
                       <td><div style={{display:"flex",gap:4}}>
                         {hasPerm("editar_tarifa")&&<span className="ic-b" onClick={()=>{setTafForm(t);setEditTarifa(t);setShowNewTarifa(true);}}>✏️</span>}
                         {hasPerm("editar_tarifa")&&<span className="ic-b" onClick={()=>{const upd={...t,activo:!t.activo};setTarifas(p=>p.map(x=>x.id===t.id?upd:x));dbUpsertTarifa(upd);logAction(upd.activo?"Activó tarifa":"Desactivó tarifa",`${t.paisOrig}-${t.ciudadOrig} → ${t.paisDest}-${t.ciudadDest}`);}}>{t.activo?"⏸":"▶️"}</span>}
@@ -4392,11 +4401,11 @@ export default function ENEXSystem(){
         {cfgTab==="actividad"&&(
           <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,overflow:"hidden"}}>
             <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",display:"flex",alignItems:"center",gap:10}}>
-              <span style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:13,fontWeight:700,color:"var(--navy)"}}>📋 Registro de Actividad</span>
-              <span style={{fontSize:10,background:"var(--bg4)",border:"1px solid var(--b1)",borderRadius:4,padding:"2px 8px",color:"var(--t3)"}}>{actLog.length} eventos</span>
+              <span style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:15,fontWeight:700,color:"var(--navy)"}}>📋 Registro de Actividad</span>
+              <span style={{fontSize:12,background:"var(--bg4)",border:"1px solid var(--b1)",borderRadius:4,padding:"2px 8px",color:"var(--t3)"}}>{actLog.length} eventos</span>
               <div style={{flex:1}}/>
-              <input className="fi" style={{width:200,fontSize:11}} value={actFilter} onChange={e=>setActFilter(e.target.value)} placeholder="Filtrar por usuario o acción…"/>
-              <button className="btn-s" style={{fontSize:10,padding:"4px 10px"}} onClick={()=>window.print()}>🖨 Exportar</button>
+              <input className="fi" style={{width:200,fontSize:13}} value={actFilter} onChange={e=>setActFilter(e.target.value)} placeholder="Filtrar por usuario o acción…"/>
+              <button className="btn-s" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>window.print()}>🖨 Exportar</button>
             </div>
             <div style={{maxHeight:"60vh",overflowY:"auto"}}>
               <table className="ct">
@@ -4406,11 +4415,11 @@ export default function ENEXSystem(){
                 <tbody>
                   {actLog.filter(a=>!actFilter||a.user.toLowerCase().includes(actFilter.toLowerCase())||a.action.toLowerCase().includes(actFilter.toLowerCase())||a.detail.toLowerCase().includes(actFilter.toLowerCase())).map((a,i)=>(
                     <tr key={i}>
-                      <td style={{fontFamily:"'DM Mono',monospace",fontSize:10,whiteSpace:"nowrap"}}>{fmtDate(a.ts)} {fmtTime(a.ts)}</td>
+                      <td style={{fontFamily:"'DM Mono',monospace",fontSize:12,whiteSpace:"nowrap"}}>{fmtDate(a.ts)} {fmtTime(a.ts)}</td>
                       <td style={{fontWeight:600,color:"var(--navy)"}}>{a.user}</td>
                       <td><RoleChip code={a.role}/></td>
                       <td style={{fontWeight:500}}>{a.action}</td>
-                      <td style={{fontFamily:"'DM Mono',monospace",fontSize:10,color:"var(--cyan)"}}>{a.detail||"—"}</td>
+                      <td style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--cyan)"}}>{a.detail||"—"}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -4477,8 +4486,8 @@ export default function ENEXSystem(){
         {/* HEADER */}
         <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
           <div style={{flex:1}}>
-            <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:18,fontWeight:700,color:"var(--navy)"}}>🔍 Tracking Internacional</div>
-            <div style={{fontSize:12,color:"var(--t3)",marginTop:2}}>Seguimiento y actualización de estados por WR</div>
+            <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:20,fontWeight:700,color:"var(--navy)"}}>🔍 Tracking Internacional</div>
+            <div style={{fontSize:14,color:"var(--t3)",marginTop:2}}>Seguimiento y actualización de estados por WR</div>
           </div>
           {trkCanUpdate&&(
             <button className={`btn-${trkMassivo?"s":"p"}`} onClick={()=>{setTrkMassivo(p=>!p);setTrkMassResult(null);}}>
@@ -4490,11 +4499,11 @@ export default function ENEXSystem(){
         {/* ACTUALIZACIÓN MASIVA */}
         {trkMassivo&&(
           <div style={{background:"var(--bg2)",border:"2px solid var(--navy)",borderRadius:12,padding:"16px",marginBottom:14}}>
-            <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:14,fontWeight:700,color:"var(--navy)",marginBottom:12}}>⚡ Actualización Masiva de Estados</div>
+            <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:16,fontWeight:700,color:"var(--navy)",marginBottom:12}}>⚡ Actualización Masiva de Estados</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
               <div className="fg">
                 <div className="fl">N° WR o Tracking (uno por línea, coma o punto y coma)</div>
-                <textarea className="ft" style={{minHeight:100,fontFamily:"'DM Mono',monospace",fontSize:12}} value={trkMassIds} onChange={e=>setTrkMassIds(e.target.value)} placeholder={"01MI58VL0000001\n01MI58VL0000002\n01MI58VL0000003"}/>
+                <textarea className="ft" style={{minHeight:100,fontFamily:"'DM Mono',monospace",fontSize:14}} value={trkMassIds} onChange={e=>setTrkMassIds(e.target.value)} placeholder={"01MI58VL0000001\n01MI58VL0000002\n01MI58VL0000003"}/>
               </div>
               <div>
                 <div className="fl" style={{marginBottom:8}}>Nuevo Estado</div>
@@ -4502,7 +4511,7 @@ export default function ENEXSystem(){
                   {WR_STATUSES.filter(s=>statusAllowed(s)).map(s=>(
                     <button key={s.code} onClick={()=>setTrkMassStatus(s)}
                       className={`btn-${trkMassStatus?.code===s.code?"p":"s"}`}
-                      style={{fontSize:11,padding:"4px 10px"}}>
+                      style={{fontSize:13,padding:"4px 10px"}}>
                       {s.code} {s.label}
                     </button>
                   ))}
@@ -4518,7 +4527,7 @@ export default function ENEXSystem(){
                 ✅ Aplicar a todos
               </button>
               {trkMassResult&&(
-                <div style={{fontSize:12}}>
+                <div style={{fontSize:14}}>
                   <span style={{color:"var(--green)",fontWeight:700}}>✓ {trkMassResult.ok} actualizados</span>
                   {trkMassResult.fail.length>0&&<span style={{color:"var(--red)",marginLeft:10}}>✗ No encontrados: {trkMassResult.fail.join(", ")}</span>}
                 </div>
@@ -4532,18 +4541,18 @@ export default function ENEXSystem(){
           <div>
             {/* Búsqueda */}
             <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,padding:"12px 14px",marginBottom:14}}>
-              <input className="fi" style={{fontSize:14}} value={trkSearch} onChange={e=>setTrkSearch(e.target.value)}
+              <input className="fi" style={{fontSize:16}} value={trkSearch} onChange={e=>setTrkSearch(e.target.value)}
                 placeholder="Buscar por N° WR, tracking, consignatario o casillero…" autoFocus/>
             </div>
 
             {/* Resultados */}
             {trkSearch.length>1&&(
               <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,overflow:"hidden"}}>
-                <div style={{padding:"8px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",fontSize:12,color:"var(--t3)"}}>
+                <div style={{padding:"8px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",fontSize:14,color:"var(--t3)"}}>
                   {trkResults.length} resultado{trkResults.length!==1?"s":""}
                 </div>
                 {trkResults.length===0?(
-                  <div style={{padding:40,textAlign:"center",color:"var(--t3)",fontSize:13}}>No se encontraron WR con ese criterio.</div>
+                  <div style={{padding:40,textAlign:"center",color:"var(--t3)",fontSize:15}}>No se encontraron WR con ese criterio.</div>
                 ):trkResults.map(w=>(
                   <div key={w.id} onClick={()=>setTrkSelected(w)}
                     style={{padding:"12px 14px",borderBottom:"1px solid var(--b2)",cursor:"pointer",
@@ -4552,11 +4561,11 @@ export default function ENEXSystem(){
                     onMouseLeave={e=>{if(trkSelected?.id!==w.id)e.currentTarget.style.background=""}}>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
-                        <span style={{fontFamily:"'DM Mono',monospace",fontWeight:800,fontSize:13,color:"var(--navy)",background:"#EEF3FF",padding:"2px 7px",borderRadius:4,border:"1px solid #B8C8F0"}}>{w.id}</span>
+                        <span style={{fontFamily:"'DM Mono',monospace",fontWeight:800,fontSize:15,color:"var(--navy)",background:"#EEF3FF",padding:"2px 7px",borderRadius:4,border:"1px solid #B8C8F0"}}>{w.id}</span>
                         <StBadge st={w.status}/>
                       </div>
-                      <div style={{fontSize:13,fontWeight:600,color:"var(--t1)"}}>{w.consignee}</div>
-                      <div style={{display:"flex",gap:10,marginTop:3,fontSize:11,color:"var(--t3)"}}>
+                      <div style={{fontSize:15,fontWeight:600,color:"var(--t1)"}}>{w.consignee}</div>
+                      <div style={{display:"flex",gap:10,marginTop:3,fontSize:13,color:"var(--t3)"}}>
                         <span>{w.casillero}</span>
                         <span>·</span>
                         <span>{w.origCity} → {w.destCity}</span>
@@ -4566,7 +4575,7 @@ export default function ENEXSystem(){
                         <span>{fmtDate(w.fecha)}</span>
                       </div>
                     </div>
-                    <div style={{fontSize:12,color:"var(--cyan)",fontWeight:600,flexShrink:0}}>Ver detalle →</div>
+                    <div style={{fontSize:14,color:"var(--cyan)",fontWeight:600,flexShrink:0}}>Ver detalle →</div>
                   </div>
                 ))}
               </div>
@@ -4575,7 +4584,7 @@ export default function ENEXSystem(){
             {/* Estado general si no hay búsqueda */}
             {trkSearch.length<=1&&!trkSelected&&(
               <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,overflow:"hidden"}}>
-                <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",fontFamily:"Arial,Helvetica,sans-serif",fontSize:14,fontWeight:700,color:"var(--navy)"}}>
+                <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",fontFamily:"Arial,Helvetica,sans-serif",fontSize:16,fontWeight:700,color:"var(--navy)"}}>
                   📊 Resumen por Estado
                 </div>
                 <div style={{padding:"12px 14px",display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
@@ -4587,10 +4596,10 @@ export default function ENEXSystem(){
                         onMouseEnter={e=>e.currentTarget.style.background="#EEF3FF"}
                         onMouseLeave={e=>e.currentTarget.style.background="var(--bg4)"}>
                         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
-                          <span style={{fontFamily:"'DM Mono',monospace",fontWeight:800,fontSize:12,color:"var(--navy)"}}>{st.code}</span>
-                          <span style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:20,fontWeight:800,color:"var(--navy)"}}>{cnt}</span>
+                          <span style={{fontFamily:"'DM Mono',monospace",fontWeight:800,fontSize:14,color:"var(--navy)"}}>{st.code}</span>
+                          <span style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:22,fontWeight:800,color:"var(--navy)"}}>{cnt}</span>
                         </div>
-                        <div style={{fontSize:11,color:"var(--t2)",fontWeight:600}}>{st.label}</div>
+                        <div style={{fontSize:13,color:"var(--t2)",fontWeight:600}}>{st.label}</div>
                       </div>
                     );
                   }).filter(Boolean)}
@@ -4605,23 +4614,23 @@ export default function ENEXSystem(){
               {/* Header */}
               <div style={{padding:"12px 14px",background:"var(--navy)",display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
                 <div style={{flex:1}}>
-                  <div style={{fontFamily:"'DM Mono',monospace",fontWeight:800,fontSize:14,color:"#E5AE3A",letterSpacing:.5}}>{trkSelected.id}</div>
-                  <div style={{fontSize:12,color:"rgba(255,255,255,.7)",marginTop:2}}>{trkSelected.consignee} · {trkSelected.casillero}</div>
+                  <div style={{fontFamily:"'DM Mono',monospace",fontWeight:800,fontSize:16,color:"#E5AE3A",letterSpacing:.5}}>{trkSelected.id}</div>
+                  <div style={{fontSize:14,color:"rgba(255,255,255,.7)",marginTop:2}}>{trkSelected.consignee} · {trkSelected.casillero}</div>
                 </div>
-                <button onClick={()=>setTrkSelected(null)} style={{background:"rgba(255,255,255,.15)",border:"none",color:"#fff",borderRadius:5,padding:"4px 10px",cursor:"pointer",fontSize:12}}>✕</button>
+                <button onClick={()=>setTrkSelected(null)} style={{background:"rgba(255,255,255,.15)",border:"none",color:"#fff",borderRadius:5,padding:"4px 10px",cursor:"pointer",fontSize:14}}>✕</button>
               </div>
               {/* Info rápida */}
               <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",flexShrink:0,display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
                 {[["Ruta",`${trkSelected.origCity} → ${trkSelected.destCity}`],["Tipo Envío",trkSelected.tipoEnvio||"—"],["Carrier",trkSelected.carrier||"—"],["Tracking",trkSelected.tracking||"—"],["Recibido",fmtDate(trkSelected.fecha)],["Cajas",String(trkSelected.cajas)]].map(([l,v])=>(
                   <div key={l}>
-                    <div style={{fontSize:9,color:"var(--t3)",textTransform:"uppercase",letterSpacing:.8,fontWeight:700}}>{l}</div>
-                    <div style={{fontSize:12,fontWeight:600,color:"var(--t1)",fontFamily:l==="Tracking"?"'DM Mono',monospace":"inherit"}}>{v}</div>
+                    <div style={{fontSize:11,color:"var(--t3)",textTransform:"uppercase",letterSpacing:.8,fontWeight:700}}>{l}</div>
+                    <div style={{fontSize:14,fontWeight:600,color:"var(--t1)",fontFamily:l==="Tracking"?"'DM Mono',monospace":"inherit"}}>{v}</div>
                   </div>
                 ))}
               </div>
               {/* Estado actual destacado */}
               <div style={{padding:"10px 14px",borderBottom:"1px solid var(--b1)",flexShrink:0,display:"flex",alignItems:"center",gap:8}}>
-                <span style={{fontSize:12,color:"var(--t3)"}}>Estado actual:</span>
+                <span style={{fontSize:14,color:"var(--t3)"}}>Estado actual:</span>
                 <StBadge st={trkSelected.status}/>
               </div>
               {/* Timeline scrollable */}
@@ -4657,44 +4666,44 @@ export default function ENEXSystem(){
         {/* SIDEBAR CANALES */}
         <div style={{background:"var(--navy)",display:"flex",flexDirection:"column",overflow:"hidden"}}>
           <div style={{padding:"14px 12px",borderBottom:"1px solid rgba(255,255,255,.1)"}}>
-            <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:16,fontWeight:700,color:"#E5AE3A",letterSpacing:1}}>💬 CHAT INTERNO</div>
-            <div style={{fontSize:11,color:"rgba(255,255,255,.4)",marginTop:2}}>ENEX · {empresaNombre}</div>
+            <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:18,fontWeight:700,color:"#E5AE3A",letterSpacing:1}}>💬 CHAT INTERNO</div>
+            <div style={{fontSize:13,color:"rgba(255,255,255,.4)",marginTop:2}}>ENEX · {empresaNombre}</div>
           </div>
           <div style={{flex:1,padding:"8px 6px",overflowY:"auto"}}>
-            <div style={{fontSize:9,letterSpacing:2,textTransform:"uppercase",color:"rgba(255,255,255,.3)",padding:"8px 8px 4px",fontWeight:700}}>Canales</div>
+            <div style={{fontSize:11,letterSpacing:2,textTransform:"uppercase",color:"rgba(255,255,255,.3)",padding:"8px 8px 4px",fontWeight:700}}>Canales</div>
             {CHAT_ROOMS.map(r=>(
               <div key={r.id} onClick={()=>setChatConv(r.id)}
                 style={{padding:"9px 10px",borderRadius:7,cursor:"pointer",marginBottom:2,
                   background:chatConv===r.id?"rgba(200,151,28,.2)":"transparent",
                   border:`1px solid ${chatConv===r.id?"rgba(200,151,28,.4)":"transparent"}`}}>
                 <div style={{display:"flex",alignItems:"center",gap:8}}>
-                  <span style={{fontSize:14}}>{r.ic}</span>
+                  <span style={{fontSize:16}}>{r.ic}</span>
                   <div>
-                    <div style={{color:chatConv===r.id?"#E5AE3A":"rgba(255,255,255,.8)",fontSize:13,fontWeight:600}}>{r.l}</div>
-                    <div style={{color:"rgba(255,255,255,.35)",fontSize:10}}>{r.desc}</div>
+                    <div style={{color:chatConv===r.id?"#E5AE3A":"rgba(255,255,255,.8)",fontSize:15,fontWeight:600}}>{r.l}</div>
+                    <div style={{color:"rgba(255,255,255,.35)",fontSize:12}}>{r.desc}</div>
                   </div>
                   {(chatMsgs[r.id]||[]).length>0&&(
-                    <span style={{marginLeft:"auto",background:chatConv===r.id?"#E5AE3A":"rgba(255,255,255,.2)",color:chatConv===r.id?"#1A2B4A":"rgba(255,255,255,.7)",fontSize:9,fontWeight:800,padding:"1px 6px",borderRadius:4}}>
+                    <span style={{marginLeft:"auto",background:chatConv===r.id?"#E5AE3A":"rgba(255,255,255,.2)",color:chatConv===r.id?"#1A2B4A":"rgba(255,255,255,.7)",fontSize:11,fontWeight:800,padding:"1px 6px",borderRadius:4}}>
                       {(chatMsgs[r.id]||[]).length}
                     </span>
                   )}
                 </div>
               </div>
             ))}
-            <div style={{fontSize:9,letterSpacing:2,textTransform:"uppercase",color:"rgba(255,255,255,.3)",padding:"12px 8px 4px",fontWeight:700}}>En línea</div>
+            <div style={{fontSize:11,letterSpacing:2,textTransform:"uppercase",color:"rgba(255,255,255,.3)",padding:"12px 8px 4px",fontWeight:700}}>En línea</div>
             {clients.filter(c=>["A","B","C","D","D1","D2"].includes(c.rol)).map(c=>(
               <div key={c.id} style={{padding:"6px 10px",display:"flex",alignItems:"center",gap:7}}>
                 <div style={{width:8,height:8,borderRadius:"50%",background:"#1A8A4A",flexShrink:0}}/>
-                <div style={{width:24,height:24,borderRadius:6,background:"rgba(255,255,255,.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:"#fff",flexShrink:0}}>{initials(c)}</div>
-                <div style={{fontSize:11,color:"rgba(255,255,255,.6)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.primerNombre} {c.primerApellido}</div>
+                <div style={{width:24,height:24,borderRadius:6,background:"rgba(255,255,255,.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:"#fff",flexShrink:0}}>{initials(c)}</div>
+                <div style={{fontSize:13,color:"rgba(255,255,255,.6)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.primerNombre} {c.primerApellido}</div>
               </div>
             ))}
           </div>
           <div style={{padding:"10px 12px",borderTop:"1px solid rgba(255,255,255,.1)",display:"flex",alignItems:"center",gap:8}}>
-            <div style={{width:30,height:30,borderRadius:8,background:"#E5AE3A",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:"#1A2B4A",flexShrink:0}}>{initials(CU)}</div>
+            <div style={{width:30,height:30,borderRadius:8,background:"#E5AE3A",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:700,color:"#1A2B4A",flexShrink:0}}>{initials(CU)}</div>
             <div style={{flex:1,minWidth:0}}>
-              <div style={{fontSize:12,fontWeight:600,color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{currentUser.primerNombre} {currentUser.primerApellido}</div>
-              <div style={{fontSize:10,color:"rgba(255,255,255,.4)"}}>{ROLE_DEFS[currentUser.rol]?.name}</div>
+              <div style={{fontSize:14,fontWeight:600,color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{currentUser.primerNombre} {currentUser.primerApellido}</div>
+              <div style={{fontSize:12,color:"rgba(255,255,255,.4)"}}>{ROLE_DEFS[currentUser.rol]?.name}</div>
             </div>
           </div>
         </div>
@@ -4703,28 +4712,28 @@ export default function ENEXSystem(){
         <div style={{display:"flex",flexDirection:"column",background:"var(--bg3)",overflow:"hidden"}}>
           {/* Header canal */}
           <div style={{padding:"12px 16px",background:"var(--bg2)",borderBottom:"1px solid var(--b1)",display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
-            <span style={{fontSize:18}}>{CHAT_ROOMS.find(r=>r.id===chatConv)?.ic}</span>
+            <span style={{fontSize:20}}>{CHAT_ROOMS.find(r=>r.id===chatConv)?.ic}</span>
             <div>
-              <div style={{fontWeight:700,fontSize:14,color:"var(--navy)"}}>{CHAT_ROOMS.find(r=>r.id===chatConv)?.l}</div>
-              <div style={{fontSize:11,color:"var(--t3)"}}>{CHAT_ROOMS.find(r=>r.id===chatConv)?.desc}</div>
+              <div style={{fontWeight:700,fontSize:16,color:"var(--navy)"}}>{CHAT_ROOMS.find(r=>r.id===chatConv)?.l}</div>
+              <div style={{fontSize:13,color:"var(--t3)"}}>{CHAT_ROOMS.find(r=>r.id===chatConv)?.desc}</div>
             </div>
           </div>
           {/* Mensajes */}
           <div style={{flex:1,overflowY:"auto",padding:"16px",display:"flex",flexDirection:"column",gap:12}}>
             {(chatMsgs[chatConv]||[]).length===0?(
-              <div style={{textAlign:"center",color:"var(--t3)",padding:"40px 0",fontSize:13}}>No hay mensajes en este canal aún.</div>
+              <div style={{textAlign:"center",color:"var(--t3)",padding:"40px 0",fontSize:15}}>No hay mensajes en este canal aún.</div>
             ):(chatMsgs[chatConv]||[]).map(m=>{
               const isMe=m.user===(currentUser.id||"rdiaz");
               return (
                 <div key={m.id} style={{display:"flex",flexDirection:isMe?"row-reverse":"row",gap:10,alignItems:"flex-end"}}>
-                  <div style={{width:32,height:32,borderRadius:8,background:isMe?"var(--navy)":"var(--bg5)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,color:isMe?"#fff":"var(--t2)",flexShrink:0}}>
+                  <div style={{width:32,height:32,borderRadius:8,background:isMe?"var(--navy)":"var(--bg5)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,color:isMe?"#fff":"var(--t2)",flexShrink:0}}>
                     {(m.name||"?").split(" ").map(n=>n[0]).slice(0,2).join("").toUpperCase()}
                   </div>
                   <div style={{maxWidth:"65%"}}>
-                    <div style={{fontSize:10,color:"var(--t3)",marginBottom:3,textAlign:isMe?"right":"left"}}>
-                      {m.name} · <span className={`rb ${ROLE_DEFS[m.role]?.color||"rH1"}`} style={{fontSize:8}}>{m.role}</span> · {fmtTime(m.ts)}
+                    <div style={{fontSize:12,color:"var(--t3)",marginBottom:3,textAlign:isMe?"right":"left"}}>
+                      {m.name} · <span className={`rb ${ROLE_DEFS[m.role]?.color||"rH1"}`} style={{fontSize:10}}>{m.role}</span> · {fmtTime(m.ts)}
                     </div>
-                    <div style={{background:isMe?"var(--navy)":"var(--bg2)",color:isMe?"#fff":"var(--t1)",padding:"10px 14px",borderRadius:isMe?"12px 12px 2px 12px":"12px 12px 12px 2px",fontSize:13,lineHeight:1.5,border:isMe?"none":"1px solid var(--b1)",boxShadow:"var(--shadow)"}}>
+                    <div style={{background:isMe?"var(--navy)":"var(--bg2)",color:isMe?"#fff":"var(--t1)",padding:"10px 14px",borderRadius:isMe?"12px 12px 2px 12px":"12px 12px 12px 2px",fontSize:15,lineHeight:1.5,border:isMe?"none":"1px solid var(--b1)",boxShadow:"var(--shadow)"}}>
                       {m.text}
                     </div>
                   </div>
@@ -4734,7 +4743,7 @@ export default function ENEXSystem(){
           </div>
           {/* Input */}
           <div style={{padding:"12px 16px",background:"var(--bg2)",borderTop:"1px solid var(--b1)",display:"flex",gap:8,flexShrink:0}}>
-            <input className="fi" style={{flex:1,fontSize:13}} value={chatMsg}
+            <input className="fi" style={{flex:1,fontSize:15}} value={chatMsg}
               onChange={e=>setChatMsg(e.target.value)}
               onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendChat();}}}
               placeholder={`Mensaje en #${chatConv}…`}/>
@@ -4779,8 +4788,8 @@ export default function ENEXSystem(){
     <div className="page-scroll">
       <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
         <div style={{flex:1}}>
-          <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:18,fontWeight:700,color:"var(--navy)"}}>🚐 Solicitudes de Pick-up</div>
-          <div style={{fontSize:12,color:"var(--t3)",marginTop:2}}>Recogidas a domicilio programadas</div>
+          <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:20,fontWeight:700,color:"var(--navy)"}}>🚐 Solicitudes de Pick-up</div>
+          <div style={{fontSize:14,color:"var(--t3)",marginTop:2}}>Recogidas a domicilio programadas</div>
         </div>
         <button className="btn-p" onClick={()=>setShowNewPickup(true)}>+ Nueva Solicitud</button>
       </div>
@@ -4798,11 +4807,11 @@ export default function ENEXSystem(){
             <tbody>
               {pickupList.map(p=>(
                 <tr key={p.id}>
-                  <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",fontSize:12}}>{p.id}</span></td>
+                  <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",fontSize:14}}>{p.id}</span></td>
                   <td style={{fontWeight:600}}>{p.clienteNombre||"—"}</td>
-                  <td style={{maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",color:"var(--t2)",fontSize:12}}>{p.clienteDir||"—"}</td>
-                  <td style={{fontFamily:"'DM Mono',monospace",fontSize:11}}>{p.fecha||"—"}</td>
-                  <td style={{fontFamily:"'DM Mono',monospace",fontSize:11}}>{p.hora||"—"}</td>
+                  <td style={{maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",color:"var(--t2)",fontSize:14}}>{p.clienteDir||"—"}</td>
+                  <td style={{fontFamily:"'DM Mono',monospace",fontSize:13}}>{p.fecha||"—"}</td>
+                  <td style={{fontFamily:"'DM Mono',monospace",fontSize:13}}>{p.hora||"—"}</td>
                   <td style={{fontWeight:600,color:"var(--t1)"}}>{p.chofer||"—"}</td>
                   <td style={{textAlign:"center",fontWeight:700}}>{p.paquetes.reduce((s,x)=>s+(parseInt(x.cantidad)||1),0)}</td>
                   <td style={{fontFamily:"'DM Mono',monospace",fontWeight:600}}>{p.cotizacion?.totalLb||0}lb</td>
@@ -4837,8 +4846,8 @@ export default function ENEXSystem(){
                   {pickupClientResults.length>0&&(
                     <div style={{position:"absolute",top:"calc(100% + 4px)",left:0,right:0,background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:8,boxShadow:"var(--shadow2)",zIndex:50,maxHeight:180,overflowY:"auto"}}>
                       {pickupClientResults.map(c=>(
-                        <div key={c.id} onClick={()=>{spuf("clienteId",c.id);spuf("clienteNombre",fullName(c));spuf("clienteDir",c.dir||"");spuf("clienteTel",c.tel1||"");setPickupClientSearch(fullName(c));setPickupClientResults([]);}} style={{padding:"9px 12px",cursor:"pointer",borderBottom:"1px solid var(--b2)",fontSize:13}} onMouseEnter={e=>e.currentTarget.style.background="#EEF3FF"} onMouseLeave={e=>e.currentTarget.style.background=""}>
-                          {fullName(c)} <span style={{color:"var(--gold2)",fontFamily:"'DM Mono',monospace",fontSize:11}}>{c.casillero}</span>
+                        <div key={c.id} onClick={()=>{spuf("clienteId",c.id);spuf("clienteNombre",fullName(c));spuf("clienteDir",c.dir||"");spuf("clienteTel",c.tel1||"");setPickupClientSearch(fullName(c));setPickupClientResults([]);}} style={{padding:"9px 12px",cursor:"pointer",borderBottom:"1px solid var(--b2)",fontSize:15}} onMouseEnter={e=>e.currentTarget.style.background="#EEF3FF"} onMouseLeave={e=>e.currentTarget.style.background=""}>
+                          {fullName(c)} <span style={{color:"var(--gold2)",fontFamily:"'DM Mono',monospace",fontSize:13}}>{c.casillero}</span>
                         </div>
                       ))}
                     </div>
@@ -4880,21 +4889,21 @@ export default function ENEXSystem(){
                 {puf.paquetes.length>1&&<button className="btn-d" style={{padding:"7px 10px"}} onClick={()=>setPuf(p=>({...p,paquetes:p.paquetes.filter((_,j)=>j!==i)}))}>🗑</button>}
               </div>
             ))}
-            <button onClick={()=>setPuf(p=>({...p,paquetes:[...p.paquetes,{descripcion:"",largo:"",ancho:"",alto:"",pesoLb:"",cantidad:1}]}))} style={{width:"100%",padding:"8px",border:"2px dashed var(--b1)",borderRadius:8,background:"var(--bg4)",cursor:"pointer",fontSize:13,color:"var(--t2)",marginBottom:14}}>+ Agregar paquete</button>
+            <button onClick={()=>setPuf(p=>({...p,paquetes:[...p.paquetes,{descripcion:"",largo:"",ancho:"",alto:"",pesoLb:"",cantidad:1}]}))} style={{width:"100%",padding:"8px",border:"2px dashed var(--b1)",borderRadius:8,background:"var(--bg4)",cursor:"pointer",fontSize:15,color:"var(--t2)",marginBottom:14}}>+ Agregar paquete</button>
 
             {/* Cotización previa */}
             {(()=>{const cot=calcPickupCotizacion(puf.paquetes);return(
               <div style={{background:"var(--bg4)",border:"1px solid var(--b1)",borderRadius:8,padding:"12px 14px",marginBottom:14}}>
-                <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:13,fontWeight:700,color:"var(--navy)",marginBottom:8}}>💵 Cotización Estimada</div>
+                <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:15,fontWeight:700,color:"var(--navy)",marginBottom:8}}>💵 Cotización Estimada</div>
                 <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10}}>
                   {[["Peso Total",`${cot.totalLb} lb`,"var(--t1)"],["Ft³ Total",String(cot.totalFt3),"var(--sky)"],["Estimado",`$${cot.estimado}`,"var(--green)"]].map(([l,v,c])=>(
                     <div key={l} style={{background:"var(--bg2)",borderRadius:6,padding:"8px 12px",border:"1px solid var(--b1)"}}>
-                      <div style={{fontSize:10,color:"var(--t3)",textTransform:"uppercase",letterSpacing:.8,marginBottom:3}}>{l}</div>
-                      <div style={{fontFamily:"'DM Mono',monospace",fontSize:16,fontWeight:800,color:c}}>{v}</div>
+                      <div style={{fontSize:12,color:"var(--t3)",textTransform:"uppercase",letterSpacing:.8,marginBottom:3}}>{l}</div>
+                      <div style={{fontFamily:"'DM Mono',monospace",fontSize:18,fontWeight:800,color:c}}>{v}</div>
                     </div>
                   ))}
                 </div>
-                <div style={{fontSize:11,color:"var(--t3)",marginTop:8}}>* Estimado basado en tarifa estándar. Puede variar según servicios adicionales.</div>
+                <div style={{fontSize:13,color:"var(--t3)",marginTop:8}}>* Estimado basado en tarifa estándar. Puede variar según servicios adicionales.</div>
               </div>
             );})()}
 
@@ -4978,8 +4987,8 @@ export default function ENEXSystem(){
   const renderCalculadora=()=>(
     <div className="page-scroll">
       <div style={{maxWidth:820,margin:"0 auto"}}>
-        <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:20,fontWeight:700,color:"var(--navy)",marginBottom:4}}>🧮 Calculadora de Envío</div>
-        <div style={{fontSize:13,color:"var(--t3)",marginBottom:16}}>Ingresa las medidas y peso para obtener un estimado de costo.</div>
+        <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:22,fontWeight:700,color:"var(--navy)",marginBottom:4}}>🧮 Calculadora de Envío</div>
+        <div style={{fontSize:15,color:"var(--t3)",marginBottom:16}}>Ingresa las medidas y peso para obtener un estimado de costo.</div>
 
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
           {/* Ruta */}
@@ -5050,17 +5059,17 @@ export default function ENEXSystem(){
             <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:14}}>
               {[[`⚖️ Peso Real`,calcForm.unitDim==="cm"?`${calcResult.kg} kg`:`${calcResult.lb} lb`,"var(--t1)"],["📐 Peso Vol.",`${calcResult.volLb} lb`,"var(--orange)"],["📦 Ft³",String(calcResult.ft3),"var(--sky)"],["🌐 M³",String(calcResult.m3),"var(--teal)"]].map(([l,v,c])=>(
                 <div key={l} style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,padding:"14px",textAlign:"center",boxShadow:"var(--shadow)"}}>
-                  <div style={{fontSize:13,marginBottom:6}}>{l}</div>
-                  <div style={{fontFamily:"'DM Mono',monospace",fontSize:20,fontWeight:800,color:c}}>{v}</div>
+                  <div style={{fontSize:15,marginBottom:6}}>{l}</div>
+                  <div style={{fontFamily:"'DM Mono',monospace",fontSize:22,fontWeight:800,color:c}}>{v}</div>
                 </div>
               ))}
             </div>
 
             {calcResult.tarifaMissing?(
               <div style={{background:"#FEF3C7",border:"1.5px solid #F59E0B",borderRadius:14,padding:"20px",marginBottom:14,textAlign:"center"}}>
-                <div style={{fontSize:24,marginBottom:6}}>⚠️</div>
-                <div style={{fontSize:15,fontWeight:700,color:"#92400E",marginBottom:4}}>No hay tarifa configurada para esta ruta</div>
-                <div style={{fontSize:12,color:"#92400E"}}>
+                <div style={{fontSize:26,marginBottom:6}}>⚠️</div>
+                <div style={{fontSize:17,fontWeight:700,color:"#92400E",marginBottom:4}}>No hay tarifa configurada para esta ruta</div>
+                <div style={{fontSize:14,color:"#92400E"}}>
                   {calcForm.origPais&&calcForm.destPais&&calcForm.tipoEnvio
                     ?`Configure una tarifa para ${COUNTRIES.find(c=>c.dial===calcForm.origPais)?.name||calcForm.origPais} → ${COUNTRIES.find(c=>c.dial===calcForm.destPais)?.name||calcForm.destPais} · ${calcForm.tipoEnvio} en Configuración → Tarifas.`
                     :"Complete país origen, país destino y tipo de envío para calcular el costo."}
@@ -5069,22 +5078,22 @@ export default function ENEXSystem(){
             ):(
               <>
                 <div style={{background:"var(--navy)",borderRadius:14,padding:"24px",marginBottom:14,textAlign:"center"}}>
-                  <div style={{fontSize:13,color:"rgba(255,255,255,.6)",marginBottom:8}}>Costo Estimado · {calcForm.tipoEnvio||"—"} · {COUNTRIES.find(c=>c.dial===calcForm.origPais)?.name?.split(" ")[0]||"—"} → {COUNTRIES.find(c=>c.dial===calcForm.destPais)?.name?.split(" ")[0]||"—"}</div>
-                  <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:52,fontWeight:800,color:"#E5AE3A",lineHeight:1}}>{calcCurrSym}{calcResult.total}</div>
-                  <div style={{fontSize:12,color:"rgba(255,255,255,.4)",marginTop:6}}>{calcCurr} · Estimado aproximado{calcResult.usoMinimo?` · Aplicado mínimo ${calcCurrSym}${calcResult.tarifa.min}`:""}</div>
+                  <div style={{fontSize:15,color:"rgba(255,255,255,.6)",marginBottom:8}}>Costo Estimado · {calcForm.tipoEnvio||"—"} · {COUNTRIES.find(c=>c.dial===calcForm.origPais)?.name?.split(" ")[0]||"—"} → {COUNTRIES.find(c=>c.dial===calcForm.destPais)?.name?.split(" ")[0]||"—"}</div>
+                  <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:54,fontWeight:800,color:"#E5AE3A",lineHeight:1}}>{calcCurrSym}{calcResult.total}</div>
+                  <div style={{fontSize:14,color:"rgba(255,255,255,.4)",marginTop:6}}>{calcCurr} · Estimado aproximado{calcResult.usoMinimo?` · Aplicado mínimo ${calcCurrSym}${calcResult.tarifa.min}`:""}</div>
                 </div>
-                <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,padding:"14px",marginBottom:14,display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,fontSize:11}}>
+                <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,padding:"14px",marginBottom:14,display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,fontSize:13}}>
                   <div><span style={{color:"var(--t3)"}}>Tarifa aplicada:</span> <b style={{fontFamily:"'DM Mono',monospace"}}>{calcCurrSym}{calcResult.tarifa.porLb||0}/lb · {calcCurrSym}{calcResult.tarifa.porFt3||0}/ft³</b></div>
                   <div><span style={{color:"var(--t3)"}}>Cargo mínimo:</span> <b style={{fontFamily:"'DM Mono',monospace"}}>{calcCurrSym}{calcResult.tarifa.min||0}</b></div>
                   <div><span style={{color:"var(--t3)"}}>Match:</span> <b>{calcResult.tarifa.matchLevel==="ciudad"?"🎯 Ciudad":"🌍 País"}</b></div>
                 </div>
-                <div style={{fontSize:12,color:"var(--t3)",textAlign:"center"}}>* Los precios son estimados basados en tarifas configuradas. Contacta a ENEX para una cotización exacta.</div>
+                <div style={{fontSize:14,color:"var(--t3)",textAlign:"center"}}>* Los precios son estimados basados en tarifas configuradas. Contacta a ENEX para una cotización exacta.</div>
               </>
             )}
           </>
         )}
         {!calcResult&&(
-          <div style={{textAlign:"center",padding:"40px",color:"var(--t3)",fontSize:14}}>
+          <div style={{textAlign:"center",padding:"40px",color:"var(--t3)",fontSize:16}}>
             Ingresa las medidas y peso para ver el estimado 👆
           </div>
         )}
@@ -5433,24 +5442,24 @@ export default function ENEXSystem(){
             ["📊","Facturado",fmtMonyBoth(totalFacturado),"var(--cyan)"],
           ].map(([ic,l,v,c])=>(
             <div key={l} style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,padding:"14px",boxShadow:"var(--shadow)"}}>
-              <div style={{fontSize:18,marginBottom:6}}>{ic}</div>
-              <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:20,fontWeight:800,color:c}}>{v}</div>
-              <div style={{fontSize:12,color:"var(--t2)",marginTop:2}}>{l}</div>
+              <div style={{fontSize:20,marginBottom:6}}>{ic}</div>
+              <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:22,fontWeight:800,color:c}}>{v}</div>
+              <div style={{fontSize:14,color:"var(--t2)",marginTop:2}}>{l}</div>
             </div>
           ))}
         </div>
 
         {/* Tabs + botón nueva factura */}
         <div style={{display:"flex",gap:4,marginBottom:14,background:"var(--bg4)",borderRadius:8,padding:"3px",border:"1px solid var(--b1)"}}>
-          {CTABS.map(t=><button key={t.k} onClick={()=>setContabTab(t.k)} style={{flex:1,padding:"7px 10px",borderRadius:6,border:"none",cursor:"pointer",fontSize:12,fontWeight:600,background:contabTab===t.k?"var(--navy)":"transparent",color:contabTab===t.k?"#fff":"var(--t2)"}}>{t.l}</button>)}
+          {CTABS.map(t=><button key={t.k} onClick={()=>setContabTab(t.k)} style={{flex:1,padding:"7px 10px",borderRadius:6,border:"none",cursor:"pointer",fontSize:14,fontWeight:600,background:contabTab===t.k?"var(--navy)":"transparent",color:contabTab===t.k?"#fff":"var(--t2)"}}>{t.l}</button>)}
         </div>
 
         {/* ── FACTURAS ── */}
         {contabTab==="facturas"&&(
           <>
             <div className="card" style={{marginBottom:10,display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-              <input className="fi" placeholder="Buscar por N°, receptor, doc, casillero…" value={facFilter.q} onChange={e=>setFacFilter(p=>({...p,q:e.target.value}))} style={{flex:1,minWidth:220,fontSize:12,padding:"6px 10px"}}/>
-              <select className="fi" value={facFilter.status} onChange={e=>setFacFilter(p=>({...p,status:e.target.value}))} style={{fontSize:12,padding:"6px 10px"}}>
+              <input className="fi" placeholder="Buscar por N°, receptor, doc, casillero…" value={facFilter.q} onChange={e=>setFacFilter(p=>({...p,q:e.target.value}))} style={{flex:1,minWidth:220,fontSize:14,padding:"6px 10px"}}/>
+              <select className="fi" value={facFilter.status} onChange={e=>setFacFilter(p=>({...p,status:e.target.value}))} style={{fontSize:14,padding:"6px 10px"}}>
                 <option value="">Todos los estados</option>
                 <option value="borrador">Borrador</option>
                 <option value="emitida">Emitida</option>
@@ -5458,18 +5467,18 @@ export default function ENEXSystem(){
                 <option value="pagada">Pagada</option>
                 <option value="anulada">Anulada</option>
               </select>
-              <select className="fi" value={facFilter.tipo} onChange={e=>setFacFilter(p=>({...p,tipo:e.target.value}))} style={{fontSize:12,padding:"6px 10px"}}>
+              <select className="fi" value={facFilter.tipo} onChange={e=>setFacFilter(p=>({...p,tipo:e.target.value}))} style={{fontSize:14,padding:"6px 10px"}}>
                 <option value="">Todos los tipos</option>
                 <option value="factura">Factura</option>
                 <option value="proforma">Proforma</option>
                 <option value="nota_credito">Nota de crédito</option>
               </select>
-              <select className="fi" value={facFilter.moneda} onChange={e=>setFacFilter(p=>({...p,moneda:e.target.value}))} style={{fontSize:12,padding:"6px 10px"}}>
+              <select className="fi" value={facFilter.moneda} onChange={e=>setFacFilter(p=>({...p,moneda:e.target.value}))} style={{fontSize:14,padding:"6px 10px"}}>
                 <option value="">Todas las monedas</option>
                 <option value="USD">USD</option>
                 <option value="EUR">EUR</option>
               </select>
-              <select className="fi" value={facFilter.receptorTipo} onChange={e=>setFacFilter(p=>({...p,receptorTipo:e.target.value}))} style={{fontSize:12,padding:"6px 10px"}}>
+              <select className="fi" value={facFilter.receptorTipo} onChange={e=>setFacFilter(p=>({...p,receptorTipo:e.target.value}))} style={{fontSize:14,padding:"6px 10px"}}>
                 <option value="">Todos los receptores</option>
                 {REC_TYPES.map(r=><option key={r.k} value={r.k}>{r.l}</option>)}
               </select>
@@ -5487,22 +5496,22 @@ export default function ENEXSystem(){
                       const negativa=f.tipo==="nota_credito";
                       return(
                         <tr key={f.id}>
-                          <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",fontSize:12}}>{f.id}</span>{f.ncFacturaOrigen&&<div style={{fontSize:9,color:"var(--purple)",fontFamily:"'DM Mono',monospace"}}>← {f.ncFacturaOrigen}</div>}</td>
-                          <td><span style={{fontSize:10,padding:"2px 6px",borderRadius:4,background:f.tipo==="nota_credito"?"var(--purple)":(f.tipo==="proforma"?"var(--gold2)":"var(--cyan)"),color:"#fff",fontWeight:700}}>{f.tipo==="nota_credito"?"NC":f.tipo==="proforma"?"PRF":"FAC"}</span></td>
-                          <td style={{fontFamily:"'DM Mono',monospace",fontSize:11}}>{fmtDate(f.fecha)}</td>
-                          <td style={{fontWeight:600}}>{f.receptorNombre||"—"}<div style={{fontSize:10,color:"var(--gold2)",fontFamily:"'DM Mono',monospace"}}>{f.receptorCasillero||f.receptorDoc||""}</div></td>
-                          <td style={{textAlign:"center",fontWeight:700,fontSize:11}}>{f.moneda}</td>
+                          <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",fontSize:14}}>{f.id}</span>{f.ncFacturaOrigen&&<div style={{fontSize:11,color:"var(--purple)",fontFamily:"'DM Mono',monospace"}}>← {f.ncFacturaOrigen}</div>}</td>
+                          <td><span style={{fontSize:12,padding:"2px 6px",borderRadius:4,background:f.tipo==="nota_credito"?"var(--purple)":(f.tipo==="proforma"?"var(--gold2)":"var(--cyan)"),color:"#fff",fontWeight:700}}>{f.tipo==="nota_credito"?"NC":f.tipo==="proforma"?"PRF":"FAC"}</span></td>
+                          <td style={{fontFamily:"'DM Mono',monospace",fontSize:13}}>{fmtDate(f.fecha)}</td>
+                          <td style={{fontWeight:600}}>{f.receptorNombre||"—"}<div style={{fontSize:12,color:"var(--gold2)",fontFamily:"'DM Mono',monospace"}}>{f.receptorCasillero||f.receptorDoc||""}</div></td>
+                          <td style={{textAlign:"center",fontWeight:700,fontSize:13}}>{f.moneda}</td>
                           <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:negativa?"var(--purple)":"var(--navy)"}}>{fmtMoney(f.total,f.moneda)}</td>
                           <td style={{fontFamily:"'DM Mono',monospace",fontWeight:600,color:"var(--green)"}}>{fmtMoney(f.pagado,f.moneda)}</td>
                           <td style={{fontFamily:"'DM Mono',monospace",fontWeight:800,color:f.saldo>0?"var(--orange)":"var(--t3)"}}>{fmtMoney(f.saldo,f.moneda)}</td>
                           <td><span className={`st ${FAC_STATUS_CLS[f.status]||"s5"}`}><span className="st-dot"/>{FAC_STATUS_LABEL[f.status]||f.status}</span></td>
                           <td style={{whiteSpace:"nowrap"}}>
-                            <button className="btn-s" style={{fontSize:10,padding:"3px 6px",marginRight:4}} title="Ver / Imprimir" onClick={()=>setFacPrint(f)}>🖨️</button>
-                            {(f.status==="borrador"||f.status==="emitida")&&(hasPerm("editar_factura")||hasPerm("facturar"))&&<button className="btn-s" style={{fontSize:10,padding:"3px 6px",marginRight:4}} title="Editar" onClick={()=>facOpenEdit(f)}>✏️</button>}
-                            {(f.status==="emitida"||f.status==="pagada_parcial")&&(hasPerm("registrar_pago")||hasPerm("cobrar"))&&<button className="btn-p" style={{fontSize:10,padding:"3px 8px",marginRight:4}} title="Registrar pago" onClick={()=>pagoOpen(f)}>💵 Cobrar</button>}
-                            {f.status!=="borrador"&&f.tipo==="factura"&&(hasPerm("nota_credito")||hasPerm("facturar"))&&<button className="btn-s" style={{fontSize:10,padding:"3px 6px",marginRight:4,color:"var(--purple)",borderColor:"var(--purple)"}} title="Nota de crédito" onClick={()=>ncOpen(f)}>📝 NC</button>}
-                            {f.status!=="anulada"&&f.status!=="borrador"&&(hasPerm("anular_factura")||hasPerm("facturar"))&&<button className="btn-s" style={{fontSize:10,padding:"3px 6px",marginRight:4,color:"var(--red)",borderColor:"var(--red)"}} title="Anular" onClick={()=>facAnular(f)}>✕</button>}
-                            {f.status==="borrador"&&hasPerm("borrar_factura")&&<button className="btn-s" style={{fontSize:10,padding:"3px 6px",color:"var(--red)",borderColor:"var(--red)"}} title="Borrar borrador" onClick={()=>facDelete(f)}>🗑️</button>}
+                            <button className="btn-s" style={{fontSize:12,padding:"3px 6px",marginRight:4}} title="Ver / Imprimir" onClick={()=>setFacPrint(f)}>🖨️</button>
+                            {(f.status==="borrador"||f.status==="emitida")&&(hasPerm("editar_factura")||hasPerm("facturar"))&&<button className="btn-s" style={{fontSize:12,padding:"3px 6px",marginRight:4}} title="Editar" onClick={()=>facOpenEdit(f)}>✏️</button>}
+                            {(f.status==="emitida"||f.status==="pagada_parcial")&&(hasPerm("registrar_pago")||hasPerm("cobrar"))&&<button className="btn-p" style={{fontSize:12,padding:"3px 8px",marginRight:4}} title="Registrar pago" onClick={()=>pagoOpen(f)}>💵 Cobrar</button>}
+                            {f.status!=="borrador"&&f.tipo==="factura"&&(hasPerm("nota_credito")||hasPerm("facturar"))&&<button className="btn-s" style={{fontSize:12,padding:"3px 6px",marginRight:4,color:"var(--purple)",borderColor:"var(--purple)"}} title="Nota de crédito" onClick={()=>ncOpen(f)}>📝 NC</button>}
+                            {f.status!=="anulada"&&f.status!=="borrador"&&(hasPerm("anular_factura")||hasPerm("facturar"))&&<button className="btn-s" style={{fontSize:12,padding:"3px 6px",marginRight:4,color:"var(--red)",borderColor:"var(--red)"}} title="Anular" onClick={()=>facAnular(f)}>✕</button>}
+                            {f.status==="borrador"&&hasPerm("borrar_factura")&&<button className="btn-s" style={{fontSize:12,padding:"3px 6px",color:"var(--red)",borderColor:"var(--red)"}} title="Borrar borrador" onClick={()=>facDelete(f)}>🗑️</button>}
                           </td>
                         </tr>
                       );
@@ -5524,8 +5533,8 @@ export default function ENEXSystem(){
               {cxc.length===0?<div className="card" style={{textAlign:"center",padding:40,color:"var(--t3)"}}>No hay cuentas pendientes. ✅</div>:(
                 <div className="card" style={{padding:0}}>
                   <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
-                    <span style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:14,fontWeight:700,color:"var(--navy)"}}>💰 Cuentas por Cobrar</span>
-                    <span style={{fontSize:12,color:"var(--orange)",fontWeight:700,marginLeft:"auto"}}>Total pendiente: {fmtMonyBoth(totalPorCobrar)}</span>
+                    <span style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:16,fontWeight:700,color:"var(--navy)"}}>💰 Cuentas por Cobrar</span>
+                    <span style={{fontSize:14,color:"var(--orange)",fontWeight:700,marginLeft:"auto"}}>Total pendiente: {fmtMonyBoth(totalPorCobrar)}</span>
                   </div>
                   <table className="ct">
                     <thead><tr><th>Factura</th><th>Receptor</th><th>Emitida</th><th>Mon</th><th>Total</th><th>Pagado</th><th>Saldo</th><th>Días</th><th>Acc.</th></tr></thead>
@@ -5534,17 +5543,17 @@ export default function ENEXSystem(){
                         const dias=f._dias;
                         return (
                           <tr key={f.id}>
-                            <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,fontSize:12,color:"var(--navy)"}}>{f.id}</span></td>
-                            <td style={{fontWeight:600}}>{f.receptorNombre||"—"}<div style={{fontSize:10,color:"var(--gold2)",fontFamily:"'DM Mono',monospace"}}>{f.receptorCasillero||f.receptorDoc||""}</div></td>
-                            <td style={{fontFamily:"'DM Mono',monospace",fontSize:11}}>{fmtDate(f.fechaEmision||f.fecha)}</td>
+                            <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,fontSize:14,color:"var(--navy)"}}>{f.id}</span></td>
+                            <td style={{fontWeight:600}}>{f.receptorNombre||"—"}<div style={{fontSize:12,color:"var(--gold2)",fontFamily:"'DM Mono',monospace"}}>{f.receptorCasillero||f.receptorDoc||""}</div></td>
+                            <td style={{fontFamily:"'DM Mono',monospace",fontSize:13}}>{fmtDate(f.fechaEmision||f.fecha)}</td>
                             <td style={{textAlign:"center",fontWeight:700}}>{f.moneda}</td>
                             <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)"}}>{fmtMoney(f.total,f.moneda)}</td>
                             <td style={{fontFamily:"'DM Mono',monospace",fontWeight:600,color:"var(--green)"}}>{fmtMoney(f.pagado,f.moneda)}</td>
                             <td style={{fontFamily:"'DM Mono',monospace",fontWeight:800,color:"var(--orange)"}}>{fmtMoney(f.saldo,f.moneda)}</td>
                             <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:dias>30?"var(--red)":dias>15?"var(--orange)":"var(--t1)"}}>{dias}d</span></td>
                             <td>
-                              <button className="btn-s" style={{fontSize:10,padding:"3px 6px",marginRight:4}} onClick={()=>setFacPrint(f)}>🖨️</button>
-                              {(hasPerm("registrar_pago")||hasPerm("cobrar"))&&<button className="btn-p" style={{fontSize:10,padding:"3px 8px"}} onClick={()=>pagoOpen(f)}>💵 Cobrar</button>}
+                              <button className="btn-s" style={{fontSize:12,padding:"3px 6px",marginRight:4}} onClick={()=>setFacPrint(f)}>🖨️</button>
+                              {(hasPerm("registrar_pago")||hasPerm("cobrar"))&&<button className="btn-p" style={{fontSize:12,padding:"3px 8px"}} onClick={()=>pagoOpen(f)}>💵 Cobrar</button>}
                             </td>
                           </tr>
                         );
@@ -5568,16 +5577,16 @@ export default function ENEXSystem(){
                     const tipoLbl=(PAY_METHODS.find(m=>m.k===p.tipoPago)||{l:p.tipoPago||"—"}).l;
                     return(
                       <tr key={p.id} style={p.anulado?{opacity:.55,textDecoration:"line-through"}:{}}>
-                        <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700,fontSize:12,color:"var(--navy)"}}>{p.id}</td>
-                        <td style={{fontFamily:"'DM Mono',monospace",fontSize:11}}>{p.facturaId}</td>
+                        <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700,fontSize:14,color:"var(--navy)"}}>{p.id}</td>
+                        <td style={{fontFamily:"'DM Mono',monospace",fontSize:13}}>{p.facturaId}</td>
                         <td style={{textAlign:"center",fontWeight:700}}>{p.moneda||"USD"}</td>
-                        <td style={{fontFamily:"'DM Mono',monospace",fontWeight:800,color:"var(--green)",fontSize:13}}>{fmtMoney(p.monto,p.moneda)}</td>
-                        <td style={{fontWeight:600,fontSize:11}}>{tipoLbl}</td>
-                        <td style={{fontFamily:"'DM Mono',monospace",fontSize:10,color:"var(--t2)"}}>{p.referencia||"—"}</td>
-                        <td style={{fontSize:10,color:"var(--t2)",maxWidth:180,whiteSpace:"normal"}}>{p.notaReferencial||"—"}</td>
-                        <td style={{fontFamily:"'DM Mono',monospace",fontSize:11}}>{fmtDate(p.fecha)} {fmtTime(p.fecha)}</td>
+                        <td style={{fontFamily:"'DM Mono',monospace",fontWeight:800,color:"var(--green)",fontSize:15}}>{fmtMoney(p.monto,p.moneda)}</td>
+                        <td style={{fontWeight:600,fontSize:13}}>{tipoLbl}</td>
+                        <td style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--t2)"}}>{p.referencia||"—"}</td>
+                        <td style={{fontSize:12,color:"var(--t2)",maxWidth:180,whiteSpace:"normal"}}>{p.notaReferencial||"—"}</td>
+                        <td style={{fontFamily:"'DM Mono',monospace",fontSize:13}}>{fmtDate(p.fecha)} {fmtTime(p.fecha)}</td>
                         <td>{p.anulado?<span className="st s1"><span className="st-dot"/>Anulado</span>:<span className="st s3"><span className="st-dot"/>Activo</span>}</td>
-                        <td>{!p.anulado&&(hasPerm("anular_pago")||hasPerm("cobrar"))&&<button className="btn-s" style={{fontSize:10,padding:"3px 6px",color:"var(--red)",borderColor:"var(--red)"}} onClick={()=>pagoAnular(p)}>✕ Anular</button>}</td>
+                        <td>{!p.anulado&&(hasPerm("anular_pago")||hasPerm("cobrar"))&&<button className="btn-s" style={{fontSize:12,padding:"3px 6px",color:"var(--red)",borderColor:"var(--red)"}} onClick={()=>pagoAnular(p)}>✕ Anular</button>}</td>
                       </tr>
                     );
                   })}
@@ -5590,7 +5599,7 @@ export default function ENEXSystem(){
         {/* ── GENERAR DE GUÍA ── */}
         {contabTab==="generar"&&(
           <div>
-            <div style={{fontSize:13,color:"var(--t2)",marginBottom:12}}>Selecciona una guía consolidada para generar borradores de factura por consignatario. Luego revisa cada borrador y emítelo.</div>
+            <div style={{fontSize:15,color:"var(--t2)",marginBottom:12}}>Selecciona una guía consolidada para generar borradores de factura por consignatario. Luego revisa cada borrador y emítelo.</div>
             {consolList.length===0?<div className="card" style={{textAlign:"center",padding:40,color:"var(--t3)"}}>No hay guías consolidadas. Primero crea un embarque en Consolidación.</div>:(
               <div className="card" style={{padding:0}}>
                 <table className="ct">
@@ -5600,14 +5609,14 @@ export default function ENEXSystem(){
                       const yaFact=facturas.filter(f=>(f.guiaIds||[]).includes(g.id));
                       return (
                         <tr key={g.id}>
-                          <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",fontSize:12}}>{g.id}</span></td>
+                          <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",fontSize:14}}>{g.id}</span></td>
                           <td style={{fontWeight:600}}>{g.destino}</td>
-                          <td style={{fontFamily:"'DM Mono',monospace",fontSize:11}}>{fmtDate(g.fecha)}</td>
+                          <td style={{fontFamily:"'DM Mono',monospace",fontSize:13}}>{fmtDate(g.fecha)}</td>
                           <td style={{textAlign:"center",fontWeight:700}}>{g.totalWR}</td>
                           <td><TypeBadge t={g.tipoEnvio}/></td>
-                          <td>{yaFact.length>0?<span style={{fontSize:11,fontWeight:700,color:"var(--green)"}}>{yaFact.length} factura(s)</span>:<span style={{fontSize:11,color:"var(--t3)"}}>—</span>}</td>
+                          <td>{yaFact.length>0?<span style={{fontSize:13,fontWeight:700,color:"var(--green)"}}>{yaFact.length} factura(s)</span>:<span style={{fontSize:13,color:"var(--t3)"}}>—</span>}</td>
                           <td>
-                            {(hasPerm("crear_factura")||hasPerm("facturar"))&&<button className="btn-p" style={{fontSize:10,padding:"3px 10px"}} onClick={()=>facFromGuia(g)}>⚡ Generar Borradores</button>}
+                            {(hasPerm("crear_factura")||hasPerm("facturar"))&&<button className="btn-p" style={{fontSize:12,padding:"3px 10px"}} onClick={()=>facFromGuia(g)}>⚡ Generar Borradores</button>}
                           </td>
                         </tr>
                       );
@@ -5648,7 +5657,7 @@ export default function ENEXSystem(){
           return (
             <div style={{display:"flex",flexDirection:"column",gap:14}}>
               <div className="card" style={{padding:0}}>
-                <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",fontFamily:"Arial,Helvetica,sans-serif",fontSize:14,fontWeight:700,color:"var(--navy)"}}>📊 Ingresos por Período (separado por moneda)</div>
+                <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",fontFamily:"Arial,Helvetica,sans-serif",fontSize:16,fontWeight:700,color:"var(--navy)"}}>📊 Ingresos por Período (separado por moneda)</div>
                 {meses.length===0?<div style={{textAlign:"center",padding:30,color:"var(--t3)"}}>No hay datos para reportar aún.</div>:(
                   <table className="ct">
                     <thead><tr><th>Período</th><th>Mon</th><th>Facturas</th><th>Total Facturado</th><th>Pagado</th><th>Saldo</th><th>% Cobrado</th></tr></thead>
@@ -5668,7 +5677,7 @@ export default function ENEXSystem(){
                                 <div style={{flex:1,height:8,background:"var(--bg4)",borderRadius:4,overflow:"hidden"}}>
                                   <div style={{height:"100%",background:"var(--green)",width:`${pct}%`,borderRadius:4}}/>
                                 </div>
-                                <span style={{fontFamily:"'DM Mono',monospace",fontSize:11,fontWeight:700,color:"var(--green)",minWidth:36}}>{pct}%</span>
+                                <span style={{fontFamily:"'DM Mono',monospace",fontSize:13,fontWeight:700,color:"var(--green)",minWidth:36}}>{pct}%</span>
                               </div>
                             </td>
                           </tr>
@@ -5679,15 +5688,15 @@ export default function ENEXSystem(){
                 )}
               </div>
               <div className="card" style={{padding:0}}>
-                <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",fontFamily:"Arial,Helvetica,sans-serif",fontSize:14,fontWeight:700,color:"var(--navy)"}}>👥 Quién debe cuánto</div>
+                <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",fontFamily:"Arial,Helvetica,sans-serif",fontSize:16,fontWeight:700,color:"var(--navy)"}}>👥 Quién debe cuánto</div>
                 {deudores.length===0?<div style={{textAlign:"center",padding:30,color:"var(--t3)"}}>No hay deudores. ✅</div>:(
                   <table className="ct">
                     <thead><tr><th>Tipo</th><th>Receptor</th><th>Mon</th><th>Facturas</th><th>Total</th><th>Pagado</th><th>Saldo</th></tr></thead>
                     <tbody>
                       {deudores.map((d,i)=>(
                         <tr key={i}>
-                          <td style={{fontSize:11,fontWeight:700,color:"var(--purple)"}}>{(REC_TYPES.find(r=>r.k===d.tipo)||{l:d.tipo}).l}</td>
-                          <td style={{fontWeight:600}}>{d.nombre}<div style={{fontSize:10,color:"var(--gold2)",fontFamily:"'DM Mono',monospace"}}>{d.casillero||""}</div></td>
+                          <td style={{fontSize:13,fontWeight:700,color:"var(--purple)"}}>{(REC_TYPES.find(r=>r.k===d.tipo)||{l:d.tipo}).l}</td>
+                          <td style={{fontWeight:600}}>{d.nombre}<div style={{fontSize:12,color:"var(--gold2)",fontFamily:"'DM Mono',monospace"}}>{d.casillero||""}</div></td>
                           <td style={{textAlign:"center",fontWeight:700}}>{d.moneda}</td>
                           <td style={{textAlign:"center",fontWeight:700}}>{d.facturas}</td>
                           <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)"}}>{fmtMoney(d.total,d.moneda)}</td>
@@ -5755,11 +5764,11 @@ export default function ENEXSystem(){
       <div className="page-scroll">
         <div className="card" style={{marginBottom:14}}>
           <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",marginBottom:10}}>
-            <div style={{fontSize:15,fontWeight:700,color:"var(--navy)"}}>🔁 Reempaque de WR</div>
-            <div style={{fontSize:11,color:"var(--t3)"}}>Selecciona los WR a reempacar y crea un WR nuevo que los agrupe.</div>
+            <div style={{fontSize:17,fontWeight:700,color:"var(--navy)"}}>🔁 Reempaque de WR</div>
+            <div style={{fontSize:13,color:"var(--t3)"}}>Selecciona los WR a reempacar y crea un WR nuevo que los agrupe.</div>
             <div style={{marginLeft:"auto",display:"flex",gap:8,alignItems:"center"}}>
-              <input className="fi" placeholder="Buscar WR, consignatario, tracking…" value={rpqSearch} onChange={e=>setRpqSearch(e.target.value)} style={{fontSize:12,padding:"6px 10px",width:260}}/>
-              <span style={{fontSize:11,color:"var(--t2)",fontWeight:600}}>Seleccionados: {rpqSel.length}</span>
+              <input className="fi" placeholder="Buscar WR, consignatario, tracking…" value={rpqSearch} onChange={e=>setRpqSearch(e.target.value)} style={{fontSize:14,padding:"6px 10px",width:260}}/>
+              <span style={{fontSize:13,color:"var(--t2)",fontWeight:600}}>Seleccionados: {rpqSel.length}</span>
               {hasPerm("crear_reempaque")&&<button className="btn-p" disabled={rpqSel.length===0} style={{opacity:rpqSel.length===0?.5:1}} onClick={createReempaque}>+ Crear Reempaque ({wrNumPrev})</button>}
             </div>
           </div>
@@ -5792,7 +5801,7 @@ export default function ENEXSystem(){
         </div>
         {yaReempacados.length>0&&(
           <div className="card">
-            <div style={{fontSize:13,fontWeight:700,color:"var(--navy)",marginBottom:8}}>📜 Histórico — Últimos WR Reempacados</div>
+            <div style={{fontSize:15,fontWeight:700,color:"var(--navy)",marginBottom:8}}>📜 Histórico — Últimos WR Reempacados</div>
             <div style={{maxHeight:"28vh",overflow:"auto",border:"1px solid var(--b1)",borderRadius:8}}>
               <table className="wt">
                 <thead><tr><th>N° WR</th><th>Consignatario</th><th>Fecha</th><th>Reempacado en</th><th>Estado</th></tr></thead>
@@ -6228,63 +6237,63 @@ export default function ENEXSystem(){
     // Render de las acciones por WR en el checklist — depende del estado actual
     const renderChkActions=(w)=>{
       const c=chkCode(w);
-      if(!hasPerm("hacer_recepcion_dest"))return<span style={{fontSize:10,color:"var(--t4)"}}>—</span>;
+      if(!hasPerm("hacer_recepcion_dest"))return<span style={{fontSize:12,color:"var(--t4)"}}>—</span>;
       // Pre-destino (14/15/16/13/etc) o estados de tránsito
       if(!["17","18","18.1","19","20","21","22","23","25"].includes(c)){
         return(<div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-          <button className="btn-s" style={{fontSize:9,padding:"3px 7px",background:"#E8F5E9",borderColor:"#81C784",color:"#2E7D32"}}
+          <button className="btn-s" style={{fontSize:11,padding:"3px 7px",background:"#E8F5E9",borderColor:"#81C784",color:"#2E7D32"}}
             onClick={()=>recibirEnDestino(w,`Checklist guía ${guiaSel?.id||"?"}`)}>✅ Recibir</button>
-          <button className="btn-s" style={{fontSize:9,padding:"3px 7px",background:"#FFEBEE",borderColor:"#E57373",color:"#C62828"}}
+          <button className="btn-s" style={{fontSize:11,padding:"3px 7px",background:"#FFEBEE",borderColor:"#E57373",color:"#C62828"}}
             onClick={()=>marcarFaltante(w,guiaSel?.id)}>❌ Faltante</button>
         </div>);
       }
       if(c==="17"){
         return(<div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-          <span style={{fontSize:9,fontWeight:700,color:"#2E7D32"}}>✓ Recibido</span>
-          {hasPerm("editar_recepcion_dest")&&<button className="btn-s" style={{fontSize:9,padding:"3px 7px"}} onClick={()=>revertirRecepcion(w)}>↩️ Revertir</button>}
+          <span style={{fontSize:11,fontWeight:700,color:"#2E7D32"}}>✓ Recibido</span>
+          {hasPerm("editar_recepcion_dest")&&<button className="btn-s" style={{fontSize:11,padding:"3px 7px"}} onClick={()=>revertirRecepcion(w)}>↩️ Revertir</button>}
         </div>);
       }
       if(c==="18"){
         return(<div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-          <span style={{fontSize:9,fontWeight:700,color:"#C62828"}}>⚠️ Faltante</span>
-          <button className="btn-s" style={{fontSize:9,padding:"3px 7px",background:"#FFF3E0",borderColor:"#FFB74D",color:"#E65100"}}
+          <span style={{fontSize:11,fontWeight:700,color:"#C62828"}}>⚠️ Faltante</span>
+          <button className="btn-s" style={{fontSize:11,padding:"3px 7px",background:"#FFF3E0",borderColor:"#FFB74D",color:"#E65100"}}
             onClick={()=>marcarInvestigacion(w)}>🔍 Investigar</button>
         </div>);
       }
-      if(c==="18.1")return<span style={{fontSize:9,fontWeight:700,color:"#E65100"}}>🔍 En investigación</span>;
-      if(c==="19")return<span style={{fontSize:9,fontWeight:700,color:"#7B1FA2"}}>➕ Sobrante</span>;
-      return<span style={{fontSize:9,fontWeight:700,color:"var(--t3)"}}>{c} {w.status?.label||""}</span>;
+      if(c==="18.1")return<span style={{fontSize:11,fontWeight:700,color:"#E65100"}}>🔍 En investigación</span>;
+      if(c==="19")return<span style={{fontSize:11,fontWeight:700,color:"#7B1FA2"}}>➕ Sobrante</span>;
+      return<span style={{fontSize:11,fontWeight:700,color:"var(--t3)"}}>{c} {w.status?.label||""}</span>;
     };
     return (
       <div className="page-scroll">
         {/* HEADER + TABS */}
         <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
           <div style={{flex:1}}>
-            <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:16,fontWeight:700,color:"var(--navy)"}}>📬 Recepción en Almacén</div>
-            <div style={{fontSize:11,color:"var(--t3)",marginTop:2}}>Recibe guías completas o WR individuales. Las guías recibidas se archivan automáticamente.</div>
+            <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:18,fontWeight:700,color:"var(--navy)"}}>📬 Recepción en Almacén</div>
+            <div style={{fontSize:13,color:"var(--t3)",marginTop:2}}>Recibe guías completas o WR individuales. Las guías recibidas se archivan automáticamente.</div>
           </div>
           <div style={{display:"flex",gap:4,background:"#EEF2F7",border:"1px solid #DCE2EC",borderRadius:8,padding:3}}>
-            <button onClick={()=>setRdTab("pendientes")} style={{fontSize:11,fontWeight:600,padding:"6px 14px",borderRadius:6,border:"none",cursor:"pointer",background:rdTab==="pendientes"?"var(--navy)":"transparent",color:rdTab==="pendientes"?"#fff":"var(--t2)"}}>⏳ Pendientes ({guiasActivas.length})</button>
-            <button onClick={()=>setRdTab("archivadas")} style={{fontSize:11,fontWeight:600,padding:"6px 14px",borderRadius:6,border:"none",cursor:"pointer",background:rdTab==="archivadas"?"var(--navy)":"transparent",color:rdTab==="archivadas"?"#fff":"var(--t2)"}}>📦 Archivadas ({guiasArchivadas.length})</button>
+            <button onClick={()=>setRdTab("pendientes")} style={{fontSize:13,fontWeight:600,padding:"6px 14px",borderRadius:6,border:"none",cursor:"pointer",background:rdTab==="pendientes"?"var(--navy)":"transparent",color:rdTab==="pendientes"?"#fff":"var(--t2)"}}>⏳ Pendientes ({guiasActivas.length})</button>
+            <button onClick={()=>setRdTab("archivadas")} style={{fontSize:13,fontWeight:600,padding:"6px 14px",borderRadius:6,border:"none",cursor:"pointer",background:rdTab==="archivadas"?"var(--navy)":"transparent",color:rdTab==="archivadas"?"#fff":"var(--t2)"}}>📦 Archivadas ({guiasArchivadas.length})</button>
           </div>
         </div>
 
         {rdTab==="pendientes"&&<>
           {/* SCAN / MANUAL */}
           <div className="card" style={{marginBottom:14}}>
-            <div style={{fontSize:13,fontWeight:700,color:"var(--navy)",marginBottom:8}}>🔎 Escanear o seleccionar guía</div>
+            <div style={{fontSize:15,fontWeight:700,color:"var(--navy)",marginBottom:8}}>🔎 Escanear o seleccionar guía</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,alignItems:"end"}}>
               <div>
-                <div style={{fontSize:10,color:"var(--t3)",marginBottom:3,fontWeight:600}}>Por escaneo (N° guía / N° WR / Tracking)</div>
+                <div style={{fontSize:12,color:"var(--t3)",marginBottom:3,fontWeight:600}}>Por escaneo (N° guía / N° WR / Tracking)</div>
                 <div style={{display:"flex",gap:6}}>
-                  <input className="fi" placeholder="Escanear o escribir…" value={rdScan} onChange={e=>setRdScan(e.target.value.toUpperCase())} onKeyDown={e=>{if(e.key==="Enter"&&hasPerm("hacer_recepcion_dest"))rdOnScan();}} disabled={!hasPerm("hacer_recepcion_dest")} style={{flex:1,fontFamily:"'DM Mono',monospace",fontSize:13,letterSpacing:1,padding:"8px 12px",opacity:hasPerm("hacer_recepcion_dest")?1:.5}} autoFocus/>
+                  <input className="fi" placeholder="Escanear o escribir…" value={rdScan} onChange={e=>setRdScan(e.target.value.toUpperCase())} onKeyDown={e=>{if(e.key==="Enter"&&hasPerm("hacer_recepcion_dest"))rdOnScan();}} disabled={!hasPerm("hacer_recepcion_dest")} style={{flex:1,fontFamily:"'DM Mono',monospace",fontSize:15,letterSpacing:1,padding:"8px 12px",opacity:hasPerm("hacer_recepcion_dest")?1:.5}} autoFocus/>
                   {hasPerm("hacer_recepcion_dest")&&<button className="btn-p" onClick={rdOnScan}>📥 Recibir</button>}
                 </div>
               </div>
               <div>
-                <div style={{fontSize:10,color:"var(--t3)",marginBottom:3,fontWeight:600}}>Seleccionar guía manualmente</div>
+                <div style={{fontSize:12,color:"var(--t3)",marginBottom:3,fontWeight:600}}>Seleccionar guía manualmente</div>
                 <div style={{display:"flex",gap:6}}>
-                  <select className="fi" value={rdSelGuia} onChange={e=>setRdSelGuia(e.target.value)} style={{flex:1,fontSize:12,padding:"8px 10px"}}>
+                  <select className="fi" value={rdSelGuia} onChange={e=>setRdSelGuia(e.target.value)} style={{flex:1,fontSize:14,padding:"8px 10px"}}>
                     <option value="">— Todas las guías pendientes —</option>
                     {guiasActivas.map(c=>(<option key={c.id} value={c.id}>{c.id} · {c.destino} · {c.totalWR||0} WR · {c.status||"—"}</option>))}
                   </select>
@@ -6297,23 +6306,23 @@ export default function ENEXSystem(){
                 </div>
               </div>
             </div>
-            {!hasPerm("hacer_recepcion_dest")&&<div style={{fontSize:11,color:"var(--red)",fontWeight:600,marginTop:6}}>⚠️ Tu rol no tiene permiso para registrar recepciones.</div>}
+            {!hasPerm("hacer_recepcion_dest")&&<div style={{fontSize:13,color:"var(--red)",fontWeight:600,marginTop:6}}>⚠️ Tu rol no tiene permiso para registrar recepciones.</div>}
           </div>
 
           {/* CHECKLIST DE GUÍA SELECCIONADA */}
           {guiaSel&&(
             <div className="card" style={{marginBottom:14}}>
               <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:8,flexWrap:"wrap"}}>
-                <div style={{fontSize:13,fontWeight:700,color:"var(--navy)"}}>📋 Checklist {guiaSel.id} ({checklist.length} WR)</div>
+                <div style={{fontSize:15,fontWeight:700,color:"var(--navy)"}}>📋 Checklist {guiaSel.id} ({checklist.length} WR)</div>
                 {/* Stats inline */}
-                <div style={{display:"flex",gap:8,fontSize:11,alignItems:"center"}}>
+                <div style={{display:"flex",gap:8,fontSize:13,alignItems:"center"}}>
                   <span style={{background:"#E8F5E9",color:"#2E7D32",padding:"2px 8px",borderRadius:10,fontWeight:700,border:"1px solid #A5D6A7"}}>✓ {nRecibidos} recibidos</span>
                   <span style={{background:"#FFEBEE",color:"#C62828",padding:"2px 8px",borderRadius:10,fontWeight:700,border:"1px solid #EF9A9A"}}>⚠️ {nFaltantes} faltantes</span>
                   <span style={{background:"#F3E5F5",color:"#7B1FA2",padding:"2px 8px",borderRadius:10,fontWeight:700,border:"1px solid #CE93D8"}}>➕ {sobrantesGuia.length} sobrantes</span>
                   {nPorEntrega>0&&<span style={{background:"#E3F2FD",color:"#1565C0",padding:"2px 8px",borderRadius:10,fontWeight:700,border:"1px solid #90CAF9"}}>🚚 {nPorEntrega} por entrega</span>}
                   <span style={{background:nPendientes>0?"#FFF3E0":"#F5F5F5",color:nPendientes>0?"#E65100":"var(--t3)",padding:"2px 8px",borderRadius:10,fontWeight:700,border:`1px solid ${nPendientes>0?"#FFCC80":"#E0E0E0"}`}}>⏳ {nPendientes} pendientes</span>
                 </div>
-                <input className="fi" placeholder="Buscar en checklist…" value={rdSearch} onChange={e=>setRdSearch(e.target.value)} style={{fontSize:12,padding:"6px 10px",width:200,marginLeft:"auto"}}/>
+                <input className="fi" placeholder="Buscar en checklist…" value={rdSearch} onChange={e=>setRdSearch(e.target.value)} style={{fontSize:14,padding:"6px 10px",width:200,marginLeft:"auto"}}/>
               </div>
               <div style={{maxHeight:"42vh",overflow:"auto",border:"1px solid var(--b1)",borderRadius:8}}>
                 <table className="wt">
@@ -6330,7 +6339,7 @@ export default function ENEXSystem(){
                         const rowBg=c==="17"?"#F1F8E9":["18","18.1"].includes(c)?"#FFF5F5":c==="19"?"#FAF4FC":["20","21","22","23","25"].includes(c)?"#F0F7FF":"";
                         return(
                           <tr key={w.id} style={{background:rowBg}}>
-                            <td style={{textAlign:"center",fontSize:10,color:"var(--t3)",fontFamily:"'DM Mono',monospace"}}>{i+1}</td>
+                            <td style={{textAlign:"center",fontSize:12,color:"var(--t3)",fontFamily:"'DM Mono',monospace"}}>{i+1}</td>
                             <td><span className="c-wr">{w.id}</span></td>
                             <td><span className="c-name">{w.consignee||"—"}</span></td>
                             <td><span className="c-cas">{w.casillero||"—"}</span></td>
@@ -6347,7 +6356,7 @@ export default function ENEXSystem(){
               {/* SOBRANTES DE ESTA GUÍA */}
               {sobrantesGuia.length>0&&(
                 <div style={{marginTop:12,border:"1px dashed #CE93D8",borderRadius:8,padding:10,background:"#FCF5FF"}}>
-                  <div style={{fontSize:12,fontWeight:700,color:"#7B1FA2",marginBottom:6}}>➕ Sobrantes detectados en {guiaSel.id} ({sobrantesGuia.length})</div>
+                  <div style={{fontSize:14,fontWeight:700,color:"#7B1FA2",marginBottom:6}}>➕ Sobrantes detectados en {guiaSel.id} ({sobrantesGuia.length})</div>
                   <div style={{maxHeight:"20vh",overflow:"auto"}}>
                     <table className="wt">
                       <thead><tr><th>N° WR</th><th>Consignatario</th><th>Tracking</th><th style={{width:260}}>Resolución</th></tr></thead>
@@ -6359,12 +6368,12 @@ export default function ENEXSystem(){
                             <td><span className="c-trk">{w.tracking||"—"}</span></td>
                             <td>{hasPerm("hacer_recepcion_dest")?(
                               <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-                                <button className="btn-s" style={{fontSize:9,padding:"3px 7px",background:"#E3F2FD",borderColor:"#64B5F6",color:"#1565C0"}}
+                                <button className="btn-s" style={{fontSize:11,padding:"3px 7px",background:"#E3F2FD",borderColor:"#64B5F6",color:"#1565C0"}}
                                   onClick={()=>resolverSobrante(w,"20")}>🚚 A Por Entrega (20)</button>
-                                <button className="btn-s" style={{fontSize:9,padding:"3px 7px"}}
+                                <button className="btn-s" style={{fontSize:11,padding:"3px 7px"}}
                                   onClick={()=>resolverSobrante(w,"4")}>🔄 Próx. guía (4)</button>
                               </div>
-                            ):<span style={{fontSize:10,color:"var(--t4)"}}>—</span>}</td>
+                            ):<span style={{fontSize:12,color:"var(--t4)"}}>—</span>}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -6376,13 +6385,13 @@ export default function ENEXSystem(){
               {/* CERRAR RECEPCIÓN */}
               {hasPerm("hacer_recepcion_dest")&&(
                 <div style={{marginTop:12,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",paddingTop:10,borderTop:"1px solid var(--b2)"}}>
-                  <div style={{fontSize:11,color:"var(--t3)"}}>
+                  <div style={{fontSize:13,color:"var(--t3)"}}>
                     {nPendientes>0
                       ?<span style={{color:"#E65100",fontWeight:600}}>⚠️ Quedan {nPendientes} WR sin resolver. Márcalos como Recibidos o Faltantes antes de cerrar.</span>
                       :"Todos los WR están resueltos. Listos para cerrar la recepción."}
                   </div>
                   <div style={{flex:1}}/>
-                  <button className="btn-p" disabled={nPendientes>0} style={{opacity:nPendientes>0?.45:1,fontSize:12,padding:"8px 18px"}}
+                  <button className="btn-p" disabled={nPendientes>0} style={{opacity:nPendientes>0?.45:1,fontSize:14,padding:"8px 18px"}}
                     onClick={()=>cerrarRecepcionGuia(guiaSel)}>
                     ✅ Cerrar Recepción de Guía ({nRecibidos} → Por Entrega)
                   </button>
@@ -6395,9 +6404,9 @@ export default function ENEXSystem(){
           {!guiaSel&&(
             <div className="card" style={{marginBottom:14}}>
               <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:8}}>
-                <div style={{fontSize:13,fontWeight:700,color:"var(--navy)"}}>⏳ WR pendientes en tránsito destino ({candidatos.length})</div>
-                <div style={{fontSize:10,color:"var(--t3)"}}>Selecciona una guía arriba para ver el checklist completo.</div>
-                <input className="fi" placeholder="Buscar…" value={rdSearch} onChange={e=>setRdSearch(e.target.value)} style={{fontSize:12,padding:"6px 10px",width:220,marginLeft:"auto"}}/>
+                <div style={{fontSize:15,fontWeight:700,color:"var(--navy)"}}>⏳ WR pendientes en tránsito destino ({candidatos.length})</div>
+                <div style={{fontSize:12,color:"var(--t3)"}}>Selecciona una guía arriba para ver el checklist completo.</div>
+                <input className="fi" placeholder="Buscar…" value={rdSearch} onChange={e=>setRdSearch(e.target.value)} style={{fontSize:14,padding:"6px 10px",width:220,marginLeft:"auto"}}/>
               </div>
               <div style={{maxHeight:"40vh",overflow:"auto",border:"1px solid var(--b1)",borderRadius:8}}>
                 <table className="wt">
@@ -6415,7 +6424,7 @@ export default function ENEXSystem(){
                           <td><span className="c-cas">{w.casillero||"—"}</span></td>
                           <td><span className="c-trk">{w.tracking||"—"}</span></td>
                           <td><StBadge st={w.status}/></td>
-                          <td>{hasPerm("hacer_recepcion_dest")?<button className="btn-s" style={{fontSize:10,padding:"4px 10px"}} onClick={()=>recibirEnDestino(w,"Recepción manual en destino")}>📥 Recibir</button>:<span style={{fontSize:10,color:"var(--t4)"}}>—</span>}</td>
+                          <td>{hasPerm("hacer_recepcion_dest")?<button className="btn-s" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>recibirEnDestino(w,"Recepción manual en destino")}>📥 Recibir</button>:<span style={{fontSize:12,color:"var(--t4)"}}>—</span>}</td>
                         </tr>
                       ))}
                   </tbody>
@@ -6426,7 +6435,7 @@ export default function ENEXSystem(){
 
           {enAlmacen.length>0&&(
             <div className="card">
-              <div style={{fontSize:13,fontWeight:700,color:"var(--navy)",marginBottom:8}}>📦 Últimos WR recibidos en Almacén</div>
+              <div style={{fontSize:15,fontWeight:700,color:"var(--navy)",marginBottom:8}}>📦 Últimos WR recibidos en Almacén</div>
               <div style={{maxHeight:"28vh",overflow:"auto",border:"1px solid var(--b1)",borderRadius:8}}>
                 <table className="wt">
                   <thead><tr><th>N° WR</th><th>Consignatario</th><th>Casillero</th><th>Tracking</th><th>Estado</th></tr></thead>
@@ -6461,18 +6470,18 @@ export default function ENEXSystem(){
                 <tbody>
                   {guiasArchivadas.map(c=>(
                     <tr key={c.id}>
-                      <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",background:"#EEF3FF",padding:"2px 6px",borderRadius:4,border:"1px solid #B8C8F0",fontSize:11}}>{c.id}</span></td>
+                      <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",background:"#EEF3FF",padding:"2px 6px",borderRadius:4,border:"1px solid #B8C8F0",fontSize:13}}>{c.id}</span></td>
                       <td style={{fontWeight:600,color:"var(--t1)"}}>{c.destino}</td>
                       <td><TypeBadge t={c.tipoEnvio}/></td>
                       <td style={{textAlign:"center",fontWeight:700,color:"var(--navy)"}}>{c.totalWR||0}</td>
                       <td style={{textAlign:"center"}}>{c.totalCajas||0}</td>
                       <td style={{fontFamily:"'DM Mono',monospace"}}>{c.totalLb||0}lb</td>
                       <td style={{fontFamily:"'DM Mono',monospace",color:"var(--sky)"}}>{c.totalFt3||0}</td>
-                      <td style={{fontFamily:"'DM Mono',monospace",fontSize:10}}>{fmtDate(c.fecha)}</td>
-                      <td style={{fontFamily:"'DM Mono',monospace",fontSize:10,color:"var(--navy)",fontWeight:600}}>{fmtDate(c.fechaRecibidaAlmacen)}</td>
+                      <td style={{fontFamily:"'DM Mono',monospace",fontSize:12}}>{fmtDate(c.fecha)}</td>
+                      <td style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--navy)",fontWeight:600}}>{fmtDate(c.fechaRecibidaAlmacen)}</td>
                       <td>
                         {hasPerm("editar_guia")&&(
-                          <button className="btn-s" style={{fontSize:10,padding:"3px 8px"}} title="Desarchivar (volver a pendientes)"
+                          <button className="btn-s" style={{fontSize:12,padding:"3px 8px"}} title="Desarchivar (volver a pendientes)"
                             onClick={()=>{
                               if(!window.confirm(`¿Desarchivar la guía ${c.id}? Volverá a pendientes pero los WR permanecerán en Almacén.`))return;
                               const upd={...c,archivada:false,fechaRecibidaAlmacen:null};
@@ -6503,10 +6512,10 @@ export default function ENEXSystem(){
       <div className="page-scroll">
         <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
           <div style={{flex:1}}>
-            <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:16,fontWeight:700,color:"var(--navy)"}}>🚀 Cargo Release (Egresos)</div>
-            <div style={{fontSize:11,color:"var(--t3)",marginTop:2}}>Liberación de carga a agente/transportista. Los WR pasan a Egresado (25). Estado elegible: 17 Almacén o 20 Por Entrega.</div>
+            <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:18,fontWeight:700,color:"var(--navy)"}}>🚀 Cargo Release (Egresos)</div>
+            <div style={{fontSize:13,color:"var(--t3)",marginTop:2}}>Liberación de carga a agente/transportista. Los WR pasan a Egresado (25). Estado elegible: 17 Almacén o 20 Por Entrega.</div>
           </div>
-          <div style={{display:"flex",gap:6,fontSize:11}}>
+          <div style={{display:"flex",gap:6,fontSize:13}}>
             <span style={{background:"#E8F5E9",color:"#2E7D32",padding:"4px 10px",borderRadius:10,fontWeight:700,border:"1px solid #A5D6A7"}}>✓ {activos.length} activos</span>
             <span style={{background:"#FFF3E0",color:"#E65100",padding:"4px 10px",borderRadius:10,fontWeight:700,border:"1px solid #FFCC80"}}>✕ {anulados.length} anulados</span>
           </div>
@@ -6515,7 +6524,7 @@ export default function ENEXSystem(){
 
         <div className="card" style={{marginBottom:10}}>
           <input className="fi" placeholder="Buscar por N° egreso, agente, contacto, documento, vehículo…"
-            value={crSearch} onChange={e=>setCrSearch(e.target.value)} style={{fontSize:12,width:"100%",padding:"8px 12px"}}/>
+            value={crSearch} onChange={e=>setCrSearch(e.target.value)} style={{fontSize:14,width:"100%",padding:"8px 12px"}}/>
         </div>
 
         <div className="card" style={{padding:0,overflow:"hidden"}}>
@@ -6530,24 +6539,24 @@ export default function ENEXSystem(){
               <tbody>
                 {lista.map(c=>(
                   <tr key={c.id} style={{background:c.anulado?"#FFF5F5":""}}>
-                    <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",background:"#EEF3FF",padding:"2px 6px",borderRadius:4,border:"1px solid #B8C8F0",fontSize:11}}>{c.id}</span></td>
-                    <td style={{fontFamily:"'DM Mono',monospace",fontSize:10}}>{fmtDate(c.fecha)} {fmtTime(c.fecha)}</td>
+                    <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",background:"#EEF3FF",padding:"2px 6px",borderRadius:4,border:"1px solid #B8C8F0",fontSize:13}}>{c.id}</span></td>
+                    <td style={{fontFamily:"'DM Mono',monospace",fontSize:12}}>{fmtDate(c.fecha)} {fmtTime(c.fecha)}</td>
                     <td style={{fontWeight:600,color:"var(--t1)"}}>{c.agenteCarga||"—"}</td>
-                    <td style={{fontSize:11,color:"var(--t2)"}}>{c.contacto||"—"}{c.documento?` · ${c.documento}`:""}</td>
-                    <td style={{fontFamily:"'DM Mono',monospace",fontSize:10,color:"var(--cyan)"}}>{c.vehiculo||"—"}</td>
+                    <td style={{fontSize:13,color:"var(--t2)"}}>{c.contacto||"—"}{c.documento?` · ${c.documento}`:""}</td>
+                    <td style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--cyan)"}}>{c.vehiculo||"—"}</td>
                     <td style={{textAlign:"center",fontWeight:700,color:"var(--navy)"}}>{(c.wrIds||[]).length}</td>
-                    <td style={{fontSize:11,color:"var(--t3)"}}>{c.usuario||"—"}</td>
+                    <td style={{fontSize:13,color:"var(--t3)"}}>{c.usuario||"—"}</td>
                     <td>{c.anulado
-                      ?<span style={{fontSize:10,fontWeight:700,color:"#C62828"}}>✕ Anulado</span>
-                      :<span style={{fontSize:10,fontWeight:700,color:"#2E7D32"}}>✓ Activo</span>}
-                      {c.anulado&&c.motivoAnulacion&&<div style={{fontSize:9,color:"#C62828",marginTop:2}}>{c.motivoAnulacion}</div>}
+                      ?<span style={{fontSize:12,fontWeight:700,color:"#C62828"}}>✕ Anulado</span>
+                      :<span style={{fontSize:12,fontWeight:700,color:"#2E7D32"}}>✓ Activo</span>}
+                      {c.anulado&&c.motivoAnulacion&&<div style={{fontSize:11,color:"#C62828",marginTop:2}}>{c.motivoAnulacion}</div>}
                     </td>
                     <td>
                       <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-                        <button className="btn-s" style={{fontSize:10,padding:"3px 8px"}} onClick={()=>setCrPrint(c)} title="Ver / Imprimir nota">🖨️ Nota</button>
-                        {!c.anulado&&hasPerm("editar_egreso")&&<button className="btn-s" style={{fontSize:10,padding:"3px 8px"}} onClick={()=>crOpenEdit(c)}>✏️ Editar</button>}
-                        {!c.anulado&&hasPerm("editar_egreso")&&<button className="btn-s" style={{fontSize:10,padding:"3px 8px",background:"#FFF3E0",borderColor:"#FFB74D",color:"#E65100"}} onClick={()=>crAnular(c)}>✕ Anular</button>}
-                        {hasPerm("borrar_egreso")&&<button className="btn-d" style={{fontSize:10,padding:"3px 8px"}} onClick={()=>crDelete(c)}>🗑️</button>}
+                        <button className="btn-s" style={{fontSize:12,padding:"3px 8px"}} onClick={()=>setCrPrint(c)} title="Ver / Imprimir nota">🖨️ Nota</button>
+                        {!c.anulado&&hasPerm("editar_egreso")&&<button className="btn-s" style={{fontSize:12,padding:"3px 8px"}} onClick={()=>crOpenEdit(c)}>✏️ Editar</button>}
+                        {!c.anulado&&hasPerm("editar_egreso")&&<button className="btn-s" style={{fontSize:12,padding:"3px 8px",background:"#FFF3E0",borderColor:"#FFB74D",color:"#E65100"}} onClick={()=>crAnular(c)}>✕ Anular</button>}
+                        {hasPerm("borrar_egreso")&&<button className="btn-d" style={{fontSize:12,padding:"3px 8px"}} onClick={()=>crDelete(c)}>🗑️</button>}
                       </div>
                     </td>
                   </tr>
@@ -6570,10 +6579,10 @@ export default function ENEXSystem(){
       <div className="page-scroll">
         <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
           <div style={{flex:1}}>
-            <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:16,fontWeight:700,color:"var(--navy)"}}>📝 Notas de Entrega</div>
-            <div style={{fontSize:11,color:"var(--t3)",marginTop:2}}>Entrega física al cliente final. Los WR pasan a Entregado (21). Estado elegible: 20 Por Entrega o 25 Egresado.</div>
+            <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:18,fontWeight:700,color:"var(--navy)"}}>📝 Notas de Entrega</div>
+            <div style={{fontSize:13,color:"var(--t3)",marginTop:2}}>Entrega física al cliente final. Los WR pasan a Entregado (21). Estado elegible: 20 Por Entrega o 25 Egresado.</div>
           </div>
-          <div style={{display:"flex",gap:6,fontSize:11}}>
+          <div style={{display:"flex",gap:6,fontSize:13}}>
             <span style={{background:"#E8F5E9",color:"#2E7D32",padding:"4px 10px",borderRadius:10,fontWeight:700,border:"1px solid #A5D6A7"}}>✓ {activas.length} activas</span>
             <span style={{background:"#FFF3E0",color:"#E65100",padding:"4px 10px",borderRadius:10,fontWeight:700,border:"1px solid #FFCC80"}}>✕ {anuladas.length} anuladas</span>
           </div>
@@ -6582,7 +6591,7 @@ export default function ENEXSystem(){
 
         <div className="card" style={{marginBottom:10}}>
           <input className="fi" placeholder="Buscar por N° nota, consignatario, receptor, documento, transportista…"
-            value={dnSearch} onChange={e=>setDnSearch(e.target.value)} style={{fontSize:12,width:"100%",padding:"8px 12px"}}/>
+            value={dnSearch} onChange={e=>setDnSearch(e.target.value)} style={{fontSize:14,width:"100%",padding:"8px 12px"}}/>
         </div>
 
         <div className="card" style={{padding:0,overflow:"hidden"}}>
@@ -6597,24 +6606,24 @@ export default function ENEXSystem(){
               <tbody>
                 {lista.map(n=>(
                   <tr key={n.id} style={{background:n.anulado?"#FFF5F5":""}}>
-                    <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",background:"#EEF3FF",padding:"2px 6px",borderRadius:4,border:"1px solid #B8C8F0",fontSize:11}}>{n.id}</span></td>
-                    <td style={{fontFamily:"'DM Mono',monospace",fontSize:10}}>{fmtDate(n.fecha)} {fmtTime(n.fecha)}</td>
+                    <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",background:"#EEF3FF",padding:"2px 6px",borderRadius:4,border:"1px solid #B8C8F0",fontSize:13}}>{n.id}</span></td>
+                    <td style={{fontFamily:"'DM Mono',monospace",fontSize:12}}>{fmtDate(n.fecha)} {fmtTime(n.fecha)}</td>
                     <td style={{fontWeight:600,color:"var(--t1)"}}>{n.consignatario||"—"}</td>
-                    <td style={{fontSize:11,color:"var(--t2)"}}>{n.receptorNombre||"—"}{n.receptorDocumento?` · ${n.receptorDocumento}`:""}</td>
-                    <td style={{fontSize:10,color:"var(--t2)"}}>{metodoLabel[n.metodoEntrega]||"—"}</td>
+                    <td style={{fontSize:13,color:"var(--t2)"}}>{n.receptorNombre||"—"}{n.receptorDocumento?` · ${n.receptorDocumento}`:""}</td>
+                    <td style={{fontSize:12,color:"var(--t2)"}}>{metodoLabel[n.metodoEntrega]||"—"}</td>
                     <td style={{textAlign:"center",fontWeight:700,color:"var(--navy)"}}>{(n.wrIds||[]).length}</td>
-                    <td style={{fontSize:11,color:"var(--t3)"}}>{n.usuario||"—"}</td>
+                    <td style={{fontSize:13,color:"var(--t3)"}}>{n.usuario||"—"}</td>
                     <td>{n.anulado
-                      ?<span style={{fontSize:10,fontWeight:700,color:"#C62828"}}>✕ Anulada</span>
-                      :<span style={{fontSize:10,fontWeight:700,color:"#2E7D32"}}>✓ Activa</span>}
-                      {n.anulado&&n.motivoAnulacion&&<div style={{fontSize:9,color:"#C62828",marginTop:2}}>{n.motivoAnulacion}</div>}
+                      ?<span style={{fontSize:12,fontWeight:700,color:"#C62828"}}>✕ Anulada</span>
+                      :<span style={{fontSize:12,fontWeight:700,color:"#2E7D32"}}>✓ Activa</span>}
+                      {n.anulado&&n.motivoAnulacion&&<div style={{fontSize:11,color:"#C62828",marginTop:2}}>{n.motivoAnulacion}</div>}
                     </td>
                     <td>
                       <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-                        <button className="btn-s" style={{fontSize:10,padding:"3px 8px"}} onClick={()=>setDnPrint(n)} title="Ver / Imprimir nota">🖨️ Nota</button>
-                        {!n.anulado&&hasPerm("editar_entrega")&&<button className="btn-s" style={{fontSize:10,padding:"3px 8px"}} onClick={()=>dnOpenEdit(n)}>✏️ Editar</button>}
-                        {!n.anulado&&(hasPerm("revertir_entrega")||hasPerm("editar_entrega"))&&<button className="btn-s" style={{fontSize:10,padding:"3px 8px",background:"#FFF3E0",borderColor:"#FFB74D",color:"#E65100"}} onClick={()=>dnAnular(n)}>✕ Anular</button>}
-                        {hasPerm("borrar_entrega")&&<button className="btn-d" style={{fontSize:10,padding:"3px 8px"}} onClick={()=>dnDelete(n)}>🗑️</button>}
+                        <button className="btn-s" style={{fontSize:12,padding:"3px 8px"}} onClick={()=>setDnPrint(n)} title="Ver / Imprimir nota">🖨️ Nota</button>
+                        {!n.anulado&&hasPerm("editar_entrega")&&<button className="btn-s" style={{fontSize:12,padding:"3px 8px"}} onClick={()=>dnOpenEdit(n)}>✏️ Editar</button>}
+                        {!n.anulado&&(hasPerm("revertir_entrega")||hasPerm("editar_entrega"))&&<button className="btn-s" style={{fontSize:12,padding:"3px 8px",background:"#FFF3E0",borderColor:"#FFB74D",color:"#E65100"}} onClick={()=>dnAnular(n)}>✕ Anular</button>}
+                        {hasPerm("borrar_entrega")&&<button className="btn-d" style={{fontSize:12,padding:"3px 8px"}} onClick={()=>dnDelete(n)}>🗑️</button>}
                       </div>
                     </td>
                   </tr>
@@ -6728,7 +6737,7 @@ export default function ENEXSystem(){
             <div style={{flex:1,minWidth:0}}><div className="u-nm">{currentUser.primerNombre} {currentUser.primerApellido}</div><div className="u-rl">{currentUser.email}</div></div>
             <RoleBadge code={currentUser.rol}/>
           </div>
-          <button className="btn-d" style={{width:"100%",marginTop:8,fontSize:11,padding:"6px 10px"}} onClick={doLogout}>🚪 Cerrar sesión</button>
+          <button className="btn-d" style={{width:"100%",marginTop:8,fontSize:13,padding:"6px 10px"}} onClick={doLogout}>🚪 Cerrar sesión</button>
         </div>
       </div>
 
@@ -6742,7 +6751,7 @@ export default function ENEXSystem(){
           </div>
           <div className="tb-ic">🌐</div>
           <div className="tb-ic">🔔<div className="tb-dot"/></div>
-          <div style={{width:28,height:28,borderRadius:6,background:"var(--navy)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,cursor:"pointer",color:"#fff"}}>{initials(currentUser)}</div>
+          <div style={{width:28,height:28,borderRadius:6,background:"var(--navy)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,cursor:"pointer",color:"#fff"}}>{initials(currentUser)}</div>
         </div>
         {renderPage()}
       </div>
@@ -6779,56 +6788,56 @@ export default function ENEXSystem(){
             <div className="label-card label-4x6" style={{width:384,height:576,border:"2px solid #000",background:"#fff",color:"#000",display:"flex",flexDirection:"column",pageBreakInside:"avoid",fontFamily:"Arial,sans-serif"}}>
               {/* Franja 1 — Nombre dinámico */}
               <div style={{textAlign:"center",padding:"10px 8px",borderBottom:"2px solid #000"}}>
-                <div style={{fontWeight:900,fontSize:24,letterSpacing:3,lineHeight:1.05,color:"#000"}}>{_hdrName}</div>
+                <div style={{fontWeight:900,fontSize:26,letterSpacing:3,lineHeight:1.05,color:"#000"}}>{_hdrName}</div>
               </div>
               {/* Franja 2 — WR# + barcode */}
               <div style={{padding:"6px 10px",borderBottom:"2px solid #000",textAlign:"center"}}>
-                <div style={{fontFamily:"'DM Mono',monospace",fontWeight:900,fontSize:18,letterSpacing:2,marginBottom:2}}>{_lwr?.id||"—"}</div>
+                <div style={{fontFamily:"'DM Mono',monospace",fontWeight:900,fontSize:20,letterSpacing:2,marginBottom:2}}>{_lwr?.id||"—"}</div>
                 <div style={{overflow:"hidden"}}><WRBarcode value={_lwr?.id||""} height={40} width={1.6}/></div>
               </div>
               {/* Franja 3 — Shipper */}
               <div style={{padding:"6px 10px",borderBottom:"1.5px solid #000"}}>
-                <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:"#000"}}>Shipper</div>
-                <div style={{fontSize:13,fontWeight:700,lineHeight:1.2}}>{_shipperName}</div>
-                {_lwr?.remitenteTel&&<div style={{fontSize:10,fontFamily:"'DM Mono',monospace"}}>{_lwr.remitenteTel}</div>}
+                <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:"#000"}}>Shipper</div>
+                <div style={{fontSize:15,fontWeight:700,lineHeight:1.2}}>{_shipperName}</div>
+                {_lwr?.remitenteTel&&<div style={{fontSize:12,fontFamily:"'DM Mono',monospace"}}>{_lwr.remitenteTel}</div>}
               </div>
               {/* Franja 4 — Consignatario (Nombre y Apellido) */}
               <div style={{padding:"6px 10px",borderBottom:"1.5px solid #000"}}>
-                <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Consignatario</div>
-                <div style={{fontSize:16,fontWeight:900,lineHeight:1.1}}>{_lwr?.consignee||"—"}</div>
-                <div style={{fontSize:10,fontFamily:"'DM Mono',monospace",fontWeight:700,marginTop:1}}>#{_lwr?.casillero||"—"}</div>
+                <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Consignatario</div>
+                <div style={{fontSize:18,fontWeight:900,lineHeight:1.1}}>{_lwr?.consignee||"—"}</div>
+                <div style={{fontSize:12,fontFamily:"'DM Mono',monospace",fontWeight:700,marginTop:1}}>#{_lwr?.casillero||"—"}</div>
               </div>
               {/* Franja 5 — Origen | Destino */}
               <div style={{display:"flex",borderBottom:"1.5px solid #000"}}>
                 <div style={{flex:1,padding:"6px 10px",borderRight:"1.5px solid #000"}}>
-                  <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Origen</div>
-                  <div style={{fontSize:14,fontWeight:800}}>{_lwr?.origCity||"—"}</div>
+                  <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Origen</div>
+                  <div style={{fontSize:16,fontWeight:800}}>{_lwr?.origCity||"—"}</div>
                 </div>
                 <div style={{flex:1,padding:"6px 10px",textAlign:"right"}}>
-                  <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Destino</div>
-                  <div style={{fontSize:14,fontWeight:800}}>{_lwr?.destCity||"—"}</div>
+                  <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Destino</div>
+                  <div style={{fontSize:16,fontWeight:800}}>{_lwr?.destCity||"—"}</div>
                 </div>
               </div>
               {/* Franja 6 — Tracking + pesos + medidas + recuadro pieza */}
               <div style={{padding:"6px 10px",borderBottom:"1.5px solid #000",display:"flex",alignItems:"stretch",gap:8,flex:1}}>
-                <div style={{flex:1,display:"flex",flexDirection:"column",gap:3,fontSize:10}}>
-                  <div><span style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Tracking </span><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,wordBreak:"break-all"}}>{d.tracking||"—"}</span></div>
+                <div style={{flex:1,display:"flex",flexDirection:"column",gap:3,fontSize:12}}>
+                  <div><span style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Tracking </span><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,wordBreak:"break-all"}}>{d.tracking||"—"}</span></div>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:2,fontFamily:"'DM Mono',monospace",fontWeight:700}}>
                     <span>P: {pkLb?`${pkLb} lb`:"—"}</span>
                     <span>Pv: {pvLb?`${pvLb} lb`:"—"}</span>
                     <span>ft³: {ft3||"—"}</span>
                     <span>m³: {m3||"—"}</span>
                   </div>
-                  <div><span style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Medidas </span><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700}}>{dimStr}</span></div>
+                  <div><span style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Medidas </span><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700}}>{dimStr}</span></div>
                 </div>
                 {/* Recuadro pequeño — número de pieza */}
                 <div style={{width:70,border:"2px solid #000",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                  <div style={{fontSize:8,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Pieza</div>
-                  <div style={{fontFamily:"'Arial Black',Arial,sans-serif",fontSize:22,fontWeight:900,lineHeight:1}}>{idx}/{total}</div>
+                  <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Pieza</div>
+                  <div style={{fontFamily:"'Arial Black',Arial,sans-serif",fontSize:24,fontWeight:900,lineHeight:1}}>{idx}/{total}</div>
                 </div>
               </div>
               {/* Franja 7 — Fecha y hora de registro + barcode pieza */}
-              <div style={{padding:"3px 10px",display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:8}}>
+              <div style={{padding:"3px 10px",display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:10}}>
                 <span style={{fontFamily:"'DM Mono',monospace",fontWeight:700}}>{_fechaStr} {_horaStr}</span>
                 <span style={{fontFamily:"'DM Mono',monospace",fontWeight:700}}>{bval}</span>
               </div>
@@ -6847,65 +6856,65 @@ export default function ENEXSystem(){
               {/* Franja 1 — Shipper | Consignatario */}
               <div style={{display:"flex",borderBottom:"2px solid #000"}}>
                 <div style={{flex:1,padding:"6px 10px",borderRight:"2px solid #000"}}>
-                  <div style={{fontSize:8,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Shipper</div>
-                  <div style={{fontSize:12,fontWeight:700,lineHeight:1.2}}>{_shipperName}</div>
+                  <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Shipper</div>
+                  <div style={{fontSize:14,fontWeight:700,lineHeight:1.2}}>{_shipperName}</div>
                 </div>
                 <div style={{flex:1,padding:"6px 10px"}}>
-                  <div style={{fontSize:8,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Consignatario</div>
-                  <div style={{fontSize:13,fontWeight:900,lineHeight:1.15}}>{_lwr?.consignee||"—"}</div>
-                  <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",fontWeight:700}}>#{_lwr?.casillero||"—"}</div>
+                  <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Consignatario</div>
+                  <div style={{fontSize:15,fontWeight:900,lineHeight:1.15}}>{_lwr?.consignee||"—"}</div>
+                  <div style={{fontSize:11,fontFamily:"'DM Mono',monospace",fontWeight:700}}>#{_lwr?.casillero||"—"}</div>
                 </div>
               </div>
               {/* Franja 2 — Pesos + medidas + recuadro pieza */}
               <div style={{padding:"6px 10px",borderBottom:"2px solid #000",display:"flex",alignItems:"stretch",gap:8}}>
-                <div style={{flex:1,fontSize:10,display:"flex",flexDirection:"column",gap:2}}>
+                <div style={{flex:1,fontSize:12,display:"flex",flexDirection:"column",gap:2}}>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:2,fontFamily:"'DM Mono',monospace",fontWeight:700}}>
                     <span>Peso: {pkLb?`${pkLb} lb`:"—"}</span>
                     <span>P.Vol: {pvLb?`${pvLb} lb`:"—"}</span>
                     <span>ft³: {d.ft3||"—"}</span>
                     <span>m³: {d.m3||"—"}</span>
                   </div>
-                  <div><span style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Medidas </span><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700}}>{dimStr}</span></div>
+                  <div><span style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Medidas </span><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700}}>{dimStr}</span></div>
                 </div>
                 <div style={{width:70,border:"2px solid #000",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                  <div style={{fontSize:8,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Pieza</div>
-                  <div style={{fontFamily:"'Arial Black',Arial,sans-serif",fontSize:22,fontWeight:900,lineHeight:1}}>{idx}/{total}</div>
+                  <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Pieza</div>
+                  <div style={{fontFamily:"'Arial Black',Arial,sans-serif",fontSize:24,fontWeight:900,lineHeight:1}}>{idx}/{total}</div>
                 </div>
               </div>
               {/* Franja 3 — N° WR + Código Barra + Tipo Envío */}
               <div style={{padding:"6px 10px",borderBottom:"2px solid #000",textAlign:"center"}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:3}}>
-                  <div style={{fontFamily:"'DM Mono',monospace",fontWeight:900,fontSize:16,letterSpacing:2}}>{_lwr?.id||"—"}</div>
-                  <div style={{fontSize:10,fontWeight:700,border:"1.5px solid #000",padding:"2px 8px",borderRadius:3}}>{_lwr?.tipoEnvio||showLabels.tipoEnvio||"—"}</div>
+                  <div style={{fontFamily:"'DM Mono',monospace",fontWeight:900,fontSize:18,letterSpacing:2}}>{_lwr?.id||"—"}</div>
+                  <div style={{fontSize:12,fontWeight:700,border:"1.5px solid #000",padding:"2px 8px",borderRadius:3}}>{_lwr?.tipoEnvio||showLabels.tipoEnvio||"—"}</div>
                 </div>
                 <div style={{overflow:"hidden"}}><WRBarcode value={_lwr?.id||""} height={38} width={1.5}/></div>
               </div>
               {/* Franja 4 — Notas + Referencia + Tipo de Pago */}
               <div style={{padding:"6px 10px",borderBottom:"2px solid #000",flex:1,display:"flex",flexDirection:"column",gap:3}}>
-                <div><span style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Notas </span><span style={{fontSize:10,fontWeight:600}}>{_lwr?.notas||"—"}</span></div>
+                <div><span style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Notas </span><span style={{fontSize:12,fontWeight:600}}>{_lwr?.notas||"—"}</span></div>
                 <div style={{display:"flex",justifyContent:"space-between",gap:8}}>
-                  <div style={{flex:1}}><span style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Ref </span><span style={{fontSize:10,fontFamily:"'DM Mono',monospace",fontWeight:700}}>{_referencia}</span></div>
-                  <div><span style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Pago </span><span style={{fontSize:10,fontWeight:700}}>{_lwr?.tipoPago||"—"}</span></div>
+                  <div style={{flex:1}}><span style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Ref </span><span style={{fontSize:12,fontFamily:"'DM Mono',monospace",fontWeight:700}}>{_referencia}</span></div>
+                  <div><span style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Pago </span><span style={{fontSize:12,fontWeight:700}}>{_lwr?.tipoPago||"—"}</span></div>
                 </div>
               </div>
               {/* Franja 5 — QR + Origen/Destino + fecha/hora */}
               <div style={{padding:"6px 10px",display:"flex",alignItems:"stretch",gap:8}}>
                 {/* QR placeholder */}
                 <div style={{width:70,height:70,border:"1.5px dashed #888",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                  <div style={{fontSize:7,color:"#888",textAlign:"center",fontWeight:700}}>QR<br/>RUTA<br/>(futuro)</div>
+                  <div style={{fontSize:9,color:"#888",textAlign:"center",fontWeight:700}}>QR<br/>RUTA<br/>(futuro)</div>
                 </div>
                 <div style={{flex:1,display:"flex",flexDirection:"column",justifyContent:"space-between"}}>
-                  <div style={{display:"flex",justifyContent:"space-between",fontSize:11,fontWeight:800}}>
+                  <div style={{display:"flex",justifyContent:"space-between",fontSize:13,fontWeight:800}}>
                     <div>
-                      <div style={{fontSize:8,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Origen</div>
+                      <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Origen</div>
                       <div>{_lwr?.origCity||"—"}</div>
                     </div>
                     <div style={{textAlign:"right"}}>
-                      <div style={{fontSize:8,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Destino</div>
+                      <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Destino</div>
                       <div>{_lwr?.destCity||"—"}</div>
                     </div>
                   </div>
-                  <div style={{fontSize:8,fontFamily:"'DM Mono',monospace",fontWeight:700,textAlign:"right"}}>{_fechaStr} {_horaStr}</div>
+                  <div style={{fontSize:10,fontFamily:"'DM Mono',monospace",fontWeight:700,textAlign:"right"}}>{_fechaStr} {_horaStr}</div>
                 </div>
               </div>
             </div>
@@ -6922,35 +6931,35 @@ export default function ENEXSystem(){
               {/* Franja 1 — Col 1 Nombre | Col 2 Consignatario */}
               <div style={{display:"flex",borderBottom:"1.5px solid #000"}}>
                 <div style={{flex:1,padding:"4px 8px",borderRight:"1.5px solid #000"}}>
-                  <div style={{fontSize:7,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>De</div>
-                  <div style={{fontSize:12,fontWeight:900,lineHeight:1.1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{_hdrName}</div>
+                  <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>De</div>
+                  <div style={{fontSize:14,fontWeight:900,lineHeight:1.1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{_hdrName}</div>
                 </div>
                 <div style={{flex:1,padding:"4px 8px"}}>
-                  <div style={{fontSize:7,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Consignatario</div>
-                  <div style={{fontSize:12,fontWeight:900,lineHeight:1.1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{_lwr?.consignee||"—"}</div>
-                  <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",fontWeight:700}}>#{_lwr?.casillero||"—"}</div>
+                  <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Consignatario</div>
+                  <div style={{fontSize:14,fontWeight:900,lineHeight:1.1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{_lwr?.consignee||"—"}</div>
+                  <div style={{fontSize:11,fontFamily:"'DM Mono',monospace",fontWeight:700}}>#{_lwr?.casillero||"—"}</div>
                 </div>
               </div>
               {/* Franja 2 — N° WR + barcode + Ciudad Destino */}
               <div style={{padding:"3px 8px",borderBottom:"1.5px solid #000",display:"flex",alignItems:"center",gap:6}}>
                 <div style={{flex:1,overflow:"hidden"}}>
-                  <div style={{fontFamily:"'DM Mono',monospace",fontWeight:900,fontSize:11,letterSpacing:1}}>{_lwr?.id||"—"}</div>
+                  <div style={{fontFamily:"'DM Mono',monospace",fontWeight:900,fontSize:13,letterSpacing:1}}>{_lwr?.id||"—"}</div>
                   <div style={{overflow:"hidden"}}><WRBarcode value={_lwr?.id||""} height={28} width={1.2}/></div>
                 </div>
                 <div style={{textAlign:"right",flexShrink:0}}>
-                  <div style={{fontSize:7,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Destino</div>
-                  <div style={{fontSize:12,fontWeight:900}}>{_lwr?.destCity||"—"}</div>
+                  <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Destino</div>
+                  <div style={{fontSize:14,fontWeight:900}}>{_lwr?.destCity||"—"}</div>
                 </div>
               </div>
               {/* Franja 3 — Pesos + medidas + tracking + pieza */}
               <div style={{padding:"3px 8px",flex:1,display:"flex",alignItems:"stretch",gap:6}}>
-                <div style={{flex:1,fontSize:9,display:"flex",flexDirection:"column",justifyContent:"center",gap:1,fontFamily:"'DM Mono',monospace",fontWeight:700}}>
+                <div style={{flex:1,fontSize:11,display:"flex",flexDirection:"column",justifyContent:"center",gap:1,fontFamily:"'DM Mono',monospace",fontWeight:700}}>
                   <div>{pkLb?`${pkLb}lb`:"—"} · {dimStr}</div>
                   <div style={{whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>Trk: {d.tracking||"—"}</div>
                 </div>
                 <div style={{width:52,border:"1.5px solid #000",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                  <div style={{fontSize:7,fontWeight:700,textTransform:"uppercase"}}>Pieza</div>
-                  <div style={{fontFamily:"'Arial Black',Arial,sans-serif",fontSize:15,fontWeight:900,lineHeight:1}}>{idx}/{total}</div>
+                  <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase"}}>Pieza</div>
+                  <div style={{fontFamily:"'Arial Black',Arial,sans-serif",fontSize:17,fontWeight:900,lineHeight:1}}>{idx}/{total}</div>
                 </div>
               </div>
             </div>
@@ -6967,37 +6976,37 @@ export default function ENEXSystem(){
               {/* Franja 1 — Col1 (más pequeña) Nombre | Col2 WR# + barcode */}
               <div style={{display:"flex",borderBottom:"1.5px solid #000"}}>
                 <div style={{width:110,padding:"3px 6px",borderRight:"1.5px solid #000",display:"flex",flexDirection:"column",justifyContent:"center"}}>
-                  <div style={{fontSize:7,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>De</div>
-                  <div style={{fontSize:11,fontWeight:900,lineHeight:1.1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{_hdrName}</div>
+                  <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>De</div>
+                  <div style={{fontSize:13,fontWeight:900,lineHeight:1.1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{_hdrName}</div>
                 </div>
                 <div style={{flex:1,padding:"3px 8px"}}>
-                  <div style={{fontFamily:"'DM Mono',monospace",fontWeight:900,fontSize:11,letterSpacing:1}}>{_lwr?.id||"—"}</div>
+                  <div style={{fontFamily:"'DM Mono',monospace",fontWeight:900,fontSize:13,letterSpacing:1}}>{_lwr?.id||"—"}</div>
                   <div style={{overflow:"hidden"}}><WRBarcode value={_lwr?.id||""} height={26} width={1.2}/></div>
                 </div>
               </div>
               {/* Franja 2 — Col1 Shipper | Col2 Consignatario */}
               <div style={{display:"flex",borderBottom:"1.5px solid #000"}}>
                 <div style={{flex:1,padding:"3px 8px",borderRight:"1.5px solid #000"}}>
-                  <div style={{fontSize:7,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Shipper</div>
-                  <div style={{fontSize:10,fontWeight:700,lineHeight:1.1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{_shipperName}</div>
+                  <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Shipper</div>
+                  <div style={{fontSize:12,fontWeight:700,lineHeight:1.1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{_shipperName}</div>
                 </div>
                 <div style={{flex:1,padding:"3px 8px"}}>
-                  <div style={{fontSize:7,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Consignatario</div>
-                  <div style={{fontSize:10,fontWeight:900,lineHeight:1.1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{_lwr?.consignee||"—"}</div>
-                  <div style={{fontSize:8,fontFamily:"'DM Mono',monospace",fontWeight:700}}>#{_lwr?.casillero||"—"}</div>
+                  <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Consignatario</div>
+                  <div style={{fontSize:12,fontWeight:900,lineHeight:1.1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{_lwr?.consignee||"—"}</div>
+                  <div style={{fontSize:10,fontFamily:"'DM Mono',monospace",fontWeight:700}}>#{_lwr?.casillero||"—"}</div>
                 </div>
               </div>
               {/* Franja 3 — Col1 Pesos/Medidas/Tracking | Col2 Envío/Pago/Pieza/Ruta */}
               <div style={{display:"flex",flex:1}}>
-                <div style={{flex:1,padding:"3px 8px",borderRight:"1.5px solid #000",fontSize:8,display:"flex",flexDirection:"column",justifyContent:"center",gap:1,fontFamily:"'DM Mono',monospace",fontWeight:700}}>
+                <div style={{flex:1,padding:"3px 8px",borderRight:"1.5px solid #000",fontSize:10,display:"flex",flexDirection:"column",justifyContent:"center",gap:1,fontFamily:"'DM Mono',monospace",fontWeight:700}}>
                   <div>P: {pkLb?`${pkLb}lb`:"—"}</div>
                   <div>Med: {dimStr}</div>
                   <div style={{whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>Trk: {d.tracking||"—"}</div>
                 </div>
-                <div style={{flex:1,padding:"3px 8px",fontSize:8,display:"flex",flexDirection:"column",justifyContent:"center",gap:1,fontFamily:"'DM Mono',monospace",fontWeight:700}}>
+                <div style={{flex:1,padding:"3px 8px",fontSize:10,display:"flex",flexDirection:"column",justifyContent:"center",gap:1,fontFamily:"'DM Mono',monospace",fontWeight:700}}>
                   <div>Env: {_lwr?.tipoEnvio||showLabels.tipoEnvio||"—"}</div>
                   <div>Pago: {_lwr?.tipoPago||"—"}</div>
-                  <div>Pz: <b style={{fontSize:10}}>{idx}/{total}</b></div>
+                  <div>Pz: <b style={{fontSize:12}}>{idx}/{total}</b></div>
                   <div style={{whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{_lwr?.origCity||"—"} → {_lwr?.destCity||"—"}</div>
                 </div>
               </div>
@@ -7015,13 +7024,13 @@ export default function ENEXSystem(){
             <div className="mhd">
               <div className="mt">🏷️ Etiquetas de Caja — {_lwr?.id}</div>
               <div style={{display:"flex",gap:6}}>
-                <button className="btn-p" style={{fontSize:10,padding:"4px 10px"}} onClick={()=>window.print()}>🖨️ Imprimir todo</button>
+                <button className="btn-p" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>window.print()}>🖨️ Imprimir todo</button>
                 <button className="mcl" onClick={()=>setShowLabels(null)}>✕</button>
               </div>
             </div>
             <div style={{marginBottom:12}}>
-              <div style={{fontSize:11,fontWeight:700,color:"var(--navy)",marginBottom:4}}>📦 Etiquetas de Caja ({_ldims.length||_lwr?.cajas||0}) · Tipo actual: <span style={{fontFamily:"'DM Mono',monospace"}}>{_tipoDesc}</span></div>
-              <div style={{fontSize:10,color:"var(--t3)",marginBottom:8}}>Cambia el tipo de etiqueta en <b>Configuración → Etiquetas</b>.</div>
+              <div style={{fontSize:13,fontWeight:700,color:"var(--navy)",marginBottom:4}}>📦 Etiquetas de Caja ({_ldims.length||_lwr?.cajas||0}) · Tipo actual: <span style={{fontFamily:"'DM Mono',monospace"}}>{_tipoDesc}</span></div>
+              <div style={{fontSize:12,color:"var(--t3)",marginBottom:8}}>Cambia el tipo de etiqueta en <b>Configuración → Etiquetas</b>.</div>
               <div style={{display:"flex",flexWrap:"wrap",gap:12,justifyContent:"center"}}>
                 {_ldims.length>0?_ldims.map((d,i)=><LabelCaja key={i} d={d} idx={i+1} total={_ldims.length}/>)
                   :Array.from({length:_lwr?.cajas||1},(_,i)=><LabelCaja key={i} d={{}} idx={i+1} total={_lwr?.cajas||1}/>)}
@@ -7064,39 +7073,39 @@ export default function ENEXSystem(){
             <div className="label-card label-4x6" style={{width:384,height:576,border:"2px solid #000",background:"#fff",color:"#000",display:"flex",flexDirection:"column",pageBreakInside:"avoid",fontFamily:"Arial,sans-serif"}}>
               {/* Franja 1 — Nombre Empresa Matriz */}
               <div style={{textAlign:"center",padding:"8px 10px",borderBottom:"2px solid #000"}}>
-                <div style={{fontWeight:900,fontSize:22,letterSpacing:4,lineHeight:1}}>{_rem}</div>
-                <div style={{fontSize:9,letterSpacing:3,marginTop:3,fontWeight:700}}>GUÍA CONSOLIDADA</div>
+                <div style={{fontWeight:900,fontSize:24,letterSpacing:4,lineHeight:1}}>{_rem}</div>
+                <div style={{fontSize:11,letterSpacing:3,marginTop:3,fontWeight:700}}>GUÍA CONSOLIDADA</div>
               </div>
               {/* Franja 2 — Número de Guía */}
               <div style={{textAlign:"center",padding:"10px 10px",borderBottom:"2px solid #000",background:"#fff"}}>
-                <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:2}}>N° Guía</div>
-                <div style={{fontFamily:"'DM Mono',monospace",fontWeight:900,fontSize:26,letterSpacing:3,marginTop:2}}>{_g?.id||"—"}</div>
+                <div style={{fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:2}}>N° Guía</div>
+                <div style={{fontFamily:"'DM Mono',monospace",fontWeight:900,fontSize:28,letterSpacing:3,marginTop:2}}>{_g?.id||"—"}</div>
               </div>
               {/* Franja 3 — Origen | Destino */}
               <div style={{display:"flex",borderBottom:"2px solid #000"}}>
                 <div style={{flex:1,padding:"8px 10px",borderRight:"1.5px solid #000",textAlign:"center"}}>
-                  <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:2}}>Origen</div>
-                  <div style={{fontSize:14,fontWeight:900,marginTop:2}}>{OFFICE_CONFIG.origCity||"—"}</div>
+                  <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:2}}>Origen</div>
+                  <div style={{fontSize:16,fontWeight:900,marginTop:2}}>{OFFICE_CONFIG.origCity||"—"}</div>
                 </div>
                 <div style={{flex:1,padding:"8px 10px",textAlign:"center"}}>
-                  <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:2}}>Destino</div>
-                  <div style={{fontSize:14,fontWeight:900,marginTop:2}}>{_g?.destino||"—"}</div>
+                  <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:2}}>Destino</div>
+                  <div style={{fontSize:16,fontWeight:900,marginTop:2}}>{_g?.destino||"—"}</div>
                 </div>
               </div>
               {/* Franja 4 — Tipo Envío | Tipo Cont+Medidas | Peso Contenedor */}
               <div style={{display:"flex",borderBottom:"2px solid #000"}}>
                 <div style={{flex:"0 0 100px",padding:"6px 6px",borderRight:"1px solid #000",textAlign:"center"}}>
-                  <div style={{fontSize:8,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Tipo Envío</div>
-                  <div style={{fontSize:11,fontWeight:900,marginTop:2}}>{_g?.tipoEnvio||"—"}</div>
+                  <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Tipo Envío</div>
+                  <div style={{fontSize:13,fontWeight:900,marginTop:2}}>{_g?.tipoEnvio||"—"}</div>
                 </div>
                 <div style={{flex:1,padding:"6px 6px",borderRight:"1px solid #000",textAlign:"center"}}>
-                  <div style={{fontSize:8,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Contenedor</div>
-                  <div style={{fontSize:10,fontWeight:900,marginTop:2}}>{cd.tipo}</div>
-                  <div style={{fontFamily:"'DM Mono',monospace",fontSize:9,fontWeight:700,marginTop:1}}>{cd.dim}{cd.manual&&<span style={{fontSize:7,marginLeft:3}}>(man)</span>}</div>
+                  <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Contenedor</div>
+                  <div style={{fontSize:12,fontWeight:900,marginTop:2}}>{cd.tipo}</div>
+                  <div style={{fontFamily:"'DM Mono',monospace",fontSize:11,fontWeight:700,marginTop:1}}>{cd.dim}{cd.manual&&<span style={{fontSize:9,marginLeft:3}}>(man)</span>}</div>
                 </div>
                 <div style={{flex:"0 0 88px",padding:"6px 6px",textAlign:"center"}}>
-                  <div style={{fontSize:8,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Peso</div>
-                  <div style={{fontFamily:"'DM Mono',monospace",fontSize:13,fontWeight:900,marginTop:2}}>{ct.pesoLb?`${ct.pesoLb} lb`:"—"}</div>
+                  <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Peso</div>
+                  <div style={{fontFamily:"'DM Mono',monospace",fontSize:15,fontWeight:900,marginTop:2}}>{ct.pesoLb?`${ct.pesoLb} lb`:"—"}</div>
                 </div>
               </div>
               {/* Franja 5 — Barcode + Pieza + recuadro paquetes + fecha/hora */}
@@ -7104,18 +7113,18 @@ export default function ENEXSystem(){
                 <div style={{display:"flex",alignItems:"center",gap:6,flex:1}}>
                   <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
                     <div style={{overflow:"hidden",width:"100%"}}><WRBarcode value={bval} height={70} width={1.9}/></div>
-                    <div style={{fontFamily:"'DM Mono',monospace",fontSize:10,letterSpacing:2,fontWeight:700,marginTop:2}}>{bval}</div>
+                    <div style={{fontFamily:"'DM Mono',monospace",fontSize:12,letterSpacing:2,fontWeight:700,marginTop:2}}>{bval}</div>
                   </div>
                   <div style={{flex:"0 0 54px",textAlign:"center",border:"1.5px solid #000",padding:"4px 2px"}}>
-                    <div style={{fontSize:7,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Pieza</div>
-                    <div style={{fontFamily:"'DM Mono',monospace",fontSize:16,fontWeight:900,lineHeight:1,marginTop:2}}>{idx}/{total}</div>
+                    <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Pieza</div>
+                    <div style={{fontFamily:"'DM Mono',monospace",fontSize:18,fontWeight:900,lineHeight:1,marginTop:2}}>{idx}/{total}</div>
                   </div>
                   <div style={{flex:"0 0 54px",textAlign:"center",border:"2px solid #000",padding:"4px 2px"}}>
-                    <div style={{fontSize:7,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Paq.</div>
-                    <div style={{fontFamily:"'DM Mono',monospace",fontSize:20,fontWeight:900,lineHeight:1,marginTop:2}}>{cajasInCont}</div>
+                    <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Paq.</div>
+                    <div style={{fontFamily:"'DM Mono',monospace",fontSize:22,fontWeight:900,lineHeight:1,marginTop:2}}>{cajasInCont}</div>
                   </div>
                 </div>
-                <div style={{textAlign:"center",fontFamily:"'DM Mono',monospace",fontSize:9,fontWeight:700,marginTop:6,paddingTop:4,borderTop:"1px dashed #888"}}>
+                <div style={{textAlign:"center",fontFamily:"'DM Mono',monospace",fontSize:11,fontWeight:700,marginTop:6,paddingTop:4,borderTop:"1px dashed #888"}}>
                   {_gfechaStr} {_ghoraStr}
                 </div>
               </div>
@@ -7132,16 +7141,16 @@ export default function ENEXSystem(){
             <div className="label-card label-4x2" style={{width:384,height:192,border:"2px solid #000",background:"#fff",color:"#000",display:"flex",flexDirection:"column",pageBreakInside:"avoid",fontFamily:"Arial,sans-serif"}}>
               {/* Franja 1 — Empresa Matriz + N° Guía */}
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"3px 8px",borderBottom:"1.5px solid #000"}}>
-                <div style={{fontWeight:900,fontSize:13,letterSpacing:2,lineHeight:1}}>{_rem}</div>
-                <div style={{fontFamily:"'DM Mono',monospace",fontWeight:900,fontSize:13,letterSpacing:1}}>{_g?.id||"—"}</div>
+                <div style={{fontWeight:900,fontSize:15,letterSpacing:2,lineHeight:1}}>{_rem}</div>
+                <div style={{fontFamily:"'DM Mono',monospace",fontWeight:900,fontSize:15,letterSpacing:1}}>{_g?.id||"—"}</div>
               </div>
               {/* Franja 2 — Ruta + tipo envío + contenedor/medidas + peso */}
               <div style={{padding:"3px 8px",borderBottom:"1.5px solid #000"}}>
-                <div style={{display:"flex",justifyContent:"space-between",fontSize:10,fontWeight:700}}>
+                <div style={{display:"flex",justifyContent:"space-between",fontSize:12,fontWeight:700}}>
                   <span>{OFFICE_CONFIG.origCity||"—"} → {_g?.destino||"—"}</span>
                   <span>{_g?.tipoEnvio||"—"}</span>
                 </div>
-                <div style={{display:"flex",justifyContent:"space-between",fontSize:9,fontFamily:"'DM Mono',monospace",fontWeight:700,marginTop:2}}>
+                <div style={{display:"flex",justifyContent:"space-between",fontSize:11,fontFamily:"'DM Mono',monospace",fontWeight:700,marginTop:2}}>
                   <span>{cd.tipo} {cd.dim}</span>
                   <span>{ct.pesoLb?`${ct.pesoLb}lb`:"—"}</span>
                 </div>
@@ -7150,15 +7159,15 @@ export default function ENEXSystem(){
               <div style={{flex:1,padding:"3px 6px",display:"flex",alignItems:"center",gap:4}}>
                 <div style={{flex:1,textAlign:"center",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
                   <div style={{overflow:"hidden",width:"100%"}}><WRBarcode value={bval} height={42} width={1.3}/></div>
-                  <div style={{fontFamily:"'DM Mono',monospace",fontSize:8,letterSpacing:1,fontWeight:700,marginTop:1}}>{bval}</div>
+                  <div style={{fontFamily:"'DM Mono',monospace",fontSize:10,letterSpacing:1,fontWeight:700,marginTop:1}}>{bval}</div>
                 </div>
                 <div style={{flex:"0 0 40px",textAlign:"center",border:"1.5px solid #000",padding:"2px 1px"}}>
-                  <div style={{fontSize:6,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Pz.</div>
-                  <div style={{fontFamily:"'DM Mono',monospace",fontSize:12,fontWeight:900,lineHeight:1}}>{idx}/{total}</div>
+                  <div style={{fontSize:8,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Pz.</div>
+                  <div style={{fontFamily:"'DM Mono',monospace",fontSize:14,fontWeight:900,lineHeight:1}}>{idx}/{total}</div>
                 </div>
                 <div style={{flex:"0 0 40px",textAlign:"center",border:"2px solid #000",padding:"2px 1px"}}>
-                  <div style={{fontSize:6,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Paq.</div>
-                  <div style={{fontFamily:"'DM Mono',monospace",fontSize:14,fontWeight:900,lineHeight:1}}>{cajasInCont}</div>
+                  <div style={{fontSize:8,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Paq.</div>
+                  <div style={{fontFamily:"'DM Mono',monospace",fontSize:16,fontWeight:900,lineHeight:1}}>{cajasInCont}</div>
                 </div>
               </div>
             </div>
@@ -7175,13 +7184,13 @@ export default function ENEXSystem(){
               <div className="mhd">
                 <div className="mt">📋 Etiquetas de Guía Consolidada — {_g?.id}</div>
                 <div style={{display:"flex",gap:6}}>
-                  <button className="btn-p" style={{fontSize:10,padding:"4px 10px"}} onClick={()=>window.print()}>🖨️ Imprimir todo</button>
+                  <button className="btn-p" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>window.print()}>🖨️ Imprimir todo</button>
                   <button className="mcl" onClick={()=>setShowConsolLabels(null)}>✕</button>
                 </div>
               </div>
               <div style={{marginBottom:12}}>
-                <div style={{fontSize:11,fontWeight:700,color:"var(--navy)",marginBottom:4}}>📋 Etiquetas de Guía Consolidada ({_total}) · Tipo actual: <span style={{fontFamily:"'DM Mono',monospace"}}>{_tipoDesc}</span></div>
-                <div style={{fontSize:10,color:"var(--t3)",marginBottom:8}}>Una etiqueta por contenedor · Total: {_totalWR} WR · {_totalCajas} cajas. Cambia el tipo en <b>Configuración → Etiquetas</b>.</div>
+                <div style={{fontSize:13,fontWeight:700,color:"var(--navy)",marginBottom:4}}>📋 Etiquetas de Guía Consolidada ({_total}) · Tipo actual: <span style={{fontFamily:"'DM Mono',monospace"}}>{_tipoDesc}</span></div>
+                <div style={{fontSize:12,color:"var(--t3)",marginBottom:8}}>Una etiqueta por contenedor · Total: {_totalWR} WR · {_totalCajas} cajas. Cambia el tipo en <b>Configuración → Etiquetas</b>.</div>
                 <div style={{display:"flex",flexWrap:"wrap",gap:12,justifyContent:"center"}}>
                   {_conts.map((ct,i)=><LabelGuiaConsol key={i} ct={ct} idx={i+1} total={_total}/>)}
                 </div>
@@ -7215,47 +7224,47 @@ export default function ENEXSystem(){
               <div className="mhd">
                 <div>
                   <div className="mtitle">🚀 {editing?`Editar Egreso ${f.editId}`:"Nuevo Egreso (Cargo Release)"}</div>
-                  <div style={{fontSize:10,color:"var(--t3)",marginTop:2}}>Los WR seleccionados pasarán a <b>Egresado (25)</b> al guardar.</div>
+                  <div style={{fontSize:12,color:"var(--t3)",marginTop:2}}>Los WR seleccionados pasarán a <b>Egresado (25)</b> al guardar.</div>
                 </div>
                 <button className="mcl" onClick={()=>setCrModal(null)}>✕</button>
               </div>
               <div className="mbd" style={{maxHeight:"70vh",overflow:"auto"}}>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
-                  <div><div style={{fontSize:10,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Agente de carga *</div>
+                  <div><div style={{fontSize:12,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Agente de carga *</div>
                     <input className="fi" list="cr-agentes" value={f.agenteCarga} onChange={e=>setCrModal(p=>({...p,agenteCarga:e.target.value}))} placeholder="Nombre del agente/transportista…"/>
                     <datalist id="cr-agentes">{agentesCarga.map(a=>(<option key={a.id||a.nombre} value={a.nombre||a.name||""}/>))}</datalist>
                   </div>
-                  <div><div style={{fontSize:10,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Contacto (persona)</div>
+                  <div><div style={{fontSize:12,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Contacto (persona)</div>
                     <input className="fi" value={f.contacto} onChange={e=>setCrModal(p=>({...p,contacto:e.target.value}))} placeholder="Ej: Luis Pérez · 0414-1234567"/>
                   </div>
-                  <div><div style={{fontSize:10,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Documento/Cédula</div>
+                  <div><div style={{fontSize:12,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Documento/Cédula</div>
                     <input className="fi" value={f.documento} onChange={e=>setCrModal(p=>({...p,documento:e.target.value}))} placeholder="V-12345678"/>
                   </div>
-                  <div><div style={{fontSize:10,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Vehículo (placa/modelo)</div>
+                  <div><div style={{fontSize:12,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Vehículo (placa/modelo)</div>
                     <input className="fi" value={f.vehiculo} onChange={e=>setCrModal(p=>({...p,vehiculo:e.target.value}))} placeholder="AB1234 · Ford 350"/>
                   </div>
                 </div>
                 <div style={{marginBottom:12}}>
-                  <div style={{fontSize:10,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Notas</div>
+                  <div style={{fontSize:12,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Notas</div>
                   <textarea className="fi" rows={2} value={f.notas} onChange={e=>setCrModal(p=>({...p,notas:e.target.value}))} placeholder="Observaciones del egreso…" style={{resize:"vertical"}}/>
                 </div>
 
                 <div style={{background:"#F5F7FB",padding:10,borderRadius:6,marginBottom:10}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-                    <div style={{fontSize:11,fontWeight:700,color:"var(--navy)"}}>📦 WR Seleccionados ({sel.length})</div>
-                    {sel.length>0&&<button className="btn-s" style={{fontSize:10,padding:"2px 8px"}} onClick={()=>setCrModal(p=>({...p,wrIds:[]}))}>Limpiar todos</button>}
+                    <div style={{fontSize:13,fontWeight:700,color:"var(--navy)"}}>📦 WR Seleccionados ({sel.length})</div>
+                    {sel.length>0&&<button className="btn-s" style={{fontSize:12,padding:"2px 8px"}} onClick={()=>setCrModal(p=>({...p,wrIds:[]}))}>Limpiar todos</button>}
                   </div>
                   {sel.length===0?(
-                    <div style={{fontSize:11,color:"var(--t3)",padding:"6px 0"}}>Sin WR — agrega abajo.</div>
+                    <div style={{fontSize:13,color:"var(--t3)",padding:"6px 0"}}>Sin WR — agrega abajo.</div>
                   ):(
                     <div style={{display:"flex",flexDirection:"column",gap:4}}>
                       {sel.map(w=>(
-                        <div key={w.id} style={{display:"flex",alignItems:"center",gap:8,background:"#fff",padding:"4px 8px",borderRadius:4,border:"1px solid #E0E7EF",fontSize:11}}>
+                        <div key={w.id} style={{display:"flex",alignItems:"center",gap:8,background:"#fff",padding:"4px 8px",borderRadius:4,border:"1px solid #E0E7EF",fontSize:13}}>
                           <span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",minWidth:80}}>{w.id}</span>
-                          <span className={`st ${w.status?.cls||"s1"}`} style={{fontSize:9}}>{w.status?.label||"—"}</span>
+                          <span className={`st ${w.status?.cls||"s1"}`} style={{fontSize:11}}>{w.status?.label||"—"}</span>
                           <span style={{flex:1,color:"var(--t2)"}}>{w.consignee||"—"}</span>
-                          <span style={{fontFamily:"'DM Mono',monospace",fontSize:10,color:"var(--t3)"}}>{w.tracking||"—"}</span>
-                          <button className="btn-s" style={{fontSize:9,padding:"2px 6px",color:"var(--red)",borderColor:"var(--red)"}} onClick={()=>setCrModal(p=>({...p,wrIds:p.wrIds.filter(id=>id!==w.id)}))}>✕</button>
+                          <span style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--t3)"}}>{w.tracking||"—"}</span>
+                          <button className="btn-s" style={{fontSize:11,padding:"2px 6px",color:"var(--red)",borderColor:"var(--red)"}} onClick={()=>setCrModal(p=>({...p,wrIds:p.wrIds.filter(id=>id!==w.id)}))}>✕</button>
                         </div>
                       ))}
                     </div>
@@ -7263,18 +7272,18 @@ export default function ENEXSystem(){
                 </div>
 
                 <div style={{marginBottom:6}}>
-                  <div style={{fontSize:11,fontWeight:700,color:"var(--t2)",marginBottom:4}}>➕ Agregar WR (elegibles: 17 Almacén, 20 Por Entrega)</div>
+                  <div style={{fontSize:13,fontWeight:700,color:"var(--t2)",marginBottom:4}}>➕ Agregar WR (elegibles: 17 Almacén, 20 Por Entrega)</div>
                   <input className="fi" placeholder="Buscar por WR, consignee, tracking…" value={qRef} onChange={e=>setCrModal(p=>({...p,_q:e.target.value}))} style={{marginBottom:6}}/>
                   <div style={{maxHeight:160,overflow:"auto",border:"1px solid #E0E7EF",borderRadius:4}}>
                     {filtered.length===0?(
-                      <div style={{padding:10,color:"var(--t3)",fontSize:11,textAlign:"center"}}>No hay WR disponibles{qRef?` para "${qRef}"`:""}</div>
+                      <div style={{padding:10,color:"var(--t3)",fontSize:13,textAlign:"center"}}>No hay WR disponibles{qRef?` para "${qRef}"`:""}</div>
                     ):filtered.map(w=>(
-                      <div key={w.id} style={{display:"flex",alignItems:"center",gap:8,padding:"4px 8px",borderBottom:"1px solid #EEF",fontSize:11,cursor:"pointer"}} onClick={()=>setCrModal(p=>({...p,wrIds:[...p.wrIds,w.id]}))}>
+                      <div key={w.id} style={{display:"flex",alignItems:"center",gap:8,padding:"4px 8px",borderBottom:"1px solid #EEF",fontSize:13,cursor:"pointer"}} onClick={()=>setCrModal(p=>({...p,wrIds:[...p.wrIds,w.id]}))}>
                         <span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",minWidth:80}}>{w.id}</span>
-                        <span className={`st ${w.status?.cls||"s1"}`} style={{fontSize:9}}>{w.status?.label||"—"}</span>
+                        <span className={`st ${w.status?.cls||"s1"}`} style={{fontSize:11}}>{w.status?.label||"—"}</span>
                         <span style={{flex:1,color:"var(--t2)"}}>{w.consignee||"—"}</span>
-                        <span style={{fontFamily:"'DM Mono',monospace",fontSize:10,color:"var(--t3)"}}>{w.tracking||"—"}</span>
-                        <span style={{color:"var(--cyan)",fontSize:10,fontWeight:700}}>+ agregar</span>
+                        <span style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--t3)"}}>{w.tracking||"—"}</span>
+                        <span style={{color:"var(--cyan)",fontSize:12,fontWeight:700}}>+ agregar</span>
                       </div>
                     ))}
                   </div>
@@ -7301,27 +7310,27 @@ export default function ENEXSystem(){
               <div className="mhd no-print">
                 <div className="mtitle">🖨️ Nota de Egreso — {cr.id}</div>
                 <div style={{display:"flex",gap:6}}>
-                  <button className="btn-p" style={{fontSize:11,padding:"4px 12px"}} onClick={()=>window.print()}>🖨️ Imprimir</button>
+                  <button className="btn-p" style={{fontSize:13,padding:"4px 12px"}} onClick={()=>window.print()}>🖨️ Imprimir</button>
                   <button className="mcl" onClick={()=>setCrPrint(null)}>✕</button>
                 </div>
               </div>
               <div className="mbd" style={{maxHeight:"78vh",overflow:"auto"}}>
-                <div className="cr-print" style={{background:"#fff",color:"#000",padding:"24px 28px",fontFamily:"Arial,Helvetica,sans-serif",fontSize:12}}>
+                <div className="cr-print" style={{background:"#fff",color:"#000",padding:"24px 28px",fontFamily:"Arial,Helvetica,sans-serif",fontSize:14}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",borderBottom:"2px solid #000",paddingBottom:10,marginBottom:14}}>
                     <div>
-                      <div style={{fontSize:20,fontWeight:900,letterSpacing:2}}>ENEX</div>
-                      <div style={{fontSize:10}}>{empresaNombre||"Int'l Courier"}</div>
-                      <div style={{fontSize:9,color:"#555"}}>Nota de Egreso / Cargo Release</div>
+                      <div style={{fontSize:22,fontWeight:900,letterSpacing:2}}>ENEX</div>
+                      <div style={{fontSize:12}}>{empresaNombre||"Int'l Courier"}</div>
+                      <div style={{fontSize:11,color:"#555"}}>Nota de Egreso / Cargo Release</div>
                     </div>
                     <div style={{textAlign:"right"}}>
-                      <div style={{fontSize:11,fontWeight:700}}>N° {cr.id}</div>
-                      <div style={{fontSize:10}}>Fecha: {fmtDate(cr.fecha)} {fmtTime(cr.fecha)}</div>
-                      <div style={{fontSize:10}}>Usuario: {cr.usuario||"—"}</div>
-                      {cr.anulado&&<div style={{fontSize:11,fontWeight:900,color:"#C62828",marginTop:4,border:"2px solid #C62828",padding:"2px 6px",display:"inline-block"}}>ANULADO</div>}
+                      <div style={{fontSize:13,fontWeight:700}}>N° {cr.id}</div>
+                      <div style={{fontSize:12}}>Fecha: {fmtDate(cr.fecha)} {fmtTime(cr.fecha)}</div>
+                      <div style={{fontSize:12}}>Usuario: {cr.usuario||"—"}</div>
+                      {cr.anulado&&<div style={{fontSize:13,fontWeight:900,color:"#C62828",marginTop:4,border:"2px solid #C62828",padding:"2px 6px",display:"inline-block"}}>ANULADO</div>}
                     </div>
                   </div>
 
-                  <table style={{width:"100%",fontSize:11,marginBottom:12}}>
+                  <table style={{width:"100%",fontSize:13,marginBottom:12}}>
                     <tbody>
                       <tr><td style={{fontWeight:700,width:120,paddingBottom:3}}>Agente de carga:</td><td style={{paddingBottom:3}}>{cr.agenteCarga||"—"}</td></tr>
                       <tr><td style={{fontWeight:700,paddingBottom:3}}>Contacto:</td><td style={{paddingBottom:3}}>{cr.contacto||"—"}</td></tr>
@@ -7332,8 +7341,8 @@ export default function ENEXSystem(){
                     </tbody>
                   </table>
 
-                  <div style={{fontSize:11,fontWeight:700,marginBottom:4}}>Detalle de carga ({wrs.length} WR · {totalCajas} cajas · {totalLb.toFixed(1)} lb)</div>
-                  <table style={{width:"100%",borderCollapse:"collapse",fontSize:10,marginBottom:16}}>
+                  <div style={{fontSize:13,fontWeight:700,marginBottom:4}}>Detalle de carga ({wrs.length} WR · {totalCajas} cajas · {totalLb.toFixed(1)} lb)</div>
+                  <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,marginBottom:16}}>
                     <thead>
                       <tr style={{background:"#EEE"}}>
                         <th style={{border:"1px solid #999",padding:"4px 6px",textAlign:"left"}}>#</th>
@@ -7370,15 +7379,15 @@ export default function ENEXSystem(){
 
                   <div style={{display:"flex",justifyContent:"space-between",gap:40,marginTop:40}}>
                     <div style={{flex:1,textAlign:"center"}}>
-                      <div style={{borderTop:"1px solid #000",paddingTop:4,fontSize:10,fontWeight:700}}>Entrega ENEX</div>
-                      <div style={{fontSize:9,color:"#555",marginTop:2}}>Firma y sello</div>
+                      <div style={{borderTop:"1px solid #000",paddingTop:4,fontSize:12,fontWeight:700}}>Entrega ENEX</div>
+                      <div style={{fontSize:11,color:"#555",marginTop:2}}>Firma y sello</div>
                     </div>
                     <div style={{flex:1,textAlign:"center"}}>
-                      <div style={{borderTop:"1px solid #000",paddingTop:4,fontSize:10,fontWeight:700}}>Recibe (Agente de carga)</div>
-                      <div style={{fontSize:9,color:"#555",marginTop:2}}>{cr.agenteCarga||"—"}{cr.documento?` · ${cr.documento}`:""}</div>
+                      <div style={{borderTop:"1px solid #000",paddingTop:4,fontSize:12,fontWeight:700}}>Recibe (Agente de carga)</div>
+                      <div style={{fontSize:11,color:"#555",marginTop:2}}>{cr.agenteCarga||"—"}{cr.documento?` · ${cr.documento}`:""}</div>
                     </div>
                   </div>
-                  <div style={{marginTop:24,fontSize:9,color:"#777",textAlign:"center",borderTop:"1px dashed #999",paddingTop:6}}>
+                  <div style={{marginTop:24,fontSize:11,color:"#777",textAlign:"center",borderTop:"1px dashed #999",paddingTop:6}}>
                     La firma confirma recepción conforme de los WR listados. Cualquier discrepancia debe reportarse al momento de la entrega.
                   </div>
                 </div>
@@ -7408,13 +7417,13 @@ export default function ENEXSystem(){
               <div className="mhd">
                 <div>
                   <div className="mtitle">📝 {editing?`Editar Nota de Entrega ${f.editId}`:"Nueva Nota de Entrega"}</div>
-                  <div style={{fontSize:10,color:"var(--t3)",marginTop:2}}>Los WR seleccionados pasarán a <b>Entregado (21)</b> al guardar.</div>
+                  <div style={{fontSize:12,color:"var(--t3)",marginTop:2}}>Los WR seleccionados pasarán a <b>Entregado (21)</b> al guardar.</div>
                 </div>
                 <button className="mcl" onClick={()=>setDnModal(null)}>✕</button>
               </div>
               <div className="mbd" style={{maxHeight:"72vh",overflow:"auto"}}>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
-                  <div><div style={{fontSize:10,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Cliente (casillero)</div>
+                  <div><div style={{fontSize:12,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Cliente (casillero)</div>
                     <select className="fs" value={f.clienteId} onChange={e=>{
                       const cid=e.target.value;
                       const cli=clients.find(c=>c.id===cid);
@@ -7429,19 +7438,19 @@ export default function ENEXSystem(){
                       {clientesMatriz.map(c=>(<option key={c.id} value={c.id}>{c.casillero||c.id} · {[c.primerNombre,c.primerApellido].filter(Boolean).join(" ")}</option>))}
                     </select>
                   </div>
-                  <div><div style={{fontSize:10,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Consignatario *</div>
+                  <div><div style={{fontSize:12,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Consignatario *</div>
                     <input className="fi" value={f.consignatario} onChange={e=>setDnModal(p=>({...p,consignatario:e.target.value}))} placeholder="Nombre del destinatario/empresa"/>
                   </div>
-                  <div><div style={{fontSize:10,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Receptor (persona que firma) *</div>
+                  <div><div style={{fontSize:12,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Receptor (persona que firma) *</div>
                     <input className="fi" value={f.receptorNombre} onChange={e=>setDnModal(p=>({...p,receptorNombre:e.target.value}))} placeholder="Nombre y apellido"/>
                   </div>
-                  <div><div style={{fontSize:10,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Documento/Cédula</div>
+                  <div><div style={{fontSize:12,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Documento/Cédula</div>
                     <input className="fi" value={f.receptorDocumento} onChange={e=>setDnModal(p=>({...p,receptorDocumento:e.target.value}))} placeholder="V-12345678"/>
                   </div>
-                  <div><div style={{fontSize:10,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Teléfono</div>
+                  <div><div style={{fontSize:12,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Teléfono</div>
                     <input className="fi" value={f.receptorTelefono} onChange={e=>setDnModal(p=>({...p,receptorTelefono:e.target.value}))} placeholder="0414-1234567"/>
                   </div>
-                  <div><div style={{fontSize:10,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Método de entrega</div>
+                  <div><div style={{fontSize:12,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Método de entrega</div>
                     <select className="fs" value={f.metodoEntrega} onChange={e=>setDnModal(p=>({...p,metodoEntrega:e.target.value}))} style={{width:"100%"}}>
                       <option value="retiro_oficina">🏢 Retiro en oficina</option>
                       <option value="domicilio">🏠 Entrega a domicilio</option>
@@ -7452,37 +7461,37 @@ export default function ENEXSystem(){
 
                 {f.metodoEntrega==="domicilio"&&(
                   <div style={{marginBottom:10}}>
-                    <div style={{fontSize:10,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Dirección de entrega</div>
+                    <div style={{fontSize:12,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Dirección de entrega</div>
                     <input className="fi" value={f.direccionEntrega} onChange={e=>setDnModal(p=>({...p,direccionEntrega:e.target.value}))} placeholder="Av. Principal, Edif X, piso Y — Municipio, Estado"/>
                   </div>
                 )}
                 {f.metodoEntrega==="transportista"&&(
                   <div style={{marginBottom:10}}>
-                    <div style={{fontSize:10,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Transportista / Agente</div>
+                    <div style={{fontSize:12,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Transportista / Agente</div>
                     <input className="fi" value={f.transportista} onChange={e=>setDnModal(p=>({...p,transportista:e.target.value}))} placeholder="MRW, Zoom, agente, etc."/>
                   </div>
                 )}
                 <div style={{marginBottom:12}}>
-                  <div style={{fontSize:10,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Notas</div>
+                  <div style={{fontSize:12,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Notas</div>
                   <textarea className="fi" rows={2} value={f.notas} onChange={e=>setDnModal(p=>({...p,notas:e.target.value}))} placeholder="Observaciones de la entrega…" style={{resize:"vertical"}}/>
                 </div>
 
                 <div style={{background:"#F5F7FB",padding:10,borderRadius:6,marginBottom:10}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-                    <div style={{fontSize:11,fontWeight:700,color:"var(--navy)"}}>📦 WR Seleccionados ({sel.length})</div>
-                    {sel.length>0&&<button className="btn-s" style={{fontSize:10,padding:"2px 8px"}} onClick={()=>setDnModal(p=>({...p,wrIds:[]}))}>Limpiar todos</button>}
+                    <div style={{fontSize:13,fontWeight:700,color:"var(--navy)"}}>📦 WR Seleccionados ({sel.length})</div>
+                    {sel.length>0&&<button className="btn-s" style={{fontSize:12,padding:"2px 8px"}} onClick={()=>setDnModal(p=>({...p,wrIds:[]}))}>Limpiar todos</button>}
                   </div>
                   {sel.length===0?(
-                    <div style={{fontSize:11,color:"var(--t3)",padding:"6px 0"}}>Sin WR — agrega abajo.</div>
+                    <div style={{fontSize:13,color:"var(--t3)",padding:"6px 0"}}>Sin WR — agrega abajo.</div>
                   ):(
                     <div style={{display:"flex",flexDirection:"column",gap:4}}>
                       {sel.map(w=>(
-                        <div key={w.id} style={{display:"flex",alignItems:"center",gap:8,background:"#fff",padding:"4px 8px",borderRadius:4,border:"1px solid #E0E7EF",fontSize:11}}>
+                        <div key={w.id} style={{display:"flex",alignItems:"center",gap:8,background:"#fff",padding:"4px 8px",borderRadius:4,border:"1px solid #E0E7EF",fontSize:13}}>
                           <span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",minWidth:80}}>{w.id}</span>
-                          <span className={`st ${w.status?.cls||"s1"}`} style={{fontSize:9}}>{w.status?.label||"—"}</span>
+                          <span className={`st ${w.status?.cls||"s1"}`} style={{fontSize:11}}>{w.status?.label||"—"}</span>
                           <span style={{flex:1,color:"var(--t2)"}}>{w.consignee||"—"}</span>
-                          <span style={{fontFamily:"'DM Mono',monospace",fontSize:10,color:"var(--t3)"}}>{w.tracking||"—"}</span>
-                          <button className="btn-s" style={{fontSize:9,padding:"2px 6px",color:"var(--red)",borderColor:"var(--red)"}} onClick={()=>setDnModal(p=>({...p,wrIds:p.wrIds.filter(id=>id!==w.id)}))}>✕</button>
+                          <span style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--t3)"}}>{w.tracking||"—"}</span>
+                          <button className="btn-s" style={{fontSize:11,padding:"2px 6px",color:"var(--red)",borderColor:"var(--red)"}} onClick={()=>setDnModal(p=>({...p,wrIds:p.wrIds.filter(id=>id!==w.id)}))}>✕</button>
                         </div>
                       ))}
                     </div>
@@ -7490,18 +7499,18 @@ export default function ENEXSystem(){
                 </div>
 
                 <div style={{marginBottom:6}}>
-                  <div style={{fontSize:11,fontWeight:700,color:"var(--t2)",marginBottom:4}}>➕ Agregar WR (elegibles: 20 Por Entrega, 25 Egresado)</div>
+                  <div style={{fontSize:13,fontWeight:700,color:"var(--t2)",marginBottom:4}}>➕ Agregar WR (elegibles: 20 Por Entrega, 25 Egresado)</div>
                   <input className="fi" placeholder="Buscar por WR, consignee, tracking…" value={qRef} onChange={e=>setDnModal(p=>({...p,_q:e.target.value}))} style={{marginBottom:6}}/>
                   <div style={{maxHeight:160,overflow:"auto",border:"1px solid #E0E7EF",borderRadius:4}}>
                     {filtered.length===0?(
-                      <div style={{padding:10,color:"var(--t3)",fontSize:11,textAlign:"center"}}>No hay WR disponibles{qRef?` para "${qRef}"`:""}</div>
+                      <div style={{padding:10,color:"var(--t3)",fontSize:13,textAlign:"center"}}>No hay WR disponibles{qRef?` para "${qRef}"`:""}</div>
                     ):filtered.map(w=>(
-                      <div key={w.id} style={{display:"flex",alignItems:"center",gap:8,padding:"4px 8px",borderBottom:"1px solid #EEF",fontSize:11,cursor:"pointer"}} onClick={()=>setDnModal(p=>({...p,wrIds:[...p.wrIds,w.id]}))}>
+                      <div key={w.id} style={{display:"flex",alignItems:"center",gap:8,padding:"4px 8px",borderBottom:"1px solid #EEF",fontSize:13,cursor:"pointer"}} onClick={()=>setDnModal(p=>({...p,wrIds:[...p.wrIds,w.id]}))}>
                         <span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",minWidth:80}}>{w.id}</span>
-                        <span className={`st ${w.status?.cls||"s1"}`} style={{fontSize:9}}>{w.status?.label||"—"}</span>
+                        <span className={`st ${w.status?.cls||"s1"}`} style={{fontSize:11}}>{w.status?.label||"—"}</span>
                         <span style={{flex:1,color:"var(--t2)"}}>{w.consignee||"—"}</span>
-                        <span style={{fontFamily:"'DM Mono',monospace",fontSize:10,color:"var(--t3)"}}>{w.tracking||"—"}</span>
-                        <span style={{color:"var(--cyan)",fontSize:10,fontWeight:700}}>+ agregar</span>
+                        <span style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--t3)"}}>{w.tracking||"—"}</span>
+                        <span style={{color:"var(--cyan)",fontSize:12,fontWeight:700}}>+ agregar</span>
                       </div>
                     ))}
                   </div>
@@ -7529,27 +7538,27 @@ export default function ENEXSystem(){
               <div className="mhd no-print">
                 <div className="mtitle">🖨️ Nota de Entrega — {dn.id}</div>
                 <div style={{display:"flex",gap:6}}>
-                  <button className="btn-p" style={{fontSize:11,padding:"4px 12px"}} onClick={()=>window.print()}>🖨️ Imprimir</button>
+                  <button className="btn-p" style={{fontSize:13,padding:"4px 12px"}} onClick={()=>window.print()}>🖨️ Imprimir</button>
                   <button className="mcl" onClick={()=>setDnPrint(null)}>✕</button>
                 </div>
               </div>
               <div className="mbd" style={{maxHeight:"78vh",overflow:"auto"}}>
-                <div className="dn-print" style={{background:"#fff",color:"#000",padding:"24px 28px",fontFamily:"Arial,Helvetica,sans-serif",fontSize:12}}>
+                <div className="dn-print" style={{background:"#fff",color:"#000",padding:"24px 28px",fontFamily:"Arial,Helvetica,sans-serif",fontSize:14}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",borderBottom:"2px solid #000",paddingBottom:10,marginBottom:14}}>
                     <div>
-                      <div style={{fontSize:20,fontWeight:900,letterSpacing:2}}>ENEX</div>
-                      <div style={{fontSize:10}}>{empresaNombre||"Int'l Courier"}</div>
-                      <div style={{fontSize:9,color:"#555"}}>Nota de Entrega al Cliente</div>
+                      <div style={{fontSize:22,fontWeight:900,letterSpacing:2}}>ENEX</div>
+                      <div style={{fontSize:12}}>{empresaNombre||"Int'l Courier"}</div>
+                      <div style={{fontSize:11,color:"#555"}}>Nota de Entrega al Cliente</div>
                     </div>
                     <div style={{textAlign:"right"}}>
-                      <div style={{fontSize:11,fontWeight:700}}>N° {dn.id}</div>
-                      <div style={{fontSize:10}}>Fecha: {fmtDate(dn.fecha)} {fmtTime(dn.fecha)}</div>
-                      <div style={{fontSize:10}}>Usuario: {dn.usuario||"—"}</div>
-                      {dn.anulado&&<div style={{fontSize:11,fontWeight:900,color:"#C62828",marginTop:4,border:"2px solid #C62828",padding:"2px 6px",display:"inline-block"}}>ANULADA</div>}
+                      <div style={{fontSize:13,fontWeight:700}}>N° {dn.id}</div>
+                      <div style={{fontSize:12}}>Fecha: {fmtDate(dn.fecha)} {fmtTime(dn.fecha)}</div>
+                      <div style={{fontSize:12}}>Usuario: {dn.usuario||"—"}</div>
+                      {dn.anulado&&<div style={{fontSize:13,fontWeight:900,color:"#C62828",marginTop:4,border:"2px solid #C62828",padding:"2px 6px",display:"inline-block"}}>ANULADA</div>}
                     </div>
                   </div>
 
-                  <table style={{width:"100%",fontSize:11,marginBottom:12}}>
+                  <table style={{width:"100%",fontSize:13,marginBottom:12}}>
                     <tbody>
                       <tr><td style={{fontWeight:700,width:140,paddingBottom:3}}>Consignatario:</td><td style={{paddingBottom:3}}>{dn.consignatario||"—"}</td></tr>
                       <tr><td style={{fontWeight:700,paddingBottom:3}}>Receptor:</td><td style={{paddingBottom:3}}>{dn.receptorNombre||"—"}</td></tr>
@@ -7563,8 +7572,8 @@ export default function ENEXSystem(){
                     </tbody>
                   </table>
 
-                  <div style={{fontSize:11,fontWeight:700,marginBottom:4}}>Detalle de la entrega ({wrs.length} WR · {totalCajas} cajas · {totalLb.toFixed(1)} lb)</div>
-                  <table style={{width:"100%",borderCollapse:"collapse",fontSize:10,marginBottom:16}}>
+                  <div style={{fontSize:13,fontWeight:700,marginBottom:4}}>Detalle de la entrega ({wrs.length} WR · {totalCajas} cajas · {totalLb.toFixed(1)} lb)</div>
+                  <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,marginBottom:16}}>
                     <thead>
                       <tr style={{background:"#EEE"}}>
                         <th style={{border:"1px solid #999",padding:"4px 6px",textAlign:"left"}}>#</th>
@@ -7600,18 +7609,18 @@ export default function ENEXSystem(){
                     </tbody>
                   </table>
 
-                  <div style={{border:"1px solid #000",padding:"8px 10px",fontSize:10,background:"#FAFAFA",marginBottom:30}}>
+                  <div style={{border:"1px solid #000",padding:"8px 10px",fontSize:12,background:"#FAFAFA",marginBottom:30}}>
                     <b>DECLARACIÓN DE RECEPCIÓN:</b> El receptor declara haber recibido conforme, en buen estado y en la cantidad indicada, la mercancía descrita en esta nota. Cualquier discrepancia o daño visible debe ser reportado al momento de la firma. Una vez firmada, ENEX queda liberado de toda responsabilidad sobre la custodia de la mercancía listada.
                   </div>
 
                   <div style={{display:"flex",justifyContent:"space-between",gap:40,marginTop:40}}>
                     <div style={{flex:1,textAlign:"center"}}>
-                      <div style={{borderTop:"1px solid #000",paddingTop:4,fontSize:10,fontWeight:700}}>Entrega ENEX</div>
-                      <div style={{fontSize:9,color:"#555",marginTop:2}}>Firma y sello</div>
+                      <div style={{borderTop:"1px solid #000",paddingTop:4,fontSize:12,fontWeight:700}}>Entrega ENEX</div>
+                      <div style={{fontSize:11,color:"#555",marginTop:2}}>Firma y sello</div>
                     </div>
                     <div style={{flex:1,textAlign:"center"}}>
-                      <div style={{borderTop:"1px solid #000",paddingTop:4,fontSize:10,fontWeight:700}}>Recibe conforme</div>
-                      <div style={{fontSize:9,color:"#555",marginTop:2}}>{dn.receptorNombre||"—"}{dn.receptorDocumento?` · ${dn.receptorDocumento}`:""}</div>
+                      <div style={{borderTop:"1px solid #000",paddingTop:4,fontSize:12,fontWeight:700}}>Recibe conforme</div>
+                      <div style={{fontSize:11,color:"#555",marginTop:2}}>{dn.receptorNombre||"—"}{dn.receptorDocumento?` · ${dn.receptorDocumento}`:""}</div>
                     </div>
                   </div>
                 </div>
@@ -7664,12 +7673,12 @@ export default function ENEXSystem(){
             <div className="modal" style={{width:900,maxHeight:"92vh",overflow:"auto"}}>
               <div className="mh">
                 <div>
-                  <div style={{fontSize:15,fontWeight:700,color:"var(--navy)"}}>
+                  <div style={{fontSize:17,fontWeight:700,color:"var(--navy)"}}>
                     {f._editing?"✏️ Editar factura":"📄 Nueva factura"}
                     {f.id&&<span style={{fontFamily:"'DM Mono',monospace",marginLeft:10,color:"var(--navy)"}}>{f.id}</span>}
                     {!f.id&&<span style={{fontFamily:"'DM Mono',monospace",marginLeft:10,color:"var(--t3)"}}>#{buildFacturaId(nextInvoiceNum)}</span>}
                   </div>
-                  <div style={{fontSize:11,color:"var(--t3)"}}>Tipo: {f.tipo==="proforma"?"Proforma":"Factura"} · {f.status==="borrador"?"Borrador":FAC_STATUS_LABEL[f.status]}</div>
+                  <div style={{fontSize:13,color:"var(--t3)"}}>Tipo: {f.tipo==="proforma"?"Proforma":"Factura"} · {f.status==="borrador"?"Borrador":FAC_STATUS_LABEL[f.status]}</div>
                 </div>
                 <button className="mcl" onClick={()=>setFacModal(null)}>✕</button>
               </div>
@@ -7739,8 +7748,8 @@ export default function ENEXSystem(){
                 </div>
 
                 <div style={{marginTop:12,marginBottom:6,display:"flex",alignItems:"center",gap:10}}>
-                  <div style={{fontSize:13,fontWeight:700,color:"var(--navy)"}}>Líneas</div>
-                  <button className="btn-s" style={{fontSize:10,padding:"2px 8px"}} onClick={addLinea}>+ Agregar línea</button>
+                  <div style={{fontSize:15,fontWeight:700,color:"var(--navy)"}}>Líneas</div>
+                  <button className="btn-s" style={{fontSize:12,padding:"2px 8px"}} onClick={addLinea}>+ Agregar línea</button>
                 </div>
                 <table className="ct" style={{width:"100%"}}>
                   <thead><tr><th style={{width:"50%"}}>Descripción</th><th style={{width:80}}>Cantidad</th><th style={{width:100}}>Precio</th><th style={{width:100}}>Total</th><th style={{width:40}}></th></tr></thead>
@@ -7751,7 +7760,7 @@ export default function ENEXSystem(){
                         <td><input className="fi" type="number" step="0.01" value={l.cantidad} onChange={e=>updLinea(i,"cantidad",e.target.value)}/></td>
                         <td><input className="fi" type="number" step="0.01" value={l.precio} onChange={e=>updLinea(i,"precio",e.target.value)}/></td>
                         <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700,textAlign:"right"}}>{fmtMoney(l.total,f.moneda)}</td>
-                        <td><button className="btn-s" style={{fontSize:9,padding:"2px 6px",color:"var(--red)",borderColor:"var(--red)"}} onClick={()=>delLinea(i)}>✕</button></td>
+                        <td><button className="btn-s" style={{fontSize:11,padding:"2px 6px",color:"var(--red)",borderColor:"var(--red)"}} onClick={()=>delLinea(i)}>✕</button></td>
                       </tr>
                     ))}
                   </tbody>
@@ -7766,10 +7775,10 @@ export default function ENEXSystem(){
                   </div>
                   <div>
                     <div style={{background:"var(--bg4)",padding:12,borderRadius:8,border:"1px solid var(--b1)"}}>
-                      <div style={{display:"flex",justifyContent:"space-between",marginBottom:6,fontSize:12}}>
+                      <div style={{display:"flex",justifyContent:"space-between",marginBottom:6,fontSize:14}}>
                         <span>Subtotal:</span><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700}}>{fmtMoney(f.subtotal||0,f.moneda)}</span>
                       </div>
-                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6,fontSize:12}}>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6,fontSize:14}}>
                         <span>Descuento:</span>
                         <input className="fi" type="number" step="0.01" value={f.descuento||0} onChange={e=>setFacModal(p=>{
                           const desc=parseFloat(e.target.value)||0;
@@ -7778,14 +7787,14 @@ export default function ENEXSystem(){
                           return{...p,descuento:desc,total,saldo};
                         })} style={{width:100,fontFamily:"'DM Mono',monospace",textAlign:"right"}}/>
                       </div>
-                      <div style={{display:"flex",justifyContent:"space-between",paddingTop:8,borderTop:"2px solid var(--navy)",fontSize:15,fontWeight:800,color:"var(--navy)"}}>
+                      <div style={{display:"flex",justifyContent:"space-between",paddingTop:8,borderTop:"2px solid var(--navy)",fontSize:17,fontWeight:800,color:"var(--navy)"}}>
                         <span>TOTAL:</span><span style={{fontFamily:"'DM Mono',monospace"}}>{fmtMoney(f.total||0,f.moneda)}</span>
                       </div>
                       {(f.pagado||0)>0&&<>
-                        <div style={{display:"flex",justifyContent:"space-between",marginTop:6,fontSize:11,color:"var(--green)"}}>
+                        <div style={{display:"flex",justifyContent:"space-between",marginTop:6,fontSize:13,color:"var(--green)"}}>
                           <span>Pagado:</span><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700}}>{fmtMoney(f.pagado,f.moneda)}</span>
                         </div>
-                        <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"var(--orange)",fontWeight:700}}>
+                        <div style={{display:"flex",justifyContent:"space-between",fontSize:13,color:"var(--orange)",fontWeight:700}}>
                           <span>Saldo:</span><span style={{fontFamily:"'DM Mono',monospace"}}>{fmtMoney(f.saldo,f.moneda)}</span>
                         </div>
                       </>}
@@ -7813,8 +7822,8 @@ export default function ENEXSystem(){
             <div className="modal" style={{width:560}}>
               <div className="mh">
                 <div>
-                  <div style={{fontSize:15,fontWeight:700,color:"var(--navy)"}}>💵 Registrar pago</div>
-                  <div style={{fontSize:11,color:"var(--t3)"}}>Factura {fact.id} · Saldo {fmtMoney(fact.saldo,fact.moneda)}</div>
+                  <div style={{fontSize:17,fontWeight:700,color:"var(--navy)"}}>💵 Registrar pago</div>
+                  <div style={{fontSize:13,color:"var(--t3)"}}>Factura {fact.id} · Saldo {fmtMoney(fact.saldo,fact.moneda)}</div>
                 </div>
                 <button className="mcl" onClick={()=>setPagoModal(null)}>✕</button>
               </div>
@@ -7862,8 +7871,8 @@ export default function ENEXSystem(){
             <div className="modal" style={{width:520}}>
               <div className="mh">
                 <div>
-                  <div style={{fontSize:15,fontWeight:700,color:"var(--purple)"}}>📝 Nota de Crédito</div>
-                  <div style={{fontSize:11,color:"var(--t3)"}}>Factura origen: {orig.id} · Total {fmtMoney(orig.total,orig.moneda)} · Pagado {fmtMoney(orig.pagado,orig.moneda)}</div>
+                  <div style={{fontSize:17,fontWeight:700,color:"var(--purple)"}}>📝 Nota de Crédito</div>
+                  <div style={{fontSize:13,color:"var(--t3)"}}>Factura origen: {orig.id} · Total {fmtMoney(orig.total,orig.moneda)} · Pagado {fmtMoney(orig.pagado,orig.moneda)}</div>
                 </div>
                 <button className="mcl" onClick={()=>setNcModal(null)}>✕</button>
               </div>
@@ -7898,37 +7907,37 @@ export default function ENEXSystem(){
           <div className="modal-backdrop" style={{overflow:"auto"}}>
             <div className="modal" style={{width:820,maxHeight:"94vh",display:"flex",flexDirection:"column"}}>
               <div className="mh">
-                <div style={{fontSize:14,fontWeight:700,color:"var(--navy)"}}>
+                <div style={{fontSize:16,fontWeight:700,color:"var(--navy)"}}>
                   {f.tipo==="nota_credito"?"📝 Nota de Crédito":f.tipo==="proforma"?"📋 Proforma":"📄 Factura"} · {f.id}
                   {f.status==="anulada"&&<span style={{marginLeft:10,color:"var(--red)",fontWeight:800}}>ANULADA</span>}
                 </div>
                 <div style={{display:"flex",gap:6}}>
-                  {hasPerm("imp_factura")&&<button className="btn-p" style={{fontSize:11,padding:"4px 10px"}} onClick={()=>window.print()}>🖨️ Imprimir</button>}
+                  {hasPerm("imp_factura")&&<button className="btn-p" style={{fontSize:13,padding:"4px 10px"}} onClick={()=>window.print()}>🖨️ Imprimir</button>}
                   <button className="mcl" onClick={()=>setFacPrint(null)}>✕</button>
                 </div>
               </div>
               <div className="mb" style={{padding:24,overflow:"auto",background:"#fff",color:"#000"}}>
-                <div id="print-area" style={{fontFamily:"Arial,Helvetica,sans-serif",color:"#000",fontSize:12}}>
+                <div id="print-area" style={{fontFamily:"Arial,Helvetica,sans-serif",color:"#000",fontSize:14}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",borderBottom:"2px solid #000",paddingBottom:10,marginBottom:14}}>
                     <div>
-                      <div style={{fontSize:24,fontWeight:900,letterSpacing:3}}>ENEX</div>
-                      <div style={{fontSize:11}}>{empresaNombre||"Int'l Courier"}</div>
-                      <div style={{fontSize:10,color:"#555"}}>Paquetería Internacional</div>
+                      <div style={{fontSize:26,fontWeight:900,letterSpacing:3}}>ENEX</div>
+                      <div style={{fontSize:13}}>{empresaNombre||"Int'l Courier"}</div>
+                      <div style={{fontSize:12,color:"#555"}}>Paquetería Internacional</div>
                     </div>
                     <div style={{textAlign:"right"}}>
-                      <div style={{fontSize:13,fontWeight:800}}>{f.tipo==="nota_credito"?"NOTA DE CRÉDITO":f.tipo==="proforma"?"PROFORMA":"FACTURA"}</div>
-                      <div style={{fontSize:14,fontWeight:900,fontFamily:"'DM Mono',monospace"}}>Nº {f.id}</div>
-                      <div style={{fontSize:10,marginTop:4}}>Fecha: {fmtDate(f.fecha)}</div>
-                      {f.fechaEmision&&<div style={{fontSize:10}}>Emisión: {fmtDate(f.fechaEmision)}</div>}
-                      <div style={{fontSize:10}}>Moneda: {f.moneda}</div>
-                      {f.ncFacturaOrigen&&<div style={{fontSize:10,color:"#7209b7"}}>Ref. factura: {f.ncFacturaOrigen}</div>}
+                      <div style={{fontSize:15,fontWeight:800}}>{f.tipo==="nota_credito"?"NOTA DE CRÉDITO":f.tipo==="proforma"?"PROFORMA":"FACTURA"}</div>
+                      <div style={{fontSize:16,fontWeight:900,fontFamily:"'DM Mono',monospace"}}>Nº {f.id}</div>
+                      <div style={{fontSize:12,marginTop:4}}>Fecha: {fmtDate(f.fecha)}</div>
+                      {f.fechaEmision&&<div style={{fontSize:12}}>Emisión: {fmtDate(f.fechaEmision)}</div>}
+                      <div style={{fontSize:12}}>Moneda: {f.moneda}</div>
+                      {f.ncFacturaOrigen&&<div style={{fontSize:12,color:"#7209b7"}}>Ref. factura: {f.ncFacturaOrigen}</div>}
                     </div>
                   </div>
 
                   <div style={{border:"1px solid #999",padding:"8px 10px",marginBottom:12,background:"#FAFAFA"}}>
-                    <div style={{fontSize:10,fontWeight:700,color:"#555",marginBottom:4}}>RECEPTOR ({(REC_TYPES.find(r=>r.k===f.receptorTipo)||{l:f.receptorTipo}).l})</div>
-                    <div style={{fontSize:13,fontWeight:700}}>{f.receptorNombre||"—"}</div>
-                    <div style={{fontSize:10,display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginTop:4}}>
+                    <div style={{fontSize:12,fontWeight:700,color:"#555",marginBottom:4}}>RECEPTOR ({(REC_TYPES.find(r=>r.k===f.receptorTipo)||{l:f.receptorTipo}).l})</div>
+                    <div style={{fontSize:15,fontWeight:700}}>{f.receptorNombre||"—"}</div>
+                    <div style={{fontSize:12,display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginTop:4}}>
                       {f.receptorDoc&&<div><b>Documento:</b> {f.receptorDoc}</div>}
                       {f.receptorCasillero&&<div><b>Casillero:</b> {f.receptorCasillero}</div>}
                       {f.receptorTel&&<div><b>Teléfono:</b> {f.receptorTel}</div>}
@@ -7937,7 +7946,7 @@ export default function ENEXSystem(){
                     </div>
                   </div>
 
-                  <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,marginBottom:10}}>
+                  <table style={{width:"100%",borderCollapse:"collapse",fontSize:13,marginBottom:10}}>
                     <thead>
                       <tr style={{background:"#EEE"}}>
                         <th style={{border:"1px solid #999",padding:"5px 6px",textAlign:"left"}}>Descripción</th>
@@ -7959,11 +7968,11 @@ export default function ENEXSystem(){
                   </table>
 
                   <div style={{display:"flex",justifyContent:"flex-end",marginBottom:14}}>
-                    <table style={{fontSize:11,minWidth:280}}>
+                    <table style={{fontSize:13,minWidth:280}}>
                       <tbody>
                         <tr><td style={{padding:"2px 8px"}}>Subtotal:</td><td style={{padding:"2px 8px",textAlign:"right",fontFamily:"monospace"}}>{fmtMoney(f.subtotal,f.moneda)}</td></tr>
                         {(f.descuento||0)>0&&<tr><td style={{padding:"2px 8px"}}>Descuento:</td><td style={{padding:"2px 8px",textAlign:"right",fontFamily:"monospace"}}>−{fmtMoney(f.descuento,f.moneda)}</td></tr>}
-                        <tr style={{fontWeight:900,borderTop:"2px solid #000"}}><td style={{padding:"6px 8px",fontSize:13}}>TOTAL:</td><td style={{padding:"6px 8px",textAlign:"right",fontFamily:"monospace",fontSize:14}}>{fmtMoney(f.total,f.moneda)}</td></tr>
+                        <tr style={{fontWeight:900,borderTop:"2px solid #000"}}><td style={{padding:"6px 8px",fontSize:15}}>TOTAL:</td><td style={{padding:"6px 8px",textAlign:"right",fontFamily:"monospace",fontSize:16}}>{fmtMoney(f.total,f.moneda)}</td></tr>
                         {(f.pagado||0)>0&&<tr style={{color:"#0B6B2F"}}><td style={{padding:"2px 8px"}}>Pagado:</td><td style={{padding:"2px 8px",textAlign:"right",fontFamily:"monospace",fontWeight:700}}>{fmtMoney(f.pagado,f.moneda)}</td></tr>}
                         {f.saldo>0.001&&<tr style={{color:"#C96703",fontWeight:800}}><td style={{padding:"2px 8px"}}>Saldo:</td><td style={{padding:"2px 8px",textAlign:"right",fontFamily:"monospace"}}>{fmtMoney(f.saldo,f.moneda)}</td></tr>}
                       </tbody>
@@ -7971,8 +7980,8 @@ export default function ENEXSystem(){
                   </div>
 
                   {pagosAplic.length>0&&<div style={{marginBottom:14}}>
-                    <div style={{fontSize:11,fontWeight:700,marginBottom:4}}>Pagos aplicados ({pagosAplic.length})</div>
-                    <table style={{width:"100%",borderCollapse:"collapse",fontSize:10}}>
+                    <div style={{fontSize:13,fontWeight:700,marginBottom:4}}>Pagos aplicados ({pagosAplic.length})</div>
+                    <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
                       <thead><tr style={{background:"#EEE"}}>
                         <th style={{border:"1px solid #999",padding:"3px 6px",textAlign:"left"}}>Nº Pago</th>
                         <th style={{border:"1px solid #999",padding:"3px 6px",textAlign:"left"}}>Fecha</th>
@@ -7994,18 +8003,18 @@ export default function ENEXSystem(){
                     </table>
                   </div>}
 
-                  {f.notas&&<div style={{marginBottom:10,fontSize:10,whiteSpace:"pre-wrap"}}><b>Notas:</b> {f.notas}</div>}
-                  {f.condiciones&&<div style={{marginBottom:10,fontSize:10,whiteSpace:"pre-wrap",color:"#555"}}><b>Condiciones:</b> {f.condiciones}</div>}
-                  {f.status==="anulada"&&f.motivoAnulacion&&<div style={{marginBottom:10,fontSize:11,color:"#C62828",fontWeight:700}}>Motivo anulación: {f.motivoAnulacion}</div>}
+                  {f.notas&&<div style={{marginBottom:10,fontSize:12,whiteSpace:"pre-wrap"}}><b>Notas:</b> {f.notas}</div>}
+                  {f.condiciones&&<div style={{marginBottom:10,fontSize:12,whiteSpace:"pre-wrap",color:"#555"}}><b>Condiciones:</b> {f.condiciones}</div>}
+                  {f.status==="anulada"&&f.motivoAnulacion&&<div style={{marginBottom:10,fontSize:13,color:"#C62828",fontWeight:700}}>Motivo anulación: {f.motivoAnulacion}</div>}
 
                   <div style={{display:"flex",justifyContent:"space-between",gap:40,marginTop:40}}>
                     <div style={{flex:1,textAlign:"center"}}>
-                      <div style={{borderTop:"1px solid #000",paddingTop:4,fontSize:10,fontWeight:700}}>ENEX</div>
-                      <div style={{fontSize:9,color:"#555",marginTop:2}}>Firma y sello</div>
+                      <div style={{borderTop:"1px solid #000",paddingTop:4,fontSize:12,fontWeight:700}}>ENEX</div>
+                      <div style={{fontSize:11,color:"#555",marginTop:2}}>Firma y sello</div>
                     </div>
                     <div style={{flex:1,textAlign:"center"}}>
-                      <div style={{borderTop:"1px solid #000",paddingTop:4,fontSize:10,fontWeight:700}}>Cliente</div>
-                      <div style={{fontSize:9,color:"#555",marginTop:2}}>{f.receptorNombre||"—"}</div>
+                      <div style={{borderTop:"1px solid #000",paddingTop:4,fontSize:12,fontWeight:700}}>Cliente</div>
+                      <div style={{fontSize:11,color:"#555",marginTop:2}}>{f.receptorNombre||"—"}</div>
                     </div>
                   </div>
                 </div>
