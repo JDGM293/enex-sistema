@@ -494,3 +494,72 @@ export const dbDeleteScanIds = async (ids) => {
   const { error } = await supabase.from('scan_log').delete().in('id', ids)
   if (error) console.error('deleteScanIds:', error)
 }
+
+// ── FOTOS DEL PAQUETE (wr_fotos + Storage bucket wr-fotos) ─────
+// Cada WR puede tener 0..N fotos por caja. El archivo vive en el bucket
+// "wr-fotos" y la tabla wr_fotos mantiene metadata (qué archivo, de qué
+// WR, qué caja, quién lo subió, cuándo).
+
+const FOTOS_BUCKET = 'wr-fotos'
+
+// Sube un archivo al bucket y retorna { path, url }. path se usa para
+// borrar después; url es la URL pública para mostrar.
+export const storageUploadFoto = async (file, wrId, cajaIdx=0) => {
+  if (!file) return null
+  const ts = Date.now()
+  const rand = Math.random().toString(36).slice(2,8)
+  const ext = (file.name && file.name.includes('.')) ? file.name.split('.').pop().toLowerCase() : 'jpg'
+  const safeExt = ext.replace(/[^a-z0-9]/g,'') || 'jpg'
+  const path = `${wrId}/caja_${cajaIdx}/${ts}_${rand}.${safeExt}`
+  const { error } = await supabase.storage.from(FOTOS_BUCKET).upload(path, file, {
+    cacheControl: '3600', upsert: false, contentType: file.type || 'image/jpeg',
+  })
+  if (error) { console.error('storageUploadFoto:', error); return null }
+  const { data: pub } = supabase.storage.from(FOTOS_BUCKET).getPublicUrl(path)
+  return { path, url: pub?.publicUrl || '' }
+}
+
+// Borra el blob del bucket (solo Storage, no la fila en wr_fotos).
+export const storageDeleteFoto = async (path) => {
+  if (!path) return
+  const { error } = await supabase.storage.from(FOTOS_BUCKET).remove([path])
+  if (error) console.error('storageDeleteFoto:', error)
+}
+
+export const fotoFromDB = (r) => r ? ({
+  id: r.id, wrId: r.wr_id, cajaIdx: r.caja_idx ?? 0,
+  url: r.url, path: r.path, filename: r.filename || '',
+  mime: r.mime || 'image/jpeg', sizeBytes: r.size_bytes || 0,
+  source: r.source || 'upload', uploadedBy: r.uploaded_by || '',
+  createdAt: r.created_at ? new Date(r.created_at) : new Date(),
+}) : null
+
+// Lee todas las fotos de un WR. Retorna array ordenado por cajaIdx asc y createdAt asc.
+export const dbGetFotosByWR = async (wrId) => {
+  if (!wrId) return []
+  const { data, error } = await supabase.from('wr_fotos')
+    .select('*').eq('wr_id', wrId)
+    .order('caja_idx', {ascending:true})
+    .order('created_at', {ascending:true})
+  if (error) { console.error('getFotosByWR:', error); return [] }
+  return (data||[]).map(fotoFromDB)
+}
+
+// Inserta una fila en wr_fotos. Retorna la foto creada (con id generado) o null.
+export const dbInsertFoto = async ({ wrId, cajaIdx=0, url, path, filename='', mime='image/jpeg', sizeBytes=0, source='upload', uploadedBy='' }) => {
+  if (!wrId || !url || !path) return null
+  const { data, error } = await supabase.from('wr_fotos').insert({
+    wr_id: wrId, caja_idx: cajaIdx, url, path, filename, mime,
+    size_bytes: sizeBytes, source, uploaded_by: uploadedBy,
+  }).select().single()
+  if (error) { console.error('insertFoto:', error); return null }
+  return fotoFromDB(data)
+}
+
+// Borra una fila + su blob. Si no pasás path, solo borra la fila.
+export const dbDeleteFoto = async (id, path=null) => {
+  if (!id) return
+  const { error } = await supabase.from('wr_fotos').delete().eq('id', id)
+  if (error) { console.error('deleteFoto:', error); return }
+  if (path) await storageDeleteFoto(path)
+}

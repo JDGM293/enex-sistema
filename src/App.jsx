@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from "react";
-import { dbGetClientes, dbUpsertCliente, dbDeleteCliente, dbGetWR, dbUpsertWR, dbDeleteWR, dbGetAgentes, dbUpsertAgente, dbDeleteAgente, dbGetOficinas, dbUpsertOficina, dbDeleteOficina, dbGetTarifas, dbUpsertTarifa, dbDeleteTarifa, dbGetConsolidaciones, dbUpsertConsolidacion, dbDeleteConsolidacion, dbGetCargoReleases, dbUpsertCargoRelease, dbDeleteCargoRelease, dbGetDeliveryNotes, dbUpsertDeliveryNote, dbDeleteDeliveryNote, dbGetFacturas, dbUpsertFactura, dbDeleteFactura, dbGetPagos, dbUpsertPago, dbDeletePago, dbLogActividad, dbGetActividad, dbGetConfig, dbSetConfig, dbGetScanLog, dbInsertScan, dbSetScanRegistered, dbDeleteScanIds } from "./supabase";
+import { useState, useEffect, useRef, Fragment } from "react";
+import { dbGetClientes, dbUpsertCliente, dbDeleteCliente, dbGetWR, dbUpsertWR, dbDeleteWR, dbGetAgentes, dbUpsertAgente, dbDeleteAgente, dbGetOficinas, dbUpsertOficina, dbDeleteOficina, dbGetTarifas, dbUpsertTarifa, dbDeleteTarifa, dbGetConsolidaciones, dbUpsertConsolidacion, dbDeleteConsolidacion, dbGetCargoReleases, dbUpsertCargoRelease, dbDeleteCargoRelease, dbGetDeliveryNotes, dbUpsertDeliveryNote, dbDeleteDeliveryNote, dbGetFacturas, dbUpsertFactura, dbDeleteFactura, dbGetPagos, dbUpsertPago, dbDeletePago, dbLogActividad, dbGetActividad, dbGetConfig, dbSetConfig, dbGetScanLog, dbInsertScan, dbSetScanRegistered, dbDeleteScanIds, storageUploadFoto, storageDeleteFoto, dbGetFotosByWR, dbInsertFoto, dbDeleteFoto } from "./supabase";
 
 // ─── TEMA CLARO PROFESIONAL ───────────────────────────────────────────────────
 const S = `
@@ -479,7 +479,7 @@ const ALL_PERMS=[
   // Admin
   "configuracion","gestionar_roles","registro_actividad","envio_masivo",
   "ver_bd_clientes","ver_bd_usuarios","paquetes_sin_reclamo",
-  "ver_fotos","subir_foto","todas_sucursales",
+  "ver_fotos","subir_foto","borrar_foto","todas_sucursales",
 ];
 
 const PERM_LBL={
@@ -513,7 +513,7 @@ const PERM_LBL={
   registrar_pago:"Registrar Pago",cobrar:"Cobrar",anular_pago:"Anular Pago",nota_credito:"Nota de Crédito",
   configuracion:"Configuración Sistema",gestionar_roles:"Gestionar Roles",registro_actividad:"Registro Actividad",envio_masivo:"Envío Masivo Email",
   ver_bd_clientes:"Ver BD Clientes",ver_bd_usuarios:"Ver BD Usuarios",paquetes_sin_reclamo:"Paquetes Sin Reclamo",
-  ver_fotos:"Ver Fotos",subir_foto:"Subir Foto",todas_sucursales:"Todas las Sucursales",
+  ver_fotos:"Ver Fotos",subir_foto:"Subir Foto",borrar_foto:"Borrar Foto",todas_sucursales:"Todas las Sucursales",
 };
 
 // Permisos por grupo para mostrar en UI
@@ -528,7 +528,7 @@ const PERM_GROUPS=[
   {label:"Servicios & Tarifas",perms:["ver_servicios","crear_servicio","editar_servicio","borrar_servicio","sel_servicio","ver_adicionales","crear_adicional","editar_adicional","borrar_adicional","sel_adicional","calculadora","ver_tarifas","crear_tarifa","editar_tarifa","borrar_tarifa"]},
   {label:"Chat & Pick-up",perms:["chat_admin","chat_gerencia","chat_auxiliar","chat_operaciones","chat_agente","chat_cliente","ver_pickup","solicitar_pickup"]},
   {label:"Contabilidad",perms:["facturar","ver_factura","registrar_cobro","ver_cuentas_cobrar","imp_factura","crear_factura","editar_factura","anular_factura","borrar_factura","registrar_pago","cobrar","anular_pago","nota_credito"]},
-  {label:"Administración",perms:["configuracion","gestionar_roles","registro_actividad","envio_masivo","ver_bd_clientes","ver_bd_usuarios","paquetes_sin_reclamo","ver_fotos","subir_foto","todas_sucursales"]},
+  {label:"Administración",perms:["configuracion","gestionar_roles","registro_actividad","envio_masivo","ver_bd_clientes","ver_bd_usuarios","paquetes_sin_reclamo","ver_fotos","subir_foto","borrar_foto","todas_sucursales"]},
 ];
 
 // ─── ROLE DEFINITIONS ────────────────────────────────────────────────────────
@@ -548,11 +548,11 @@ const ROLE_DEFS={
   D:{code:"D",name:"Jefe de Operaciones",color:"rD",icon:"⚙️",
     desc:"Supervisa y ejecuta operaciones completas — origen + destino.",
     subs:["D1","D2"],
-    perms:["ver_wr","crear_wr","editar_wr","ver_rp","hacer_rp","editar_rp","ver_booking","crear_booking","editar_booking","solicitar_reempaque","ver_reempaque","crear_reempaque","editar_reempaque","ver_guia","crear_guia","editar_guia","ver_confirmacion","confirmar","desconfirmar","ver_egreso","hacer_egreso","editar_egreso","ver_recepcion_dest","hacer_recepcion_dest","editar_recepcion_dest","ver_entrega","entregar","revertir_entrega","editar_entrega","status_origen","status_destino","ver_reportes","rep_confirmados","rep_guia_op","rep_postal","rep_packing","imp_wr","imp_guia","imp_etiq_caja","imp_etiq_guia","imp_rp","imp_booking","imp_reempaque","imp_lista_conf","imp_guia_op","imp_postal","imp_packing","imp_recibo_entrega","ver_estado_cuenta","ver_estado_cliente","ver_tracking","rastrear","ver_prealerta","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_tarifas","ver_bd_clientes","ver_fotos","subir_foto","chat_admin","chat_gerencia","chat_auxiliar","chat_operaciones","todas_sucursales"]},
+    perms:["ver_wr","crear_wr","editar_wr","ver_rp","hacer_rp","editar_rp","ver_booking","crear_booking","editar_booking","solicitar_reempaque","ver_reempaque","crear_reempaque","editar_reempaque","ver_guia","crear_guia","editar_guia","ver_confirmacion","confirmar","desconfirmar","ver_egreso","hacer_egreso","editar_egreso","ver_recepcion_dest","hacer_recepcion_dest","editar_recepcion_dest","ver_entrega","entregar","revertir_entrega","editar_entrega","status_origen","status_destino","ver_reportes","rep_confirmados","rep_guia_op","rep_postal","rep_packing","imp_wr","imp_guia","imp_etiq_caja","imp_etiq_guia","imp_rp","imp_booking","imp_reempaque","imp_lista_conf","imp_guia_op","imp_postal","imp_packing","imp_recibo_entrega","ver_estado_cuenta","ver_estado_cliente","ver_tracking","rastrear","ver_prealerta","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_tarifas","ver_bd_clientes","ver_fotos","subir_foto","borrar_foto","chat_admin","chat_gerencia","chat_auxiliar","chat_operaciones","todas_sucursales"]},
 
   D1:{code:"D1",name:"Operaciones Origen",color:"rD1",icon:"📤",
     desc:"Ejecuta operaciones de origen: RP, WR, guías, consolidación, egreso. Estados 1→7.",
-    perms:["ver_wr","crear_wr","editar_wr","ver_rp","hacer_rp","editar_rp","ver_booking","crear_booking","editar_booking","solicitar_reempaque","ver_reempaque","crear_reempaque","editar_reempaque","ver_guia","crear_guia","editar_guia","ver_confirmacion","confirmar","desconfirmar","ver_egreso","hacer_egreso","editar_egreso","status_origen","ver_reportes","rep_confirmados","rep_guia_op","rep_postal","rep_packing","imp_wr","imp_guia","imp_etiq_caja","imp_etiq_guia","imp_rp","imp_booking","imp_reempaque","imp_lista_conf","imp_guia_op","imp_postal","imp_packing","ver_tracking","rastrear","ver_prealerta","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","ver_bd_clientes","ver_fotos","subir_foto","chat_admin","chat_gerencia","chat_auxiliar","chat_operaciones"]},
+    perms:["ver_wr","crear_wr","editar_wr","ver_rp","hacer_rp","editar_rp","ver_booking","crear_booking","editar_booking","solicitar_reempaque","ver_reempaque","crear_reempaque","editar_reempaque","ver_guia","crear_guia","editar_guia","ver_confirmacion","confirmar","desconfirmar","ver_egreso","hacer_egreso","editar_egreso","status_origen","ver_reportes","rep_confirmados","rep_guia_op","rep_postal","rep_packing","imp_wr","imp_guia","imp_etiq_caja","imp_etiq_guia","imp_rp","imp_booking","imp_reempaque","imp_lista_conf","imp_guia_op","imp_postal","imp_packing","ver_tracking","rastrear","ver_prealerta","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","ver_bd_clientes","ver_fotos","subir_foto","borrar_foto","chat_admin","chat_gerencia","chat_auxiliar","chat_operaciones"]},
 
   D2:{code:"D2",name:"Operaciones Destino",color:"rD2",icon:"📥",
     desc:"Ejecuta operaciones de destino: recepción, entrega. Estados 8→12P.",
@@ -802,7 +802,7 @@ const TypeBadge=({t})=><span className={`type-b ${TYPE_CLS[t]||""}`}>{t}</span>;
 
 // ─── WR ROW ────────────────────────────────────────────────────────────────────
 const CT_LABEL_WR={agente:"🤝 Agente",vendedor_agente:"💼 Vend. Agente",autonomo:"🧑‍💻 Autónomo",oficina:"🏢 Oficina",vendedor_oficina:"🛒 Vend. Oficina",matriz:"🏛️ Matriz"};
-const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[],oficinas=[],empresaNombre="Casa Matriz",sendTypes=[],onAssignTipo})=>{
+const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[],oficinas=[],empresaNombre="Casa Matriz",sendTypes=[],onAssignTipo,onFotoClick})=>{
   const isIn=unitL==="in";
   const isLb=unitW==="lb";
   const showVol = isLb ? `${w.volLb}lb` : `${w.volKg}kg`;
@@ -916,11 +916,11 @@ const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[
       <td style={{textAlign:"right"}}><span className="c-ft3">{w.ft3||"—"}</span></td>
       <td style={{textAlign:"right"}}><span className="c-m3">{w.m3||"—"}</span></td>
       <td><span className="c-note">{w.notas||"—"}</span></td>
-      {/* FOTO — link directo a imagen (Supabase Storage se conecta en bloque C) */}
+      {/* FOTO — abre el visor de fotos del WR (Supabase Storage) */}
       <td style={{textAlign:"center"}} onClick={e=>e.stopPropagation()}>
         {w.foto
-          ?<a href={typeof w.foto==="string"?w.foto:"#"} target="_blank" rel="noopener noreferrer" title="Ver foto del paquete" style={{textDecoration:"none",fontSize:18,cursor:"pointer"}}
-             onClick={ev=>{if(typeof w.foto!=="string"){ev.preventDefault();alert("La vista de fotos se habilita al completar el módulo C (Supabase Storage).");}}}>📷</a>
+          ?<button type="button" title="Ver fotos del paquete" onClick={()=>onFotoClick&&onFotoClick(w)}
+             style={{background:"transparent",border:"none",fontSize:18,cursor:"pointer",padding:0,lineHeight:1}}>📷</button>
           :<span className="ic-b" style={{color:"var(--t4)"}}>—</span>}
       </td>
       <td style={{textAlign:"center"}}><span className={`ic-b ${w.prealerta?"has":""}`}>{w.prealerta?"📎":"—"}</span></td>
@@ -930,7 +930,7 @@ const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[
 
 // ─── WR TABLE COMPONENT ────────────────────────────────────────────────────────
 const PAGE_SIZE=50;
-const WRTable=({rows,selId,onSelect,unitL,unitW,onSort,sortCol,sortDir,dimOpen,onDimToggle,page,onPage,clients=[],agentes=[],oficinas=[],empresaNombre="Casa Matriz",sendTypes=[],onAssignTipo})=>{
+const WRTable=({rows,selId,onSelect,unitL,unitW,onSort,sortCol,sortDir,dimOpen,onDimToggle,page,onPage,clients=[],agentes=[],oficinas=[],empresaNombre="Casa Matriz",sendTypes=[],onAssignTipo,onFotoClick})=>{
   const totalPages=Math.max(1,Math.ceil(rows.length/PAGE_SIZE));
   const pageRows=rows.slice((page-1)*PAGE_SIZE,page*PAGE_SIZE);
   const SortTh=({col,children,align})=>(
@@ -972,7 +972,7 @@ const WRTable=({rows,selId,onSelect,unitL,unitW,onSort,sortCol,sortDir,dimOpen,o
             ):pageRows.map(w=>(
               <WRRow key={w.id} w={w} sel={selId===w.id} onClick={()=>onSelect(w)}
                 unitL={unitL} unitW={unitW} clients={clients} agentes={agentes} oficinas={oficinas} empresaNombre={empresaNombre}
-                sendTypes={sendTypes} onAssignTipo={onAssignTipo}
+                sendTypes={sendTypes} onAssignTipo={onAssignTipo} onFotoClick={onFotoClick}
                 dimOpen={dimOpen===w.id} onDimToggle={()=>onDimToggle(w.id)}/>
             ))}
           </tbody>
@@ -1005,6 +1005,7 @@ const emptyCaja=()=>({
   proveedor:"", numFactura:"", montoFactura:"",
   largo:"", ancho:"", alto:"", pesoLb:"",
   descripcion:"", tipoEmbalaje:"",
+  fotos:[], // [{id?, file, url, path?, source:'upload'|'webcam', mime, sizeBytes, filename, createdAt}]
 });
 const emptyWRF=()=>({
   consignee:"",casilleroSearch:"",casillero:"",clienteId:"",
@@ -1269,6 +1270,227 @@ const emptyPickup=()=>({
   status:"Pendiente",cotizacion:null,
 });
 
+// ─── WEBCAM CAPTURE MODAL ────────────────────────────────────────────────────
+// Modal autocontenido para capturar una foto desde la webcam del usuario.
+// Props:
+//   onCapture(file)  — callback con el File (image/jpeg) cuando el usuario confirma
+//   onClose()        — cerrar sin capturar
+function WebcamCaptureModal({ onCapture, onClose }){
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const streamRef = useRef(null);
+  const [ready,setReady] = useState(false);
+  const [err,setErr] = useState("");
+  const [shot,setShot] = useState(null); // {dataUrl, blob}
+  const [facing,setFacing] = useState("environment"); // "user" | "environment"
+
+  useEffect(()=>{
+    let cancelled=false;
+    (async()=>{
+      try{
+        // Detener stream previo si lo hay
+        if(streamRef.current){
+          streamRef.current.getTracks().forEach(t=>t.stop());
+          streamRef.current = null;
+        }
+        const constraints = {
+          video: { facingMode: facing, width:{ideal:1280}, height:{ideal:720} },
+          audio: false
+        };
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        if(cancelled){ stream.getTracks().forEach(t=>t.stop()); return; }
+        streamRef.current = stream;
+        if(videoRef.current){
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play().catch(()=>{});
+        }
+        setReady(true);
+        setErr("");
+      }catch(e){
+        console.error("getUserMedia:", e);
+        setErr(e.name==="NotAllowedError" ? "Permiso de cámara denegado. Habilitalo en el navegador e intentá de nuevo." : "No se pudo acceder a la cámara: "+(e.message||e.name||"error"));
+        setReady(false);
+      }
+    })();
+    return ()=>{
+      cancelled=true;
+      if(streamRef.current){
+        streamRef.current.getTracks().forEach(t=>t.stop());
+        streamRef.current = null;
+      }
+    };
+  },[facing]);
+
+  const capture = ()=>{
+    const v = videoRef.current, c = canvasRef.current;
+    if(!v || !c) return;
+    const w = v.videoWidth || 1280, h = v.videoHeight || 720;
+    c.width = w; c.height = h;
+    const ctx = c.getContext("2d");
+    ctx.drawImage(v, 0, 0, w, h);
+    const dataUrl = c.toDataURL("image/jpeg", 0.9);
+    c.toBlob(blob=>{
+      setShot({ dataUrl, blob });
+    }, "image/jpeg", 0.9);
+  };
+
+  const retry = ()=> setShot(null);
+
+  const confirm = ()=>{
+    if(!shot || !shot.blob) return;
+    const filename = `webcam_${Date.now()}.jpg`;
+    const file = new File([shot.blob], filename, { type: "image/jpeg" });
+    onCapture && onCapture(file);
+  };
+
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+      <div style={{background:"var(--bg2)",borderRadius:12,overflow:"hidden",width:"100%",maxWidth:680,boxShadow:"var(--shadow2)",display:"flex",flexDirection:"column",maxHeight:"90vh"}}>
+        {/* Header */}
+        <div style={{padding:"14px 18px",borderBottom:"1px solid var(--b1)",background:"var(--navy)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <div style={{fontSize:15,fontWeight:700,display:"flex",alignItems:"center",gap:8}}>
+            <span style={{fontSize:18}}>📸</span> Capturar foto del paquete
+          </div>
+          <button onClick={onClose} style={{width:28,height:28,borderRadius:"50%",border:"none",background:"rgba(255,255,255,0.12)",color:"#fff",fontSize:18,fontWeight:700,cursor:"pointer",lineHeight:1}}>×</button>
+        </div>
+        {/* Body */}
+        <div style={{padding:16,flex:1,overflow:"auto",background:"#000"}}>
+          {err ? (
+            <div style={{background:"rgba(204,34,51,0.15)",color:"#fff",padding:"16px 18px",borderRadius:8,border:"1px solid rgba(204,34,51,0.4)",textAlign:"center"}}>
+              <div style={{fontSize:32,marginBottom:8}}>⚠️</div>
+              <div style={{fontSize:14,lineHeight:1.5}}>{err}</div>
+            </div>
+          ) : shot ? (
+            <div style={{display:"flex",justifyContent:"center"}}>
+              <img src={shot.dataUrl} alt="preview" style={{maxWidth:"100%",maxHeight:"60vh",borderRadius:6,display:"block"}}/>
+            </div>
+          ) : (
+            <div style={{position:"relative",display:"flex",justifyContent:"center",background:"#000",borderRadius:6,overflow:"hidden"}}>
+              <video ref={videoRef} playsInline muted autoPlay style={{maxWidth:"100%",maxHeight:"60vh",display:"block",background:"#000"}}/>
+              {!ready && (
+                <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:14}}>Conectando cámara…</div>
+              )}
+            </div>
+          )}
+          <canvas ref={canvasRef} style={{display:"none"}}/>
+        </div>
+        {/* Footer */}
+        <div style={{padding:"12px 18px",borderTop:"1px solid var(--b1)",background:"var(--bg3)",display:"flex",gap:8,justifyContent:"space-between",alignItems:"center",flexWrap:"wrap"}}>
+          <div>
+            {!shot && !err && (
+              <button type="button" className="btn-s" style={{fontSize:12,padding:"6px 10px"}} onClick={()=>setFacing(f=>f==="user"?"environment":"user")}>
+                🔄 {facing==="user"?"Cámara trasera":"Cámara frontal"}
+              </button>
+            )}
+          </div>
+          <div style={{display:"flex",gap:8}}>
+            <button className="btn-s" onClick={onClose}>Cancelar</button>
+            {shot ? (
+              <>
+                <button className="btn-s" onClick={retry}>↻ Tomar otra</button>
+                <button className="btn-p" onClick={confirm}>✅ Usar esta foto</button>
+              </>
+            ) : (
+              <button className="btn-p" disabled={!ready||!!err} onClick={capture} style={!ready||!!err?{opacity:.5,cursor:"not-allowed"}:{}}>
+                📸 Capturar
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── PHOTO GALLERY MODAL ─────────────────────────────────────────────────────
+// Visor de todas las fotos de un WR (agrupadas por caja).
+// Props:
+//   wrId           — id del WR
+//   currentUser    — usuario actual (para permiso de borrar)
+//   onClose()      — cerrar
+function PhotoGalleryModal({ wrId, currentUser, onClose }){
+  const [fotos,setFotos] = useState([]);
+  const [loading,setLoading] = useState(true);
+  const [viewing,setViewing] = useState(null); // foto seleccionada para zoom
+  const canDelete = currentUser && Array.isArray(currentUser.perms) && currentUser.perms.includes("borrar_foto");
+
+  const load = async()=>{
+    setLoading(true);
+    const rows = await dbGetFotosByWR(wrId);
+    setFotos(rows);
+    setLoading(false);
+  };
+  useEffect(()=>{ if(wrId) load(); /* eslint-disable-next-line */ },[wrId]);
+
+  const handleDelete = async(foto)=>{
+    if(!canDelete) return;
+    if(!window.confirm("¿Borrar esta foto? No se puede deshacer.")) return;
+    await dbDeleteFoto(foto.id, foto.path);
+    await load();
+  };
+
+  // Agrupar por cajaIdx
+  const grupos = {};
+  fotos.forEach(f=>{
+    const k = f.cajaIdx ?? 0;
+    if(!grupos[k]) grupos[k] = [];
+    grupos[k].push(f);
+  });
+  const cajaKeys = Object.keys(grupos).sort((a,b)=>Number(a)-Number(b));
+
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",zIndex:9998,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+      <div style={{background:"var(--bg2)",borderRadius:12,overflow:"hidden",width:"100%",maxWidth:900,boxShadow:"var(--shadow2)",display:"flex",flexDirection:"column",maxHeight:"92vh"}}>
+        <div style={{padding:"14px 18px",borderBottom:"1px solid var(--b1)",background:"var(--navy)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <div style={{fontSize:15,fontWeight:700,display:"flex",alignItems:"center",gap:8}}>
+            <span style={{fontSize:18}}>📷</span> Fotos del WR {wrId}
+            {!loading && <span style={{background:"var(--gold)",fontSize:12,padding:"2px 8px",borderRadius:10}}>{fotos.length}</span>}
+          </div>
+          <button onClick={onClose} style={{width:28,height:28,borderRadius:"50%",border:"none",background:"rgba(255,255,255,0.12)",color:"#fff",fontSize:18,fontWeight:700,cursor:"pointer",lineHeight:1}}>×</button>
+        </div>
+        <div style={{padding:16,flex:1,overflow:"auto"}}>
+          {loading ? (
+            <div style={{textAlign:"center",padding:"40px 16px",color:"var(--t3)"}}>Cargando fotos…</div>
+          ) : fotos.length===0 ? (
+            <div style={{textAlign:"center",padding:"40px 16px",color:"var(--t3)",fontSize:14}}>
+              <div style={{fontSize:40,marginBottom:10}}>📭</div>
+              Este WR aún no tiene fotos cargadas.
+            </div>
+          ) : (
+            cajaKeys.map(k=>(
+              <div key={k} style={{marginBottom:20}}>
+                <div style={{fontSize:13,fontWeight:700,color:"var(--navy)",textTransform:"uppercase",letterSpacing:1,marginBottom:8,borderBottom:"1px solid var(--b1)",paddingBottom:5}}>
+                  📦 Caja {Number(k)+1} <span style={{color:"var(--t3)",fontWeight:500,marginLeft:6}}>({grupos[k].length} {grupos[k].length===1?"foto":"fotos"})</span>
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(140px, 1fr))",gap:10}}>
+                  {grupos[k].map(foto=>(
+                    <div key={foto.id} style={{position:"relative",aspectRatio:"1",borderRadius:8,overflow:"hidden",border:"1px solid var(--b1)",background:"var(--bg4)",cursor:"pointer"}} onClick={()=>setViewing(foto)}>
+                      <img src={foto.url} alt={foto.filename} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
+                      {canDelete && (
+                        <button type="button" title="Borrar foto" onClick={e=>{e.stopPropagation();handleDelete(foto);}} style={{position:"absolute",top:5,right:5,width:24,height:24,borderRadius:"50%",border:"none",background:"rgba(204,34,51,0.95)",color:"#fff",fontSize:15,fontWeight:900,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}}>×</button>
+                      )}
+                      <div style={{position:"absolute",bottom:0,left:0,right:0,background:"linear-gradient(to top, rgba(0,0,0,0.75), transparent)",color:"#fff",fontSize:10,padding:"10px 5px 4px",textAlign:"center",fontWeight:600}}>
+                        {foto.source==='webcam'?'📸':'📁'} {new Date(foto.createdAt).toLocaleDateString("es-VE")}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+      {/* Zoom viewer */}
+      {viewing && (
+        <div onClick={()=>setViewing(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.95)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:16,cursor:"zoom-out"}}>
+          <img src={viewing.url} alt={viewing.filename} style={{maxWidth:"95%",maxHeight:"95%",borderRadius:6,boxShadow:"0 4px 24px rgba(0,0,0,0.5)"}}/>
+          <button onClick={e=>{e.stopPropagation();setViewing(null);}} style={{position:"absolute",top:16,right:16,width:36,height:36,borderRadius:"50%",border:"none",background:"rgba(255,255,255,0.15)",color:"#fff",fontSize:22,fontWeight:700,cursor:"pointer",lineHeight:1}}>×</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── MAIN APP ──────────────────────────────────────────────────────────────────
 export default function ENEXSystem(){
   // ── LOGIN STATE ────────────────────────────────────────────────────────────
@@ -1341,6 +1563,10 @@ export default function ENEXSystem(){
   const [rdSearch,setRdSearch]=useState("");
   const [rdTab,setRdTab]=useState("pendientes"); // pendientes | archivadas
   const [rdSelGuia,setRdSelGuia]=useState(""); // id de la guía seleccionada para recepción
+
+  // Modales de fotos del paquete (Nuevo WR)
+  const [webcamOpen,setWebcamOpen]=useState(null);  // null | {cajaIdx}
+  const [photoGalleryOpen,setPhotoGalleryOpen]=useState(null); // null | {wrId}
   // Cargo Release (egresos)
   const [cargoReleases,setCargoReleases]=useState([]);
   const [crModal,setCrModal]=useState(null); // null | {wrIds:[], agenteCarga, contacto, documento, vehiculo, notas, editId?}
@@ -1632,6 +1858,38 @@ export default function ENEXSystem(){
   const addCaja=()=>setWrf(p=>({...p,cajas:[...p.cajas,emptyCaja()]}));
   const removeCaja=(idx)=>setWrf(p=>({...p,cajas:p.cajas.filter((_,i)=>i!==idx)}));
 
+  // ── FOTOS del paquete (por caja) ──────────────────────────────
+  // Antes de guardar el WR estas fotos viven en memoria (objetURL + File).
+  // Al submit se suben al bucket y se insertan las filas en wr_fotos.
+  const addFotosToCaja=(idx, fileList, source="upload")=>{
+    const arr = Array.from(fileList||[]).filter(f=>f && f.type && f.type.startsWith("image/"));
+    if(!arr.length) return;
+    const nuevas = arr.map(f=>({
+      id: null, // aún no persistido
+      file: f,
+      url: URL.createObjectURL(f),
+      path: null,
+      source,
+      mime: f.type || 'image/jpeg',
+      sizeBytes: f.size || 0,
+      filename: f.name || (source==='webcam'?'webcam.jpg':'upload.jpg'),
+      createdAt: new Date(),
+    }));
+    setWrf(p=>({...p,cajas:p.cajas.map((c,i)=>i===idx?{...c,fotos:[...(c.fotos||[]),...nuevas]}:c)}));
+  };
+  const removeFotoFromCaja=(idx, fotoIdx)=>{
+    setWrf(p=>({...p,cajas:p.cajas.map((c,i)=>{
+      if(i!==idx) return c;
+      const arr=[...(c.fotos||[])];
+      const rem=arr.splice(fotoIdx,1)[0];
+      // liberar objectURL si era local
+      if(rem && rem.url && rem.url.startsWith('blob:')) {
+        try{ URL.revokeObjectURL(rem.url); }catch{}
+      }
+      return {...c,fotos:arr};
+    })}));
+  };
+
   // computed totals from all cajas (each multiplied by cantidad)
   const cajaCalcs=wrf.cajas.map(c=>{
     const l=parseFloat(c.largo)||0, a=parseFloat(c.ancho)||0, h=parseFloat(c.alto)||0;
@@ -1681,7 +1939,34 @@ export default function ENEXSystem(){
     return`${CASILLERO_PREFIX}${String(max+1).padStart(CASILLERO_DIGITS,"0")}`;
   };
 
-  const submitWR=()=>{
+  // Sube las fotos nuevas de cada caja al bucket y las inserta en wr_fotos.
+  // Sólo procesa las fotos que aún no tienen id (es decir, las que acaba de
+  // agregar el usuario). Retorna el número de fotos subidas exitosamente.
+  const uploadFotosForWR=async(wrId, cajas, userId)=>{
+    let count=0;
+    for(let i=0;i<cajas.length;i++){
+      const caja=cajas[i];
+      const nuevas=(caja.fotos||[]).filter(f=>f && f.file && !f.id);
+      for(const foto of nuevas){
+        try{
+          const up=await storageUploadFoto(foto.file, wrId, i);
+          if(!up) continue;
+          const row=await dbInsertFoto({
+            wrId, cajaIdx:i, url:up.url, path:up.path,
+            filename:foto.filename||'foto.jpg',
+            mime:foto.mime||'image/jpeg',
+            sizeBytes:foto.sizeBytes||0,
+            source:foto.source||'upload',
+            uploadedBy:userId||'',
+          });
+          if(row) count++;
+        }catch(e){ console.error("uploadFoto:",e); }
+      }
+    }
+    return count;
+  };
+
+  const submitWR=async ()=>{
     // Expand dims: each registro × cantidad generates individual dim entries
     const dims=[];
     cajaCalcs.forEach((c,i)=>{
@@ -1737,11 +2022,15 @@ export default function ENEXSystem(){
         shipper:wrf.remitente,remitenteDir:wrf.remitenteDir||"",cargos:wrf.cargos,
       };
       wrf.cajas.forEach(c=>{if(c.tracking)checkAndRemoveScan(c.tracking);});
+      // Subir fotos nuevas al bucket (antes de marcar foto=true)
+      const uploadedCount=await uploadFotosForWR(editWR.id, wrf.cajas, currentUser?.id||'');
+      if(uploadedCount>0) updated.foto=true;
       setWrList(p=>p.map(x=>x.id===editWR.id?updated:x));
       dbUpsertWR(updated);
       setShowNewWR(false);setEditWR(null);
       setWrf(emptyWRF());setClientSearch("");
       logAction("Editó WR",editWR.id);
+      if(uploadedCount>0) logAction("Subió fotos WR",`${editWR.id} (${uploadedCount})`);
     } else {
       // ── CREATE MODE ────────────────────────────────────────────────────────
       const reempaqueIds=Array.isArray(wrf.reempaqueDe)?wrf.reempaqueDe:[];
@@ -1781,13 +2070,17 @@ export default function ENEXSystem(){
           historial:[...(w.historial||[]),{code:"2.3",label:"Reempacado",fecha:now,user:currentUser.id,nota:`Reempacado → ${n.id}`}],
         }));
       }
+      // Subir fotos al bucket (después del upsert para que el FK wr_id exista)
+      dbUpsertWR(n);
+      const uploadedCount=await uploadFotosForWR(n.id, wrf.cajas, currentUser?.id||'');
+      if(uploadedCount>0){ n.foto=true; dbUpsertWR(n); }
       setWrList(p=>[n,...p.map(w=>padresUpd.find(pa=>pa.id===w.id)||w)]);
       padresUpd.forEach(dbUpsertWR);
-      dbUpsertWR(n);
       setShowNewWR(false);
       setWrf(emptyWRF());setClientSearch("");
       if(esReempaque){logAction("Creó Reempaque",`${n.id} ← [${reempaqueIds.join(", ")}]`);setRpqSel([]);}
       logAction("Creó WR",wrNumPrev);
+      if(uploadedCount>0) logAction("Subió fotos WR",`${n.id} (${uploadedCount})`);
       setShowLabels({wr:n,dims,remitente:wrf.remitente,tipoEnvio:wrf.tipoEnvio});
     }
   };
@@ -1928,6 +2221,7 @@ export default function ENEXSystem(){
             sendTypes={SEND_TYPES} onAssignTipo={assignTipoEnvio}
             onSort={handleSort} sortCol={sortCol} sortDir={sortDir}
             dimOpen={dimOpen} onDimToggle={handleDimToggle}
+            onFotoClick={w=>setPhotoGalleryOpen({wrId:w.id})}
             page={page} onPage={setPage}/>
         </div>
 
@@ -1994,6 +2288,7 @@ export default function ENEXSystem(){
         sendTypes={SEND_TYPES} onAssignTipo={assignTipoEnvio}
         onSort={handleSort} sortCol={sortCol} sortDir={sortDir}
         dimOpen={dimOpen} onDimToggle={handleDimToggle}
+        onFotoClick={w=>setPhotoGalleryOpen({wrId:w.id})}
         page={page} onPage={setPage}/>
     </div>
   );
@@ -2410,26 +2705,33 @@ export default function ENEXSystem(){
               </div>
 
               <div style={{padding:"12px 14px"}}>
-                {/* 3 trackings en una sola línea */}
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:10}}>
-                  {[0,1,2].map(ti=>{
-                    const tkeys=[["carrier","tracking"],["carrier2","tracking2"],["carrier3","tracking3"]];
-                    const [ck,tk]=tkeys[ti];
-                    // per-caja only has carrier/tracking for first; use caja fields
-                    const cfield=ti===0?"carrier":ti===1?"carrier2":"carrier3";
-                    const tfield=ti===0?"tracking":ti===1?"tracking2":"tracking3";
-                    return (
-                      <div key={ti} style={{background:"var(--bg4)",borderRadius:7,padding:"8px 10px",border:"1px solid var(--b1)"}}>
-                        <div className="fl" style={{marginBottom:4}}>Transportista {ti+1}{ti>0?" (opc.)":""}</div>
-                        <input className="fi" style={{marginBottom:6,fontSize:13,textTransform:"uppercase",fontWeight:600}} value={caja[cfield]||""} onChange={e=>swCaja(idx,cfield,e.target.value.toUpperCase())} placeholder={ti===0?"UPS, FEDEX…":"Opcional"}/>
-                        <div className="fl" style={{marginBottom:4}}>Tracking {ti+1}</div>
-                        <div style={{display:"flex",gap:4}}>
-                          <input className="fi" style={{fontFamily:"'DM Mono',monospace",fontSize:13,flex:1}} value={caja[tfield]||""} onChange={e=>swCaja(idx,tfield,e.target.value)} placeholder="Escanear…"/>
-                          {ti===0&&<button className="scan-btn" style={{padding:"5px 8px",fontSize:13}}>📡</button>}
-                        </div>
-                      </div>
-                    );
-                  })}
+                {/* Trackings — una sola franja compacta con los 3 transportistas */}
+                <div style={{background:"var(--bg4)",border:"1px solid var(--b1)",borderRadius:7,padding:"8px 10px",marginBottom:10}}>
+                  <div style={{display:"grid",gridTemplateColumns:"95px 1fr auto 1px 95px 1fr 1px 95px 1fr",gap:6,alignItems:"end"}}>
+                    {[0,1,2].map(ti=>{
+                      const cfield=ti===0?"carrier":ti===1?"carrier2":"carrier3";
+                      const tfield=ti===0?"tracking":ti===1?"tracking2":"tracking3";
+                      return (
+                        <Fragment key={ti}>
+                          {/* Separador vertical entre grupos */}
+                          {ti>0&&<div style={{width:1,height:30,background:"var(--b1)",alignSelf:"center"}}/>}
+                          {/* Transportista */}
+                          <div>
+                            <div className="fl" style={{marginBottom:2,fontSize:10}}>Transp. {ti+1}{ti>0?" (opc.)":""}</div>
+                            <input className="fi" style={{padding:"4px 6px",fontSize:12,textTransform:"uppercase",fontWeight:600}} value={caja[cfield]||""} onChange={e=>swCaja(idx,cfield,e.target.value.toUpperCase())} placeholder={ti===0?"UPS, FEDEX…":"Opcional"}/>
+                          </div>
+                          {/* Tracking */}
+                          <div>
+                            <div className="fl" style={{marginBottom:2,fontSize:10}}>Tracking {ti+1}</div>
+                            <div style={{display:"flex",gap:4}}>
+                              <input className="fi" style={{padding:"4px 6px",fontFamily:"'DM Mono',monospace",fontSize:12,flex:1}} value={caja[tfield]||""} onChange={e=>swCaja(idx,tfield,e.target.value)} placeholder="Escanear…"/>
+                              {ti===0&&<button type="button" className="scan-btn" style={{padding:"4px 8px",fontSize:13}} title="Escanear código de barras (requiere lector USB)">📡</button>}
+                            </div>
+                          </div>
+                        </Fragment>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 {/* Proveedor + Factura + Monto */}
@@ -2463,6 +2765,48 @@ export default function ENEXSystem(){
                   <div className="fl">Descripción de la Mercancía</div>
                   <textarea className="fi" value={caja.descripcion} onChange={e=>swCaja(idx,"descripcion",e.target.value)} placeholder="Descripción detallada de la mercancía: tipo de producto, materiales, uso, etc." rows={3} style={{resize:"vertical",minHeight:64,fontFamily:"inherit",fontSize:14,lineHeight:1.5}}/>
                 </div>
+
+                {/* FOTOS DEL PAQUETE (por caja) */}
+                {hasPerm(currentUser,"subir_foto") && (
+                  <div style={{marginTop:12,paddingTop:10,borderTop:"1px dashed var(--b1)"}}>
+                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+                      <div style={{fontSize:13,fontWeight:700,color:"var(--navy)",textTransform:"uppercase",letterSpacing:.8,display:"flex",alignItems:"center",gap:7}}>
+                        <span style={{fontSize:15}}>📷</span> Fotos del paquete
+                        {(caja.fotos||[]).length>0 && (
+                          <span style={{background:"var(--gold)",color:"#fff",fontSize:11,padding:"2px 8px",borderRadius:10,fontWeight:700}}>{caja.fotos.length}</span>
+                        )}
+                      </div>
+                      <div style={{display:"flex",gap:6}}>
+                        <label className="btn-s" style={{fontSize:12,padding:"5px 10px",cursor:"pointer",margin:0,display:"inline-flex",alignItems:"center",gap:5}}>
+                          <span>📁</span> Subir archivo
+                          <input type="file" accept="image/*" multiple style={{display:"none"}} onChange={e=>{addFotosToCaja(idx,e.target.files,"upload");e.target.value="";}}/>
+                        </label>
+                        <button type="button" className="btn-s" style={{fontSize:12,padding:"5px 10px",display:"inline-flex",alignItems:"center",gap:5}} onClick={()=>setWebcamOpen({cajaIdx:idx})}>
+                          <span>📸</span> Cámara web
+                        </button>
+                      </div>
+                    </div>
+                    {(caja.fotos||[]).length===0 ? (
+                      <div style={{padding:"12px",border:"2px dashed var(--b1)",borderRadius:8,background:"var(--bg4)",textAlign:"center",color:"var(--t3)",fontSize:13}}>
+                        Sin fotos — usa los botones de arriba para agregar fotos del paquete de esta caja
+                      </div>
+                    ) : (
+                      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(110px, 1fr))",gap:8}}>
+                        {caja.fotos.map((foto,fi)=>(
+                          <div key={fi} style={{position:"relative",aspectRatio:"1",borderRadius:8,overflow:"hidden",border:"1px solid var(--b1)",background:"var(--bg4)"}}>
+                            <img src={foto.url} alt={foto.filename||"foto"} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
+                            <div style={{position:"absolute",top:4,right:4,display:"flex",gap:4}}>
+                              <button type="button" title="Quitar foto" onClick={()=>removeFotoFromCaja(idx,fi)} style={{width:22,height:22,borderRadius:"50%",border:"none",background:"rgba(204,34,51,0.95)",color:"#fff",fontSize:14,fontWeight:900,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}}>×</button>
+                            </div>
+                            <div style={{position:"absolute",bottom:0,left:0,right:0,background:"linear-gradient(to top, rgba(0,0,0,0.7), transparent)",color:"#fff",fontSize:10,padding:"8px 4px 3px",textAlign:"center",fontWeight:600}}>
+                              {foto.source==='webcam'?'📸 Cámara':'📁 Archivo'}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           );
@@ -6760,6 +7104,8 @@ export default function ENEXSystem(){
       {showNewWR&&renderNewWRModal()}
       {selWR&&renderWRDetail()}
       {showStatModal&&renderStatModal()}
+      {webcamOpen&&<WebcamCaptureModal onClose={()=>setWebcamOpen(null)} onCapture={(file)=>{addFotosToCaja(webcamOpen.cajaIdx,[file],"webcam");setWebcamOpen(null);}}/>}
+      {photoGalleryOpen&&<PhotoGalleryModal wrId={photoGalleryOpen.wrId} currentUser={currentUser} onClose={()=>setPhotoGalleryOpen(null)}/>}
       {showLabels&&(()=>{
         const _lwr=showLabels.wr;const _ldims=showLabels.dims||[];
         const _hdrName=getHeaderName(_lwr,clients,agentes,oficinas,empresaNombre);
