@@ -675,9 +675,9 @@ const WR_STATUSES=[
   {code:"11",  label:"Auditoria",       cls:"s4", phase:"transito", auto:false, manual:true,  channels:["dashboard","cliente","consolidacion"]},
   {code:"12",  label:"Liberado",        cls:"s3", phase:"transito", auto:false, manual:true,  channels:["dashboard","cliente","consolidacion"]},
   {code:"13",  label:"Tránsito Final",  cls:"s2", phase:"transito", auto:false, manual:true,  channels:["dashboard","cliente","consolidacion"]},
-  {code:"14",  label:"Aduana Destino",  cls:"s5", phase:"destino",  auto:false, manual:true,  channels:["dashboard","cliente","consolidacion"]},
-  {code:"15",  label:"Auditoria",       cls:"s4", phase:"destino",  auto:false, manual:true,  channels:["dashboard","cliente","consolidacion"]},
-  {code:"16",  label:"Liberado",        cls:"s3", phase:"destino",  auto:false, manual:true,  channels:["dashboard","cliente","consolidacion"]},
+  {code:"14",  label:"Aduana Destino",  cls:"s5", phase:"destino",  auto:false, manual:true,  channels:["dashboard","cliente","recepcion"]},
+  {code:"15",  label:"Auditoría 3",     cls:"s4", phase:"destino",  auto:false, manual:true,  channels:["dashboard","cliente","recepcion"]},
+  {code:"16",  label:"Liberado 3",      cls:"s3", phase:"destino",  auto:false, manual:true,  channels:["dashboard","cliente","recepcion"]},
   {code:"17",  label:"Almacén",         cls:"s6", phase:"destino",  auto:true,  manual:false, channels:["dashboard","recepcion"]},
   {code:"18",  label:"Faltante",        cls:"s4", phase:"excep",    auto:true,  manual:false, channels:["dashboard"],             exc:true},
   {code:"18.1",label:"Investigación",   cls:"s4", phase:"excep",    auto:false, manual:true,  channels:["dashboard","recepcion"], exc:true},
@@ -700,24 +700,48 @@ const CLIENT_STATUSES =WR_STATUSES.filter(s=>s.channels?.includes("cliente"));
 const CONSOL_STATUSES =WR_STATUSES.filter(s=>s.manual&&s.channels?.includes("consolidacion"));
 // Estados que Recepción en Almacén puede fijar/leer
 const RECEP_STATUSES  =WR_STATUSES.filter(s=>s.channels?.includes("recepcion"));
-// GUIDE_PHASES — 7 fases de progreso de la guía consolidada
-// Cada fase representa un hito macro; agrupan los códigos WR_STATUSES con guide:true
-// El código "avance" es el que se fija al avanzar a esa fase (código más representativo del grupo)
+// GUIDE_PHASES — 9 fases de progreso de la guía consolidada (5→13)
+// Cada fase representa un estado individual editable desde el módulo Consolidación.
+// Una vez se fija la última (Tránsito 2 / 13), la guía queda lista para Recepción en
+// Almacén y NO puede retroceder a fases anteriores.
 const GUIDE_PHASES=[
-  {key:"consol",  label:"Consolidado",      short:"Consol.",  codes:["4"],             advance:"4",  icon:"🗂️"},
-  {key:"linea",   label:"Entregado Línea",  short:"Línea",    codes:["5"],             advance:"5",  icon:"🛫"},
-  {key:"adsal",   label:"Aduana Salida",    short:"Ad. Sal.", codes:["6","7","8"],     advance:"6",  icon:"🛃"},
-  {key:"trans",   label:"Tránsito",         short:"Tránsito", codes:["9","10","11","12","13"], advance:"9", icon:"✈️"},
-  {key:"addest",  label:"Aduana Destino",   short:"Ad. Dest.",codes:["14","15"],       advance:"14", icon:"🛂"},
-  {key:"liber",   label:"Liberado",         short:"Liberado", codes:["16"],            advance:"16", icon:"✅"},
-  {key:"almacen", label:"En Almacén",       short:"Almacén",  codes:["17"],            advance:"17", icon:"🏬"},
+  {key:"linea",   label:"Entregado Línea",  short:"Línea",     codes:["5"],  advance:"5",  icon:"🛫"},
+  {key:"adsal",   label:"Aduana Salida",    short:"Ad. Sal.",  codes:["6"],  advance:"6",  icon:"🛃"},
+  {key:"aud1",    label:"Auditoría 1",      short:"Auditoria", codes:["7"],  advance:"7",  icon:"🔍"},
+  {key:"lib1",    label:"Liberado 1",       short:"Liberado 1",codes:["8"],  advance:"8",  icon:"✅"},
+  {key:"trans1",  label:"Tránsito 1",       short:"Tránsito 1",codes:["9"],  advance:"9",  icon:"✈️"},
+  {key:"adtrans", label:"Aduana Tránsito",  short:"Ad. Trans.",codes:["10"], advance:"10", icon:"🛂"},
+  {key:"aud2",    label:"Auditoría 2",      short:"Auditoría 2",codes:["11"],advance:"11", icon:"🔍"},
+  {key:"lib2",    label:"Liberado 2",       short:"Liberado 2",codes:["12"], advance:"12", icon:"✅"},
+  {key:"trans2",  label:"Tránsito 2",       short:"Tránsito 2",codes:["13"], advance:"13", icon:"🚛"},
+];
+// Fases manejables desde Recepción en Almacén (NO desde Consolidación)
+const RECEP_PHASES=[
+  {key:"addest",  label:"Aduana Destino",   short:"Ad. Dest.", codes:["14"], advance:"14", icon:"🛂"},
+  {key:"aud3",    label:"Auditoría 3",      short:"Auditoría 3",codes:["15"],advance:"15", icon:"🔍"},
+  {key:"lib3",    label:"Liberado 3",       short:"Liberado 3",codes:["16"], advance:"16", icon:"✅"},
 ];
 const currentGuidePhaseIdx=(code)=>{
   const idx=GUIDE_PHASES.findIndex(p=>p.codes.includes(String(code)));
   if(idx>=0) return idx;
-  // Si el código es anterior a "4" (1/2/2.3/3) la guía aún no alcanza la primera fase
+  // Si el código es 4 o menor (Consolidado/preconsolidado) la guía aún no alcanza la primera fase
   const n=parseFloat(code);
-  if(!isNaN(n)&&n<4) return -1;
+  if(!isNaN(n)&&n<=4) return -1;
+  // Si el código es 14+ la guía ya pasó todas las fases de tránsito (en destino/almacén)
+  if(!isNaN(n)&&n>=14) return GUIDE_PHASES.length-1;
+  return 0;
+};
+// Helper: ¿es Tránsito 2 (estado terminal de Consolidación)?
+const isGuideFinalConsolPhase=(code)=>String(code)==="13";
+// Índice de la fase actual dentro de RECEP_PHASES (Ad. Dest./Auditoría 3/Liberado 3)
+const currentRecepPhaseIdx=(code)=>{
+  const idx=RECEP_PHASES.findIndex(p=>p.codes.includes(String(code)));
+  if(idx>=0) return idx;
+  const n=parseFloat(code);
+  // Si la guía está en Tránsito 2 (13) o antes, aún no entró a Recepción
+  if(!isNaN(n)&&n<=13) return -1;
+  // Si pasó del bloque Recepción (≥17 = Almacén / Por Entrega / etc.) marca todas como completadas
+  if(!isNaN(n)&&n>=17) return RECEP_PHASES.length-1;
   return 0;
 };
 const SEND_TYPES_INIT=["Aéreo Express","Aéreo Económico","Marítimo FCL","Marítimo LCL","Terrestre"];
@@ -1511,7 +1535,8 @@ export default function ENEXSystem(){
   const [searchParam,setSearchParam]=useState("Tracking");
   const [search,setSearch]=useState("");
   const [filterSt,setFilterSt]=useState("all");
-  const [clFilter,setClFilter]=useState("todos");
+  // Default vacío: el módulo abre en blanco y obliga a elegir Clientes / Usuarios / Todos
+  const [clFilter,setClFilter]=useState("");
   const [dimOpen,setDimOpen]=useState(null);
   const [unitL,setUnitL]=useState("in");
   const [unitW,setUnitW]=useState("lb");
@@ -1568,6 +1593,11 @@ export default function ENEXSystem(){
   const [rdSearch,setRdSearch]=useState("");
   const [rdTab,setRdTab]=useState("pendientes"); // pendientes | archivadas
   const [rdSelGuia,setRdSelGuia]=useState(""); // id de la guía seleccionada para recepción
+  // Filtros para guías archivadas (búsqueda histórico)
+  const [rdArchSearch,setRdArchSearch]=useState("");
+  const [rdArchTipo,setRdArchTipo]=useState("");
+  const [rdArchFrom,setRdArchFrom]=useState("");
+  const [rdArchTo,setRdArchTo]=useState("");
 
   // Modales de fotos del paquete (Nuevo WR)
   const [webcamOpen,setWebcamOpen]=useState(null);  // null | {cajaIdx}
@@ -1575,6 +1605,12 @@ export default function ENEXSystem(){
   // Cargo Release (egresos)
   const [cargoReleases,setCargoReleases]=useState([]);
   const [crModal,setCrModal]=useState(null); // null | {wrIds:[], agenteCarga, contacto, documento, vehiculo, notas, editId?}
+  // Multi-selección y filtros del módulo Cargo Release (estilo Reempaque)
+  const [crSel,setCrSel]=useState([]); // ids de WR seleccionados para egreso múltiple
+  const [crHistOpen,setCrHistOpen]=useState(false);
+  const [crHistCliente,setCrHistCliente]=useState("");
+  const [crHistDesde,setCrHistDesde]=useState("");
+  const [crHistHasta,setCrHistHasta]=useState("");
   // Cargo Release individual (desde Estado de Cuenta) — modal con 4 campos
   const [crIndivModal,setCrIndivModal]=useState(null); // null | {wr, nombre, id, empresa, notas}
   // Recibo de cargo release individual (para imprimir)
@@ -1661,6 +1697,18 @@ export default function ENEXSystem(){
       setEtqTipo("wr");
       setEtqSearch("");
     }
+  /* eslint-disable-next-line */
+  },[tab]);
+  // Cierra modales que pudieran haber quedado abiertos al cambiar de módulo
+  useEffect(()=>{
+    setCrModal(null);
+    setCrIndivModal(null);
+    setCrPrint(null);
+    setDnModal(null);
+    setDnPrint(null);
+    setCrSel([]);
+    // Clientes & Usuarios: al entrar/abandonar, volver al estado en blanco con selector
+    if(tab==="clients") setClFilter("");
   /* eslint-disable-next-line */
   },[tab]);
   // ── SUPABASE: cargar datos al iniciar ────────────────────────────────────
@@ -1810,7 +1858,8 @@ export default function ENEXSystem(){
     if(va<vb)return sortDir==="asc"?-1:1;if(va>vb)return sortDir==="asc"?1:-1;return 0;
   });
 
-  const filteredCl=clients.filter(c=>clFilter==="todos"?true:c.tipo===(clFilter==="clientes"?"cliente":"usuario"));
+  // Si clFilter es "" se muestra el selector y la tabla no se renderiza, así que devolvemos vacío
+  const filteredCl=!clFilter?[]:clients.filter(c=>clFilter==="todos"?true:c.tipo===(clFilter==="clientes"?"cliente":"usuario"));
 
   // Stats
   const stats={
@@ -2413,7 +2462,44 @@ export default function ENEXSystem(){
   };
 
   // ── CLIENTS ────────────────────────────────────────────────────────────────
-  const renderClients=()=>(
+  const renderClients=()=>{
+    // Cuando no hay filtro seleccionado, mostramos sólo el selector (módulo en blanco)
+    if(!clFilter){
+      const totalCli=clients.filter(c=>c.tipo==="cliente").length;
+      const totalUsr=clients.filter(c=>c.tipo==="usuario").length;
+      const cards=[
+        {v:"clientes",ic:"🏠",l:"Clientes",d:"Personas y empresas que envían/reciben paquetes.",n:totalCli,c1:"#E8F8EE",c2:"var(--green)"},
+        {v:"usuarios",ic:"👤",l:"Usuarios del Sistema",d:"Empleados, agentes, oficinas y roles internos.",n:totalUsr,c1:"#F0EAFE",c2:"var(--purple)"},
+        {v:"todos",   ic:"👥",l:"Todos",                d:"Lista combinada de Clientes y Usuarios.",       n:clients.length,c1:"#EEF3FF",c2:"var(--navy)"},
+      ];
+      return(
+        <div className="page-scroll">
+          <div className="card" style={{textAlign:"center",padding:"40px 24px",marginBottom:14}}>
+            <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:22,fontWeight:700,color:"var(--navy)",marginBottom:6}}>👥 Clientes & Usuarios</div>
+            <div style={{fontSize:14,color:"var(--t3)",maxWidth:520,margin:"0 auto"}}>Selecciona qué quieres ver para empezar.</div>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:14,maxWidth:1080,margin:"0 auto"}}>
+            {cards.map(card=>(
+              <div key={card.v} onClick={()=>setClFilter(card.v)}
+                style={{
+                  background:"var(--bg2)",border:"2px solid var(--b1)",borderRadius:14,padding:"22px 20px",
+                  cursor:"pointer",transition:"all .15s",textAlign:"center",
+                }}
+                onMouseEnter={e=>{e.currentTarget.style.borderColor=card.c2;e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow="0 8px 24px rgba(0,0,0,.08)";}}
+                onMouseLeave={e=>{e.currentTarget.style.borderColor="var(--b1)";e.currentTarget.style.transform="";e.currentTarget.style.boxShadow="";}}>
+                <div style={{fontSize:42,marginBottom:6}}>{card.ic}</div>
+                <div style={{fontSize:18,fontWeight:700,color:"var(--navy)"}}>{card.l}</div>
+                <div style={{fontSize:13,color:"var(--t3)",marginTop:6,minHeight:36}}>{card.d}</div>
+                <div style={{marginTop:14,display:"inline-block",background:card.c1,color:card.c2,fontWeight:700,fontSize:14,padding:"6px 14px",borderRadius:20,border:`1px solid ${card.c2}`}}>
+                  {card.n} {card.v==="todos"?"registros":card.v==="clientes"?"clientes":"usuarios"}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+    return(
     <div className="page-scroll">
       <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
         <div className="tabs" style={{flex:1}}>
@@ -2422,6 +2508,8 @@ export default function ENEXSystem(){
               <span className="t-cnt">{v==="todos"?clients.length:clients.filter(c=>c.tipo===(v==="clientes"?"cliente":"usuario")).length}</span>
             </div>
           ))}
+          <div className="tab" onClick={()=>setClFilter("")} title="Volver al selector"
+            style={{marginLeft:"auto",color:"var(--t3)",cursor:"pointer"}}>↩ Cambiar</div>
         </div>
         {hasPerm("crear_cliente")&&<button className="btn-p" onClick={()=>setShowNewCl(true)}>+ Agregar</button>}
       </div>
@@ -2479,7 +2567,8 @@ export default function ENEXSystem(){
         </div>
       </div>
     </div>
-  );
+    );
+  };
 
   // ── ROLES ──────────────────────────────────────────────────────────────────
 
@@ -3291,6 +3380,22 @@ export default function ENEXSystem(){
 
               {/* Bloque "Entregado por" eliminado — la entrega se imprime ahora vía Nota de Entrega */}
 
+              {/* ── 3 CASILLAS: EMPRESA · NOMBRE · FIRMA ── */}
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginTop:10,marginBottom:6}}>
+                <div style={{border:"1px solid #999",borderRadius:4,minHeight:54,display:"flex",flexDirection:"column"}}>
+                  <div style={{fontSize:9,fontWeight:700,color:"#444",textTransform:"uppercase",letterSpacing:.4,padding:"3px 6px",borderBottom:"1px solid #ccc",background:"#f5f5f5"}}>Empresa</div>
+                  <div style={{flex:1}}/>
+                </div>
+                <div style={{border:"1px solid #999",borderRadius:4,minHeight:54,display:"flex",flexDirection:"column"}}>
+                  <div style={{fontSize:9,fontWeight:700,color:"#444",textTransform:"uppercase",letterSpacing:.4,padding:"3px 6px",borderBottom:"1px solid #ccc",background:"#f5f5f5"}}>Nombre</div>
+                  <div style={{flex:1}}/>
+                </div>
+                <div style={{border:"1px solid #999",borderRadius:4,minHeight:54,display:"flex",flexDirection:"column"}}>
+                  <div style={{fontSize:9,fontWeight:700,color:"#444",textTransform:"uppercase",letterSpacing:.4,padding:"3px 6px",borderBottom:"1px solid #ccc",background:"#f5f5f5"}}>Firma</div>
+                  <div style={{flex:1}}/>
+                </div>
+              </div>
+
               {/* ── TEXTO LEGAL ── */}
               <div style={{fontSize:11,lineHeight:1.6,color:"#333",textAlign:"center",marginTop:8,borderTop:"1px solid #ccc",paddingTop:6}}>
                 <div style={{fontWeight:700,marginBottom:3,fontSize:12}}>NOTA: SE ESTA ENTREGANDO ESTA CAJA COMPLETAMENTE SELLADA.</div>
@@ -3947,9 +4052,11 @@ export default function ENEXSystem(){
               <th style={{minWidth:170}}>Acciones</th>
             </tr></thead>
             <tbody>
-              {consolList.map(c=>{
+              {consolList.filter(c=>!c.archivada).map(c=>{
                 const stActual=WR_STATUSES.find(s=>s.label===c.status)||WR_STATUSES.find(s=>s.code==="4");
                 const curPhaseIdx=currentGuidePhaseIdx(stActual?.code||"4");
+                // Una vez en Tránsito 2 (13) o más allá: la guía está bloqueada en Consolidación.
+                const isLocked=isGuideFinalConsolPhase(stActual?.code)||(parseFloat(stActual?.code||"0")>=13);
                 return (
                 <tr key={c.id}>
                   <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",background:"#EEF3FF",padding:"2px 6px",borderRadius:4,border:"1px solid #B8C8F0",fontSize:13}}>{c.id}</span></td>
@@ -3964,38 +4071,46 @@ export default function ENEXSystem(){
                   <td style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--cyan)"}}>{c.numVuelo||"—"}</td>
                   <td style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--purple)"}}>{c.awb||c.bl||"—"}</td>
                   <td style={{fontFamily:"'DM Mono',monospace",fontSize:12}}>{c.fechaSalida||"—"}</td>
-                  <td style={{minWidth:320,padding:"6px 8px"}}>
+                  <td style={{minWidth:480,padding:"6px 8px"}}>
                     {/* Estado actual destacado */}
                     <div style={{marginBottom:6,display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
                       <StBadge st={stActual||{cls:"s3",label:c.status||"En preparación"}}/>
                       <span style={{fontSize:12,color:"var(--t3)"}}>
-                        {curPhaseIdx>=0?`Fase ${curPhaseIdx+1}/7`:"Pre-consolidado"}
+                        {curPhaseIdx>=0?`Fase ${curPhaseIdx+1}/${GUIDE_PHASES.length}`:"Pre-consolidado"}
                       </span>
+                      {isLocked&&<span style={{fontSize:11,color:"#7B1FA2",fontWeight:700,background:"#F3E5F5",padding:"2px 8px",borderRadius:10,border:"1px solid #CE93D8"}}>🔒 Bloqueada — pasar a Recepción en Almacén</span>}
                     </div>
-                    {/* Barra de progreso 7 fases */}
-                    <div style={{display:"flex",alignItems:"stretch",gap:2,background:"#F3F5F9",border:"1px solid #DFE4EE",borderRadius:6,padding:2,overflow:"hidden"}}>
+                    {/* Barra de progreso 9 fases (Línea → Tránsito 2) — más alta para que quepa todo */}
+                    <div style={{display:"flex",alignItems:"stretch",gap:2,background:"#F3F5F9",border:"1px solid #DFE4EE",borderRadius:6,padding:3,overflow:"hidden"}}>
                       {GUIDE_PHASES.map((ph,i)=>{
                         const isDone=curPhaseIdx>i;
                         const isCur=curPhaseIdx===i;
                         const isNext=curPhaseIdx+1===i;
-                        const editable=statusInChannel(ph.advance,"consolidacion");
+                        // Una vez bloqueada (Tránsito 2 fijado), ningún botón es editable.
+                        const editable=!isLocked&&statusInChannel(ph.advance,"consolidacion");
                         const bg=isDone?"var(--navy)":isCur?"var(--cyan)":isNext&&editable?"#EEF3FF":"#fff";
                         const color=isDone||isCur?"#fff":editable?"var(--t2)":"var(--t3)";
+                        const tip=isLocked
+                          ?`${i+1}. ${ph.label} — guía bloqueada (ya pasó a Tránsito 2)`
+                          :editable
+                            ?`${i+1}. ${ph.label} — click para fijar esta fase${ph.advance==="13"?"\n⚠️ Al confirmar Tránsito 2 ya no se podrá retroceder.":""}`
+                            :`${i+1}. ${ph.label} — se asigna automáticamente`;
+                        const onClick=editable?(()=>{
+                          if(ph.advance==="13"&&!window.confirm("⚠️ Al fijar Tránsito 2, esta guía quedará BLOQUEADA en Consolidación.\nNo podrás regresar a fases anteriores.\nLa guía pasará a manejarse desde Recepción en Almacén.\n\n¿Confirmar?"))return;
+                          updateGuideStatus(c.id,ph.advance);
+                        }):undefined;
                         return (
-                          <span key={ph.key}
-                            title={editable
-                              ?`${i+1}. ${ph.label} — click para fijar esta fase`
-                              :`${i+1}. ${ph.label} — se asigna automáticamente (no editable aquí)`}
-                            onClick={editable?(()=>updateGuideStatus(c.id,ph.advance)):undefined}
+                          <span key={ph.key} title={tip} onClick={onClick}
                             style={{
-                              flex:1,cursor:editable?"pointer":"not-allowed",padding:"4px 2px",textAlign:"center",
-                              background:bg,color,borderRadius:4,opacity:editable?1:.6,
-                              fontSize:11,fontWeight:isCur?700:600,
+                              flex:1,cursor:editable?"pointer":"not-allowed",padding:"7px 2px 6px",textAlign:"center",
+                              background:bg,color,borderRadius:4,opacity:editable?1:isLocked&&isDone?1:.6,
+                              fontSize:11,fontWeight:isCur?700:600,minHeight:48,
+                              display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center",
                               border:isCur?"1.5px solid var(--navy)":"1px solid transparent",
                               transition:"all .15s",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",
                             }}>
-                            <span style={{display:"block",fontSize:13,lineHeight:1}}>{ph.icon}</span>
-                            <span style={{display:"block",fontSize:10,marginTop:1,lineHeight:1}}>{ph.short}</span>
+                            <span style={{display:"block",fontSize:15,lineHeight:1}}>{ph.icon}</span>
+                            <span style={{display:"block",fontSize:10,marginTop:3,lineHeight:1.1,fontWeight:600}}>{ph.short}</span>
                           </span>
                         );
                       })}
@@ -4269,19 +4384,19 @@ export default function ENEXSystem(){
     const [etqMode,_etqMode]=[etqTipo,setEtqTipo];
     return (
     <div className="page-scroll">
-      <div className="card" style={{maxWidth:640}}>
+      <div className="card" style={{maxWidth:etqMode==="entregas"?"100%":640,marginBottom:etqMode==="entregas"?14:0}}>
         <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:17,fontWeight:700,color:"var(--navy)",marginBottom:4}}>🖨️ Impresión</div>
-        <div style={{fontSize:13,color:"var(--t3)",marginBottom:10}}>Etiquetas de caja, guía consolidada, notas de entrega, egresos y recibos (próximamente).</div>
+        <div style={{fontSize:13,color:"var(--t3)",marginBottom:10}}>Etiquetas de caja, guía consolidada y Notas de Entrega.</div>
         {/* Selector tipo de impresión */}
         <div style={{display:"flex",gap:6,marginBottom:12,flexWrap:"wrap"}}>
           <button className={`btn-${etqMode==="wr"?"p":"s"}`} style={{flex:"1 1 160px"}} onClick={()=>{_etqMode("wr");setEtqSearch("");}}>📦 Etiquetas WR</button>
           <button className={`btn-${etqMode==="guia"?"p":"s"}`} style={{flex:"1 1 160px"}} onClick={()=>{_etqMode("guia");setEtqSearch("");}}>🗂️ Etiquetas Guía</button>
-          <button className="btn-s" style={{flex:"1 1 160px",opacity:.5,cursor:"not-allowed"}} disabled title="Disponible próximamente">📄 Nota Entrega</button>
+          <button className={`btn-${etqMode==="entregas"?"p":"s"}`} style={{flex:"1 1 160px"}} onClick={()=>{_etqMode("entregas");setEtqSearch("");}}>📝 Notas de Entrega</button>
           <button className="btn-s" style={{flex:"1 1 160px",opacity:.5,cursor:"not-allowed"}} disabled title="Disponible próximamente">🪪 Egreso WR</button>
           <button className="btn-s" style={{flex:"1 1 160px",opacity:.5,cursor:"not-allowed"}} disabled title="Disponible próximamente">💵 Recibo de Pago</button>
         </div>
-        <input className="fi" style={{marginBottom:12}} value={etqSearch} onChange={e=>setEtqSearch(e.target.value)}
-          placeholder={etqMode==="guia"?"Buscar guía por número, destino o tipo…":"Buscar WR por número, nombre o casillero…"}/>
+        {etqMode!=="entregas"&&<input className="fi" style={{marginBottom:12}} value={etqSearch} onChange={e=>setEtqSearch(e.target.value)}
+          placeholder={etqMode==="guia"?"Buscar guía por número, destino o tipo…":"Buscar WR por número, nombre o casillero…"}/>}
         {etqMode==="wr"&&etqSearch.length>1&&(wrList||[]).filter(w=>w.id.toLowerCase().includes(etqSearch.toLowerCase())||(w.consignee||"").toLowerCase().includes(etqSearch.toLowerCase())).slice(0,20).map(w=>(
           <div key={w.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:8,border:"1px solid var(--b1)",marginBottom:6,cursor:"pointer",background:"var(--bg3)"}}
             onClick={()=>setShowLabels({wr:w,dims:w.dims||[],remitente:w.shipper||"",tipoEnvio:w.tipoEnvio||""})}>
@@ -4306,10 +4421,12 @@ export default function ENEXSystem(){
             <span style={{color:"var(--cyan)",fontSize:14,fontWeight:600}}>🏷️ Imprimir</span>
           </div>
         ))}
-        {etqSearch.length<=1&&<div style={{color:"var(--t3)",fontSize:14,textAlign:"center",padding:20}}>Escribe al menos 2 caracteres para buscar</div>}
+        {etqMode!=="entregas"&&etqSearch.length<=1&&<div style={{color:"var(--t3)",fontSize:14,textAlign:"center",padding:20}}>Escribe al menos 2 caracteres para buscar</div>}
         {etqSearch.length>1&&etqMode==="wr"&&(wrList||[]).filter(w=>w.id.toLowerCase().includes(etqSearch.toLowerCase())||(w.consignee||"").toLowerCase().includes(etqSearch.toLowerCase())).length===0&&<div style={{color:"var(--t3)",fontSize:14,textAlign:"center",padding:20}}>No se encontraron WR.</div>}
         {etqSearch.length>1&&etqMode==="guia"&&(consolList||[]).filter(g=>{const q=etqSearch.toLowerCase();return String(g.id||"").toLowerCase().includes(q)||String(g.destino||"").toLowerCase().includes(q)||String(g.tipoEnvio||"").toLowerCase().includes(q);}).length===0&&<div style={{color:"var(--t3)",fontSize:14,textAlign:"center",padding:20}}>No se encontraron guías consolidadas.</div>}
       </div>
+      {/* SUB-MÓDULO Notas de Entrega — embebido en Impresión */}
+      {etqMode==="entregas"&&renderDeliveryNotes()}
     </div>
     );
   };
@@ -4913,11 +5030,12 @@ export default function ENEXSystem(){
   };
 
   // ── TRACKING INTERNACIONAL ───────────────────────────────────────────────
-
-  // Permisos de tracking por rol
-  const trkCanUpdate=["A","B","C","D","D1","D2"].includes(currentUser.rol);
-  const trkCanOrigin=["A","B","C","D","D1"].includes(currentUser.rol);   // estados 1-7
-  const trkCanDest=["A","B","C","D","D2"].includes(currentUser.rol);     // estados 8-12P
+  // Por decisión de producto, este módulo es PURAMENTE INFORMATIVO (orientado a clientes).
+  // Nada en esta vista debe modificar el estado de un WR. Los estados se gestionan desde
+  // los módulos correspondientes (Consolidación, Recepción en Almacén, Cargo Release, etc.).
+  const trkCanUpdate=false; // siempre false → desactiva edición masiva e individual aquí
+  const trkCanOrigin=false;
+  const trkCanDest=false;
 
   const statusAllowed=(st)=>{
     const cod=parseFloat(st.code);
@@ -4964,58 +5082,16 @@ export default function ENEXSystem(){
 
     return (
       <div className="page-scroll">
-        {/* HEADER */}
+        {/* HEADER — vista informativa, sin acciones de modificación */}
         <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
           <div style={{flex:1}}>
             <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:20,fontWeight:700,color:"var(--navy)"}}>🔍 Tracking Internacional</div>
-            <div style={{fontSize:14,color:"var(--t3)",marginTop:2}}>Seguimiento y actualización de estados por WR</div>
+            <div style={{fontSize:14,color:"var(--t3)",marginTop:2}}>Vista informativa para clientes — los estados se gestionan en sus módulos correspondientes.</div>
           </div>
-          {trkCanUpdate&&(
-            <button className={`btn-${trkMassivo?"s":"p"}`} onClick={()=>{setTrkMassivo(p=>!p);setTrkMassResult(null);}}>
-              {trkMassivo?"✕ Cancelar":"⚡ Actualización Masiva"}
-            </button>
-          )}
+          <span style={{fontSize:11,fontWeight:700,color:"var(--t3)",background:"#EEF2F7",padding:"4px 10px",borderRadius:10,border:"1px solid #DCE2EC"}}>👁️ Solo lectura</span>
         </div>
 
-        {/* ACTUALIZACIÓN MASIVA */}
-        {trkMassivo&&(
-          <div style={{background:"var(--bg2)",border:"2px solid var(--navy)",borderRadius:12,padding:"16px",marginBottom:14}}>
-            <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:16,fontWeight:700,color:"var(--navy)",marginBottom:12}}>⚡ Actualización Masiva de Estados</div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
-              <div className="fg">
-                <div className="fl">N° WR o Tracking (uno por línea, coma o punto y coma)</div>
-                <textarea className="ft" style={{minHeight:100,fontFamily:"'DM Mono',monospace",fontSize:14}} value={trkMassIds} onChange={e=>setTrkMassIds(e.target.value)} placeholder={"01MI58VL0000001\n01MI58VL0000002\n01MI58VL0000003"}/>
-              </div>
-              <div>
-                <div className="fl" style={{marginBottom:8}}>Nuevo Estado</div>
-                <div style={{display:"flex",flexWrap:"wrap",gap:4,maxHeight:160,overflowY:"auto"}}>
-                  {WR_STATUSES.filter(s=>statusAllowed(s)).map(s=>(
-                    <button key={s.code} onClick={()=>setTrkMassStatus(s)}
-                      className={`btn-${trkMassStatus?.code===s.code?"p":"s"}`}
-                      style={{fontSize:13,padding:"4px 10px"}}>
-                      {s.code} {s.label}
-                    </button>
-                  ))}
-                </div>
-                <div className="fg" style={{marginTop:10}}>
-                  <div className="fl">Nota / Observación (opcional)</div>
-                  <input className="fi" value={trkMassNota} onChange={e=>setTrkMassNota(e.target.value)} placeholder="Ej: Liberado por aduana, vuelo AA1234…"/>
-                </div>
-              </div>
-            </div>
-            <div style={{display:"flex",alignItems:"center",gap:10}}>
-              <button className="btn-p" onClick={applyMassivo} disabled={!trkMassStatus||!trkMassIds.trim()} style={{opacity:(!trkMassStatus||!trkMassIds.trim())?0.5:1}}>
-                ✅ Aplicar a todos
-              </button>
-              {trkMassResult&&(
-                <div style={{fontSize:14}}>
-                  <span style={{color:"var(--green)",fontWeight:700}}>✓ {trkMassResult.ok} actualizados</span>
-                  {trkMassResult.fail.length>0&&<span style={{color:"var(--red)",marginLeft:10}}>✗ No encontrados: {trkMassResult.fail.join(", ")}</span>}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+        {/* (Bloque de Actualización Masiva eliminado — Tracking es solo lectura) */}
 
         <div style={{display:"grid",gridTemplateColumns:trkSelected?"1fr 380px":"1fr",gap:14}}>
           {/* PANEL IZQUIERDO — búsqueda y lista */}
@@ -6480,6 +6556,38 @@ export default function ENEXSystem(){
     dbUpsertWR(upd);
     logAction("Revirtió recepción",w.id);
   };
+  // Avanza una guía dentro del módulo de Recepción en Almacén.
+  // Estados editables aquí: 14 Aduana Destino, 15 Auditoría 3, 16 Liberado 3.
+  // Cascada al estado de cada WR de la guía (excepto los ya en 17/excep/entrega).
+  const updateGuideStatusRecep=(consolId,stCode)=>{
+    const st=getStatus(stCode);
+    if(!st)return;
+    if(!statusInChannel(stCode,"recepcion")){
+      window.alert(`El estado "${st.label}" no se asigna desde Recepción en Almacén.`);
+      return;
+    }
+    if(!hasPerm("hacer_recepcion_dest")){window.alert("Tu rol no tiene permiso para fijar este estado.");return;}
+    setConsolList(p=>p.map(c=>{
+      if(c.id!==consolId)return c;
+      const updated={...c,status:st.label};
+      dbUpsertConsolidacion(updated);
+      return updated;
+    }));
+    const consol=consolList.find(c=>c.id===consolId);
+    if(!consol)return;
+    const allWrIds=(consol.containers||[]).flatMap(ct=>(ct.wr||[]).map(w=>w.id));
+    if(allWrIds.length===0)return;
+    setWrList(p=>p.map(w=>{
+      if(!allWrIds.includes(w.id))return w;
+      // No retroceder WRs ya recibidos/excep/entrega
+      if(["17","18","18.1","19","20","21","22","23","25"].includes(w.status?.code||""))return w;
+      const upd={...w,status:st,historial:[...(w.historial||[]),{code:st.code,label:st.label,fecha:new Date(),user:currentUser.id,nota:`Recepción → ${st.label} (guía ${consolId})`}]};
+      dbUpsertWR(upd);
+      return upd;
+    }));
+    logAction(`Recepción → ${st.label}`,`Guía ${consolId}`);
+  };
+
   // Cierra la recepción de una guía: promueve todos los WR en 17 Almacén → 20 Por Entrega
   // y archiva la guía. Los faltantes (18/18.1) y sobrantes (19) permanecen en su estado.
   // Bloquea el cierre si quedan WR en estados pre-destino (< 17 y no excep/entrega).
@@ -6555,7 +6663,10 @@ export default function ENEXSystem(){
   // Un Cargo Release agrupa 1+ WRs entregados a un agente/transportista.
   // Al crear: todos los WRs pasan a estado 25 Egresado. Elegible solo desde 20 Por Entrega
   // (lo habitual) o 17 Almacén (egreso directo sin pasar por Por Entrega).
-  const crElegible=(w)=>["17","20"].includes(w.status?.code||"");
+  // Cargo Release: ahora se egresa desde origen — sólo WR previos a Consolidación
+  // Estados elegibles: 1 (Procesado), 2 (Pendiente Confirmar), 2.3 (Reempacado/observación), 3 (Confirmado)
+  // Cualquier WR ya consolidado (4) o en fases siguientes NO se puede egresar desde aquí.
+  const crElegible=(w)=>["1","2","2.3","3"].includes(w.status?.code||"");
   const crBuildId=()=>{
     const d=new Date();
     const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,"0"), dd=String(d.getDate()).padStart(2,"0");
@@ -6886,7 +6997,10 @@ export default function ENEXSystem(){
           </div>
 
           {/* CHECKLIST DE GUÍA SELECCIONADA */}
-          {guiaSel&&(
+          {guiaSel&&(()=>{
+            const stGuiaActual=WR_STATUSES.find(s=>s.label===guiaSel.status)||WR_STATUSES.find(s=>s.code==="13");
+            const recPhaseIdx=currentRecepPhaseIdx(stGuiaActual?.code||"13");
+            return(
             <div className="card" style={{marginBottom:14}}>
               <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:8,flexWrap:"wrap"}}>
                 <div style={{fontSize:15,fontWeight:700,color:"var(--navy)"}}>📋 Checklist {guiaSel.id} ({checklist.length} WR)</div>
@@ -6900,6 +7014,49 @@ export default function ENEXSystem(){
                 </div>
                 <input className="fi" placeholder="Buscar en checklist…" value={rdSearch} onChange={e=>setRdSearch(e.target.value)} style={{fontSize:14,padding:"6px 10px",width:200,marginLeft:"auto"}}/>
               </div>
+
+              {/* FRANJA RECEPCIÓN — 3 fases: Ad. Dest. / Auditoría 3 / Liberado 3 */}
+              <div style={{marginBottom:10,padding:"8px 10px",background:"#F8FAFE",border:"1px solid #DCE4F2",borderRadius:8}}>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6,flexWrap:"wrap"}}>
+                  <span style={{fontSize:12,fontWeight:700,color:"var(--navy)"}}>Estado de la guía en Recepción:</span>
+                  <StBadge st={stGuiaActual||{cls:"s3",label:guiaSel.status||"—"}}/>
+                  <span style={{fontSize:11,color:"var(--t3)"}}>
+                    {recPhaseIdx>=0?`Fase ${recPhaseIdx+1}/${RECEP_PHASES.length}`:"Aún no inicia recepción"}
+                  </span>
+                </div>
+                <div style={{display:"flex",alignItems:"stretch",gap:3,background:"#fff",border:"1px solid #DFE4EE",borderRadius:6,padding:3}}>
+                  {RECEP_PHASES.map((ph,i)=>{
+                    const isDone=recPhaseIdx>i;
+                    const isCur=recPhaseIdx===i;
+                    const isNext=recPhaseIdx+1===i;
+                    const editable=hasPerm("hacer_recepcion_dest")&&statusInChannel(ph.advance,"recepcion");
+                    const bg=isDone?"var(--navy)":isCur?"var(--cyan)":isNext&&editable?"#EEF3FF":"#fff";
+                    const color=isDone||isCur?"#fff":editable?"var(--t2)":"var(--t3)";
+                    const tip=editable
+                      ?`${i+1}. ${ph.label} — click para fijar esta fase`
+                      :`${i+1}. ${ph.label}`;
+                    const onClick=editable?(()=>{
+                      if(window.confirm(`¿Fijar el estado "${ph.label}" en la guía ${guiaSel.id}?\nSe aplicará a todos los WR pendientes de la guía.`))
+                        updateGuideStatusRecep(guiaSel.id,ph.advance);
+                    }):undefined;
+                    return(
+                      <span key={ph.key} title={tip} onClick={onClick}
+                        style={{
+                          flex:1,cursor:editable?"pointer":"not-allowed",padding:"8px 4px 7px",textAlign:"center",
+                          background:bg,color,borderRadius:4,opacity:editable?1:.7,
+                          fontSize:12,fontWeight:isCur?700:600,minHeight:54,
+                          display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center",
+                          border:isCur?"1.5px solid var(--navy)":"1px solid transparent",
+                          transition:"all .15s",
+                        }}>
+                        <span style={{display:"block",fontSize:17,lineHeight:1}}>{ph.icon}</span>
+                        <span style={{display:"block",fontSize:11,marginTop:3,lineHeight:1.1,fontWeight:700}}>{ph.short}</span>
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+
               <div style={{maxHeight:"42vh",overflow:"auto",border:"1px solid var(--b1)",borderRadius:8}}>
                 <table className="wt">
                   <thead><tr>
@@ -6974,7 +7131,8 @@ export default function ENEXSystem(){
                 </div>
               )}
             </div>
-          )}
+            );
+          })()}
 
           {/* LISTA GLOBAL (sin guía seleccionada) */}
           {!guiaSel&&(
@@ -7032,10 +7190,52 @@ export default function ENEXSystem(){
           )}
         </>}
 
-        {rdTab==="archivadas"&&(
+        {rdTab==="archivadas"&&(()=>{
+          const qa=(rdArchSearch||"").toLowerCase().trim();
+          const tipoF=(rdArchTipo||"").trim();
+          const fromTs=rdArchFrom?new Date(rdArchFrom+"T00:00:00").getTime():null;
+          const toTs  =rdArchTo  ?new Date(rdArchTo  +"T23:59:59").getTime():null;
+          const archFiltradas=guiasArchivadas.filter(c=>{
+            if(qa&&!String(c.id||"").toLowerCase().includes(qa)&&!String(c.destino||"").toLowerCase().includes(qa))return false;
+            if(tipoF&&c.tipoEnvio!==tipoF)return false;
+            const ref=c.fechaRecibidaAlmacen?new Date(c.fechaRecibidaAlmacen).getTime():(c.fecha?new Date(c.fecha).getTime():0);
+            if(fromTs&&ref<fromTs)return false;
+            if(toTs&&ref>toTs)return false;
+            return true;
+          });
+          return(
+          <>
+            <div className="card" style={{marginBottom:10}}>
+              <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1fr auto",gap:8,alignItems:"end"}}>
+                <div>
+                  <div style={{fontSize:11,color:"var(--t3)",fontWeight:600,marginBottom:3}}>Buscar (N° guía o destino)</div>
+                  <input className="fi" placeholder="Ej: GUI-2026-001 / Caracas…" value={rdArchSearch} onChange={e=>setRdArchSearch(e.target.value)} style={{fontSize:14,padding:"7px 10px",width:"100%"}}/>
+                </div>
+                <div>
+                  <div style={{fontSize:11,color:"var(--t3)",fontWeight:600,marginBottom:3}}>Tipo de envío</div>
+                  <select className="fi" value={rdArchTipo} onChange={e=>setRdArchTipo(e.target.value)} style={{fontSize:14,padding:"7px 10px",width:"100%"}}>
+                    <option value="">— Todos —</option>
+                    {SEND_TYPES.map(t=>(<option key={t} value={t}>{t}</option>))}
+                  </select>
+                </div>
+                <div>
+                  <div style={{fontSize:11,color:"var(--t3)",fontWeight:600,marginBottom:3}}>Desde</div>
+                  <input type="date" className="fi" value={rdArchFrom} onChange={e=>setRdArchFrom(e.target.value)} style={{fontSize:13,padding:"7px 10px",width:"100%"}}/>
+                </div>
+                <div>
+                  <div style={{fontSize:11,color:"var(--t3)",fontWeight:600,marginBottom:3}}>Hasta</div>
+                  <input type="date" className="fi" value={rdArchTo} onChange={e=>setRdArchTo(e.target.value)} style={{fontSize:13,padding:"7px 10px",width:"100%"}}/>
+                </div>
+                <button className="btn-s" style={{fontSize:12,padding:"7px 12px"}}
+                  onClick={()=>{setRdArchSearch("");setRdArchTipo("");setRdArchFrom("");setRdArchTo("");}}>✕ Limpiar</button>
+              </div>
+              <div style={{fontSize:12,color:"var(--t3)",marginTop:6}}>
+                {archFiltradas.length} de {guiasArchivadas.length} guías archivadas
+              </div>
+            </div>
           <div className="card" style={{padding:0}}>
-            {guiasArchivadas.length===0?(
-              <div style={{textAlign:"center",padding:60,color:"var(--t3)"}}>Aún no hay guías recibidas/archivadas.</div>
+            {archFiltradas.length===0?(
+              <div style={{textAlign:"center",padding:60,color:"var(--t3)"}}>{guiasArchivadas.length===0?"Aún no hay guías recibidas/archivadas.":"Ninguna guía coincide con los filtros."}</div>
             ):(
               <table className="ct">
                 <thead><tr>
@@ -7044,7 +7244,7 @@ export default function ENEXSystem(){
                   <th style={{width:130}}>Acciones</th>
                 </tr></thead>
                 <tbody>
-                  {guiasArchivadas.map(c=>(
+                  {archFiltradas.map(c=>(
                     <tr key={c.id}>
                       <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",background:"#EEF3FF",padding:"2px 6px",borderRadius:4,border:"1px solid #B8C8F0",fontSize:13}}>{c.id}</span></td>
                       <td style={{fontWeight:600,color:"var(--t1)"}}>{c.destino}</td>
@@ -7073,7 +7273,9 @@ export default function ENEXSystem(){
               </table>
             )}
           </div>
-        )}
+          </>
+          );
+        })()}
       </div>
     );
   };
@@ -7081,64 +7283,154 @@ export default function ENEXSystem(){
   // ── CARGO RELEASE RENDER ────────────────────────────────────────────────────
   const renderCargoRelease=()=>{
     const q=(crSearch||"").toLowerCase().trim();
+    // Candidatos: WR elegibles (estados 1, 2, 2.3, 3 — antes de Consolidación)
+    const candidatos=wrList.filter(w=>{
+      if(!crElegible(w))return false;
+      if(!q)return true;
+      return [w.id,w.consignee,w.casillero,w.tracking,w.descripcion].some(v=>String(v||"").toLowerCase().includes(q));
+    });
+    const toggleSel=(id)=>setCrSel(p=>p.includes(id)?p.filter(x=>x!==id):[...p,id]);
+    const toggleAll=()=>{
+      if(candidatos.every(w=>crSel.includes(w.id))) setCrSel(p=>p.filter(id=>!candidatos.some(w=>w.id===id)));
+      else setCrSel(p=>[...new Set([...p,...candidatos.map(w=>w.id)])]);
+    };
+    // Histórico filtrado (oculto por defecto) — buscar por cliente/N° egreso y rango de fechas
+    const qCli=(crHistCliente||"").toLowerCase().trim();
+    const dDesde=crHistDesde?new Date(crHistDesde+"T00:00:00"):null;
+    const dHasta=crHistHasta?new Date(crHistHasta+"T23:59:59"):null;
+    const historico=cargoReleases.filter(c=>{
+      if(qCli){
+        const wrIds=c.wrIds||[];
+        const consigs=wrIds.map(id=>{const w=wrList.find(x=>x.id===id);return w?(w.consignee||""):"";}).join(" ").toLowerCase();
+        const hit=[c.id,c.agenteCarga,c.contacto,c.vehiculo,consigs].some(v=>String(v||"").toLowerCase().includes(qCli));
+        if(!hit)return false;
+      }
+      if(dDesde||dHasta){
+        const f=c.fecha?new Date(c.fecha):null;
+        if(!f)return false;
+        if(dDesde&&f<dDesde)return false;
+        if(dHasta&&f>dHasta)return false;
+      }
+      return true;
+    });
     const activos=cargoReleases.filter(c=>!c.anulado);
     const anulados=cargoReleases.filter(c=>c.anulado);
-    const lista=cargoReleases.filter(c=>!q||[c.id,c.agenteCarga,c.contacto,c.documento,c.vehiculo].some(v=>String(v||"").toLowerCase().includes(q)));
     return(
       <div className="page-scroll">
         <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
           <div style={{flex:1}}>
             <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:18,fontWeight:700,color:"var(--navy)"}}>🚀 Cargo Release (Egresos)</div>
-            <div style={{fontSize:13,color:"var(--t3)",marginTop:2}}>Liberación de carga a agente/transportista. Los WR pasan a Egresado (25). Estado elegible: 17 Almacén o 20 Por Entrega.</div>
+            <div style={{fontSize:13,color:"var(--t3)",marginTop:2}}>Liberación desde origen. Sólo se egresan WR hasta <b>Confirmado (3)</b>. Una vez consolidado (4 o más), el WR ya no se puede egresar desde aquí.</div>
           </div>
           <div style={{display:"flex",gap:6,fontSize:13}}>
             <span style={{background:"#E8F5E9",color:"#2E7D32",padding:"4px 10px",borderRadius:10,fontWeight:700,border:"1px solid #A5D6A7"}}>✓ {activos.length} activos</span>
             <span style={{background:"#FFF3E0",color:"#E65100",padding:"4px 10px",borderRadius:10,fontWeight:700,border:"1px solid #FFCC80"}}>✕ {anulados.length} anulados</span>
           </div>
-          {hasPerm("hacer_egreso")&&<button className="btn-p" onClick={()=>crOpenNew()}>➕ Nuevo Egreso</button>}
         </div>
 
-        <div className="card" style={{marginBottom:10}}>
-          <input className="fi" placeholder="Buscar por N° egreso, agente, contacto, documento, vehículo…"
-            value={crSearch} onChange={e=>setCrSearch(e.target.value)} style={{fontSize:14,width:"100%",padding:"8px 12px"}}/>
-        </div>
-
-        <div className="card" style={{padding:0,overflow:"hidden"}}>
-          {lista.length===0?(
-            <div style={{textAlign:"center",padding:60,color:"var(--t3)"}}>No hay egresos registrados.</div>
-          ):(
-            <table className="ct">
+        {/* CANDIDATOS — multi-selección estilo Reempaque */}
+        <div className="card" style={{marginBottom:14}}>
+          <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",marginBottom:10}}>
+            <div style={{fontSize:17,fontWeight:700,color:"var(--navy)"}}>📦 WR elegibles para egresar</div>
+            <div style={{fontSize:13,color:"var(--t3)"}}>Marca uno o varios y crea un solo Cargo Release.</div>
+            <div style={{marginLeft:"auto",display:"flex",gap:8,alignItems:"center"}}>
+              <input className="fi" placeholder="Buscar WR, consignatario, tracking…" value={crSearch} onChange={e=>setCrSearch(e.target.value)} style={{fontSize:14,padding:"6px 10px",width:260}}/>
+              <span style={{fontSize:13,color:"var(--t2)",fontWeight:600}}>Seleccionados: {crSel.length}</span>
+              {hasPerm("hacer_egreso")&&<button className="btn-p" disabled={crSel.length===0} style={{opacity:crSel.length===0?.5:1}} onClick={()=>crOpenNew(crSel)}>🚀 Egresar ({crSel.length})</button>}
+            </div>
+          </div>
+          <div style={{maxHeight:"50vh",overflow:"auto",border:"1px solid var(--b1)",borderRadius:8}}>
+            <table className="wt">
               <thead><tr>
-                <th>N° Egreso</th><th>Fecha</th><th>Agente</th><th>Contacto</th><th>Vehículo</th>
-                <th style={{textAlign:"center"}}>WR</th><th>Usuario</th><th>Estado</th><th style={{width:200}}>Acciones</th>
+                <th style={{width:36,textAlign:"center"}}>
+                  <input type="checkbox"
+                    checked={candidatos.length>0&&candidatos.every(w=>crSel.includes(w.id))}
+                    onChange={toggleAll}/>
+                </th>
+                <th>N° WR</th><th>Fecha</th><th>Consignatario</th><th>Casillero</th>
+                <th>Tracking</th><th>Descripción</th><th>Estado</th><th style={{textAlign:"right"}}>Cajas</th>
               </tr></thead>
               <tbody>
-                {lista.map(c=>(
-                  <tr key={c.id} style={{background:c.anulado?"#FFF5F5":""}}>
-                    <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",background:"#EEF3FF",padding:"2px 6px",borderRadius:4,border:"1px solid #B8C8F0",fontSize:13}}>{c.id}</span></td>
-                    <td style={{fontFamily:"'DM Mono',monospace",fontSize:12}}>{fmtDate(c.fecha)} {fmtTime(c.fecha)}</td>
-                    <td style={{fontWeight:600,color:"var(--t1)"}}>{c.agenteCarga||"—"}</td>
-                    <td style={{fontSize:13,color:"var(--t2)"}}>{c.contacto||"—"}{c.documento?` · ${c.documento}`:""}</td>
-                    <td style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--cyan)"}}>{c.vehiculo||"—"}</td>
-                    <td style={{textAlign:"center",fontWeight:700,color:"var(--navy)"}}>{(c.wrIds||[]).length}</td>
-                    <td style={{fontSize:13,color:"var(--t3)"}}>{c.usuario||"—"}</td>
-                    <td>{c.anulado
-                      ?<span style={{fontSize:12,fontWeight:700,color:"#C62828"}}>✕ Anulado</span>
-                      :<span style={{fontSize:12,fontWeight:700,color:"#2E7D32"}}>✓ Activo</span>}
-                      {c.anulado&&c.motivoAnulacion&&<div style={{fontSize:11,color:"#C62828",marginTop:2}}>{c.motivoAnulacion}</div>}
-                    </td>
-                    <td>
-                      <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-                        <button className="btn-s" style={{fontSize:12,padding:"3px 8px"}} onClick={()=>setCrPrint(c)} title="Ver / Imprimir nota">🖨️ Nota</button>
-                        {!c.anulado&&hasPerm("editar_egreso")&&<button className="btn-s" style={{fontSize:12,padding:"3px 8px"}} onClick={()=>crOpenEdit(c)}>✏️ Editar</button>}
-                        {!c.anulado&&hasPerm("editar_egreso")&&<button className="btn-s" style={{fontSize:12,padding:"3px 8px",background:"#FFF3E0",borderColor:"#FFB74D",color:"#E65100"}} onClick={()=>crAnular(c)}>✕ Anular</button>}
-                        {hasPerm("borrar_egreso")&&<button className="btn-d" style={{fontSize:12,padding:"3px 8px"}} onClick={()=>crDelete(c)}>🗑️</button>}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {candidatos.length===0
+                  ?<tr><td colSpan={9} style={{textAlign:"center",padding:40,color:"var(--t3)"}}>No hay WR elegibles para egreso (estados 1, 2, 2.3 o 3).</td></tr>
+                  :candidatos.map(w=>(
+                    <tr key={w.id} className={crSel.includes(w.id)?"sel":""} onClick={()=>toggleSel(w.id)} style={{cursor:"pointer"}}>
+                      <td style={{textAlign:"center"}}><input type="checkbox" checked={crSel.includes(w.id)} onChange={()=>toggleSel(w.id)}/></td>
+                      <td><span className="c-wr">{w.id}</span></td>
+                      <td><span className="c-dt">{fmtDate(w.fecha)}</span></td>
+                      <td><span className="c-name">{w.consignee||"—"}</span></td>
+                      <td><span className="c-cas">{w.casillero||"—"}</span></td>
+                      <td><span className="c-trk">{w.tracking||"—"}</span></td>
+                      <td style={{maxWidth:220,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{w.descripcion||"—"}</td>
+                      <td><StBadge st={w.status}/></td>
+                      <td style={{textAlign:"right",fontWeight:700}}>{w.cajas||0}</td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
+          </div>
+        </div>
+
+        {/* HISTÓRICO — oculto por defecto, filtros por cliente/fecha */}
+        <div className="card">
+          <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:crHistOpen?10:0}}>
+            <button
+              onClick={()=>setCrHistOpen(p=>!p)}
+              style={{background:"none",border:"none",cursor:"pointer",fontSize:15,fontWeight:700,color:"var(--navy)",padding:0}}>
+              {crHistOpen?"▼":"▶"} 📜 Histórico de Cargo Release
+            </button>
+            <span style={{fontSize:12,color:"var(--t3)"}}>
+              {crHistOpen?`${historico.length} resultado${historico.length===1?"":"s"}`:"Click para abrir y buscar por cliente/fecha"}
+            </span>
+            {crHistOpen&&(
+              <div style={{marginLeft:"auto",display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+                <input className="fi" placeholder="Cliente, agente, N° egreso…" value={crHistCliente} onChange={e=>setCrHistCliente(e.target.value)} style={{fontSize:13,padding:"5px 8px",width:200}}/>
+                <label style={{fontSize:11,color:"var(--t3)",fontWeight:600}}>Desde</label>
+                <input type="date" className="fi" value={crHistDesde} onChange={e=>setCrHistDesde(e.target.value)} style={{fontSize:13,padding:"5px 8px"}}/>
+                <label style={{fontSize:11,color:"var(--t3)",fontWeight:600}}>Hasta</label>
+                <input type="date" className="fi" value={crHistHasta} onChange={e=>setCrHistHasta(e.target.value)} style={{fontSize:13,padding:"5px 8px"}}/>
+                {(crHistCliente||crHistDesde||crHistHasta)&&
+                  <button className="btn-s" style={{fontSize:12,padding:"4px 8px"}} onClick={()=>{setCrHistCliente("");setCrHistDesde("");setCrHistHasta("");}}>✕ Limpiar</button>}
+              </div>
+            )}
+          </div>
+          {crHistOpen&&(
+            <div style={{maxHeight:"40vh",overflow:"auto",border:"1px solid var(--b1)",borderRadius:8}}>
+              <table className="ct">
+                <thead><tr>
+                  <th>N° Egreso</th><th>Fecha</th><th>Agente</th><th>Contacto</th><th>Vehículo</th>
+                  <th style={{textAlign:"center"}}>WR</th><th>Usuario</th><th>Estado</th><th style={{width:200}}>Acciones</th>
+                </tr></thead>
+                <tbody>
+                  {historico.length===0?(
+                    <tr><td colSpan={9} style={{textAlign:"center",padding:30,color:"var(--t3)"}}>No hay egresos en el rango filtrado.</td></tr>
+                  ):historico.map(c=>(
+                    <tr key={c.id} style={{background:c.anulado?"#FFF5F5":""}}>
+                      <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",background:"#EEF3FF",padding:"2px 6px",borderRadius:4,border:"1px solid #B8C8F0",fontSize:13}}>{c.id}</span></td>
+                      <td style={{fontFamily:"'DM Mono',monospace",fontSize:12}}>{fmtDate(c.fecha)} {fmtTime(c.fecha)}</td>
+                      <td style={{fontWeight:600,color:"var(--t1)"}}>{c.agenteCarga||"—"}</td>
+                      <td style={{fontSize:13,color:"var(--t2)"}}>{c.contacto||"—"}{c.documento?` · ${c.documento}`:""}</td>
+                      <td style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--cyan)"}}>{c.vehiculo||"—"}</td>
+                      <td style={{textAlign:"center",fontWeight:700,color:"var(--navy)"}}>{(c.wrIds||[]).length}</td>
+                      <td style={{fontSize:13,color:"var(--t3)"}}>{c.usuario||"—"}</td>
+                      <td>{c.anulado
+                        ?<span style={{fontSize:12,fontWeight:700,color:"#C62828"}}>✕ Anulado</span>
+                        :<span style={{fontSize:12,fontWeight:700,color:"#2E7D32"}}>✓ Activo</span>}
+                        {c.anulado&&c.motivoAnulacion&&<div style={{fontSize:11,color:"#C62828",marginTop:2}}>{c.motivoAnulacion}</div>}
+                      </td>
+                      <td>
+                        <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+                          <button className="btn-s" style={{fontSize:12,padding:"3px 8px"}} onClick={()=>setCrPrint(c)} title="Ver / Imprimir nota">🖨️ Nota</button>
+                          {!c.anulado&&hasPerm("editar_egreso")&&<button className="btn-s" style={{fontSize:12,padding:"3px 8px"}} onClick={()=>crOpenEdit(c)}>✏️ Editar</button>}
+                          {!c.anulado&&hasPerm("editar_egreso")&&<button className="btn-s" style={{fontSize:12,padding:"3px 8px",background:"#FFF3E0",borderColor:"#FFB74D",color:"#E65100"}} onClick={()=>crAnular(c)}>✕ Anular</button>}
+                          {hasPerm("borrar_egreso")&&<button className="btn-d" style={{fontSize:12,padding:"3px 8px"}} onClick={()=>crDelete(c)}>🗑️</button>}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </div>
@@ -7228,7 +7520,6 @@ export default function ENEXSystem(){
       {id:"consolidation",ic:"🗂️",l:"Consolidación"},
       {id:"recepciondest",ic:"📬",l:"Recepción en Almacén"},
       {id:"cargorelease",ic:"🚀",l:"Cargo Release"},
-      {id:"entregas",ic:"📝",l:"Notas de Entrega"},
     ]},
     {label:"Gestión",items:[
       {id:"clients",ic:"👥",l:"Clientes & Usuarios"},
@@ -7277,7 +7568,7 @@ export default function ENEXSystem(){
       case "reempaque":    return renderReempaque();
       case "recepciondest":return renderRecepcionDest();
       case "cargorelease": return renderCargoRelease();
-      case "entregas":     return renderDeliveryNotes();
+      // case "entregas" — Notas de Entrega ahora vive dentro de Impresión (etqMode="entregas")
       default:             return <div className="page-scroll"><div className="card" style={{textAlign:"center",padding:60,color:"var(--t3)"}}>{PAGE_TITLES[tab]} — Módulo próximamente</div></div>;
     }
   };
@@ -7891,7 +8182,7 @@ export default function ENEXSystem(){
       {crModal&&(()=>{
         const f=crModal;
         const editing=!!f.editId;
-        // WRs elegibles = 17 o 20, + los ya seleccionados (aunque estén en 25 por ser edit)
+        // WRs elegibles = 1, 2, 2.3, 3 + los ya seleccionados (aunque estén en 25 por ser edit)
         const elegibles=wrList.filter(w=>crElegible(w)||f.wrIds.includes(w.id));
         const sel=f.wrIds.map(id=>wrList.find(w=>w.id===id)).filter(Boolean);
         const qRef=f._q||"";
@@ -7903,11 +8194,11 @@ export default function ENEXSystem(){
         }).slice(0,30);
         const agentesCarga=agentes.filter(a=>a.tipo==="transporte"||a.tipoAgente==="transporte"||!a.tipoAgente);
         return(
-          <div className="modal-bg" onClick={()=>{}}>
-            <div className="modal" style={{maxWidth:900,width:"94%"}} onClick={e=>e.stopPropagation()}>
+          <div className="ov">
+            <div className="modal mlg" style={{maxWidth:1100,width:"96%"}} onClick={e=>e.stopPropagation()}>
               <div className="mhd">
-                <div>
-                  <div className="mtitle">🚀 {editing?`Editar Egreso ${f.editId}`:"Nuevo Egreso (Cargo Release)"}</div>
+                <div style={{flex:1}}>
+                  <div className="mt">🚀 {editing?`Editar Egreso ${f.editId}`:"Nuevo Egreso (Cargo Release)"}</div>
                   <div style={{fontSize:12,color:"var(--t3)",marginTop:2}}>Los WR seleccionados pasarán a <b>Egresado (25)</b> al guardar.</div>
                 </div>
                 <button className="mcl" onClick={()=>setCrModal(null)}>✕</button>
@@ -7956,7 +8247,7 @@ export default function ENEXSystem(){
                 </div>
 
                 <div style={{marginBottom:6}}>
-                  <div style={{fontSize:13,fontWeight:700,color:"var(--t2)",marginBottom:4}}>➕ Agregar WR (elegibles: 17 Almacén, 20 Por Entrega)</div>
+                  <div style={{fontSize:13,fontWeight:700,color:"var(--t2)",marginBottom:4}}>➕ Agregar WR (elegibles hasta Confirmado: 1, 2, 2.3, 3)</div>
                   <input className="fi" placeholder="Buscar por WR, consignee, tracking…" value={qRef} onChange={e=>setCrModal(p=>({...p,_q:e.target.value}))} style={{marginBottom:6}}/>
                   <div style={{maxHeight:160,overflow:"auto",border:"1px solid #E0E7EF",borderRadius:4}}>
                     {filtered.length===0?(
@@ -7989,10 +8280,10 @@ export default function ENEXSystem(){
         const totalCajas=wrs.reduce((s,w)=>s+(w.dims?.length||0),0);
         const totalLb=wrs.reduce((s,w)=>s+(w.dims||[]).reduce((a,d)=>a+parseFloat(d.pkLb||d.pk*2.205||0),0),0);
         return(
-          <div className="modal-bg">
-            <div className="modal" style={{maxWidth:900,width:"96%"}}>
+          <div className="ov">
+            <div className="modal mlg" style={{maxWidth:900,width:"96%"}}>
               <div className="mhd no-print">
-                <div className="mtitle">🖨️ Nota de Egreso — {cr.id}</div>
+                <div className="mt">🖨️ Nota de Egreso — {cr.id}</div>
                 <div style={{display:"flex",gap:6}}>
                   <button className="btn-p" style={{fontSize:13,padding:"4px 12px"}} onClick={()=>window.print()}>🖨️ Imprimir</button>
                   <button className="mcl" onClick={()=>setCrPrint(null)}>✕</button>
@@ -8096,11 +8387,11 @@ export default function ENEXSystem(){
         }).slice(0,30);
         const clientesMatriz=clients.filter(c=>c.tipo==="cliente");
         return(
-          <div className="modal-bg">
-            <div className="modal" style={{maxWidth:900,width:"94%"}} onClick={e=>e.stopPropagation()}>
+          <div className="ov">
+            <div className="modal mlg" style={{maxWidth:1100,width:"96%"}} onClick={e=>e.stopPropagation()}>
               <div className="mhd">
-                <div>
-                  <div className="mtitle">📝 {editing?`Editar Nota de Entrega ${f.editId}`:"Nueva Nota de Entrega"}</div>
+                <div style={{flex:1}}>
+                  <div className="mt">📝 {editing?`Editar Nota de Entrega ${f.editId}`:"Nueva Nota de Entrega"}</div>
                   <div style={{fontSize:12,color:"var(--t3)",marginTop:2}}>Los WR seleccionados pasarán a <b>Entregado (21)</b> al guardar.</div>
                 </div>
                 <button className="mcl" onClick={()=>setDnModal(null)}>✕</button>
@@ -8217,10 +8508,10 @@ export default function ENEXSystem(){
         const totalLb=wrs.reduce((s,w)=>s+(w.dims||[]).reduce((a,d)=>a+parseFloat(d.pkLb||d.pk*2.205||0),0),0);
         const metodoLabel={retiro_oficina:"Retiro en oficina",domicilio:"Entrega a domicilio",transportista:"Transportista / Agente"};
         return(
-          <div className="modal-bg">
-            <div className="modal" style={{maxWidth:900,width:"96%"}}>
+          <div className="ov">
+            <div className="modal mlg" style={{maxWidth:900,width:"96%"}}>
               <div className="mhd no-print">
-                <div className="mtitle">🖨️ Nota de Entrega — {dn.id}</div>
+                <div className="mt">🖨️ Nota de Entrega — {dn.id}</div>
                 <div style={{display:"flex",gap:6}}>
                   <button className="btn-p" style={{fontSize:13,padding:"4px 12px"}} onClick={()=>window.print()}>🖨️ Imprimir</button>
                   <button className="mcl" onClick={()=>setDnPrint(null)}>✕</button>
