@@ -2817,7 +2817,7 @@ export default function ENEXSystem(){
               <div style={{padding:"12px 14px"}}>
                 {/* Trackings — una sola franja compacta con los 3 transportistas */}
                 <div style={{background:"var(--bg4)",border:"1px solid var(--b1)",borderRadius:7,padding:"8px 10px",marginBottom:10}}>
-                  <div style={{display:"grid",gridTemplateColumns:"95px 1fr auto 1px 95px 1fr 1px 95px 1fr",gap:6,alignItems:"end"}}>
+                  <div style={{display:"grid",gridTemplateColumns:"95px minmax(140px,1fr) 1px 95px minmax(140px,1fr) 1px 95px minmax(140px,1fr)",columnGap:6,rowGap:6,alignItems:"end"}}>
                     {[0,1,2].map(ti=>{
                       const cfield=ti===0?"carrier":ti===1?"carrier2":"carrier3";
                       const tfield=ti===0?"tracking":ti===1?"tracking2":"tracking3";
@@ -2877,7 +2877,7 @@ export default function ENEXSystem(){
                 </div>
 
                 {/* FOTOS DEL PAQUETE (por caja) */}
-                {hasPerm(currentUser,"subir_foto") && (
+                {hasPerm("subir_foto") && (
                   <div style={{marginTop:12,paddingTop:10,borderTop:"1px dashed var(--b1)"}}>
                     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
                       <div style={{fontSize:13,fontWeight:700,color:"var(--navy)",textTransform:"uppercase",letterSpacing:.8,display:"flex",alignItems:"center",gap:7}}>
