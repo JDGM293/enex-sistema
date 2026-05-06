@@ -136,6 +136,9 @@ input.fi:not([type="email"]):not([type="password"]):not([type="number"]){text-tr
 .wt tbody tr.sel td{background:#E8F0FE}
 .wt tbody tr.sel td:first-child{background:#E8F0FE}
 .wt tbody tr:last-child td{border-bottom:none}
+/* Estado y Tipo Envío en la tabla WR: 1 nivel más pequeño que el resto (sin tocar el header) */
+.wt td .st{font-size:11.5px;padding:2px 8px}
+.wt td .type-b{font-size:11.5px;padding:2px 6px}
 
 /* cells */
 .c-wr{display:inline-block;font-family:'DM Mono',monospace;font-weight:700;font-size:14px;background:#fff;border:2px solid #1A2B4A;color:#1A2B4A;padding:3px 9px;border-radius:5px;letter-spacing:.5px;white-space:nowrap}
@@ -892,27 +895,27 @@ const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[
   );
   return (
     <tr className={sel?"sel":""} onClick={onClick}>
-      {/* 1. TIPO ENVÍO (confirmación) — primera columna */}
-      <td onClick={e=>e.stopPropagation()} style={{minWidth:110,padding:"4px 6px"}}>
-        {w.tipoEnvio
-          ?<div style={{display:"inline-flex",alignItems:"center",gap:4}}>
-              <TypeBadge t={w.tipoEnvio}/>
-              {onAssignTipo&&<span onClick={()=>{if(window.confirm(`¿Quitar tipo de envío del WR ${w.id}?${w.status?.code==="3"?"\n\nTambién se revertirá la confirmación.":""}`))onAssignTipo(w,"");}} title="Quitar tipo de envío" style={{cursor:"pointer",fontSize:14,color:"var(--red)",padding:"0 4px",lineHeight:1,fontWeight:700}}>✕</span>}
-            </div>
-          :(onAssignTipo&&sendTypes.length>0
-            ?<select value="" onChange={e=>{if(e.target.value)onAssignTipo(w,e.target.value);}} title="Confirmar tipo de envío" style={{fontSize:12,padding:"2px 4px",border:"1px dashed var(--navy)",borderRadius:4,background:"var(--bg3)",color:"var(--navy)",fontWeight:600,cursor:"pointer",minWidth:100}}>
-                <option value="">— Asignar —</option>
-                {sendTypes.map(t=><option key={t} value={t}>{t}</option>)}
-              </select>
-            :<span style={{color:"var(--t3)"}}>—</span>)}
-      </td>
-      {/* 2. N° WR */}
+      {/* 1. N° WR — primera columna */}
       <td>
         <div className="c-wr">{w.id}</div>
         <div className="c-route">{w.origCity} → {w.destCity}</div>
       </td>
+      {/* 2. TIPO ENVÍO (confirmación) — después de N° WR */}
+      <td onClick={e=>e.stopPropagation()} style={{minWidth:88,padding:"4px 6px"}}>
+        {w.tipoEnvio
+          ?<div style={{display:"inline-flex",alignItems:"center",gap:4}}>
+              <span style={{display:"inline-flex"}}><TypeBadge t={w.tipoEnvio}/></span>
+              {onAssignTipo&&<span onClick={()=>{if(window.confirm(`¿Quitar tipo de envío del WR ${w.id}?${w.status?.code==="3"?"\n\nTambién se revertirá la confirmación.":""}`))onAssignTipo(w,"");}} title="Quitar tipo de envío" style={{cursor:"pointer",fontSize:13,color:"var(--red)",padding:"0 3px",lineHeight:1,fontWeight:700}}>✕</span>}
+            </div>
+          :(onAssignTipo&&sendTypes.length>0
+            ?<select value="" onChange={e=>{if(e.target.value)onAssignTipo(w,e.target.value);}} title="Confirmar tipo de envío" style={{fontSize:11,padding:"2px 3px",border:"1px dashed var(--navy)",borderRadius:4,background:"var(--bg3)",color:"var(--navy)",fontWeight:600,cursor:"pointer",minWidth:78}}>
+                <option value="">Asignar</option>
+                {sendTypes.map(t=><option key={t} value={t}>{t}</option>)}
+              </select>
+            :<span style={{color:"var(--t3)"}}>—</span>)}
+      </td>
       {/* 3. ESTADO */}
-      <td style={{minWidth:130,padding:"4px 6px"}} title={w.status?.label||""}><StBadge st={w.status}/></td>
+      <td style={{minWidth:100,padding:"4px 6px"}} title={w.status?.label||""}><StBadge st={w.status}/></td>
       <td style={{textAlign:"center",fontWeight:700,color:"var(--navy)"}}>{w.cajas}</td>
       <td>{(()=>{
         const cl=clients.find(c=>c.id===w.clienteId)||clients.find(c=>c.casillero===w.casillero);
@@ -968,9 +971,9 @@ const WRTable=({rows,selId,onSelect,unitL,unitW,onSort,sortCol,sortDir,dimOpen,o
         <table className="wt">
           <thead>
             <tr>
-              <th style={{minWidth:110}}>Tipo Envío</th>
               <SortTh col="id">N° WR</SortTh>
-              <th style={{minWidth:130}}>Estado</th>
+              <th style={{minWidth:88}}>Tipo Envío</th>
+              <th style={{minWidth:100}}>Estado</th>
               <SortTh col="cajas" align="center">Cajas</SortTh>
               <SortTh col="branch">Branch</SortTh>
               <SortTh col="fecha">Fecha / Hora</SortTh>
