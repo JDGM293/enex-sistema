@@ -946,7 +946,7 @@ const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[
         <span style={{fontWeight:700,fontSize:13,color:"var(--navy)"}}>{w.carrier||"—"}</span>
       </td>
       <td><span className="c-trk">{w.tracking||"—"}</span></td>
-      <td style={{minWidth:200,maxWidth:260,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{w.descripcion||"—"}</td>
+      <td style={{minWidth:200,maxWidth:260,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{cleanReempaqueDesc(w.descripcion)||"—"}</td>
       <td style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--t1)",maxWidth:100,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={w.factura||""}>{w.factura?w.factura:"—"}</td>
       <td style={{textAlign:"right"}}><span className="c-val">${w.valor?.toFixed(2)||"0.00"}</span></td>
       <td>{dimCell}</td>
@@ -2050,7 +2050,7 @@ export default function ENEXSystem(){
           carrier:wrf.cajas[i].carrier,
           tracking:wrf.cajas[i].tracking,
           factura:wrf.cajas[i].numFactura,
-          descripcion:wrf.cajas[i].descripcion,
+          descripcion:cleanReempaqueDesc(wrf.cajas[i].descripcion),
         });
       }
     });
@@ -2086,7 +2086,7 @@ export default function ENEXSystem(){
         cajas:totalCajasCount,
         consignee:wrf.consignee,casillero:wrf.casillero,clienteId:wrf.clienteId,
         carrier:wrf.cajas[0]?.carrier||"",tracking:wrf.cajas[0]?.tracking||"",
-        descripcion:wrf.cajas[0]?.descripcion||"",factura:wrf.cajas[0]?.numFactura||"",
+        descripcion:cleanReempaqueDesc(wrf.cajas[0]?.descripcion||""),factura:wrf.cajas[0]?.numFactura||"",
         valor:wrf.cajas.reduce((s,c)=>s+parseFloat(c.montoFactura||0),0),
         dims,
         pesoKg:totalPesoKg,pesoLb:totalPesoLb,
@@ -2119,7 +2119,7 @@ export default function ENEXSystem(){
         fecha:now,
         consignee:wrf.consignee,casillero:_casillero,clienteId:_clienteId,
         carrier:esReempaque?"REEMPAQUE":(wrf.cajas[0]?.carrier||""),tracking:wrf.cajas[0]?.tracking||"",
-        descripcion:wrf.cajas[0]?.descripcion||"",
+        descripcion:cleanReempaqueDesc(wrf.cajas[0]?.descripcion||""),
         factura:wrf.cajas[0]?.numFactura||"",
         valor:wrf.cajas.reduce((s,c)=>s+parseFloat(c.montoFactura||0),0),
         dims,
@@ -3974,7 +3974,7 @@ export default function ENEXSystem(){
                             <td><span className="c-wr">{w.id}</span></td>
                             <td><span className="c-dt">{fmtDate(w.fecha)}</span></td>
                             <td><span className="c-trk">{w.tracking||"—"}</span></td>
-                            <td style={{maxWidth:220,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{w.descripcion||"—"}</td>
+                            <td style={{maxWidth:220,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{cleanReempaqueDesc(w.descripcion)||"—"}</td>
                             <td><StBadge st={w.status}/></td>
                             <td style={{textAlign:"right",fontWeight:700}}>{w.cajas||0}</td>
                           </tr>
@@ -4391,7 +4391,7 @@ export default function ENEXSystem(){
                                 <td style={{textAlign:"center"}}>{w.cajas}</td>
                                 <td style={{fontFamily:"'DM Mono',monospace",fontWeight:600}}>{w.pesoLb}lb</td>
                                 <td style={{fontFamily:"'DM Mono',monospace",color:"var(--sky)"}}>{w.ft3}</td>
-                                <td style={{color:"var(--t2)"}}>{w.descripcion||"—"}</td>
+                                <td style={{color:"var(--t2)"}}>{cleanReempaqueDesc(w.descripcion)||"—"}</td>
                                 <td><span style={{cursor:"pointer",color:"var(--red)",fontSize:14}} onClick={()=>{
                                   scCont(ci,"wr",cont.wr.filter(r=>r.id!==w.id));
                                   setWrList(p=>p.map(x=>x.id===w.id?{...x,status:WR_STATUSES.find(s=>s.code==="3")||x.status}:x));
@@ -6444,7 +6444,7 @@ export default function ENEXSystem(){
                       <td><span className="c-name">{w.consignee||"—"}</span></td>
                       <td><span className="c-cas">{w.casillero||"—"}</span></td>
                       <td><span className="c-trk">{w.tracking||"—"}</span></td>
-                      <td style={{maxWidth:220,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{w.descripcion||"—"}</td>
+                      <td style={{maxWidth:220,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{cleanReempaqueDesc(w.descripcion)||"—"}</td>
                       <td><StBadge st={w.status}/></td>
                       <td style={{textAlign:"right",fontWeight:700}}>{w.cajas||0}</td>
                     </tr>
@@ -7430,7 +7430,7 @@ export default function ENEXSystem(){
                       <td><span className="c-name">{w.consignee||"—"}</span></td>
                       <td><span className="c-cas">{w.casillero||"—"}</span></td>
                       <td><span className="c-trk">{w.tracking||"—"}</span></td>
-                      <td style={{maxWidth:220,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{w.descripcion||"—"}</td>
+                      <td style={{maxWidth:220,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{cleanReempaqueDesc(w.descripcion)||"—"}</td>
                       <td><StBadge st={w.status}/></td>
                       <td style={{textAlign:"right",fontWeight:700}}>{w.cajas||0}</td>
                     </tr>
@@ -8632,7 +8632,7 @@ export default function ENEXSystem(){
                       {wrs.map((w,i)=>{
                         const c=(w.dims||[]).length;
                         const lb=(w.dims||[]).reduce((a,d)=>a+parseFloat(d.pkLb||d.pk*2.205||0),0);
-                        const desc=(w.dims||[]).map(d=>d.descripcion).filter(Boolean).join(" · ")||w.notas||"—";
+                        const desc=(w.dims||[]).map(d=>cleanReempaqueDesc(d.descripcion)).filter(Boolean).join(" · ")||cleanReempaqueDesc(w.notas)||"—";
                         return(
                           <tr key={w.id}>
                             <td style={{border:"1px solid #999",padding:"3px 6px"}}>{i+1}</td>
