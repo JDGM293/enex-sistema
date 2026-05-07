@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, Fragment } from "react";
-import { dbGetClientes, dbUpsertCliente, dbDeleteCliente, dbGetWR, dbUpsertWR, dbDeleteWR, dbGetAgentes, dbUpsertAgente, dbDeleteAgente, dbGetOficinas, dbUpsertOficina, dbDeleteOficina, dbGetTarifas, dbUpsertTarifa, dbDeleteTarifa, dbGetConsolidaciones, dbUpsertConsolidacion, dbDeleteConsolidacion, dbGetCargoReleases, dbUpsertCargoRelease, dbDeleteCargoRelease, dbGetDeliveryNotes, dbUpsertDeliveryNote, dbDeleteDeliveryNote, dbGetFacturas, dbUpsertFactura, dbDeleteFactura, dbGetPagos, dbUpsertPago, dbDeletePago, dbLogActividad, dbGetActividad, dbGetConfig, dbSetConfig, dbGetScanLog, dbInsertScan, dbSetScanRegistered, dbDeleteScanIds, storageUploadFoto, storageDeleteFoto, dbGetFotosByWR, dbInsertFoto, dbDeleteFoto } from "./supabase";
+import { dbGetClientes, dbUpsertCliente, dbDeleteCliente, dbGetWR, dbUpsertWR, dbDeleteWR, dbGetAgentes, dbUpsertAgente, dbDeleteAgente, dbGetOficinas, dbUpsertOficina, dbDeleteOficina, dbGetTarifas, dbUpsertTarifa, dbDeleteTarifa, dbGetConsolidaciones, dbUpsertConsolidacion, dbDeleteConsolidacion, dbGetCargoReleases, dbUpsertCargoRelease, dbDeleteCargoRelease, dbGetDeliveryNotes, dbUpsertDeliveryNote, dbDeleteDeliveryNote, dbGetFacturas, dbUpsertFactura, dbDeleteFactura, dbGetPagos, dbUpsertPago, dbDeletePago, dbLogActividad, dbGetActividad, dbGetConfig, dbSetConfig, dbGetScanLog, dbInsertScan, dbSetScanRegistered, dbDeleteScanIds, storageUploadFoto, storageDeleteFoto, dbGetFotosByWR, dbInsertFoto, dbDeleteFoto, storageUploadFotoConsol, storageDeleteFotoConsol, dbGetFotosByConsol, dbInsertFotoConsol, dbDeleteFotoConsol } from "./supabase";
 
 // ─── TEMA CLARO PROFESIONAL ───────────────────────────────────────────────────
 const S = `
@@ -1286,12 +1286,12 @@ const TimelineWR=({w,applyStatus,trkCanUpdate,statusAllowed,CU})=>{
   );
 };
 
-const emptyConsol=(firstType="")=>({
-  destino:"VL", tipoEnvio:firstType,
+const emptyConsol=()=>({
+  destino:"", tipoEnvio:"",
   fechaSalida:"", fechaLlegada:"",
   numVuelo:"", awb:"", bl:"",
   notas:"",
-  containers:[{tipo:"",largo:"",ancho:"",alto:"",pesoLb:"",sello:"",wr:[]}],
+  containers:[{tipo:"",largo:"",ancho:"",alto:"",pesoLb:"",sello:"",wr:[],fotos:[]}],
 });
 
 // Parse "LxWxH in" / "88×56×48 in" → {l,w,h}. Returns null si no puede.
@@ -1777,8 +1777,8 @@ export default function ENEXSystem(){
       if(pgs&&pgs.length>0)setPagos(pgs);
       if(sendT&&sendT.length>0){
         setSendTypes(sendT);
-        // Sincronizar forms que aún no tienen tipo de envío con el primero disponible
-        setCf(p=>({...p,tipoEnvio:p.tipoEnvio||sendT[0]}));
+        // La calculadora sí queda con el primer tipo cargado por conveniencia.
+        // El embarque (cf) NO se autocompleta — debe quedar vacío para que el usuario elija.
         setCalcForm(p=>({...p,tipoEnvio:p.tipoEnvio||sendT[0]}));
       }
       if(payT&&payT.length>0)setPayTypes(payT);
@@ -1961,6 +1961,62 @@ export default function ENEXSystem(){
       }
       return {...c,fotos:arr};
     })}));
+  };
+
+  // ── FOTOS DE CONTENEDORES (Consolidación) ──────────────────────────────────
+  // Mismo patrón que las fotos de WR: se acumulan en el form como objetos con
+  // id=null (aún no persistido) y al guardar el embarque se suben al bucket
+  // "consol-fotos" e insertan filas en la tabla consol_fotos.
+  const addFotosToContainer=(ci, fileList, source="upload")=>{
+    const arr = Array.from(fileList||[]).filter(f=>f && f.type && f.type.startsWith("image/"));
+    if(!arr.length) return;
+    const nuevas = arr.map(f=>({
+      id: null,
+      file: f,
+      url: URL.createObjectURL(f),
+      path: null,
+      source,
+      mime: f.type || 'image/jpeg',
+      sizeBytes: f.size || 0,
+      filename: f.name || (source==='webcam'?'webcam.jpg':'upload.jpg'),
+      createdAt: new Date(),
+    }));
+    setCf(p=>({...p,containers:p.containers.map((c,i)=>i===ci?{...c,fotos:[...(c.fotos||[]),...nuevas]}:c)}));
+  };
+  const removeFotoFromContainer=(ci, fotoIdx)=>{
+    setCf(p=>({...p,containers:p.containers.map((c,i)=>{
+      if(i!==ci) return c;
+      const arr=[...(c.fotos||[])];
+      const rem=arr.splice(fotoIdx,1)[0];
+      if(rem && rem.url && rem.url.startsWith('blob:')){
+        try{ URL.revokeObjectURL(rem.url); }catch{}
+      }
+      return {...c,fotos:arr};
+    })}));
+  };
+  // Sube las fotos nuevas (sin id) de cada contenedor al bucket y crea filas en consol_fotos.
+  const uploadFotosForConsol=async(consolId, containers, userId)=>{
+    let count=0;
+    for(let i=0;i<containers.length;i++){
+      const cont=containers[i];
+      const nuevas=(cont.fotos||[]).filter(f=>f && f.file && !f.id);
+      for(const foto of nuevas){
+        try{
+          const up=await storageUploadFotoConsol(foto.file, consolId, i);
+          if(!up) continue;
+          const row=await dbInsertFotoConsol({
+            consolId, containerIdx:i, url:up.url, path:up.path,
+            filename:foto.filename||'foto.jpg',
+            mime:foto.mime||'image/jpeg',
+            sizeBytes:foto.sizeBytes||0,
+            source:foto.source||'upload',
+            uploadedBy:userId||'',
+          });
+          if(row) count++;
+        }catch(e){ console.error("uploadFotoConsol:",e); }
+      }
+    }
+    return count;
   };
 
   // computed totals from all cajas (each multiplied by cantidad)
@@ -4020,7 +4076,7 @@ export default function ENEXSystem(){
     else{setContScanVal(p=>({...p,[ci]:""}));setContScanErr(p=>({...p,[ci]:""}));}
   };
 
-  const addContainer=()=>setCf(p=>({...p,containers:[...p.containers,{tipo:"E",largo:"",ancho:"",alto:"",pesoLb:"",sello:"",wr:[]}]}));
+  const addContainer=()=>setCf(p=>({...p,containers:[...p.containers,{tipo:"",largo:"",ancho:"",alto:"",pesoLb:"",sello:"",wr:[],fotos:[]}]}));
   const removeContainer=(ci)=>setCf(p=>({...p,containers:p.containers.filter((_,i)=>i!==ci)}));
 
   // Actualiza el estado de una guía consolidada y lo cascada a todos sus WRs
@@ -4054,7 +4110,10 @@ export default function ENEXSystem(){
     logAction(`Guía ${consolId} → ${st.label}`,`${allWrIds.length} WRs actualizados`);
   };
 
-  const submitConsol=()=>{
+  const submitConsol=async()=>{
+    // Validaciones — destino y tipoEnvio son obligatorios
+    if(!cf.destino){window.alert("⚠️ Debes seleccionar la Ciudad Destino antes de cerrar el embarque.");return;}
+    if(!cf.tipoEnvio){window.alert("⚠️ Debes seleccionar el Tipo de Envío antes de cerrar el embarque.");return;}
     const now=new Date();
     const allWR=(cf.containers||[]).flatMap(c=>c.wr||[]);
     const totalLb=parseFloat(allWR.reduce((s,w)=>s+(w.pesoLb||0),0).toFixed(1));
@@ -4076,12 +4135,15 @@ export default function ENEXSystem(){
     };
     setConsolList(p=>existing?p.map(c=>c.id===n.id?n:c):[n,...p]);
     dbUpsertConsolidacion(n);
+    // Subir fotos pendientes (sin id) de cada contenedor al bucket
+    const uploadedCount=await uploadFotosForConsol(n.id, cf.containers, currentUser?.id||'');
     setShowNewConsol(false);
     setEditConsolId(null);
-    setCf(emptyConsol(SEND_TYPES[0]||""));
+    setCf(emptyConsol());
     setContScanVal({});
     setContScanErr({});
     logAction(existing?"Editó embarque":"Cerró embarque",n.id);
+    if(uploadedCount>0) logAction("Subió fotos embarque",`${n.id} (${uploadedCount})`);
     // Abre el modal de etiquetas de Guía Consolidada (1 etiqueta por contenedor)
     setShowConsolLabels({
       guia:n,
@@ -4099,14 +4161,14 @@ export default function ENEXSystem(){
           <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:18,fontWeight:700,color:"var(--navy)"}}>🗂️ Consolidación de Embarques</div>
           <div style={{fontSize:13,color:"var(--t3)",marginTop:2}}>Agrupa WR confirmados en contenedores y genera el embarque.</div>
         </div>
-        <button className="btn-p" onClick={()=>setShowNewConsol(true)}>+ Nuevo Embarque</button>
+        <button className="btn-p" onClick={()=>{setCf(emptyConsol());setEditConsolId(null);setContScanVal({});setContScanErr({});setShowNewConsol(true);}}>+ Nuevo Embarque</button>
       </div>
 
       {/* LISTA DE EMBARQUES */}
       {consolList.length===0?(
         <div className="card" style={{textAlign:"center",padding:60,color:"var(--t3)"}}>
           No hay embarques consolidados aún.<br/>
-          <button className="btn-p" style={{marginTop:14}} onClick={()=>setShowNewConsol(true)}>+ Crear primer embarque</button>
+          <button className="btn-p" style={{marginTop:14}} onClick={()=>{setCf(emptyConsol());setEditConsolId(null);setContScanVal({});setContScanErr({});setShowNewConsol(true);}}>+ Crear primer embarque</button>
         </div>
       ):(
         <div className="card" style={{padding:0}}>
@@ -4194,10 +4256,24 @@ export default function ENEXSystem(){
                       })}>🏷️ Etiquetas</button>
                       {hasPerm("editar_guia")&&(
                         <button className="btn-s" style={{fontSize:12,padding:"3px 8px"}} title="Editar guía"
-                          onClick={()=>{setCf({
-                            destino:c.destino,tipoEnvio:c.tipoEnvio,fechaSalida:c.fechaSalida||"",numVuelo:c.numVuelo||"",
-                            awb:c.awb||"",bl:c.bl||"",notas:c.notas||"",containers:c.containers||[],
-                          });setEditConsolId(c.id);setShowNewConsol(true);}}>✏️ Editar</button>
+                          onClick={async()=>{
+                            // Cargar fotos guardadas del bucket consol-fotos para esta guía
+                            let fotosByCont={};
+                            try{
+                              const fotos=await dbGetFotosByConsol(c.id);
+                              fotos.forEach(f=>{
+                                const k=f.containerIdx??0;
+                                if(!fotosByCont[k])fotosByCont[k]=[];
+                                fotosByCont[k].push({id:f.id,url:f.url,path:f.path,filename:f.filename,mime:f.mime,sizeBytes:f.sizeBytes,source:f.source,createdAt:f.createdAt});
+                              });
+                            }catch(e){console.error("dbGetFotosByConsol:",e);}
+                            const conts=(c.containers||[]).map((ct,i)=>({...ct,fotos:[...(fotosByCont[i]||[]),...(ct.fotos||[]).filter(f=>!f.id)]}));
+                            setCf({
+                              destino:c.destino,tipoEnvio:c.tipoEnvio,fechaSalida:c.fechaSalida||"",numVuelo:c.numVuelo||"",
+                              awb:c.awb||"",bl:c.bl||"",notas:c.notas||"",containers:conts,
+                            });
+                            setEditConsolId(c.id);setShowNewConsol(true);
+                          }}>✏️ Editar</button>
                       )}
                       {hasPerm("borrar_guia")&&(
                         <button className="btn-s" style={{fontSize:12,padding:"3px 8px",color:"var(--red)",borderColor:"var(--red)"}} title="Borrar guía"
@@ -4235,24 +4311,26 @@ export default function ENEXSystem(){
           <div className="modal mxl" onClick={e=>e.stopPropagation()}>
             <div className="mhd">
               <div className="mt">🗂️ {editConsolId?`Editar Embarque ${editConsolId}`:"Nuevo Embarque Consolidado"}</div>
-              <button className="mcl" onClick={()=>{setShowNewConsol(false);setEditConsolId(null);}}>✕</button>
+              <button className="mcl" onClick={()=>{setShowNewConsol(false);setEditConsolId(null);setCf(emptyConsol());setContScanVal({});setContScanErr({});}}>✕</button>
             </div>
 
             {/* INFO GENERAL */}
             <div className="sdiv">INFORMACIÓN DEL EMBARQUE</div>
             <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:14}}>
               <div className="fg">
-                <div className="fl">Ciudad Destino</div>
+                <div className="fl">Ciudad Destino *</div>
                 <select className="fs" value={cf.destino} onChange={e=>sc2("destino",e.target.value)}>
+                  <option value="">— Selecciona ciudad destino —</option>
                   {COUNTRIES.find(c=>c.dial===OFFICE_CONFIG.destCountry)?.cities.map(c=>(
                     <option key={c.code} value={c.code}>{c.name} ({c.code})</option>
                   ))}
                 </select>
               </div>
               <div className="fg">
-                <div className="fl">Tipo de Envío</div>
+                <div className="fl">Tipo de Envío *</div>
                 <select className="fs" value={cf.tipoEnvio} onChange={e=>sc2("tipoEnvio",e.target.value)}>
-                  {SEND_TYPES.map(t=><option key={t}>{t}</option>)}
+                  <option value="">— Selecciona tipo de envío —</option>
+                  {SEND_TYPES.map(t=><option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
               <div className="fg">
@@ -4277,27 +4355,36 @@ export default function ENEXSystem(){
               </div>
             </div>
 
-            {/* WR CONFIRMADOS DISPONIBLES — clickeables */}
-            <div className="sdiv">WR CONFIRMADOS DISPONIBLES — clic para agregar al contenedor activo</div>
+            {/* WR CONFIRMADOS DISPONIBLES — solo del tipoEnvio elegido */}
+            <div className="sdiv">WR CONFIRMADOS DISPONIBLES{cf.tipoEnvio?` — ${cf.tipoEnvio} (clic para agregar al contenedor activo)`:" — selecciona primero el Tipo de Envío"}</div>
             <div style={{background:"var(--bg4)",border:"1px solid var(--b1)",borderRadius:8,padding:"8px 12px",marginBottom:14,maxHeight:160,overflowY:"auto"}}>
-              {wrList.filter(w=>w.status?.code==="3"&&!cf.containers.some(c=>c.wr.some(r=>r.id===w.id))).length===0?(
-                <div style={{color:"var(--t3)",fontSize:13,padding:"8px 0"}}>No hay WR confirmados disponibles.</div>
-              ):wrList.filter(w=>w.status?.code==="3"&&!cf.containers.some(c=>c.wr.some(r=>r.id===w.id))).map(w=>(
-                <div key={w.id} onClick={()=>{
-                    // Add to last container (or first)
-                    const ci=cf.containers.length-1;
-                    const err=addWRToContainer(ci,w.id);
-                    if(err)alert(err);
-                  }}
-                  style={{display:"inline-flex",alignItems:"center",gap:6,margin:"3px",padding:"5px 10px",background:"#fff",border:"2px solid #1A8A4A",borderRadius:6,cursor:"pointer",transition:"all .12s"}}
-                  onMouseEnter={e=>{e.currentTarget.style.background="#E8F8EE";e.currentTarget.style.transform="scale(1.02)";}}
-                  onMouseLeave={e=>{e.currentTarget.style.background="#fff";e.currentTarget.style.transform="";}}>
-                  <span style={{fontFamily:"'DM Mono',monospace",fontWeight:800,color:"var(--navy)",fontSize:14}}>{w.id}</span>
-                  <span style={{color:"var(--t2)",fontSize:13}}>{w.consignee}</span>
-                  <span style={{color:"var(--t3)",fontSize:12,background:"var(--bg4)",padding:"1px 5px",borderRadius:3}}>{w.cajas}cj · {w.pesoLb}lb</span>
-                  <span style={{color:"var(--green)",fontSize:14}}>+</span>
-                </div>
-              ))}
+              {!cf.tipoEnvio?(
+                <div style={{color:"var(--orange)",fontSize:13,padding:"8px 0",fontWeight:600}}>⚠️ Selecciona el Tipo de Envío en la sección de arriba para ver los WR confirmados disponibles.</div>
+              ):(()=>{
+                const elegibles=wrList.filter(w=>
+                  w.status?.code==="3"
+                  && (w.tipoEnvio||"")===cf.tipoEnvio
+                  && !cf.containers.some(c=>c.wr.some(r=>r.id===w.id))
+                );
+                if(elegibles.length===0){
+                  return <div style={{color:"var(--t3)",fontSize:13,padding:"8px 0"}}>No hay WR confirmados disponibles para tipo <b>{cf.tipoEnvio}</b>.</div>;
+                }
+                return elegibles.map(w=>(
+                  <div key={w.id} onClick={()=>{
+                      const ci=cf.containers.length-1;
+                      const err=addWRToContainer(ci,w.id);
+                      if(err)alert(err);
+                    }}
+                    style={{display:"inline-flex",alignItems:"center",gap:6,margin:"3px",padding:"5px 10px",background:"#fff",border:"2px solid #1A8A4A",borderRadius:6,cursor:"pointer",transition:"all .12s"}}
+                    onMouseEnter={e=>{e.currentTarget.style.background="#E8F8EE";e.currentTarget.style.transform="scale(1.02)";}}
+                    onMouseLeave={e=>{e.currentTarget.style.background="#fff";e.currentTarget.style.transform="";}}>
+                    <span style={{fontFamily:"'DM Mono',monospace",fontWeight:800,color:"var(--navy)",fontSize:14}}>{w.id}</span>
+                    <span style={{color:"var(--t2)",fontSize:13}}>{w.consignee}</span>
+                    <span style={{color:"var(--t3)",fontSize:12,background:"var(--bg4)",padding:"1px 5px",borderRadius:3}}>{w.cajas}cj · {w.pesoLb}lb</span>
+                    <span style={{color:"var(--green)",fontSize:14}}>+</span>
+                  </div>
+                ));
+              })()}
             </div>
 
             {/* CONTAINERS */}
@@ -4315,22 +4402,26 @@ export default function ENEXSystem(){
                     <span style={{color:"#E5AE3A",fontFamily:"Arial,Helvetica,sans-serif",fontWeight:800,fontSize:16}}>
                       📦 CONTENEDOR {ci+1}
                     </span>
-                    <select value={cont.tipo} onChange={e=>{
-                        const code=e.target.value;
-                        const reg=CONTAINER_TYPES.find(t=>t.code===code);
+                    {/* Input + datalist: permite elegir un tipo registrado en Configuración
+                        o escribir uno libre si el tipo no existe aún. */}
+                    <input list={`container-types-${ci}`} value={cont.tipo}
+                      placeholder="Selecciona o escribe el tipo…"
+                      onChange={e=>{
+                        const val=e.target.value;
+                        const reg=CONTAINER_TYPES.find(t=>t.code===val||t.name===val);
                         const dims=reg?parseContainerDim(reg.dim):null;
                         setCf(p=>({...p,containers:p.containers.map((c,i)=>i===ci?{
                           ...c,
-                          tipo:code,
-                          // Si el tipo trae medidas oficiales, autollenar; si es "Libre" o no existe, dejar manual
+                          tipo:reg?reg.code:val,
+                          // Si el tipo trae medidas oficiales, autollenar; si es libre o no existe, no tocar
                           ...(dims?{largo:dims.l,ancho:dims.a,alto:dims.h}:{})
                         }:c)}));
                       }}
-                      style={{background:"rgba(255,255,255,.15)",border:"1px solid rgba(255,255,255,.3)",borderRadius:5,color:"#fff",padding:"3px 8px",fontSize:14,fontWeight:700,cursor:"pointer"}}>
-                      <option value="" style={{background:"var(--navy)"}}>— Seleccionar tipo —</option>
-                      {CONTAINER_TYPES.map(t=><option key={t.code} value={t.code} style={{background:"var(--navy)"}}>{t.name}</option>)}
-                    </select>
-                    <span style={{fontSize:13,color:"rgba(255,255,255,.6)"}}>{cont.tipo?(contType?.dim||"Manual"):"Selecciona un tipo"}</span>
+                      style={{background:"rgba(255,255,255,.15)",border:"1px solid rgba(255,255,255,.3)",borderRadius:5,color:"#fff",padding:"3px 8px",fontSize:14,fontWeight:700,minWidth:180}}/>
+                    <datalist id={`container-types-${ci}`}>
+                      {CONTAINER_TYPES.map(t=><option key={t.code} value={t.code}>{t.name}</option>)}
+                    </datalist>
+                    <span style={{fontSize:13,color:"rgba(255,255,255,.6)"}}>{cont.tipo?(contType?.dim||"Manual / personalizado"):"Selecciona o escribe un tipo"}</span>
                     <div style={{flex:1}}/>
                     <span style={{fontSize:13,color:"#E5AE3A",fontWeight:600}}>{cont.wr.length} WR · {contWRCajas} cajas · {contWRPeso}lb</span>
                     {cf.containers.length>1&&(
@@ -4402,6 +4493,48 @@ export default function ENEXSystem(){
                         </table>
                       </div>
                     )}
+
+                    {/* FOTOS DEL CONTENEDOR (al guardar el embarque se suben al bucket consol-fotos) */}
+                    {hasPerm("subir_foto") && (
+                      <div style={{marginTop:12,paddingTop:10,borderTop:"1px dashed var(--b1)"}}>
+                        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+                          <div style={{fontSize:13,fontWeight:700,color:"var(--navy)",textTransform:"uppercase",letterSpacing:.8,display:"flex",alignItems:"center",gap:7}}>
+                            <span style={{fontSize:15}}>📷</span> Fotos del contenedor
+                            {(cont.fotos||[]).length>0 && (
+                              <span style={{background:"var(--gold)",color:"#fff",fontSize:11,padding:"2px 8px",borderRadius:10,fontWeight:700}}>{cont.fotos.length}</span>
+                            )}
+                          </div>
+                          <div style={{display:"flex",gap:6}}>
+                            <label className="btn-s" style={{fontSize:12,padding:"5px 10px",cursor:"pointer",margin:0,display:"inline-flex",alignItems:"center",gap:5}}>
+                              <span>📁</span> Subir archivo
+                              <input type="file" accept="image/*" multiple style={{display:"none"}} onChange={e=>{addFotosToContainer(ci,e.target.files,"upload");e.target.value="";}}/>
+                            </label>
+                            <button type="button" className="btn-s" style={{fontSize:12,padding:"5px 10px",display:"inline-flex",alignItems:"center",gap:5}} onClick={()=>setWebcamOpen({containerIdx:ci})}>
+                              <span>📸</span> Cámara web
+                            </button>
+                          </div>
+                        </div>
+                        {(cont.fotos||[]).length===0 ? (
+                          <div style={{padding:"12px",border:"2px dashed var(--b1)",borderRadius:8,background:"var(--bg4)",textAlign:"center",color:"var(--t3)",fontSize:13}}>
+                            Sin fotos — usa los botones de arriba para agregar fotos del contenedor
+                          </div>
+                        ) : (
+                          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(110px, 1fr))",gap:8}}>
+                            {cont.fotos.map((foto,fi)=>(
+                              <div key={fi} style={{position:"relative",aspectRatio:"1",borderRadius:8,overflow:"hidden",border:"1px solid var(--b1)",background:"var(--bg4)"}}>
+                                <img src={foto.url} alt={foto.filename||"foto"} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
+                                <div style={{position:"absolute",top:4,right:4,display:"flex",gap:4}}>
+                                  <button type="button" title="Quitar foto" onClick={()=>removeFotoFromContainer(ci,fi)} style={{width:22,height:22,borderRadius:"50%",border:"none",background:"rgba(204,34,51,0.95)",color:"#fff",fontSize:14,fontWeight:900,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}}>×</button>
+                                </div>
+                                <div style={{position:"absolute",bottom:0,left:0,right:0,background:"linear-gradient(to top, rgba(0,0,0,0.7), transparent)",color:"#fff",fontSize:10,padding:"8px 4px 3px",textAlign:"center",fontWeight:600}}>
+                                  {foto.source==='webcam'?'📸 Cámara':'📁 Archivo'}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -4433,7 +4566,7 @@ export default function ENEXSystem(){
             })()}
 
             <div className="mft">
-              <button className="btn-s" onClick={()=>{setShowNewConsol(false);setEditConsolId(null);setCf(emptyConsol(SEND_TYPES[0]||""));setContScanVal({});setContScanErr({});}}>Cancelar</button>
+              <button className="btn-s" onClick={()=>{setShowNewConsol(false);setEditConsolId(null);setCf(emptyConsol());setContScanVal({});setContScanErr({});}}>Cancelar</button>
               <button className="btn-p" onClick={submitConsol}
                 disabled={cf.containers.every(c=>c.wr.length===0)}
                 style={{opacity:cf.containers.every(c=>c.wr.length===0)?0.5:1}}>
@@ -7696,7 +7829,17 @@ export default function ENEXSystem(){
       {showNewWR&&renderNewWRModal()}
       {selWR&&renderWRDetail()}
       {showStatModal&&renderStatModal()}
-      {webcamOpen&&<WebcamCaptureModal onClose={()=>setWebcamOpen(null)} onCapture={(file)=>{addFotosToCaja(webcamOpen.cajaIdx,[file],"webcam");setWebcamOpen(null);}}/>}
+      {webcamOpen&&<WebcamCaptureModal onClose={()=>setWebcamOpen(null)} onCapture={(file)=>{
+        // El modal de cámara web sirve tanto para fotos de caja (Nuevo WR)
+        // como para fotos de contenedor (Nuevo Embarque). Ruteo según la
+        // propiedad presente en webcamOpen.
+        if(typeof webcamOpen.containerIdx==='number'){
+          addFotosToContainer(webcamOpen.containerIdx,[file],"webcam");
+        } else if(typeof webcamOpen.cajaIdx==='number'){
+          addFotosToCaja(webcamOpen.cajaIdx,[file],"webcam");
+        }
+        setWebcamOpen(null);
+      }}/>}
       {photoGalleryOpen&&<PhotoGalleryModal wrId={photoGalleryOpen.wrId} currentUser={currentUser} onClose={()=>setPhotoGalleryOpen(null)}/>}
 
       {/* CARGO RELEASE INDIVIDUAL — formulario simplificado */}

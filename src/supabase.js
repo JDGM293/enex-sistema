@@ -563,3 +563,68 @@ export const dbDeleteFoto = async (id, path=null) => {
   if (error) { console.error('deleteFoto:', error); return }
   if (path) await storageDeleteFoto(path)
 }
+
+// ── FOTOS DE CONSOLIDACIÓN (consol_fotos + Storage bucket consol-fotos) ─────
+// Cada Embarque (consolidación) puede tener 0..N fotos por contenedor.
+// El archivo vive en el bucket "consol-fotos" y la tabla consol_fotos
+// mantiene metadata (qué archivo, de qué consolidación, qué contenedor,
+// quién lo subió, cuándo).
+
+const CONSOL_FOTOS_BUCKET = 'consol-fotos'
+
+export const storageUploadFotoConsol = async (file, consolId, containerIdx=0) => {
+  if (!file) return null
+  const ts = Date.now()
+  const rand = Math.random().toString(36).slice(2,8)
+  const ext = (file.name && file.name.includes('.')) ? file.name.split('.').pop().toLowerCase() : 'jpg'
+  const safeExt = ext.replace(/[^a-z0-9]/g,'') || 'jpg'
+  const path = `${consolId}/cont_${containerIdx}/${ts}_${rand}.${safeExt}`
+  const { error } = await supabase.storage.from(CONSOL_FOTOS_BUCKET).upload(path, file, {
+    cacheControl: '3600', upsert: false, contentType: file.type || 'image/jpeg',
+  })
+  if (error) { console.error('storageUploadFotoConsol:', error); return null }
+  const { data: pub } = supabase.storage.from(CONSOL_FOTOS_BUCKET).getPublicUrl(path)
+  return { path, url: pub?.publicUrl || '' }
+}
+
+export const storageDeleteFotoConsol = async (path) => {
+  if (!path) return
+  const { error } = await supabase.storage.from(CONSOL_FOTOS_BUCKET).remove([path])
+  if (error) console.error('storageDeleteFotoConsol:', error)
+}
+
+export const fotoConsolFromDB = (r) => r ? ({
+  id: r.id, consolId: r.consol_id, containerIdx: r.container_idx ?? 0,
+  url: r.url, path: r.path, filename: r.filename || '',
+  mime: r.mime || 'image/jpeg', sizeBytes: r.size_bytes || 0,
+  source: r.source || 'upload', uploadedBy: r.uploaded_by || '',
+  createdAt: r.created_at ? new Date(r.created_at) : new Date(),
+}) : null
+
+// Lee todas las fotos de una consolidación. Ordenadas por contenedor asc y fecha asc.
+export const dbGetFotosByConsol = async (consolId) => {
+  if (!consolId) return []
+  const { data, error } = await supabase.from('consol_fotos')
+    .select('*').eq('consol_id', consolId)
+    .order('container_idx', {ascending:true})
+    .order('created_at', {ascending:true})
+  if (error) { console.error('getFotosByConsol:', error); return [] }
+  return (data||[]).map(fotoConsolFromDB)
+}
+
+export const dbInsertFotoConsol = async ({ consolId, containerIdx=0, url, path, filename='', mime='image/jpeg', sizeBytes=0, source='upload', uploadedBy='' }) => {
+  if (!consolId || !url || !path) return null
+  const { data, error } = await supabase.from('consol_fotos').insert({
+    consol_id: consolId, container_idx: containerIdx, url, path, filename, mime,
+    size_bytes: sizeBytes, source, uploaded_by: uploadedBy,
+  }).select().single()
+  if (error) { console.error('insertFotoConsol:', error); return null }
+  return fotoConsolFromDB(data)
+}
+
+export const dbDeleteFotoConsol = async (id, path=null) => {
+  if (!id) return
+  const { error } = await supabase.from('consol_fotos').delete().eq('id', id)
+  if (error) { console.error('deleteFotoConsol:', error); return }
+  if (path) await storageDeleteFotoConsol(path)
+}
