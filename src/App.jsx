@@ -1613,6 +1613,8 @@ export default function ENEXSystem(){
   const [rdArchTipo,setRdArchTipo]=useState("");
   const [rdArchFrom,setRdArchFrom]=useState("");
   const [rdArchTo,setRdArchTo]=useState("");
+  // Guía archivada actualmente abierta en el modal de vista detallada
+  const [rdArchView,setRdArchView]=useState(null);
 
   // Modales de fotos del paquete (Nuevo WR)
   const [webcamOpen,setWebcamOpen]=useState(null);  // null | {cajaIdx}
@@ -3582,6 +3584,97 @@ export default function ENEXSystem(){
     if(idx<3)return"—"; // no consolidado aún
     // Generar número de guía basado en el WR (simula número asignado al consolidar)
     return "GU-"+w.id.slice(8,14);
+  };
+
+  // ── IMPRESIÓN DE GUÍA ARCHIVADA (Recepción en Almacén) ────────────────────
+  // Abre una ventana con un HTML imprimible: header de la guía, contenedores
+  // (con sus WRs) y totales. Pensado para archivo físico al cerrar la recepción.
+  const printGuiaArchivada=(c)=>{
+    if(!c){window.alert("Guía no encontrada.");return;}
+    const fechaImp=new Date().toLocaleString("es-VE",{dateStyle:"medium",timeStyle:"short"});
+    const fmtD=(d)=>d?new Date(d).toLocaleDateString("es-VE",{day:"2-digit",month:"2-digit",year:"numeric"}):"—";
+    const escapeHtml=(s)=>String(s||"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
+    const containers=Array.isArray(c.containers)?c.containers:[];
+    const totalWR=c.totalWR||containers.reduce((s,ct)=>s+(ct.wr?.length||0),0);
+    const totalCajas=c.totalCajas||containers.reduce((s,ct)=>s+(ct.wr||[]).reduce((a,w)=>a+(w.cajas||1),0),0);
+    const totalLb=c.totalLb||containers.reduce((s,ct)=>s+(ct.wr||[]).reduce((a,w)=>a+(w.pesoLb||0),0),0);
+    const totalFt3=c.totalFt3||containers.reduce((s,ct)=>s+(ct.wr||[]).reduce((a,w)=>a+(w.ft3||0),0),0);
+    const contBlocks=containers.map((ct,i)=>{
+      const dimsTxt=[ct.largo,ct.ancho,ct.alto].filter(Boolean).join(" × ");
+      const wrRows=(ct.wr||[]).map((w,wi)=>`
+        <tr>
+          <td style="border:1px solid #999;padding:3px 6px">${wi+1}</td>
+          <td style="border:1px solid #999;padding:3px 6px;font-family:monospace;font-weight:700">${escapeHtml(w.id)}</td>
+          <td style="border:1px solid #999;padding:3px 6px">${escapeHtml(w.consignee||"—")}</td>
+          <td style="border:1px solid #999;padding:3px 6px;text-align:center">${w.cajas||0}</td>
+          <td style="border:1px solid #999;padding:3px 6px;text-align:right;font-family:monospace">${(w.pesoLb||0).toFixed?(w.pesoLb||0).toFixed(1):w.pesoLb||0}lb</td>
+          <td style="border:1px solid #999;padding:3px 6px;font-family:monospace">${w.ft3||"—"}</td>
+          <td style="border:1px solid #999;padding:3px 6px">${escapeHtml(cleanReempaqueDesc(w.descripcion||"")||"—")}</td>
+        </tr>`).join("")||`<tr><td colspan="7" style="border:1px solid #999;padding:8px;text-align:center;color:#999">(sin WR)</td></tr>`;
+      return `
+        <div style="border:2px solid #1A2B4A;border-radius:6px;margin-bottom:10px;overflow:hidden">
+          <div style="background:#1A2B4A;color:#fff;padding:6px 10px;display:flex;justify-content:space-between;align-items:center">
+            <span style="font-weight:700">📦 Contenedor ${i+1}${ct.tipo?` — ${escapeHtml(ct.tipo)}`:""}</span>
+            <span style="font-size:11px;color:#E5AE3A">${dimsTxt?escapeHtml(dimsTxt)+" in":""}${ct.sello?` · Sello: ${escapeHtml(ct.sello)}`:""}${ct.pesoLb?` · ${ct.pesoLb}lb`:""}</span>
+          </div>
+          <table style="width:100%;border-collapse:collapse;font-size:11px">
+            <thead><tr style="background:#F0F4FA">
+              <th style="border:1px solid #999;padding:4px 6px;text-align:left">#</th>
+              <th style="border:1px solid #999;padding:4px 6px;text-align:left">N° WR</th>
+              <th style="border:1px solid #999;padding:4px 6px;text-align:left">Consignatario</th>
+              <th style="border:1px solid #999;padding:4px 6px;text-align:center">Cajas</th>
+              <th style="border:1px solid #999;padding:4px 6px;text-align:right">Peso</th>
+              <th style="border:1px solid #999;padding:4px 6px;text-align:left">Ft³</th>
+              <th style="border:1px solid #999;padding:4px 6px;text-align:left">Descripción</th>
+            </tr></thead>
+            <tbody>${wrRows}</tbody>
+          </table>
+        </div>`;
+    }).join("");
+    const html=`<!doctype html><html><head><title>Guía ${escapeHtml(c.id)} — Recepción Almacén</title>
+<style>
+  body{margin:0;padding:20px;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#111;background:#fff}
+  .hd{border-bottom:3px solid #1A2B4A;padding-bottom:10px;margin-bottom:14px}
+  .hd h1{margin:0;font-size:20px;color:#1A2B4A;letter-spacing:1px}
+  .hd .sub{font-size:11px;color:#666;margin-top:3px}
+  .info{background:#F0F4FA;border:1px solid #C0CDD8;border-radius:6px;padding:10px 14px;margin-bottom:12px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px 14px;font-size:12px}
+  .info b{color:#1A2B4A}
+  .totals{background:#F0F4FA;border:1px solid #1A2B4A;border-radius:6px;padding:10px 14px;margin-top:12px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;font-size:13px;font-weight:700}
+  .totals .lbl{font-size:10px;color:#666;font-weight:600;text-transform:uppercase}
+  .ft{margin-top:18px;font-size:10px;color:#666;text-align:center;border-top:1px dashed #aaa;padding-top:8px}
+  @media print{body{padding:0}}
+</style></head><body>
+  <div class="hd">
+    <h1>${escapeHtml(empresaNombre||"ENEX")} — RECEPCIÓN EN ALMACÉN</h1>
+    <div class="sub">Generado: ${fechaImp}</div>
+  </div>
+  <div class="info">
+    <div><b>Guía:</b> ${escapeHtml(c.id)}</div>
+    <div><b>Destino:</b> ${escapeHtml(c.destino||"—")}</div>
+    <div><b>Tipo de envío:</b> ${escapeHtml(c.tipoEnvio||"—")}</div>
+    <div><b>Fecha creación:</b> ${fmtD(c.fecha)}</div>
+    <div><b>Fecha salida:</b> ${fmtD(c.fechaSalida)}</div>
+    <div><b>Fecha llegada:</b> ${fmtD(c.fechaLlegada)}</div>
+    <div><b>Recibida en almacén:</b> ${fmtD(c.fechaRecibidaAlmacen)}</div>
+    <div><b>N° vuelo / barco:</b> ${escapeHtml(c.numVuelo||"—")}</div>
+    <div><b>Estado:</b> ${escapeHtml(c.status||"Recibida")}</div>
+    <div><b>AWB:</b> ${escapeHtml(c.awb||"—")}</div>
+    <div><b>BL:</b> ${escapeHtml(c.bl||"—")}</div>
+    <div><b>Notas:</b> ${escapeHtml(c.notas||"—")}</div>
+  </div>
+  ${contBlocks||"<div style='text-align:center;padding:20px;color:#888'>Sin contenedores.</div>"}
+  <div class="totals">
+    <div><div class="lbl">Total WR</div>${totalWR}</div>
+    <div><div class="lbl">Total cajas</div>${totalCajas}</div>
+    <div><div class="lbl">Peso total</div>${(totalLb||0).toFixed?totalLb.toFixed(1):totalLb}lb</div>
+    <div><div class="lbl">Ft³ total</div>${(totalFt3||0).toFixed?totalFt3.toFixed(2):totalFt3}</div>
+  </div>
+  <div class="ft">Documento de archivo de recepción — ${escapeHtml(empresaNombre||"ENEX")} International Courier</div>
+  <script>window.addEventListener('load',()=>setTimeout(()=>window.print(),250));</script>
+</body></html>`;
+    const w=window.open("","_blank","width=900,height=1200");
+    if(!w){window.alert("Tu navegador bloqueó la ventana de impresión. Habilita pop-ups para este sitio.");return;}
+    w.document.open();w.document.write(html);w.document.close();
   };
 
   // ── IMPRESIÓN DEL ESTADO DE CUENTA ────────────────────────────────────────
@@ -7443,11 +7536,13 @@ export default function ENEXSystem(){
                 <thead><tr>
                   <th>N° Guía</th><th>Destino</th><th>Tipo</th><th>WR</th><th>Cajas</th>
                   <th>Peso lb</th><th>Ft³</th><th>Fecha creación</th><th>Recibida en almacén</th>
-                  <th style={{width:130}}>Acciones</th>
+                  <th style={{width:240}}>Acciones</th>
                 </tr></thead>
                 <tbody>
                   {archFiltradas.map(c=>(
-                    <tr key={c.id}>
+                    <tr key={c.id} style={{cursor:"pointer"}} onClick={()=>setRdArchView(c)}
+                      onMouseEnter={e=>{Array.from(e.currentTarget.cells).forEach(cell=>cell.style.background="#EEF3FF");}}
+                      onMouseLeave={e=>{Array.from(e.currentTarget.cells).forEach(cell=>cell.style.background="");}}>
                       <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",background:"#EEF3FF",padding:"2px 6px",borderRadius:4,border:"1px solid #B8C8F0",fontSize:13}}>{c.id}</span></td>
                       <td style={{fontWeight:600,color:"var(--t1)"}}>{c.destino}</td>
                       <td><TypeBadge t={c.tipoEnvio}/></td>
@@ -7457,17 +7552,25 @@ export default function ENEXSystem(){
                       <td style={{fontFamily:"'DM Mono',monospace",color:"var(--sky)"}}>{c.totalFt3||0}</td>
                       <td style={{fontFamily:"'DM Mono',monospace",fontSize:12}}>{fmtDate(c.fecha)}</td>
                       <td style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--navy)",fontWeight:600}}>{fmtDate(c.fechaRecibidaAlmacen)}</td>
-                      <td>
-                        {hasPerm("editar_guia")&&(
-                          <button className="btn-s" style={{fontSize:12,padding:"3px 8px"}} title="Desarchivar (volver a pendientes)"
-                            onClick={()=>{
-                              if(!window.confirm(`¿Desarchivar la guía ${c.id}? Volverá a pendientes pero los WR permanecerán en Almacén.`))return;
-                              const upd={...c,archivada:false,fechaRecibidaAlmacen:null};
-                              setConsolList(p=>p.map(x=>x.id===c.id?upd:x));
-                              dbUpsertConsolidacion(upd);
-                              logAction("Desarchivó guía",c.id);
-                            }}>↩️ Desarchivar</button>
-                        )}
+                      <td onClick={e=>e.stopPropagation()}>
+                        <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+                          <button className="btn-s" style={{fontSize:12,padding:"3px 8px"}} title="Ver detalle de la guía"
+                            onClick={()=>setRdArchView(c)}>👁 Ver</button>
+                          {hasPerm("imp_guia")&&(
+                            <button className="btn-s" style={{fontSize:12,padding:"3px 8px"}} title="Imprimir guía archivada"
+                              onClick={()=>printGuiaArchivada(c)}>🖨 Imprimir</button>
+                          )}
+                          {hasPerm("editar_guia")&&(
+                            <button className="btn-s" style={{fontSize:12,padding:"3px 8px",color:"var(--orange)",borderColor:"var(--orange)"}} title="Desarchivar (volver a pendientes)"
+                              onClick={()=>{
+                                if(!window.confirm(`¿Desarchivar la guía ${c.id}? Volverá a pendientes pero los WR permanecerán en Almacén.`))return;
+                                const upd={...c,archivada:false,fechaRecibidaAlmacen:null};
+                                setConsolList(p=>p.map(x=>x.id===c.id?upd:x));
+                                dbUpsertConsolidacion(upd);
+                                logAction("Desarchivó guía",c.id);
+                              }}>↩️</button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -7476,6 +7579,102 @@ export default function ENEXSystem(){
             )}
           </div>
           </>
+          );
+        })()}
+
+        {/* MODAL — VISTA DETALLADA DE GUÍA ARCHIVADA */}
+        {rdArchView&&(()=>{
+          const c=rdArchView;
+          const containers=Array.isArray(c.containers)?c.containers:[];
+          return (
+            <div className="ov" onClick={()=>setRdArchView(null)}>
+              <div className="modal mlg" onClick={e=>e.stopPropagation()} style={{maxHeight:"90vh",display:"flex",flexDirection:"column"}}>
+                <div className="mhd">
+                  <div className="mt">📦 Guía Archivada — {c.id}</div>
+                  <div style={{display:"flex",gap:6}}>
+                    {hasPerm("imp_guia")&&(
+                      <button className="btn-p" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>printGuiaArchivada(c)}>🖨 Imprimir</button>
+                    )}
+                    <button className="mcl" onClick={()=>setRdArchView(null)}>✕</button>
+                  </div>
+                </div>
+                <div style={{padding:"14px 16px",overflowY:"auto",flex:1}}>
+                  {/* Información de la guía */}
+                  <div style={{background:"var(--bg4)",border:"1px solid var(--b1)",borderRadius:8,padding:"12px 14px",marginBottom:14}}>
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"6px 18px",fontSize:13}}>
+                      <div><span style={{color:"var(--t3)",fontWeight:600}}>Destino:</span> <strong style={{color:"var(--t1)"}}>{c.destino||"—"}</strong></div>
+                      <div><span style={{color:"var(--t3)",fontWeight:600}}>Tipo de envío:</span> <TypeBadge t={c.tipoEnvio}/></div>
+                      <div><span style={{color:"var(--t3)",fontWeight:600}}>Estado:</span> <strong style={{color:"var(--green)"}}>{c.status||"Recibida (cerrada)"}</strong></div>
+                      <div><span style={{color:"var(--t3)",fontWeight:600}}>Fecha creación:</span> {fmtDate(c.fecha)}</div>
+                      <div><span style={{color:"var(--t3)",fontWeight:600}}>Fecha salida:</span> {c.fechaSalida?fmtDate(c.fechaSalida):"—"}</div>
+                      <div><span style={{color:"var(--t3)",fontWeight:600}}>Fecha llegada:</span> {c.fechaLlegada?fmtDate(c.fechaLlegada):"—"}</div>
+                      <div style={{gridColumn:"1/-1"}}><span style={{color:"var(--t3)",fontWeight:600}}>Recibida en almacén:</span> <strong style={{color:"var(--navy)"}}>{fmtDate(c.fechaRecibidaAlmacen)} {c.fechaRecibidaAlmacen?fmtTime(c.fechaRecibidaAlmacen):""}</strong></div>
+                      <div><span style={{color:"var(--t3)",fontWeight:600}}>N° vuelo / barco:</span> {c.numVuelo||"—"}</div>
+                      <div><span style={{color:"var(--t3)",fontWeight:600}}>AWB:</span> <span style={{fontFamily:"'DM Mono',monospace"}}>{c.awb||"—"}</span></div>
+                      <div><span style={{color:"var(--t3)",fontWeight:600}}>BL:</span> <span style={{fontFamily:"'DM Mono',monospace"}}>{c.bl||"—"}</span></div>
+                      {c.notas&&<div style={{gridColumn:"1/-1"}}><span style={{color:"var(--t3)",fontWeight:600}}>Notas:</span> {c.notas}</div>}
+                    </div>
+                  </div>
+
+                  {/* Totales */}
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:14}}>
+                    {[
+                      ["Total WR",c.totalWR||0,"var(--navy)"],
+                      ["Total cajas",c.totalCajas||0,"var(--t1)"],
+                      ["Peso total",`${c.totalLb||0}lb`,"var(--t1)"],
+                      ["Ft³ total",String(c.totalFt3||0),"var(--sky)"],
+                    ].map(([l,v,col])=>(
+                      <div key={l} style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:8,padding:"8px 12px"}}>
+                        <div style={{fontSize:11,color:"var(--t3)",fontWeight:600,textTransform:"uppercase",letterSpacing:.6}}>{l}</div>
+                        <div style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:col,fontSize:18}}>{v}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Contenedores con sus WRs */}
+                  {containers.length===0?(
+                    <div style={{textAlign:"center",padding:30,color:"var(--t3)"}}>Esta guía no tiene contenedores registrados.</div>
+                  ):containers.map((ct,i)=>(
+                    <div key={i} style={{border:"2px solid var(--navy)",borderRadius:10,marginBottom:12,overflow:"hidden"}}>
+                      <div style={{background:"var(--navy)",padding:"8px 14px",display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+                        <span style={{color:"#E5AE3A",fontWeight:700,fontSize:14}}>📦 Contenedor {i+1}{ct.tipo?` — ${ct.tipo}`:""}</span>
+                        <div style={{flex:1}}/>
+                        <span style={{fontSize:12,color:"rgba(255,255,255,.7)"}}>
+                          {[ct.largo,ct.ancho,ct.alto].filter(Boolean).join(" × ")}{[ct.largo,ct.ancho,ct.alto].filter(Boolean).length===3?" in":""}
+                          {ct.sello?` · Sello: ${ct.sello}`:""}{ct.pesoLb?` · ${ct.pesoLb}lb`:""}
+                        </span>
+                      </div>
+                      {(ct.wr||[]).length>0?(
+                        <table className="ct" style={{fontSize:12}}>
+                          <thead><tr><th>#</th><th>N° WR</th><th>Consignatario</th><th>Cajas</th><th>Peso</th><th>Ft³</th><th>Descripción</th></tr></thead>
+                          <tbody>
+                            {(ct.wr||[]).map((w,wi)=>(
+                              <tr key={w.id}>
+                                <td style={{color:"var(--t3)"}}>{wi+1}</td>
+                                <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)"}}>{w.id}</span></td>
+                                <td style={{fontWeight:600}}>{w.consignee}</td>
+                                <td style={{textAlign:"center"}}>{w.cajas}</td>
+                                <td style={{fontFamily:"'DM Mono',monospace",fontWeight:600}}>{w.pesoLb}lb</td>
+                                <td style={{fontFamily:"'DM Mono',monospace",color:"var(--sky)"}}>{w.ft3}</td>
+                                <td style={{color:"var(--t2)"}}>{cleanReempaqueDesc(w.descripcion)||"—"}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      ):(
+                        <div style={{padding:14,textAlign:"center",color:"var(--t3)",fontSize:12}}>(contenedor sin WR)</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <div className="mft">
+                  <button className="btn-s" onClick={()=>setRdArchView(null)}>Cerrar</button>
+                  {hasPerm("imp_guia")&&(
+                    <button className="btn-p" onClick={()=>printGuiaArchivada(c)}>🖨 Imprimir guía</button>
+                  )}
+                </div>
+              </div>
+            </div>
           );
         })()}
       </div>
