@@ -902,19 +902,29 @@ const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[
         <div className="c-wr">{w.id}</div>
         <div className="c-route">{w.origCity} → {w.destCity}</div>
       </td>
-      {/* 2. TIPO ENVÍO (confirmación) — después de N° WR */}
+      {/* 2. TIPO ENVÍO (confirmación) — después de N° WR.
+           Solo modificable si status ∈ {1, 2, 3}. Reempacado (2.3), Egresado (25) y
+           Consolidado en adelante (4+) muestran el badge sin permitir cambios. */}
       <td onClick={e=>e.stopPropagation()} style={{minWidth:88,padding:"4px 6px"}}>
-        {w.tipoEnvio
-          ?<div style={{display:"inline-flex",alignItems:"center",gap:4}}>
-              <span style={{display:"inline-flex"}}><TypeBadge t={w.tipoEnvio}/></span>
-              {onAssignTipo&&<span onClick={()=>{if(window.confirm(`¿Quitar tipo de envío del WR ${w.id}?${w.status?.code==="3"?"\n\nTambién se revertirá la confirmación.":""}`))onAssignTipo(w,"");}} title="Quitar tipo de envío" style={{cursor:"pointer",fontSize:13,color:"var(--red)",padding:"0 3px",lineHeight:1,fontWeight:700}}>✕</span>}
-            </div>
-          :(onAssignTipo&&sendTypes.length>0
-            ?<select value="" onChange={e=>{if(e.target.value)onAssignTipo(w,e.target.value);}} title="Confirmar tipo de envío" style={{fontSize:11,padding:"2px 3px",border:"1px dashed var(--navy)",borderRadius:4,background:"var(--bg3)",color:"var(--navy)",fontWeight:600,cursor:"pointer",minWidth:78}}>
-                <option value="">Asignar</option>
-                {sendTypes.map(t=><option key={t} value={t}>{t}</option>)}
-              </select>
-            :<span style={{color:"var(--t3)"}}>—</span>)}
+        {(()=>{
+          const _wrLocked=!["1","2","3"].includes(w.status?.code||"");
+          if(_wrLocked){
+            return w.tipoEnvio
+              ? <span style={{display:"inline-flex"}}><TypeBadge t={w.tipoEnvio}/></span>
+              : <span style={{color:"var(--t4)",fontSize:11}}>—</span>;
+          }
+          return w.tipoEnvio
+            ?<div style={{display:"inline-flex",alignItems:"center",gap:4}}>
+                <span style={{display:"inline-flex"}}><TypeBadge t={w.tipoEnvio}/></span>
+                {onAssignTipo&&<span onClick={()=>{if(window.confirm(`¿Quitar tipo de envío del WR ${w.id}?${w.status?.code==="3"?"\n\nTambién se revertirá la confirmación.":""}`))onAssignTipo(w,"");}} title="Quitar tipo de envío" style={{cursor:"pointer",fontSize:13,color:"var(--red)",padding:"0 3px",lineHeight:1,fontWeight:700}}>✕</span>}
+              </div>
+            :(onAssignTipo&&sendTypes.length>0
+              ?<select value="" onChange={e=>{if(e.target.value)onAssignTipo(w,e.target.value);}} title="Confirmar tipo de envío" style={{fontSize:11,padding:"2px 3px",border:"1px dashed var(--navy)",borderRadius:4,background:"var(--bg3)",color:"var(--navy)",fontWeight:600,cursor:"pointer",minWidth:78}}>
+                  <option value="">Asignar</option>
+                  {sendTypes.map(t=><option key={t} value={t}>{t}</option>)}
+                </select>
+              :<span style={{color:"var(--t3)"}}>—</span>);
+        })()}
       </td>
       {/* 3. ESTADO */}
       <td style={{minWidth:100,padding:"4px 6px"}} title={w.status?.label||""}><StBadge st={w.status}/></td>
@@ -2162,6 +2172,16 @@ export default function ENEXSystem(){
       window.alert(`El WR ${w.id} fue reempacado en ${w.reempacadoEn||"otro WR"} y queda fijo en estado Reempacado. No se puede confirmar ni cambiar su tipo de envío.`);
       return;
     }
+    // WR egresado (25) tampoco se confirma ni cambia tipo
+    if(w.status?.code==="25"){
+      window.alert(`El WR ${w.id} ya fue Egresado. No se puede confirmar ni cambiar su tipo de envío.`);
+      return;
+    }
+    // Consolidado (4) o posterior — el tipo queda fijo
+    if(!wrEsModificable(w)){
+      window.alert(`El WR ${w.id} ya está en estado ${w.status?.label||"?"}. Desde Consolidado en adelante no se puede cambiar el tipo de envío.`);
+      return;
+    }
     // Blanquear tipo: si está Confirmado (3), revertir al estado previo del historial (desconfirma)
     if(!tipo||!String(tipo).trim()){
       if(!hasPerm("desconfirmar")){window.alert("Tu rol no tiene permiso para quitar/revertir el tipo de envío.");return;}
@@ -2977,7 +2997,7 @@ export default function ENEXSystem(){
         <div className="mhd">
           <div className="mt">📋 Warehouse Receipt</div>
           <div style={{display:"flex",gap:6}}>
-            {hasPerm("editar_wr")&&<button className="btn-s" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>{
+            {hasPerm("editar_wr")&&wrEsModificable(selWR)&&<button className="btn-s" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>{
               setEditWR(selWR);
               // Reconstruir cajas desde dims (almacenadas en cm y kg) → convertir a pulg/lb para el form
               const _rawCajas=selWR.dims&&selWR.dims.length>0
@@ -3024,8 +3044,9 @@ export default function ENEXSystem(){
             )}
           </div>
         )}
-        {/* Barra de confirmación por tipo de envío — oculta si el WR está reempacado */}
-        {canEdit&&selWR.status?.code!=="2.3"&&(
+        {/* Barra de confirmación por tipo de envío — solo si el WR es modificable
+            (estados 1, 2 o 3). Reempacado, Egresado y Consolidado+ quedan fijos. */}
+        {canEdit&&wrEsModificable(selWR)&&(
           <div className="no-print" style={{display:"flex",alignItems:"center",gap:10,padding:"8px 14px",background:"var(--bg4)",borderBottom:"1px solid var(--b1)",flexWrap:"wrap"}}>
             <div style={{fontSize:12,fontWeight:700,color:"var(--t3)",textTransform:"uppercase",letterSpacing:.5}}>Tipo de Envío:</div>
             <select className="fs" style={{fontSize:13,padding:"4px 8px",minWidth:180}} value={selWR.tipoEnvio||""}
@@ -3528,7 +3549,7 @@ export default function ENEXSystem(){
         <td style="padding:5px 6px;border-bottom:1px solid #ddd;font-family:monospace">${w.ft3||"—"}</td>
         <td style="padding:5px 6px;border-bottom:1px solid #ddd;font-family:monospace">${w.m3||"—"}</td>
         <td style="padding:5px 6px;border-bottom:1px solid #ddd">${w.tipoEnvio||"—"}</td>
-        <td style="padding:5px 6px;border-bottom:1px solid #ddd;max-width:200px;overflow:hidden">${(w.descripcion||"—").replace(/</g,"&lt;").slice(0,60)}</td>
+        <td style="padding:5px 6px;border-bottom:1px solid #ddd;max-width:200px;overflow:hidden">${(cleanReempaqueDesc(w.descripcion)||"—").replace(/</g,"&lt;").slice(0,60)}</td>
         <td style="padding:5px 6px;border-bottom:1px solid #ddd;font-family:monospace;font-weight:700;text-align:right">$${(w.valor||0).toFixed(2)}</td>
       </tr>`).join("");
     const totalCajas=wrs.reduce((s,w)=>s+(w.cajas||0),0);
@@ -3705,16 +3726,24 @@ export default function ENEXSystem(){
                 {hasPerm("crear_wr")&&<button className="btn-p" style={{fontSize:13,padding:"6px 12px"}} onClick={()=>openWRModalForClient(ecCliente)}>+ Nuevo WR</button>}
                 {hasPerm("crear_reempaque")&&<button className="btn-s" style={{fontSize:13,padding:"6px 12px"}} onClick={()=>setRpqCliModal({cliente:ecCliente,selectedIds:[]})}>🔁 Reempaque</button>}
                 {hasPerm("hacer_egreso")&&(()=>{
-                  // WR del cliente actualmente egresables (status 17 Almacén o 20 Por Entrega)
-                  const elegiblesCli=wrTodos.filter(w=>["17","20"].includes(w.status?.code||""));
+                  // WR egresables de ESTE cliente: solo estados 1, 2 o 3 (Recibido / Origen / Confirmado).
+                  // 2.3 (Reempacado), 4+ (Consolidado en adelante) y 25 (Egresado) quedan fijos.
+                  const elegiblesCli=wrTodos.filter(w=>crElegible(w));
                   const disabled=elegiblesCli.length===0;
                   return (
                     <button className="btn-s" disabled={disabled}
                       style={{fontSize:13,padding:"6px 12px",background:"#FFF5EA",borderColor:"var(--orange)",color:"var(--orange)",fontWeight:700,opacity:disabled?.5:1,cursor:disabled?"not-allowed":"pointer"}}
-                      title={disabled?"Este cliente no tiene WR en estado Almacén/Por Entrega":"Cargo Release individual"}
+                      title={disabled?"Este cliente no tiene WR egresables (solo 1/2/3 — Recibido/Origen/Confirmado)":"Egreso individual de un WR de este cliente"}
                       onClick={()=>{
+                        if(elegiblesCli.length===0)return;
                         if(elegiblesCli.length===1){crOpenIndivPorWR(elegiblesCli[0]);return;}
-                        crOpenNew(elegiblesCli.map(w=>w.id));
+                        // Más de uno: pedir cuál egresar
+                        const opciones=elegiblesCli.map((w,i)=>`${i+1}. ${w.id} — ${w.status?.label||"?"}${w.tipoEnvio?` · ${w.tipoEnvio}`:""}`).join("\n");
+                        const sel=window.prompt(`Este cliente tiene ${elegiblesCli.length} WR egresables.\nEscribe el número del WR a egresar:\n\n${opciones}`,"1");
+                        if(!sel)return;
+                        const idx=parseInt(sel,10)-1;
+                        if(isNaN(idx)||idx<0||idx>=elegiblesCli.length){window.alert("Número inválido.");return;}
+                        crOpenIndivPorWR(elegiblesCli[idx]);
                       }}>🚀 Cargo Release{elegiblesCli.length>0?` (${elegiblesCli.length})`:""}</button>
                   );
                 })()}
@@ -3786,20 +3815,23 @@ export default function ENEXSystem(){
                 {(()=>{
                   // Columnas dinámicas: Origen solo se muestra en el tab Reempacados.
                   const showOrigen = ecFiltro==="reempacados";
-                  // En Reempacados ocultamos Confirmado, Consolidado, Enviado, Alm. Destino, Entregado, N° Guía y Tipo Envío
+                  // En Reempacados ocultamos las fechas intermedias y N° Guía
                   const hideMiddle = showOrigen;
+                  // Tipo Envío va siempre al final, salvo en Reempacados (que queda fijo en 2.3)
+                  const showTipoEnvio = !showOrigen;
                   const baseCols = [
                     "Estado","N° WR",
                     ...(showOrigen?["Origen"]:[]),
                     "Cajas","Peso lb","P.Vol lb","Ft³","M³",
                     "Recibido",
-                    ...(hideMiddle?[]:["Confirmado","Consolidado","Enviado","Alm. Destino","Entregado","N° Guía","Tipo Envío"]),
-                    "Contenido","Valor","Acciones"
+                    ...(hideMiddle?[]:["Confirmado","Consolidado","Enviado","Alm. Destino","Entregado","N° Guía"]),
+                    "Contenido","Valor",
+                    ...(showTipoEnvio?["Tipo Envío"]:[])
                   ];
                   // Totales: columnas de texto que no suman (Estado, N° WR, [Origen])
                   const firstColspan = 2 + (showOrigen?1:0); // TOTALES ocupa Estado+N°WR(+Origen)
                   // Columnas entre M³ y Valor que no suman: Recibido..Contenido
-                  const middleColspan = hideMiddle ? 2 : 9;
+                  const middleColspan = hideMiddle ? 2 : 8;
                 return (
                 <table style={{width:"100%",borderCollapse:"collapse",fontSize:12.5,whiteSpace:"nowrap"}}>
                   <thead>
@@ -3858,32 +3890,31 @@ export default function ENEXSystem(){
                             <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",fontSize:12,color:getStatusDate(w,"almacen_dest")==="—"?"var(--t3)":"var(--t1)"}}>{getStatusDate(w,"almacen_dest")}</td>
                             <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",fontSize:12,color:getStatusDate(w,"entregado")==="—"?"var(--t3)":"var(--green)",fontWeight:getStatusDate(w,"entregado")==="—"?400:700}}>{getStatusDate(w,"entregado")}</td>
                             <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--purple)",fontWeight:600}}>{getNumGuia(w)}</td>
-                            {/* TIPO ENVÍO — mismo patrón que Dashboard (badge + ✕ o select dashed "Asignar") */}
-                            <td onClick={e=>e.stopPropagation()} style={{padding:"7px 8px",minWidth:90}}>
-                              {isReempacado
-                                ?<span style={{color:"var(--t4)",fontSize:11}}>—</span>
-                                :(w.tipoEnvio
-                                  ?<div style={{display:"inline-flex",alignItems:"center",gap:4}}>
-                                      <span style={{display:"inline-flex"}}><TypeBadge t={w.tipoEnvio}/></span>
-                                      {hasPerm("confirmar")&&<span onClick={()=>{if(window.confirm(`¿Quitar tipo de envío del WR ${w.id}?${w.status?.code==="3"?"\n\nTambién se revertirá la confirmación.":""}`))assignTipoEnvio(w,"");}} title="Quitar tipo de envío" style={{cursor:"pointer",fontSize:13,color:"var(--red)",padding:"0 3px",lineHeight:1,fontWeight:700}}>✕</span>}
-                                    </div>
-                                  :(hasPerm("confirmar")
-                                    ?<select value="" onChange={e=>{if(e.target.value)assignTipoEnvio(w,e.target.value);}} title="Confirmar tipo de envío" style={{fontSize:11,padding:"2px 3px",border:"1px dashed var(--navy)",borderRadius:4,background:"var(--bg3)",color:"var(--navy)",fontWeight:600,cursor:"pointer",minWidth:78}}>
-                                        <option value="">Asignar</option>
-                                        {SEND_TYPES.map(t=><option key={t} value={t}>{t}</option>)}
-                                      </select>
-                                    :<span style={{color:"var(--t3)",fontSize:11}}>—</span>))}
-                            </td>
                           </>
                         )}
                         <td style={{padding:"7px 8px",maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",color:"var(--t2)"}}>{cleanReempaqueDesc(w.descripcion)||"—"}</td>
                         <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--green)"}}>${w.valor?.toFixed(2)||"0.00"}</td>
-                        {/* ACCIONES — abre detalle (las acciones de tipo envío y egresar viven en otras zonas) */}
-                        <td style={{padding:"7px 8px"}}>
-                          <button type="button" onClick={()=>setSelWR(w)}
-                            style={{fontSize:11,padding:"3px 8px",border:"1px solid var(--navy)",borderRadius:4,background:"var(--bg3)",color:"var(--navy)",fontWeight:600,cursor:"pointer"}}
-                            title="Ver detalle del WR">👁 Ver</button>
-                        </td>
+                        {/* TIPO ENVÍO — al final de la fila (mismo patrón que Dashboard).
+                            Bloqueado para Reempacado (2.3), Egresado (25) y Consolidado en adelante (4+). */}
+                        {showTipoEnvio && (
+                          <td onClick={e=>e.stopPropagation()} style={{padding:"7px 8px",minWidth:90}}>
+                            {!wrEsModificable(w)
+                              ?(w.tipoEnvio
+                                  ?<span style={{display:"inline-flex"}}><TypeBadge t={w.tipoEnvio}/></span>
+                                  :<span style={{color:"var(--t4)",fontSize:11}}>—</span>)
+                              :(w.tipoEnvio
+                                ?<div style={{display:"inline-flex",alignItems:"center",gap:4}}>
+                                    <span style={{display:"inline-flex"}}><TypeBadge t={w.tipoEnvio}/></span>
+                                    {hasPerm("confirmar")&&<span onClick={()=>{if(window.confirm(`¿Quitar tipo de envío del WR ${w.id}?${w.status?.code==="3"?"\n\nTambién se revertirá la confirmación.":""}`))assignTipoEnvio(w,"");}} title="Quitar tipo de envío" style={{cursor:"pointer",fontSize:13,color:"var(--red)",padding:"0 3px",lineHeight:1,fontWeight:700}}>✕</span>}
+                                  </div>
+                                :(hasPerm("confirmar")
+                                  ?<select value="" onChange={e=>{if(e.target.value)assignTipoEnvio(w,e.target.value);}} title="Confirmar tipo de envío" style={{fontSize:11,padding:"2px 3px",border:"1px dashed var(--navy)",borderRadius:4,background:"var(--bg3)",color:"var(--navy)",fontWeight:600,cursor:"pointer",minWidth:78}}>
+                                      <option value="">Asignar</option>
+                                      {SEND_TYPES.map(t=><option key={t} value={t}>{t}</option>)}
+                                    </select>
+                                  :<span style={{color:"var(--t3)",fontSize:11}}>—</span>))}
+                          </td>
+                        )}
                       </tr>
                       );
                     })}
@@ -3899,7 +3930,7 @@ export default function ENEXSystem(){
                         <td style={{padding:"8px",fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--teal)"}}>{totalM3C}</td>
                         <td colSpan={middleColspan}/>
                         <td style={{padding:"8px",fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--green)"}}>${totalValorC}</td>
-                        <td/>
+                        {showTipoEnvio&&<td/>}
                       </tr>
                     </tfoot>
                   )}
@@ -6316,6 +6347,10 @@ export default function ENEXSystem(){
   // Cualquier estado superior (4+) o el propio 2.3 (ya reempacado) queda bloqueado.
   const REEMPAQUE_ALLOWED_CODES=["1","2","3"];
   const puedeReempacarse=(w)=>REEMPAQUE_ALLOWED_CODES.includes(w?.status?.code||"1");
+  // Reglas de bloqueo del WR — Reempacado (2.3), Egresado (25) y todo lo que esté
+  // en Consolidado (4) o posterior queda FIJO: no se edita, no se confirma tipo,
+  // no se reempaqueta y no se egresa. Solo es modificable cuando el código es 1, 2 o 3.
+  const wrEsModificable=(w)=>["1","2","3"].includes(w?.status?.code||"");
   const openWRModalAsReempaque=(parentIds,clientePrefill)=>{
     if(!hasPerm("crear_reempaque")){window.alert("Tu rol no tiene permiso para crear reempaques.");return;}
     if(!parentIds||parentIds.length===0){window.alert("Selecciona al menos un WR para reempacar.");return;}
@@ -6697,12 +6732,10 @@ export default function ENEXSystem(){
   };
   // ── CARGO RELEASE (Egreso) ──────────────────────────────────────────────────
   // Un Cargo Release agrupa 1+ WRs entregados a un agente/transportista.
-  // Al crear: todos los WRs pasan a estado 25 Egresado. Elegible solo desde 20 Por Entrega
-  // (lo habitual) o 17 Almacén (egreso directo sin pasar por Por Entrega).
-  // Cargo Release: ahora se egresa desde origen — sólo WR previos a Consolidación
-  // Estados elegibles: 1 (Procesado), 2 (Pendiente Confirmar), 2.3 (Reempacado/observación), 3 (Confirmado)
-  // Cualquier WR ya consolidado (4) o en fases siguientes NO se puede egresar desde aquí.
-  const crElegible=(w)=>["1","2","2.3","3"].includes(w.status?.code||"");
+  // Al crear: todos los WRs pasan a estado 25 Egresado. Sólo se puede egresar desde Origen,
+  // antes de Consolidación. Estados elegibles: 1 (Recibido), 2 (Origen), 3 (Confirmado).
+  // No elegibles: 2.3 (Reempacado), 4+ (Consolidado en adelante), 25 (ya Egresado).
+  const crElegible=(w)=>["1","2","3"].includes(w.status?.code||"");
   const crBuildId=()=>{
     const d=new Date();
     const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,"0"), dd=String(d.getDate()).padStart(2,"0");
@@ -6788,7 +6821,7 @@ export default function ENEXSystem(){
   // muestra un recibo imprimible.
   const crOpenIndivPorWR=(w)=>{
     if(!hasPerm("hacer_egreso")){window.alert("Tu rol no tiene permiso para registrar egresos.");return;}
-    if(!crElegible(w)){window.alert(`El WR ${w.id} está en estado ${w.status?.label||"?"}. Solo se puede egresar desde Almacén (17) o Por Entrega (20).`);return;}
+    if(!crElegible(w)){window.alert(`El WR ${w.id} está en estado ${w.status?.label||"?"}. Solo se puede egresar desde Origen (Recibido / Origen / Confirmado). Reempacados, Consolidados y Egresados quedan fijos.`);return;}
     setCrIndivModal({wr:w,nombre:"",id:"",empresa:"",notas:""});
   };
   const crSubmitIndiv=()=>{
