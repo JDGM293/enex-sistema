@@ -466,6 +466,8 @@ const ALL_PERMS=[
   "ver_tracking","rastrear","ver_prealerta","pre_tracking","pre_factura",
   // Status
   "status_origen","status_destino",
+  // Override de estado (escape hatch para Admin/Gerencia — corrige errores sin pasar por módulos)
+  "override_estado",
   // Chat
   "chat_admin","chat_gerencia","chat_auxiliar","chat_operaciones","chat_agente","chat_cliente",
   // Pick-up
@@ -506,6 +508,7 @@ const PERM_LBL={
   ver_estado_cuenta:"Ver Estado Cuenta",ver_estado_cliente:"EC Cliente",ver_estado_agente:"EC Agente",ver_estado_oficina:"EC Oficina",
   ver_tracking:"Ver Tracking",rastrear:"Rastrear",ver_prealerta:"Ver Pre-alerta",pre_tracking:"Pre-alerta Tracking",pre_factura:"Pre-alerta Factura",
   status_origen:"Status Origen",status_destino:"Status Destino",
+  override_estado:"Forzar Estado WR (override)",
   chat_admin:"Chat Admin",chat_gerencia:"Chat Gerencia",chat_auxiliar:"Chat Auxiliar",chat_operaciones:"Chat Operaciones",chat_agente:"Chat Agente",chat_cliente:"Chat Cliente",
   ver_pickup:"Ver Pick-up",solicitar_pickup:"Solicitar Pick-up",
   ver_servicios:"Ver Servicios",crear_servicio:"Crear Servicio",editar_servicio:"Editar Servicio",borrar_servicio:"Borrar Servicio",sel_servicio:"Seleccionar Servicio",
@@ -531,7 +534,7 @@ const PERM_GROUPS=[
   {label:"Servicios & Tarifas",perms:["ver_servicios","crear_servicio","editar_servicio","borrar_servicio","sel_servicio","ver_adicionales","crear_adicional","editar_adicional","borrar_adicional","sel_adicional","calculadora","ver_tarifas","crear_tarifa","editar_tarifa","borrar_tarifa"]},
   {label:"Chat & Pick-up",perms:["chat_admin","chat_gerencia","chat_auxiliar","chat_operaciones","chat_agente","chat_cliente","ver_pickup","solicitar_pickup"]},
   {label:"Contabilidad",perms:["facturar","ver_factura","registrar_cobro","ver_cuentas_cobrar","imp_factura","crear_factura","editar_factura","anular_factura","borrar_factura","registrar_pago","cobrar","anular_pago","nota_credito"]},
-  {label:"Administración",perms:["configuracion","gestionar_roles","registro_actividad","envio_masivo","ver_bd_clientes","ver_bd_usuarios","paquetes_sin_reclamo","ver_fotos","subir_foto","borrar_foto","todas_sucursales"]},
+  {label:"Administración",perms:["configuracion","gestionar_roles","registro_actividad","envio_masivo","ver_bd_clientes","ver_bd_usuarios","paquetes_sin_reclamo","ver_fotos","subir_foto","borrar_foto","todas_sucursales","override_estado"]},
 ];
 
 // ─── ROLE DEFINITIONS ────────────────────────────────────────────────────────
@@ -3234,78 +3237,40 @@ export default function ENEXSystem(){
           </div>
           {canStatus&&selWR.status?.code!=="2.3"&&(
             <div style={{marginBottom:12}}>
-              <div className="sdiv">ACTUALIZAR ESTADO</div>
-              {/* Grupos de estados manuales para WR individuales.
-                  Criterio: filtramos por `s.manual` excepto Excepciones (18/18.1/19
-                  tienen flujos especiales propios) y mantenemos el botón Entregado (21)
-                  transitoriamente hasta que Lote 5 (Notas de Entrega) lo reemplace. */}
-              {[
-                {label:"📍 Origen",filter:s=>s.phase==="origen"&&s.manual},
-                {label:"⚠️ Excepciones",filter:s=>s.phase==="excep"},
-                {label:"🚚 Entrega",filter:s=>s.phase==="entrega"&&(s.manual||s.code==="21")},
-              ].map(grp=>{
-                const sts=WR_STATUSES.filter(grp.filter);
-                if(sts.length===0)return null;
-                return(
-                  <div key={grp.label} style={{marginBottom:8}}>
-                    <div style={{fontSize:11,fontWeight:700,color:"var(--t3)",marginBottom:4,textTransform:"uppercase",letterSpacing:.5}}>{grp.label}</div>
-                    <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-                      {sts.map(s=>(
-                        <button key={s.code}
-                          className={`btn-${selWR.status?.code===s.code?"p":"s"}`}
-                          style={{fontSize:11,padding:"3px 8px"}}
-                          onClick={()=>{
-                            // Flujo especial: Entregado → preguntar cobro
-                            if(s.code==="21"){
-                              const cobrado=window.confirm("¿Se cobró al momento de la entrega?\n✅ Aceptar = Cobrado (23)\n❌ Cancelar = Por Cobrar (22)");
-                              const finalSt=WR_STATUSES.find(x=>x.code===(cobrado?"23":"22"));
-                              const upd={...selWR,status:finalSt,historial:[...(selWR.historial||[]),{code:finalSt.code,label:finalSt.label,fecha:new Date(),user:currentUser.id}]};
-                              setSelWR(upd);setWrList(p=>p.map(w=>w.id===upd.id?upd:w));dbUpsertWR(upd);
-                              logAction(cobrado?"Cobrado":"Por Cobrar",upd.id);
-                              return;
-                            }
-                            // Flujo especial: Faltante → preguntar si se quedó en origen
-                            if(s.code==="18"){
-                              const enOrigen=window.confirm("¿El paquete se quedó en Origen?\n✅ Aceptar = Vuelve a Consolidado (4) para próxima guía\n❌ Cancelar = Pasa a Investigación (18.1)");
-                              const finalSt=WR_STATUSES.find(x=>x.code===(enOrigen?"4":"18.1"));
-                              const nota=enOrigen?"Faltante — quedó en origen, reasignar a próxima guía":"Faltante — en investigación";
-                              const upd={...selWR,status:finalSt,historial:[...(selWR.historial||[]),{code:finalSt.code,label:finalSt.label,fecha:new Date(),user:currentUser.id,nota}]};
-                              setSelWR(upd);setWrList(p=>p.map(w=>w.id===upd.id?upd:w));dbUpsertWR(upd);
-                              logAction(finalSt.label,upd.id);
-                              return;
-                            }
-                            // Flujo especial: Investigación → agregar nota de resultado
-                            if(s.code==="18.1"){
-                              const nota=window.prompt("Resultado de la investigación (requerido):");
-                              if(!nota)return;
-                              const upd={...selWR,status:s,historial:[...(selWR.historial||[]),{code:s.code,label:s.label,fecha:new Date(),user:currentUser.id,nota}]};
-                              setSelWR(upd);setWrList(p=>p.map(w=>w.id===upd.id?upd:w));dbUpsertWR(upd);
-                              logAction("Investigación",`${upd.id} — ${nota}`);
-                              return;
-                            }
-                            // Flujo especial: Sobrante → resolver
-                            if(s.code==="19"){
-                              const aceptar=window.confirm("¿Cómo se resuelve el Sobrante?\n✅ Aceptar = Aceptación manual → pasa a Almacén (17)\n❌ Cancelar = Asignar a próxima guía (queda en Sobrante)");
-                              const finalSt=WR_STATUSES.find(x=>x.code===(aceptar?"17":"19"));
-                              const nota=aceptar?"Sobrante — aceptación manual, pasa a Almacén":"Sobrante — pendiente asignación a próxima guía";
-                              const upd={...selWR,status:finalSt,historial:[...(selWR.historial||[]),{code:finalSt.code,label:finalSt.label,fecha:new Date(),user:currentUser.id,nota}]};
-                              setSelWR(upd);setWrList(p=>p.map(w=>w.id===upd.id?upd:w));dbUpsertWR(upd);
-                              logAction(finalSt.label,upd.id);
-                              return;
-                            }
-                            // Estado normal
-                            const upd={...selWR,status:s,historial:[...(selWR.historial||[]),{code:s.code,label:s.label,fecha:new Date(),user:currentUser.id}]};
-                            setSelWR(upd);setWrList(p=>p.map(w=>w.id===upd.id?upd:w));dbUpsertWR(upd);
-                            logAction(`Estado → ${s.label}`,upd.id);
-                          }}>
-                          {s.code} {s.label}
-                        </button>
-                      ))}
-                    </div>
+              <div className="sdiv">CAMBIOS DE ESTADO — ¿DÓNDE SE HACE CADA UNO?</div>
+              {/* Cada cambio de estado vive en un módulo dedicado. El WR Modal es
+                  read-only para estado, salvo el botón de override (Admin/Gerencia). */}
+              <div style={{background:"var(--bg4)",border:"1px solid var(--b1)",borderRadius:8,padding:"10px 14px",fontSize:12,color:"var(--t2)",lineHeight:1.55}}>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"6px 18px"}}>
+                  <div><span style={{fontWeight:700,color:"var(--navy)"}}>📍 Origen (1→3):</span> Recepción en Puerta + Nuevo WR + Confirmación (Dashboard / EC)</div>
+                  <div><span style={{fontWeight:700,color:"var(--navy)"}}>📦 Consolidación (4):</span> módulo Consolidación</div>
+                  <div><span style={{fontWeight:700,color:"var(--navy)"}}>🛫 Tránsito (5→13):</span> guía consolidada (cascada automática)</div>
+                  <div><span style={{fontWeight:700,color:"var(--navy)"}}>📥 Recepción Almacén (14→17):</span> módulo Recepción en Almacén</div>
+                  <div><span style={{fontWeight:700,color:"#C62828"}}>⚠️ Faltante / Investigación (18 / 18.1):</span> Recepción en Almacén → checklist → ❌ Faltante</div>
+                  <div><span style={{fontWeight:700,color:"#7B1FA2"}}>➕ Sobrante (19):</span> Recepción en Almacén → auto-detect al escanear + panel "Sobrantes"</div>
+                  <div><span style={{fontWeight:700,color:"#1565C0"}}>📝 Por Entrega / Entregado (20 / 21):</span> Notas de Entrega (Impresión → entregas)</div>
+                  <div><span style={{fontWeight:700,color:"var(--orange)"}}>💰 Por Cobrar / Cobrado (22 / 23):</span> Facturación (auto al emitir / pagar factura)</div>
+                  <div style={{gridColumn:"1/-1"}}><span style={{fontWeight:700,color:"#2E7D32"}}>🚀 Egresado (25):</span> Cargo Release (módulo grupal o botón individual desde Estado de Cuenta)</div>
+                </div>
+                {hasPerm("override_estado")&&(
+                  <div style={{marginTop:10,paddingTop:10,borderTop:"1px dashed var(--b1)",display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+                    <span style={{fontSize:12,color:"var(--t3)",fontWeight:600}}>🛠 Override (corregir error sin reabrir el módulo):</span>
+                    <button className="btn-s" style={{fontSize:12,padding:"3px 10px",borderColor:"var(--orange)",color:"var(--orange)",fontWeight:700}}
+                      onClick={()=>{
+                        const opciones=WR_STATUSES.map(s=>`${s.code} ${s.label}`).join("\n");
+                        const elegido=window.prompt(`⚠️ FORZAR estado (override) del WR ${selWR.id}.\nUso solo para corregir errores. Quedará registrado en el historial.\n\nEscribe el código del estado destino:\n\n${opciones}`,selWR.status?.code||"");
+                        if(!elegido)return;
+                        const stTarget=WR_STATUSES.find(s=>s.code===String(elegido).trim());
+                        if(!stTarget){window.alert("Código de estado inválido. Revisa la lista y reintenta.");return;}
+                        const motivo=window.prompt(`Motivo del override (obligatorio — quedará en historial):\nWR ${selWR.id}: ${selWR.status?.label||"?"} → ${stTarget.label}`);
+                        if(!motivo||!motivo.trim()){window.alert("El motivo es obligatorio.");return;}
+                        const upd={...selWR,status:stTarget,historial:[...(selWR.historial||[]),{code:stTarget.code,label:stTarget.label,fecha:new Date(),user:currentUser.id,nota:`OVERRIDE por ${currentUser.id||currentUser.email}: ${motivo.trim()}`}]};
+                        setSelWR(upd);setWrList(p=>p.map(w=>w.id===upd.id?upd:w));dbUpsertWR(upd);
+                        logAction(`Override estado → ${stTarget.label}`,`${upd.id} · ${motivo.trim()}`);
+                      }}>🛠 Forzar Estado</button>
                   </div>
-                );
-              })}
-              <div style={{fontSize:11,color:"var(--t3)",marginTop:4}}>Los estados 5→16 (tránsito) se actualizan desde la Guía Consolidada → cascada automática.</div>
+                )}
+              </div>
             </div>
           )}
           <div className="wr-legal">
@@ -6283,6 +6248,11 @@ export default function ENEXSystem(){
 
     return (
       <div className="page-scroll">
+        {/* PANEL DE AYUDA — qué se hace en este módulo */}
+        <div style={{background:"#FEF9E7",border:"1px solid #F0C040",borderRadius:8,padding:"8px 14px",marginBottom:14,fontSize:12,color:"#7A5C00",lineHeight:1.5}}>
+          <strong style={{color:"#8B6914"}}>📍 Este módulo maneja:</strong> Facturación, pagos, notas de crédito y <strong>💰 Por Cobrar (22) / Cobrado (23)</strong> — los WR pasan automáticamente a estos estados al emitir la factura y registrar el pago. Para entregar el WR físicamente usá <b>Notas de Entrega</b>.
+        </div>
+
         {/* Mini stats */}
         <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:16}}>
           {[
@@ -7260,6 +7230,11 @@ export default function ENEXSystem(){
           </div>
         </div>
 
+        {/* PANEL DE AYUDA — qué se hace en este módulo */}
+        <div style={{background:"#EEF7F0",border:"1px solid #B8DCC0",borderRadius:8,padding:"8px 14px",marginBottom:10,fontSize:12,color:"#1A6040",lineHeight:1.5}}>
+          <strong style={{color:"#1A8A4A"}}>📍 Este módulo maneja:</strong> Recepción de guía en Almacén Destino (estados 14→17), <strong style={{color:"#C62828"}}>⚠️ Faltante (18) e Investigación (18.1)</strong> y <strong style={{color:"#7B1FA2"}}>➕ Sobrante (19)</strong>. Para Entregado y Egresado usá los módulos respectivos.
+        </div>
+
         {rdTab==="pendientes"&&<>
           {/* SCAN / MANUAL */}
           <div className="card" style={{marginBottom:14}}>
@@ -7729,6 +7704,11 @@ export default function ENEXSystem(){
           </div>
         </div>
 
+        {/* PANEL DE AYUDA — qué se hace en este módulo */}
+        <div style={{background:"#FFF5EA",border:"1px solid #F0B880",borderRadius:8,padding:"8px 14px",marginBottom:10,fontSize:12,color:"#8B4000",lineHeight:1.5}}>
+          <strong style={{color:"#C05800"}}>📍 Este módulo maneja:</strong> <strong>🚀 Egresado (25)</strong> — egreso de WR desde Origen antes de consolidación. También se puede egresar individualmente desde Estado de Cuenta. Para Faltante/Sobrante usá Recepción en Almacén; para Entregado, Notas de Entrega.
+        </div>
+
         {/* CANDIDATOS — multi-selección estilo Reempaque */}
         <div className="card" style={{marginBottom:14}}>
           <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",marginBottom:10}}>
@@ -7856,6 +7836,11 @@ export default function ENEXSystem(){
             <span style={{background:"#FFF3E0",color:"#E65100",padding:"4px 10px",borderRadius:10,fontWeight:700,border:"1px solid #FFCC80"}}>✕ {anuladas.length} anuladas</span>
           </div>
           {hasPerm("entregar")&&<button className="btn-p" onClick={()=>dnOpenNew()}>➕ Nueva Entrega</button>}
+        </div>
+
+        {/* PANEL DE AYUDA — qué se hace en este módulo */}
+        <div style={{background:"#E8F0FE",border:"1px solid #90B8F0",borderRadius:8,padding:"8px 14px",marginBottom:10,fontSize:12,color:"#1A6090",lineHeight:1.5}}>
+          <strong style={{color:"#1865C0"}}>📍 Este módulo maneja:</strong> <strong>📝 Por Entrega (20) → Entregado (21)</strong> — entrega física firmada al cliente final. Una vez entregado, el cobro se gestiona desde <b>Facturación</b> (Por Cobrar 22 / Cobrado 23). Para egresar antes de la entrega usá <b>Cargo Release</b>.
         </div>
 
         <div className="card" style={{marginBottom:10}}>
