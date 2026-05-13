@@ -8126,10 +8126,16 @@ export default function ENEXSystem(){
     {label:"Operación",items:[
       {id:"scan",ic:"📡",l:"Recepción en Puerta",badge:scanLog.filter(s=>!s.registered).length>0?String(scanLog.filter(s=>!s.registered).length):null,red:true},
       {id:"wr",ic:"📦",l:"Warehouse Receipt",badge:String(filteredWR.length)},
-      {id:"reempaque",ic:"🔁",l:"Reempaque"},
       {id:"consolidation",ic:"🗂️",l:"Consolidación"},
       {id:"recepciondest",ic:"📬",l:"Recepción en Almacén"},
+      {id:"reempaque",ic:"🔁",l:"Reempaque"},
       {id:"cargorelease",ic:"🚀",l:"Cargo Release"},
+    ]},
+    {label:"Administración",items:[
+      {id:"entregasydespachos",ic:"📝",l:"Entregas y Despachos"},
+      {id:"facturacion",ic:"🧾",l:"Facturación",onClick:()=>{setTab("contabilidad");setContabTab("facturas");},activeWhen:()=>tab==="contabilidad"&&contabTab==="facturas"},
+      {id:"contabilidad",ic:"💰",l:"Contabilidad"},
+      {id:"alerts",ic:"🔔",l:"Alertas"},
     ]},
     {label:"Gestión",items:[
       {id:"clients",ic:"👥",l:"Clientes & Usuarios"},
@@ -8145,19 +8151,14 @@ export default function ENEXSystem(){
       {id:"docs",ic:"📋",l:"Documentos"},
       {id:"reports",ic:"📈",l:"Reportes"},
     ]},
-    {label:"Administración",items:[
-      {id:"facturacion",ic:"🧾",l:"Facturación",onClick:()=>{setTab("contabilidad");setContabTab("facturas");},activeWhen:()=>tab==="contabilidad"&&contabTab==="facturas"},
-      {id:"contabilidad",ic:"💰",l:"Contabilidad"},
-    ]},
     {label:"Sistema",items:[
-      {id:"alerts",ic:"🔔",l:"Alertas"},
-      {id:"roles",ic:"🔐",l:"Roles & Permisos"},
-      {id:"actividad",ic:"📋",l:"Registro de Actividad",onClick:()=>goSettingsTab("actividad"),activeWhen:()=>tab==="settings"&&cfgTab==="actividad"},
       ...(canAdmin?[{id:"settings",ic:"⚙️",l:"Configuración"}]:[]),
+      {id:"roles",ic:"🔐",l:"Roles & Permisos"},
+      {id:"actividad",ic:"📋",l:"Actividad",onClick:()=>goSettingsTab("actividad"),activeWhen:()=>tab==="settings"&&cfgTab==="actividad"},
     ]},
   ];
 
-  const PAGE_TITLES={dashboard:"Dashboard General",wr:"Warehouse Receipts",scan:"Recepción en Puerta",etiquetas:"Imprimir Etiquetas",clients:"Clientes & Usuarios",estadocuenta:"Estado de Cuenta",roles:"Roles & Permisos",consolidation:"Consolidación",tracking:"Tracking",pickup:"Pick-up",contabilidad:"Contabilidad",calculadora:"Calculadora de Envío",chat:"Chat Interno",docs:"Documentos",reports:"Reportes",alerts:"Alertas",settings:"Configuración",reempaque:"Reempaque",recepciondest:"Recepción en Destino",cargorelease:"Cargo Release (Egreso)",entregas:"Notas de Entrega"};
+  const PAGE_TITLES={dashboard:"Dashboard General",wr:"Warehouse Receipts",scan:"Recepción en Puerta",etiquetas:"Imprimir Etiquetas",clients:"Clientes & Usuarios",estadocuenta:"Estado de Cuenta",roles:"Roles & Permisos",consolidation:"Consolidación",tracking:"Tracking",pickup:"Pick-up",contabilidad:"Contabilidad",calculadora:"Calculadora de Envío",chat:"Chat Interno",docs:"Documentos",reports:"Reportes",alerts:"Alertas",settings:"Configuración",reempaque:"Reempaque",recepciondest:"Recepción en Almacén",cargorelease:"Cargo Release (Egreso)",entregas:"Notas de Entrega",entregasydespachos:"Entregas y Despachos",facturacion:"Facturación"};
 
   const renderPage=()=>{
     switch(tab){
@@ -8178,7 +8179,8 @@ export default function ENEXSystem(){
       case "reempaque":    return renderReempaque();
       case "recepciondest":return renderRecepcionDest();
       case "cargorelease": return renderCargoRelease();
-      // case "entregas" — Notas de Entrega ahora vive dentro de Impresión (etqMode="entregas")
+      case "entregasydespachos": return renderDeliveryNotes();
+      // case "entregas" — Notas de Entrega también accesible desde Impresión (etqMode="entregas")
       default:             return <div className="page-scroll"><div className="card" style={{textAlign:"center",padding:60,color:"var(--t3)"}}>{PAGE_TITLES[tab]} — Módulo próximamente</div></div>;
     }
   };
