@@ -3084,10 +3084,70 @@ export default function ENEXSystem(){
             {hasPerm("borrar_wr")&&<button className="btn-s" style={{fontSize:12,padding:"4px 10px",color:"var(--red)",borderColor:"var(--red)"}} onClick={()=>{if(window.confirm(`¿Borrar WR ${selWR.id}? Esta acción no se puede deshacer.`)){setWrList(p=>p.filter(x=>x.id!==selWR.id));dbDeleteWR(selWR.id);logAction("Borró WR",selWR.id);setSelWR(null);}}}>🗑 Borrar</button>}
             {crElegible(selWR)&&hasPerm("hacer_egreso")&&<button className="btn-s" style={{fontSize:12,padding:"4px 10px",background:"#E8F5E9",borderColor:"#81C784",color:"#2E7D32",fontWeight:700}} onClick={()=>{crOpenNew([selWR.id]);setSelWR(null);}} title="Registrar egreso individual de este WR">🚀 Egresar</button>}
             {dnElegible(selWR)&&hasPerm("entregar")&&<button className="btn-s" style={{fontSize:12,padding:"4px 10px",background:"#E3F2FD",borderColor:"#64B5F6",color:"#1565C0",fontWeight:700}} onClick={()=>{dnOpenNew([selWR.id]);setSelWR(null);}} title="Registrar entrega al cliente">📝 Entregar</button>}
+            {/* Facturar — visible si el rol tiene permiso y el WR no tiene factura activa.
+                Para PREPAID factura al remitente; para COD al receptor según clienteTipo. */}
+            {(hasPerm("crear_factura")||hasPerm("facturar"))&&!facturas.some(f=>f.status!=="anulada"&&Array.isArray(f.wrIds)&&f.wrIds.includes(selWR.id))&&(()=>{
+              const esPrepaid=(selWR.tipoPago||"").toLowerCase().includes("prepa");
+              return (
+                <button className="btn-s" style={{fontSize:12,padding:"4px 10px",background:"#FFF9E7",borderColor:"#F0C040",color:"#8B6914",fontWeight:700}}
+                  title={esPrepaid?"Facturar PREPAID al remitente":"Facturar COD al receptor según tipo de cliente"}
+                  onClick={()=>{
+                    const r=facReceptorParaWR(selWR);
+                    const valor=parseFloat(selWR.valor)||0;
+                    const flete=Array.isArray(selWR.cargos)?selWR.cargos.reduce((s,c)=>{const m=parseFloat(c?.monto||c?.precio||0);return s+(isNaN(m)?0:m);},0):0;
+                    const lineas=[
+                      {descripcion:`Flete internacional — WR ${selWR.id}${esPrepaid?" (PREPAID)":" (COD)"}`,cantidad:1,precio:flete||valor||0,total:flete||valor||0},
+                    ];
+                    facOpenNew({
+                      tipo:"factura",moneda:"USD",
+                      receptorTipo:r?.tipo||"cliente",receptorId:r?.id||"",
+                      receptorNombre:r?.snapshot?.nombre||"",receptorDoc:r?.snapshot?.doc||"",
+                      receptorDir:r?.snapshot?.dir||"",receptorTel:r?.snapshot?.tel||"",
+                      receptorEmail:r?.snapshot?.email||"",receptorCasillero:r?.snapshot?.casillero||"",
+                      lineas, wrIds:[selWR.id],
+                      notas:`WR ${selWR.id} · ${selWR.consignee||""} · ${selWR.casillero||""}${esPrepaid?" · PREPAID (remitente: "+(selWR.remitente||selWR.shipper||"—")+")":""}`,
+                    });
+                    setSelWR(null);
+                  }}>💰 Facturar {esPrepaid?"PREPAID":"COD"}</button>
+              );
+            })()}
             <button className="btn-p" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>window.print()}>🖨 Imprimir</button>
             <button className="mcl" onClick={()=>setSelWR(null)}>✕</button>
           </div>
         </div>
+        {/* Panel "Entrega y Facturación" — visibilidad rápida de DN + facturas asociadas al WR */}
+        {(()=>{
+          const dnsRel=deliveryNotes.filter(n=>!n.anulado&&Array.isArray(n.wrIds)&&n.wrIds.includes(selWR.id));
+          const facsRel=facturas.filter(f=>f.status!=="anulada"&&Array.isArray(f.wrIds)&&f.wrIds.includes(selWR.id));
+          if(dnsRel.length===0&&facsRel.length===0)return null;
+          const statusFacLabel={borrador:"📝 Borrador",emitida:"📤 Emitida",pagada_parcial:"💵 Parcial",pagada:"✅ Pagada"};
+          const statusFacColor=(s)=>s==="pagada"?"var(--green)":s==="pagada_parcial"?"var(--orange)":s==="emitida"?"var(--cyan)":"var(--t3)";
+          return (
+            <div className="no-print" style={{padding:"10px 14px",background:"#F5F7FB",borderBottom:"1px solid var(--b1)",display:"flex",gap:18,flexWrap:"wrap",fontSize:13}}>
+              <div style={{display:"flex",alignItems:"center",gap:6}}>
+                <span style={{fontWeight:700,color:"var(--t3)",textTransform:"uppercase",fontSize:11,letterSpacing:.5}}>📝 Entrega:</span>
+                {dnsRel.length===0
+                  ?<span style={{color:"var(--t4)"}}>sin nota</span>
+                  :dnsRel.map(n=>(<span key={n.id} style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",background:"#E8F0FE",padding:"2px 6px",borderRadius:4,border:"1px solid #B8C8F0"}}>{n.id}</span>))}
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:6}}>
+                <span style={{fontWeight:700,color:"var(--t3)",textTransform:"uppercase",fontSize:11,letterSpacing:.5}}>💰 Facturación:</span>
+                {facsRel.length===0
+                  ?<span style={{color:"var(--t4)"}}>sin factura</span>
+                  :facsRel.map(f=>(
+                      <span key={f.id} style={{display:"inline-flex",alignItems:"center",gap:4,fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",background:"#FFF9E7",padding:"2px 6px",borderRadius:4,border:"1px solid #F0C040"}}>
+                        {f.id} <span style={{fontSize:11,color:statusFacColor(f.status),fontWeight:700}}>{statusFacLabel[f.status]||f.status}</span>
+                        <span style={{fontSize:11,color:"var(--t2)"}}>· {f.moneda} {(parseFloat(f.total)||0).toFixed(2)}{(parseFloat(f.saldo)||0)>0?` (saldo ${f.moneda} ${(parseFloat(f.saldo)||0).toFixed(2)})`:""}</span>
+                      </span>
+                    ))}
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:6}}>
+                <span style={{fontWeight:700,color:"var(--t3)",textTransform:"uppercase",fontSize:11,letterSpacing:.5}}>💳 Tipo Pago:</span>
+                <span style={{fontWeight:700,color:(selWR.tipoPago||"").toLowerCase().includes("prepa")?"#1A6090":"var(--orange)"}}>{selWR.tipoPago||"—"}</span>
+              </div>
+            </div>
+          );
+        })()}
         {/* Bloque F — Banner cuando el WR fue REEMPACADO (queda fijo en estado 2.3) */}
         {selWR.status?.code==="2.3"&&(
           <div className="no-print" style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:"#FFF8E1",borderBottom:"2px solid #FFC107",flexWrap:"wrap"}}>
@@ -5972,6 +6032,90 @@ export default function ENEXSystem(){
     return null;
   };
 
+  // ── FACTURACIÓN: helpers de receptor por tipo de pago y sync WR↔factura ─────
+  // Para un WR COD: determina automáticamente a quién facturar según el
+  // clienteTipo del consignatario:
+  //   matriz                                  → al cliente final
+  //   agente / vendedor_agente                 → al agente padre
+  //   oficina / vendedor_oficina               → a la oficina padre
+  //   autonomo                                 → al autónomo padre
+  // Para un WR PREPAID: siempre al remitente (texto libre del WR; el operario puede
+  // editar/ajustar al crear la factura).
+  // Retorna {tipo, id, snapshot} donde snapshot es el dato del lookupReceptor.
+  const facReceptorParaWR=(w)=>{
+    if(!w)return null;
+    const esPrepaid=(w.tipoPago||"").toLowerCase().includes("prepa");
+    if(esPrepaid){
+      return {tipo:"cliente", id:"", snapshot:{
+        nombre:w.remitente||w.shipper||"",doc:"",dir:w.remitenteDir||"",tel:w.remitenteTel||"",email:w.remitenteEmail||"",casillero:"",
+      }};
+    }
+    // COD: mapear según clienteTipo del consignatario
+    const cli=clients.find(c=>c.id===w.clienteId)||clients.find(c=>c.casillero===w.casillero);
+    const ct=cli?.clienteTipo||"matriz";
+    if(ct==="agente"||ct==="vendedor_agente"){
+      const id=cli?.agenteId||"";
+      return {tipo:"agente",id,snapshot:lookupReceptor("agente",id)};
+    }
+    if(ct==="oficina"||ct==="vendedor_oficina"){
+      const id=cli?.oficinaId||"";
+      return {tipo:"oficina",id,snapshot:lookupReceptor("oficina",id)};
+    }
+    if(ct==="autonomo"){
+      const id=cli?.autonomoId||"";
+      return {tipo:"autonomo",id,snapshot:lookupReceptor("autonomo",id)};
+    }
+    // matriz → al cliente mismo
+    const id=cli?.id||"";
+    return {tipo:"cliente",id,snapshot:lookupReceptor("cliente",id)};
+  };
+
+  // Aplica cambios de estado a los WRs vinculados a una factura, según el evento:
+  //   "emitida"       → 21 (Entregado) → 22 (Por Cobrar)
+  //   "pagada"        → 22 o 21 → 23 (Cobrado). PREPAID: 21 también salta a 23
+  //   "pagada_parcial"→ 21 → 22 (al menos arrancó el cobro)
+  //   "anulada"       → revertir 22/23 → 21 (Entregado) si todavía lo estaba; deja sin tocar si avanzó por otro lado
+  //   "pago_anulado"  → si la factura ya no tiene pagado, revertir 23 → 22; si quedó parcial, dejar en 22
+  // Solo toca WRs que estén en estado coherente — no degrada estados que ya avanzaron por otra vía.
+  const syncWRStatusFromFactura=(factura,evento)=>{
+    if(!factura||!Array.isArray(factura.wrIds)||factura.wrIds.length===0)return;
+    const now=new Date();
+    let cambios=0;
+    setWrList(prev=>prev.map(w=>{
+      if(!factura.wrIds.includes(w.id))return w;
+      const c=w.status?.code||"";
+      const esPrepaid=(w.tipoPago||"").toLowerCase().includes("prepa");
+      let nuevoCode=null;
+      let nota="";
+      if(evento==="emitida"){
+        // 21 → 22 (Por Cobrar). PREPAID: si ya está pagada, irá a 23 al disparar "pagada" después.
+        if(c==="21"){nuevoCode="22";nota=`Factura ${factura.id} emitida`;}
+      } else if(evento==="pagada"){
+        // 21, 22 → 23 (Cobrado). PREPAID: 21 también salta directo a 23.
+        if(["21","22"].includes(c)){nuevoCode="23";nota=`Factura ${factura.id} pagada${esPrepaid?" (PREPAID)":""}`;}
+      } else if(evento==="pagada_parcial"){
+        if(c==="21"){nuevoCode="22";nota=`Factura ${factura.id} pago parcial`;}
+      } else if(evento==="anulada"){
+        // Solo revertir si el WR todavía está en 22/23 por esta factura. Mandar a 21 (Entregado).
+        if(["22","23"].includes(c)){nuevoCode="21";nota=`Factura ${factura.id} anulada — WR vuelve a Entregado`;}
+      } else if(evento==="pago_anulado"){
+        // Si la factura quedó con pagado=0 → revertir 23 → 22
+        if(c==="23"&&(parseFloat(factura.pagado)||0)<=0.001){nuevoCode="22";nota=`Pago de ${factura.id} anulado`;}
+      }
+      if(!nuevoCode)return w;
+      const st=getStatus(nuevoCode);
+      if(!st)return w;
+      cambios++;
+      const upd={...w,status:st,historial:[...(w.historial||[]),{code:st.code,label:st.label,fecha:now,user:currentUser.id,nota}]};
+      dbUpsertWR(upd);
+      // Mantener selWR sincronizado si está abierto
+      if(selWR&&selWR.id===upd.id)setSelWR(upd);
+      return upd;
+    }));
+    if(cambios>0)logAction(`Sync WR ← factura (${evento})`,`${factura.id} → ${cambios} WR`);
+    return cambios;
+  };
+
   const emptyLinea=()=>({descripcion:"",cantidad:1,precio:0,total:0});
   const emptyFactura=()=>({
     id:"",numero:0,tipo:"factura",
@@ -6040,6 +6184,8 @@ export default function ENEXSystem(){
       setNextInvoiceNum(n=>{const nn=n+1;dbSetConfig('factura_sec_next',String(nn));return nn;});
     }
     logAction("Emitió factura",`${fact.id} · ${fmtMoney(fact.total,fact.moneda)} · ${fact.receptorNombre}`);
+    // Sync: WRs vinculados que estén en 21 (Entregado) pasan a 22 (Por Cobrar)
+    syncWRStatusFromFactura(fact,"emitida");
     setFacModal(null);
   };
   const facAnular=(f)=>{
@@ -6052,6 +6198,8 @@ export default function ENEXSystem(){
     setFacturas(p=>p.map(x=>x.id===f.id?upd:x));
     dbUpsertFactura(upd);
     logAction("Anuló factura",`${f.id} — ${motivo}`);
+    // Sync: WRs en 22/23 vuelven a 21 (Entregado)
+    syncWRStatusFromFactura(upd,"anulada");
   };
   const facDelete=(f)=>{
     if(!hasPerm("borrar_factura")){window.alert("Tu rol no tiene permiso para borrar facturas.");return;}
@@ -6096,6 +6244,8 @@ export default function ENEXSystem(){
     setFacturas(pr=>pr.map(f=>f.id===fact.id?upd:f));
     dbUpsertFactura(upd);
     logAction("Registró pago",`${pago.id} · ${fmtMoney(monto,pago.moneda)} → ${fact.id}`);
+    // Sync: WRs vinculados pasan a 23 (Cobrado) o 22 (Por Cobrar) según total/parcial
+    syncWRStatusFromFactura(upd,nuevoStatus==="pagada"?"pagada":"pagada_parcial");
     setPagoModal(null);
   };
   const pagoAnular=(pago)=>{
@@ -6115,6 +6265,8 @@ export default function ENEXSystem(){
       const updF={...fact,pagado:nuevoPagado,saldo:nuevoSaldo,status:nuevoStatus};
       setFacturas(pr=>pr.map(f=>f.id===fact.id?updF:f));
       dbUpsertFactura(updF);
+      // Sync: si quedó sin pagos → revertir 23 → 22 (Por Cobrar)
+      syncWRStatusFromFactura(updF,nuevoPagado<=0.001?"pago_anulado":"pagada_parcial");
     }
     logAction("Anuló pago",`${pago.id} — ${motivo}`);
   };
@@ -6159,41 +6311,74 @@ export default function ENEXSystem(){
   };
 
   // ── Generar factura desde una guía consolidada ─────────────────────────────
-  const facFromGuia=(guia)=>{
-    if(!hasPerm("crear_factura")&&!hasPerm("facturar")){window.alert("Tu rol no tiene permiso.");return;}
+  // Genera borradores COD desde una guía, agrupados según el clienteTipo del
+  // consignatario de cada WR:
+  //   matriz                     → 1 factura al cliente final
+  //   agente / vendedor_agente   → 1 factura al agente padre (agrupa todos sus clientes)
+  //   oficina / vendedor_oficina → 1 factura a la oficina padre
+  //   autonomo                   → 1 factura al autónomo padre
+  // Excluye los WR PREPAID (se facturan en origen al remitente) y los que ya tienen
+  // factura activa. Si silent=true no muestra alerts (uso desde recibirGuiaCompleta).
+  // Retorna el número de borradores creados.
+  const facFromGuia=(guia,silent=false)=>{
+    if(!hasPerm("crear_factura")&&!hasPerm("facturar")){
+      if(!silent)window.alert("Tu rol no tiene permiso.");
+      return 0;
+    }
     const allWR=(guia.containers||[]).flatMap(c=>c.wr||[]);
-    if(allWR.length===0){window.alert("La guía no tiene WR.");return;}
-    // Agrupar por cliente (casillero); una factura por cliente
-    const porCliente={};
-    allWR.forEach(w=>{
-      const key=w.clienteId||w.casillero||w.consignee||"sin_cliente";
-      if(!porCliente[key])porCliente[key]={clienteId:w.clienteId||"",casillero:w.casillero||"",consignee:w.consignee||"",wrs:[]};
-      porCliente[key].wrs.push(w);
+    if(allWR.length===0){
+      if(!silent)window.alert("La guía no tiene WR.");
+      return 0;
+    }
+    // Hidratar WRs con el estado real de wrList (los containers pueden tener un snapshot viejo)
+    const wrsHidratados=allWR.map(w=>wrList.find(x=>x.id===w.id)||w);
+    // Filtrar: solo COD (no PREPAID) y sin factura activa
+    const facturados=new Set(facturas.filter(f=>f.status!=="anulada"&&Array.isArray(f.wrIds)).flatMap(f=>f.wrIds));
+    const cods=wrsHidratados.filter(w=>{
+      const esPrepaid=(w.tipoPago||"").toLowerCase().includes("prepa");
+      if(esPrepaid)return false;
+      if(facturados.has(w.id))return false;
+      return true;
     });
-    const prev=facturas.length>0?facturas[0]:null;
+    if(cods.length===0){
+      if(!silent)window.alert("No hay WR COD pendientes de facturar en esta guía. Los PREPAID se facturan aparte; los demás ya tienen factura activa.");
+      return 0;
+    }
+    // Agrupar por receptor según clienteTipo
+    const grupos={};
+    cods.forEach(w=>{
+      const r=facReceptorParaWR(w);
+      if(!r)return;
+      const key=`${r.tipo}::${r.id||w.casillero||w.consignee||"sin_id"}`;
+      if(!grupos[key])grupos[key]={receptor:r,wrs:[]};
+      grupos[key].wrs.push(w);
+    });
     let seq=nextInvoiceNum;
     const nuevas=[];
-    Object.values(porCliente).forEach(grp=>{
-      const cli=grp.clienteId?clients.find(c=>c.id===grp.clienteId):null;
-      const rec=cli?lookupReceptor("cliente",cli.id):null;
-      const fleteTotal=grp.wrs.reduce((s,w)=>s+(parseFloat(w.cargos?.find?.(c=>c.concepto==="Flete"||c.tipo==="flete")?.monto)||0),0);
+    Object.values(grupos).forEach(grp=>{
+      const r=grp.receptor;
+      const fleteTotal=grp.wrs.reduce((s,w)=>{
+        const cargosFlete=Array.isArray(w.cargos)?w.cargos.find(c=>(c.concepto||"").toLowerCase().includes("flete")||c.tipo==="flete"):null;
+        const monto=parseFloat(cargosFlete?.monto||cargosFlete?.precio||0);
+        return s+(isNaN(monto)?0:monto);
+      },0);
+      const valorTotal=grp.wrs.reduce((s,w)=>s+(parseFloat(w.valor)||0),0);
       const lineas=[
-        {descripcion:`Flete internacional — Guía ${guia.id} (${grp.wrs.length} WR)`,cantidad:1,precio:fleteTotal,total:fleteTotal},
+        {descripcion:`Flete internacional COD — Guía ${guia.id} (${grp.wrs.length} WR · receptor: ${r.tipo})`,cantidad:1,precio:fleteTotal||0,total:fleteTotal||0},
       ];
       const fact={
         ...emptyFactura(),
         id:buildFacturaId(seq),numero:seq,
         tipo:"factura",status:"borrador",moneda:"USD",
         fecha:new Date(),fechaEmision:null,
-        receptorTipo:"cliente",receptorId:cli?.id||"",
-        receptorNombre:rec?.nombre||grp.consignee,
-        receptorDoc:rec?.doc||"",receptorDir:rec?.dir||"",
-        receptorTel:rec?.tel||"",receptorEmail:rec?.email||"",
-        receptorCasillero:rec?.casillero||grp.casillero||"",
+        receptorTipo:r.tipo,receptorId:r.id||"",
+        receptorNombre:r.snapshot?.nombre||"",receptorDoc:r.snapshot?.doc||"",
+        receptorDir:r.snapshot?.dir||"",receptorTel:r.snapshot?.tel||"",
+        receptorEmail:r.snapshot?.email||"",receptorCasillero:r.snapshot?.casillero||"",
         lineas,
         wrIds:grp.wrs.map(w=>w.id),
         guiaIds:[guia.id],
-        notas:`Factura auto-generada desde guía ${guia.id}. Revisa líneas antes de emitir.`,
+        notas:`Borrador COD auto-generado desde guía ${guia.id}. WRs: ${grp.wrs.map(w=>w.id).join(", ")}. Valor declarado total: $${valorTotal.toFixed(2)}. Revisa líneas antes de emitir.`,
         usuario:currentUser.id||currentUser.email||"",
       };
       nuevas.push(recalcFactura(fact));
@@ -6203,8 +6388,9 @@ export default function ENEXSystem(){
     nuevas.forEach(f=>dbUpsertFactura(f));
     setNextInvoiceNum(seq);
     dbSetConfig('factura_sec_next',String(seq));
-    logAction("Generó borradores de guía",`${guia.id} → ${nuevas.length} facturas`);
-    window.alert(`✅ ${nuevas.length} borradores creados. Revisa y emite uno por uno desde "Facturas".`);
+    logAction("Generó borradores COD de guía",`${guia.id} → ${nuevas.length} facturas (${cods.length} WR)`);
+    if(!silent)window.alert(`✅ ${nuevas.length} borradores COD creados desde guía ${guia.id}.\n${cods.length} WR agrupados por receptor (cliente/agente/oficina/autónomo).\nRevisa y emite desde "Facturas".`);
+    return nuevas.length;
   };
 
   const renderContabilidad=()=>{
@@ -6309,17 +6495,30 @@ export default function ENEXSystem(){
                 <table className="ct">
                   <thead><tr>
                     <th>N° Factura</th><th>Tipo</th><th>Fecha</th><th>Receptor</th>
+                    <th>WR / Guía</th><th>Nota Entrega</th>
                     <th>Mon</th><th>Total</th><th>Pagado</th><th>Saldo</th><th>Estado</th><th style={{minWidth:160}}>Acciones</th>
                   </tr></thead>
                   <tbody>
                     {facFilt.map(f=>{
                       const negativa=f.tipo==="nota_credito";
+                      // Notas de entrega ligadas (comparten WRs con la factura)
+                      const dnsRel=deliveryNotes.filter(n=>!n.anulado&&Array.isArray(n.wrIds)&&Array.isArray(f.wrIds)&&n.wrIds.some(id=>f.wrIds.includes(id)));
                       return(
                         <tr key={f.id}>
                           <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",fontSize:14}}>{f.id}</span>{f.ncFacturaOrigen&&<div style={{fontSize:11,color:"var(--purple)",fontFamily:"'DM Mono',monospace"}}>← {f.ncFacturaOrigen}</div>}</td>
                           <td><span style={{fontSize:12,padding:"2px 6px",borderRadius:4,background:f.tipo==="nota_credito"?"var(--purple)":(f.tipo==="proforma"?"var(--gold2)":"var(--cyan)"),color:"#fff",fontWeight:700}}>{f.tipo==="nota_credito"?"NC":f.tipo==="proforma"?"PRF":"FAC"}</span></td>
                           <td style={{fontFamily:"'DM Mono',monospace",fontSize:13}}>{fmtDate(f.fecha)}</td>
                           <td style={{fontWeight:600}}>{f.receptorNombre||"—"}<div style={{fontSize:12,color:"var(--gold2)",fontFamily:"'DM Mono',monospace"}}>{f.receptorCasillero||f.receptorDoc||""}</div></td>
+                          <td style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:"var(--t2)"}}>
+                            {(f.wrIds||[]).length>0&&<div><b style={{color:"var(--navy)"}}>{(f.wrIds||[]).length} WR</b>{(f.wrIds||[]).length<=3&&<>: {(f.wrIds||[]).join(", ")}</>}</div>}
+                            {(f.guiaIds||[]).length>0&&<div style={{color:"var(--purple)"}}>Guía: {(f.guiaIds||[]).join(", ")}</div>}
+                            {(f.wrIds||[]).length===0&&(f.guiaIds||[]).length===0&&<span style={{color:"var(--t4)"}}>—</span>}
+                          </td>
+                          <td style={{fontSize:11}}>
+                            {dnsRel.length===0
+                              ?<span style={{color:"var(--t4)"}}>—</span>
+                              :dnsRel.map(n=>(<div key={n.id} style={{fontFamily:"'DM Mono',monospace",color:"var(--navy)",fontWeight:600}}>{n.id}</div>))}
+                          </td>
                           <td style={{textAlign:"center",fontWeight:700,fontSize:13}}>{f.moneda}</td>
                           <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:negativa?"var(--purple)":"var(--navy)"}}>{fmtMoney(f.total,f.moneda)}</td>
                           <td style={{fontFamily:"'DM Mono',monospace",fontWeight:600,color:"var(--green)"}}>{fmtMoney(f.pagado,f.moneda)}</td>
@@ -6902,7 +7101,19 @@ export default function ENEXSystem(){
     dbUpsertConsolidacion(updGuia);
     logAction(`Cerró recepción guía ${guia.id}`,`${recibidos.length} WR → Por Entrega · ${faltantes} faltantes · ${sobrantes} sobrantes`);
     setRdSelGuia("");
-    window.alert(`✅ Guía ${guia.id} cerrada.\n${recibidos.length} WR pasaron a Por Entrega (20).`);
+    // Ofrecer auto-generar facturas COD para esta guía (excluye PREPAID, agrupa por clienteTipo)
+    const wrsCODSinFactura=recibidos.filter(w=>{
+      const esPrepaid=(w.tipoPago||"").toLowerCase().includes("prepa");
+      if(esPrepaid)return false;
+      return !facturas.some(f=>f.status!=="anulada"&&Array.isArray(f.wrIds)&&f.wrIds.includes(w.id));
+    });
+    const ofrecerFacturar=wrsCODSinFactura.length>0&&(hasPerm("crear_factura")||hasPerm("facturar"));
+    const okMsg=`✅ Guía ${guia.id} cerrada.\n${recibidos.length} WR pasaron a Por Entrega (20).`;
+    if(ofrecerFacturar&&window.confirm(`${okMsg}\n\n¿Generar los borradores COD para esta guía?\n${wrsCODSinFactura.length} WR COD agrupados por receptor (cliente / agente / oficina / autónomo).\nLos PREPAID se facturan aparte al remitente.`)){
+      facFromGuia(updGuia,false);
+    } else if(!ofrecerFacturar){
+      window.alert(okMsg);
+    }
   };
   // Marca como recibidos (17 Almacén) todos los WR de una guía, en un paso.
   // NO archiva la guía — la archivación requiere `cerrarRecepcionGuia` (paso 2).
@@ -7855,10 +8066,14 @@ export default function ENEXSystem(){
             <table className="ct">
               <thead><tr>
                 <th>N° Nota</th><th>Fecha</th><th>Consignatario</th><th>Receptor</th><th>Método</th>
-                <th style={{textAlign:"center"}}>WR</th><th>Usuario</th><th>Estado</th><th style={{width:200}}>Acciones</th>
+                <th style={{textAlign:"center"}}>WR</th><th>Factura</th><th>Usuario</th><th>Estado</th><th style={{width:200}}>Acciones</th>
               </tr></thead>
               <tbody>
-                {lista.map(n=>(
+                {lista.map(n=>{
+                  // Facturas asociadas (no anuladas) que comparten algún WR con esta nota
+                  const facsRel=facturas.filter(f=>f.status!=="anulada"&&Array.isArray(f.wrIds)&&(n.wrIds||[]).some(id=>f.wrIds.includes(id)));
+                  const statusBadge={borrador:"📝 Borrador",emitida:"📤 Emitida",pagada_parcial:"💵 Parcial",pagada:"✅ Pagada"};
+                  return (
                   <tr key={n.id} style={{background:n.anulado?"#FFF5F5":""}}>
                     <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",background:"#EEF3FF",padding:"2px 6px",borderRadius:4,border:"1px solid #B8C8F0",fontSize:13}}>{n.id}</span></td>
                     <td style={{fontFamily:"'DM Mono',monospace",fontSize:12}}>{fmtDate(n.fecha)} {fmtTime(n.fecha)}</td>
@@ -7866,6 +8081,15 @@ export default function ENEXSystem(){
                     <td style={{fontSize:13,color:"var(--t2)"}}>{n.receptorNombre||"—"}{n.receptorDocumento?` · ${n.receptorDocumento}`:""}</td>
                     <td style={{fontSize:12,color:"var(--t2)"}}>{metodoLabel[n.metodoEntrega]||"—"}</td>
                     <td style={{textAlign:"center",fontWeight:700,color:"var(--navy)"}}>{(n.wrIds||[]).length}</td>
+                    <td style={{fontSize:12}}>
+                      {facsRel.length===0
+                        ?<span style={{color:"var(--t4)"}}>—</span>
+                        :facsRel.map(f=>(
+                            <div key={f.id} style={{fontFamily:"'DM Mono',monospace",color:"var(--navy)",fontWeight:600}}>
+                              {f.id} <span style={{fontSize:11,color:f.status==="pagada"?"var(--green)":f.status==="pagada_parcial"?"var(--orange)":"var(--t3)",fontWeight:700,marginLeft:4}}>{statusBadge[f.status]||f.status}</span>
+                            </div>
+                          ))}
+                    </td>
                     <td style={{fontSize:13,color:"var(--t3)"}}>{n.usuario||"—"}</td>
                     <td>{n.anulado
                       ?<span style={{fontSize:12,fontWeight:700,color:"#C62828"}}>✕ Anulada</span>
@@ -7881,7 +8105,7 @@ export default function ENEXSystem(){
                       </div>
                     </td>
                   </tr>
-                ))}
+                );})}
               </tbody>
             </table>
           )}
