@@ -6786,31 +6786,111 @@ export default function ENEXSystem(){
   const wrPuedeConsolidarse=(w)=>w?.status?.code==="3";
 
   // ── TIMELINE DE HITOS DEL WR ─────────────────────────────────────────────────
-  // Devuelve la línea de tiempo de hitos importantes del WR: fechas, usuarios y
-  // notas. Se alimenta de w.fecha (creación) y de w.historial (cada cambio de
-  // estado se persiste con {code,label,fecha,user,nota}). Si un hito todavía no
-  // ocurrió, `reached:false`. Útil tanto para el WR Modal como para el modal
-  // rápido (📅) en las filas de Dashboard / WR / EC.
+  // Construye la línea de tiempo según el camino del WR:
+  //   • Reempacado (2.3) → terminal en Reempacado (muestra reempacadoEn)
+  //   • Egresado (25)    → terminal en Despachado
+  //   • Normal           → flujo completo (Registrado → Confirmado → Consolidado → Recibido
+  //                        → Por Entrega → Entregado → Cobrado)
+  // Confirmado se marca como alcanzado solo si tipoEnvio está seteado AHORA (no por historia).
+  // Consolidado hace fallback a consolList si no hay entrada "4" en historial.
+  // Cobrado hace fallback a facturas pagadas si no hay entrada "23" en historial.
   const getWRTimeline=(w)=>{
     if(!w)return [];
     const hist=Array.isArray(w.historial)?w.historial:[];
-    const findFirst=(codes)=>hist.find(h=>codes.includes(h.code));
-    const HITOS=[
-      {key:"registrado", label:"Registrado",          ic:"📦", color:"var(--navy)",  source:"creacion", codes:[]},
-      {key:"confirmado", label:"Confirmado",          ic:"✅", color:"var(--green)", codes:["3"]},
-      {key:"consolidado",label:"Consolidado",         ic:"🗂️", color:"var(--cyan)",  codes:["4"]},
-      {key:"recibido",   label:"Recibido en Almacén", ic:"📥", color:"var(--purple)",codes:["17"]},
-      {key:"porentrega", label:"Por Entrega",         ic:"🚚", color:"var(--sky)",   codes:["20"]},
-      {key:"entregado",  label:"Entregado / Despachado",ic:"📝",color:"var(--green)",codes:["21","25"]},
-      {key:"cobrado",    label:"Cobrado",             ic:"💰", color:"var(--gold2)", codes:["23"]},
-    ];
-    return HITOS.map(h=>{
-      if(h.source==="creacion"){
-        return {...h, fecha:w.fecha, user:w.usuario||"", nota:`WR creado · ${w.id}`, reached:!!w.fecha};
-      }
-      const entry=findFirst(h.codes);
-      return {...h, fecha:entry?.fecha||null, user:entry?.user||"", nota:entry?.nota||(entry?`Estado ${entry.code} ${entry.label}`:""), reached:!!entry, statusCode:entry?.code||""};
+    const findFirst=(codes)=>hist.find(h=>codes.includes(String(h.code)));
+    const code=w.status?.code||"1";
+    const esReempacado=code==="2.3"||!!w.reempacadoEn;
+    const esEgresado=code==="25";
+    const tieneTipo=!!(w.tipoEnvio&&String(w.tipoEnvio).trim());
+    const guiaConsol=consolList.find(c=>{
+      if(Array.isArray(c.wrIds)&&c.wrIds.includes(w.id))return true;
+      // Fallback: containers[].wr[].id
+      return (c.containers||[]).some(ct=>(ct.wr||[]).some(r=>r.id===w.id));
     });
+
+    const hitos=[];
+    // 1) Registrado — siempre
+    hitos.push({
+      key:"registrado", label:"Registrado", ic:"📦", color:"var(--navy)",
+      fecha:w.fecha, user:w.usuario||"", nota:`WR creado · ${w.id}`,
+      extra:w.tipoPago?`💳 ${w.tipoPago}`:null,
+      reached:!!w.fecha,
+    });
+    // 2) Confirmado — solo si tipoEnvio actual está seteado
+    const confEntry=[...hist].reverse().find(h=>String(h.code)==="3");
+    hitos.push({
+      key:"confirmado", label:"Confirmado", ic:"✅", color:"var(--green)",
+      fecha:tieneTipo?(confEntry?.fecha||null):null,
+      user:tieneTipo?(confEntry?.user||""):"",
+      nota:tieneTipo?(confEntry?.nota||""):"",
+      extra:tieneTipo?`✈️ Tipo de envío: ${w.tipoEnvio}`:null,
+      reached:tieneTipo,
+    });
+
+    // 3) Camino divergente
+    if(esReempacado){
+      const reempEntry=findFirst(["2.3"]);
+      hitos.push({
+        key:"reempacado", label:"Reempacado", ic:"🔁", color:"var(--purple)",
+        fecha:reempEntry?.fecha||null, user:reempEntry?.user||"", nota:reempEntry?.nota||"",
+        extra:w.reempacadoEn?`📦 Reempacado en: ${w.reempacadoEn}`:null,
+        reached:true, terminal:true,
+      });
+      return hitos;
+    }
+    if(esEgresado){
+      const egresEntry=findFirst(["25"]);
+      // Buscar cargo release asociado para info adicional
+      const cr=(cargoReleases||[]).find(c=>!c.anulado&&Array.isArray(c.wrIds)&&c.wrIds.includes(w.id));
+      hitos.push({
+        key:"despachado", label:"Despachado (Egresado)", ic:"🚀", color:"var(--orange)",
+        fecha:egresEntry?.fecha||cr?.fecha||null, user:egresEntry?.user||cr?.usuario||"", nota:egresEntry?.nota||"",
+        extra:cr?`📋 Egreso ${cr.id} → ${cr.agenteCarga||"agente"}`:null,
+        reached:true, terminal:true,
+      });
+      return hitos;
+    }
+
+    // 4) Flujo normal completo
+    const consolEntry=findFirst(["4"]);
+    const consolFecha=consolEntry?.fecha||guiaConsol?.fecha||null;
+    hitos.push({
+      key:"consolidado", label:"Consolidado", ic:"🗂️", color:"var(--cyan)",
+      fecha:consolFecha, user:consolEntry?.user||"", nota:consolEntry?.nota||"",
+      extra:guiaConsol?`📋 Guía: ${guiaConsol.id} · ${guiaConsol.destino||""}`:null,
+      reached:!!consolFecha,
+    });
+    const recibidoEntry=findFirst(["17"]);
+    hitos.push({
+      key:"recibido", label:"Recibido en Almacén", ic:"📥", color:"var(--purple)",
+      fecha:recibidoEntry?.fecha||null, user:recibidoEntry?.user||"", nota:recibidoEntry?.nota||"",
+      reached:!!recibidoEntry,
+    });
+    const porEntregaEntry=findFirst(["20"]);
+    hitos.push({
+      key:"porentrega", label:"Por Entrega", ic:"🚚", color:"var(--sky)",
+      fecha:porEntregaEntry?.fecha||null, user:porEntregaEntry?.user||"", nota:porEntregaEntry?.nota||"",
+      reached:!!porEntregaEntry,
+    });
+    const entregadoEntry=findFirst(["21"]);
+    const dnRel=deliveryNotes.find(n=>!n.anulado&&Array.isArray(n.wrIds)&&n.wrIds.includes(w.id));
+    hitos.push({
+      key:"entregado", label:"Entregado", ic:"📝", color:"var(--green)",
+      fecha:entregadoEntry?.fecha||null, user:entregadoEntry?.user||"", nota:entregadoEntry?.nota||"",
+      extra:dnRel?`📋 Nota ${dnRel.id} → ${dnRel.receptorNombre||dnRel.consignatario||""}`:null,
+      reached:!!entregadoEntry,
+    });
+    // Cobrado: historial "23" OR factura pagada vinculada
+    const cobradoEntry=findFirst(["23"]);
+    const facPagada=facturas.find(f=>f.status==="pagada"&&Array.isArray(f.wrIds)&&f.wrIds.includes(w.id));
+    const cobradoFecha=cobradoEntry?.fecha||facPagada?.fechaEmision||facPagada?.fecha||null;
+    hitos.push({
+      key:"cobrado", label:"Cobrado", ic:"💰", color:"var(--gold2)",
+      fecha:cobradoFecha, user:cobradoEntry?.user||"", nota:cobradoEntry?.nota||"",
+      extra:facPagada?`📋 Factura ${facPagada.id} · ${facPagada.moneda} ${(parseFloat(facPagada.total)||0).toFixed(2)}`:null,
+      reached:!!cobradoFecha,
+    });
+    return hitos;
   };
 
   // Render una timeline visual (lista vertical) — usada en WR Modal y en timeline modal rápido
@@ -6836,11 +6916,15 @@ export default function ENEXSystem(){
                 <div style={{flex:1,paddingBottom:isLast?0:14}}>
                   <div style={{display:"flex",alignItems:"baseline",gap:8,flexWrap:"wrap"}}>
                     <span style={{fontSize:14,fontWeight:700,color:h.reached?"var(--t1)":"var(--t4)"}}>{h.label}</span>
-                    {h.reached
+                    {h.terminal&&<span style={{fontSize:10,padding:"1px 6px",borderRadius:8,background:"#FFF8E1",border:"1px solid #FFC107",color:"#7A5C00",fontWeight:700,letterSpacing:.4,textTransform:"uppercase"}}>terminal</span>}
+                    {h.reached&&h.fecha
                       ?<span style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--t2)",fontWeight:600}}>{fmtDate(h.fecha)} {fmtTime(h.fecha)}</span>
-                      :<span style={{fontSize:11,color:"var(--t4)",fontStyle:"italic"}}>pendiente</span>}
+                      :(!h.reached&&<span style={{fontSize:11,color:"var(--t4)",fontStyle:"italic"}}>pendiente</span>)}
                   </div>
-                  {h.reached&&(
+                  {h.extra&&h.reached&&(
+                    <div style={{fontSize:12,color:h.color,marginTop:3,fontWeight:600}}>{h.extra}</div>
+                  )}
+                  {h.reached&&(h.user||h.nota)&&(
                     <div style={{fontSize:11,color:"var(--t3)",marginTop:2}}>
                       {h.user&&<>por <b style={{color:"var(--t2)"}}>{h.user}</b>{h.nota?" · ":""}</>}
                       {h.nota&&<span style={{color:"var(--t2)"}}>{h.nota}</span>}
