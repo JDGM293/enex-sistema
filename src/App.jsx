@@ -834,7 +834,7 @@ const TypeBadge=({t})=><span className={`type-b ${TYPE_CLS[t]||""}`}>{t}</span>;
 
 // ─── WR ROW ────────────────────────────────────────────────────────────────────
 const CT_LABEL_WR={agente:"🤝 Agente",vendedor_agente:"💼 Vend. Agente",autonomo:"🧑‍💻 Autónomo",oficina:"🏢 Oficina",vendedor_oficina:"🛒 Vend. Oficina",matriz:"🏛️ Matriz"};
-const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[],oficinas=[],empresaNombre="Casa Matriz",sendTypes=[],onAssignTipo,onFotoClick})=>{
+const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[],oficinas=[],empresaNombre="Casa Matriz",sendTypes=[],onAssignTipo,onFotoClick,onTimelineClick})=>{
   const isIn=unitL==="in";
   const isLb=unitW==="lb";
   const showVol = isLb ? `${w.volLb}lb` : `${w.volKg}kg`;
@@ -902,7 +902,15 @@ const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[
     <tr className={sel?"sel":""} onClick={onClick}>
       {/* 1. N° WR — primera columna */}
       <td>
-        <div className="c-wr">{w.id}</div>
+        <div className="c-wr" style={{display:"inline-flex",alignItems:"center",gap:6}}>
+          {w.id}
+          {onTimelineClick&&(
+            <span onClick={e=>{e.stopPropagation();onTimelineClick(w);}} title="📅 Historia y fechas del WR"
+              style={{cursor:"pointer",fontSize:12,opacity:.7,transition:"opacity .12s"}}
+              onMouseEnter={e=>e.currentTarget.style.opacity=1}
+              onMouseLeave={e=>e.currentTarget.style.opacity=.7}>📅</span>
+          )}
+        </div>
         <div className="c-route">{w.origCity} → {w.destCity}</div>
       </td>
       {/* 2. TIPO ENVÍO (confirmación) — después de N° WR.
@@ -972,7 +980,7 @@ const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[
 
 // ─── WR TABLE COMPONENT ────────────────────────────────────────────────────────
 const PAGE_SIZE=50;
-const WRTable=({rows,selId,onSelect,unitL,unitW,onSort,sortCol,sortDir,dimOpen,onDimToggle,page,onPage,clients=[],agentes=[],oficinas=[],empresaNombre="Casa Matriz",sendTypes=[],onAssignTipo,onFotoClick})=>{
+const WRTable=({rows,selId,onSelect,unitL,unitW,onSort,sortCol,sortDir,dimOpen,onDimToggle,page,onPage,clients=[],agentes=[],oficinas=[],empresaNombre="Casa Matriz",sendTypes=[],onAssignTipo,onFotoClick,onTimelineClick})=>{
   const totalPages=Math.max(1,Math.ceil(rows.length/PAGE_SIZE));
   const pageRows=rows.slice((page-1)*PAGE_SIZE,page*PAGE_SIZE);
   const SortTh=({col,children,align})=>(
@@ -1014,7 +1022,7 @@ const WRTable=({rows,selId,onSelect,unitL,unitW,onSort,sortCol,sortDir,dimOpen,o
             ):pageRows.map(w=>(
               <WRRow key={w.id} w={w} sel={selId===w.id} onClick={()=>onSelect(w)}
                 unitL={unitL} unitW={unitW} clients={clients} agentes={agentes} oficinas={oficinas} empresaNombre={empresaNombre}
-                sendTypes={sendTypes} onAssignTipo={onAssignTipo} onFotoClick={onFotoClick}
+                sendTypes={sendTypes} onAssignTipo={onAssignTipo} onFotoClick={onFotoClick} onTimelineClick={onTimelineClick}
                 dimOpen={dimOpen===w.id} onDimToggle={()=>onDimToggle(w.id)}/>
             ))}
           </tbody>
@@ -1550,6 +1558,10 @@ export default function ENEXSystem(){
   const [showNewCl,setShowNewCl]=useState(false);
   const [showEditCl,setShowEditCl]=useState(null);
   const [showStatModal,setShowStatModal]=useState(null); // {key, label, rows}
+  // Forzar Estado (override) — Admin/Gerencia. {wr, codigoDestino, motivo}
+  const [overrideModal,setOverrideModal]=useState(null);
+  // Timeline rápida (acceso desde fila sin abrir WR Modal completo). Guarda el WR.
+  const [timelineWR,setTimelineWR]=useState(null);
   const [searchParam,setSearchParam]=useState("Tracking");
   const [search,setSearch]=useState("");
   const [filterSt,setFilterSt]=useState("all");
@@ -2375,6 +2387,7 @@ export default function ENEXSystem(){
             onSort={handleSort} sortCol={sortCol} sortDir={sortDir}
             dimOpen={dimOpen} onDimToggle={handleDimToggle}
             onFotoClick={w=>setPhotoGalleryOpen({wrId:w.id})}
+            onTimelineClick={w=>setTimelineWR(w)}
             page={page} onPage={setPage}/>
         </div>
 
@@ -2442,6 +2455,7 @@ export default function ENEXSystem(){
         onSort={handleSort} sortCol={sortCol} sortDir={sortDir}
         dimOpen={dimOpen} onDimToggle={handleDimToggle}
         onFotoClick={w=>setPhotoGalleryOpen({wrId:w.id})}
+        onTimelineClick={w=>setTimelineWR(w)}
         page={page} onPage={setPage}/>
     </div>
   );
@@ -3317,23 +3331,19 @@ export default function ENEXSystem(){
                   <div style={{marginTop:10,paddingTop:10,borderTop:"1px dashed var(--b1)",display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
                     <span style={{fontSize:12,color:"var(--t3)",fontWeight:600}}>🛠 Override (corregir error sin reabrir el módulo):</span>
                     <button className="btn-s" style={{fontSize:12,padding:"3px 10px",borderColor:"var(--orange)",color:"var(--orange)",fontWeight:700}}
-                      onClick={()=>{
-                        const opciones=WR_STATUSES.map(s=>`${s.code} ${s.label}`).join("\n");
-                        const elegido=window.prompt(`⚠️ FORZAR estado (override) del WR ${selWR.id}.\nUso solo para corregir errores. Quedará registrado en el historial.\n\nEscribe el código del estado destino:\n\n${opciones}`,selWR.status?.code||"");
-                        if(!elegido)return;
-                        const stTarget=WR_STATUSES.find(s=>s.code===String(elegido).trim());
-                        if(!stTarget){window.alert("Código de estado inválido. Revisa la lista y reintenta.");return;}
-                        const motivo=window.prompt(`Motivo del override (obligatorio — quedará en historial):\nWR ${selWR.id}: ${selWR.status?.label||"?"} → ${stTarget.label}`);
-                        if(!motivo||!motivo.trim()){window.alert("El motivo es obligatorio.");return;}
-                        const upd={...selWR,status:stTarget,historial:[...(selWR.historial||[]),{code:stTarget.code,label:stTarget.label,fecha:new Date(),user:currentUser.id,nota:`OVERRIDE por ${currentUser.id||currentUser.email}: ${motivo.trim()}`}]};
-                        setSelWR(upd);setWrList(p=>p.map(w=>w.id===upd.id?upd:w));dbUpsertWR(upd);
-                        logAction(`Override estado → ${stTarget.label}`,`${upd.id} · ${motivo.trim()}`);
-                      }}>🛠 Forzar Estado</button>
+                      onClick={()=>setOverrideModal({wr:selWR,codigoDestino:selWR.status?.code||"",motivo:""})}>🛠 Forzar Estado</button>
                   </div>
                 )}
               </div>
             </div>
           )}
+          {/* 📅 HISTORIA Y FECHAS — línea de tiempo de hitos del WR */}
+          <div className="wb" style={{marginBottom:12}}>
+            <div className="wb-t">📅 Historia y Fechas</div>
+            <div style={{padding:"6px 4px"}}>
+              {renderWRTimeline(selWR)}
+            </div>
+          </div>
           <div className="wr-legal">
             NOTA: SE ESTÁ ENTREGANDO ESTA CAJA COMPLETAMENTE SELLADA. Certifico que este envío no contiene dinero, narcóticos, armas o dispositivos explosivos no autorizados. <strong>{empresaNombre} International Courier</strong> no se hace responsable de los artículos no retirados en los treinta (30) días siguientes a su recepción. Nuestra responsabilidad en siniestros será de $100 por recibo si el cliente no asegura la carga. SHIPPER autoriza a {empresaNombre} a inspeccionar la carga de acuerdo con el Programa IACSSP aprobado por la TSA. Al recibir este documento, da fe de haber leído y estar de acuerdo con los términos y regulaciones.
           </div>
@@ -6774,6 +6784,98 @@ export default function ENEXSystem(){
   // Un WR puede consolidarse SOLO si está en estado 3 Confirmado. Reempacado (2.3) y
   // Egresado (25) salieron del flujo; estados pre-Confirmado no están listos.
   const wrPuedeConsolidarse=(w)=>w?.status?.code==="3";
+
+  // ── TIMELINE DE HITOS DEL WR ─────────────────────────────────────────────────
+  // Devuelve la línea de tiempo de hitos importantes del WR: fechas, usuarios y
+  // notas. Se alimenta de w.fecha (creación) y de w.historial (cada cambio de
+  // estado se persiste con {code,label,fecha,user,nota}). Si un hito todavía no
+  // ocurrió, `reached:false`. Útil tanto para el WR Modal como para el modal
+  // rápido (📅) en las filas de Dashboard / WR / EC.
+  const getWRTimeline=(w)=>{
+    if(!w)return [];
+    const hist=Array.isArray(w.historial)?w.historial:[];
+    const findFirst=(codes)=>hist.find(h=>codes.includes(h.code));
+    const HITOS=[
+      {key:"registrado", label:"Registrado",          ic:"📦", color:"var(--navy)",  source:"creacion", codes:[]},
+      {key:"confirmado", label:"Confirmado",          ic:"✅", color:"var(--green)", codes:["3"]},
+      {key:"consolidado",label:"Consolidado",         ic:"🗂️", color:"var(--cyan)",  codes:["4"]},
+      {key:"recibido",   label:"Recibido en Almacén", ic:"📥", color:"var(--purple)",codes:["17"]},
+      {key:"porentrega", label:"Por Entrega",         ic:"🚚", color:"var(--sky)",   codes:["20"]},
+      {key:"entregado",  label:"Entregado / Despachado",ic:"📝",color:"var(--green)",codes:["21","25"]},
+      {key:"cobrado",    label:"Cobrado",             ic:"💰", color:"var(--gold2)", codes:["23"]},
+    ];
+    return HITOS.map(h=>{
+      if(h.source==="creacion"){
+        return {...h, fecha:w.fecha, user:w.usuario||"", nota:`WR creado · ${w.id}`, reached:!!w.fecha};
+      }
+      const entry=findFirst(h.codes);
+      return {...h, fecha:entry?.fecha||null, user:entry?.user||"", nota:entry?.nota||(entry?`Estado ${entry.code} ${entry.label}`:""), reached:!!entry, statusCode:entry?.code||""};
+    });
+  };
+
+  // Render una timeline visual (lista vertical) — usada en WR Modal y en timeline modal rápido
+  const renderWRTimeline=(w)=>{
+    const tl=getWRTimeline(w);
+    const hist=Array.isArray(w?.historial)?w.historial:[];
+    return (
+      <div>
+        <div style={{display:"flex",flexDirection:"column",gap:0,position:"relative"}}>
+          {tl.map((h,i)=>{
+            const isLast=i===tl.length-1;
+            const dotColor=h.reached?h.color:"var(--b1)";
+            return (
+              <div key={h.key} style={{display:"flex",gap:12,alignItems:"flex-start"}}>
+                {/* Columna del punto + línea vertical */}
+                <div style={{display:"flex",flexDirection:"column",alignItems:"center",minWidth:24}}>
+                  <div style={{width:24,height:24,borderRadius:"50%",background:dotColor,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,flexShrink:0,opacity:h.reached?1:.3}}>
+                    {h.ic}
+                  </div>
+                  {!isLast&&<div style={{width:2,flex:1,minHeight:24,background:h.reached&&tl[i+1]?.reached?h.color:"var(--b2)",marginTop:2,marginBottom:2,opacity:h.reached?.4:.2}}/>}
+                </div>
+                {/* Columna del contenido */}
+                <div style={{flex:1,paddingBottom:isLast?0:14}}>
+                  <div style={{display:"flex",alignItems:"baseline",gap:8,flexWrap:"wrap"}}>
+                    <span style={{fontSize:14,fontWeight:700,color:h.reached?"var(--t1)":"var(--t4)"}}>{h.label}</span>
+                    {h.reached
+                      ?<span style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--t2)",fontWeight:600}}>{fmtDate(h.fecha)} {fmtTime(h.fecha)}</span>
+                      :<span style={{fontSize:11,color:"var(--t4)",fontStyle:"italic"}}>pendiente</span>}
+                  </div>
+                  {h.reached&&(
+                    <div style={{fontSize:11,color:"var(--t3)",marginTop:2}}>
+                      {h.user&&<>por <b style={{color:"var(--t2)"}}>{h.user}</b>{h.nota?" · ":""}</>}
+                      {h.nota&&<span style={{color:"var(--t2)"}}>{h.nota}</span>}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        {/* Historial completo (incluye estados intermedios de tránsito, excepciones, etc.) */}
+        {hist.length>0&&(
+          <details style={{marginTop:14,borderTop:"1px dashed var(--b1)",paddingTop:10}}>
+            <summary style={{cursor:"pointer",fontSize:13,fontWeight:600,color:"var(--navy)"}}>Ver historial completo ({hist.length} entradas)</summary>
+            <div style={{marginTop:8,maxHeight:240,overflow:"auto",border:"1px solid var(--b1)",borderRadius:6}}>
+              <table className="ct" style={{fontSize:11.5}}>
+                <thead><tr><th style={{width:48}}>Code</th><th>Estado</th><th>Fecha</th><th>Usuario</th><th>Nota</th></tr></thead>
+                <tbody>
+                  {hist.slice().sort((a,b)=>new Date(b.fecha)-new Date(a.fecha)).map((h,i)=>(
+                    <tr key={i}>
+                      <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)"}}>{h.code}</span></td>
+                      <td style={{fontWeight:600}}>{h.label||"—"}</td>
+                      <td style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:"var(--t2)"}}>{fmtDate(h.fecha)} {fmtTime(h.fecha)}</td>
+                      <td style={{fontSize:11,color:"var(--t3)"}}>{h.user||"—"}</td>
+                      <td style={{fontSize:11,color:"var(--t2)"}}>{h.nota||"—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </details>
+        )}
+      </div>
+    );
+  };
   const openWRModalAsReempaque=(parentIds,clientePrefill)=>{
     if(!hasPerm("crear_reempaque")){window.alert("Tu rol no tiene permiso para crear reempaques.");return;}
     if(!parentIds||parentIds.length===0){window.alert("Selecciona al menos un WR para reempacar.");return;}
@@ -7678,10 +7780,13 @@ export default function ENEXSystem(){
 
           {enAlmacen.length>0&&(
             <div className="card">
-              <div style={{fontSize:15,fontWeight:700,color:"var(--navy)",marginBottom:8}}>📦 Últimos WR recibidos en Almacén</div>
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8,flexWrap:"wrap"}}>
+                <div style={{fontSize:15,fontWeight:700,color:"var(--navy)"}}>📦 Últimos WR recibidos en Almacén</div>
+                <div style={{fontSize:12,color:"var(--t3)"}}>WRs que quedaron en 17 (probablemente porque la guía no cerró bien). Podés moverlos individualmente a Por Entrega.</div>
+              </div>
               <div style={{maxHeight:"28vh",overflow:"auto",border:"1px solid var(--b1)",borderRadius:8}}>
                 <table className="wt">
-                  <thead><tr><th>N° WR</th><th>Consignatario</th><th>Casillero</th><th>Tracking</th><th>Estado</th></tr></thead>
+                  <thead><tr><th>N° WR</th><th>Consignatario</th><th>Casillero</th><th>Tracking</th><th>Estado</th><th style={{width:170}}>Acciones</th></tr></thead>
                   <tbody>
                     {enAlmacen.map(w=>(
                       <tr key={w.id}>
@@ -7690,6 +7795,25 @@ export default function ENEXSystem(){
                         <td>{w.casillero||"—"}</td>
                         <td><span className="c-trk">{w.tracking||"—"}</span></td>
                         <td><StBadge st={w.status}/></td>
+                        <td onClick={e=>e.stopPropagation()}>
+                          <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+                            <button className="btn-s" style={{fontSize:11,padding:"3px 7px"}}
+                              onClick={()=>setSelWR(w)} title="Abrir detalle del WR">👁 Ver</button>
+                            {hasPerm("hacer_recepcion_dest")&&(
+                              <button className="btn-s" style={{fontSize:11,padding:"3px 7px",background:"#E3F2FD",borderColor:"#64B5F6",color:"#1565C0",fontWeight:700}}
+                                title="Mover este WR a Por Entrega (20) — útil si la guía no cerró correctamente"
+                                onClick={()=>{
+                                  if(!window.confirm(`¿Pasar el WR ${w.id} a Por Entrega (20)?\n\nEsto se usa cuando un WR quedó atrapado en Almacén porque la guía no se cerró bien.\nQueda asentado en el historial.`))return;
+                                  const st20=getStatus("20");
+                                  if(!st20)return;
+                                  const upd={...w,status:st20,historial:[...(w.historial||[]),{code:"20",label:"Por Entrega",fecha:new Date(),user:currentUser.id,nota:"Avance individual 17→20 desde Recepción en Almacén"}]};
+                                  setWrList(p=>p.map(x=>x.id===w.id?upd:x));
+                                  dbUpsertWR(upd);
+                                  logAction("Pasó WR a Por Entrega (individual)",upd.id);
+                                }}>🚚 Pasar a Por Entrega</button>
+                            )}
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -8279,6 +8403,113 @@ export default function ENEXSystem(){
         setWebcamOpen(null);
       }}/>}
       {photoGalleryOpen&&<PhotoGalleryModal wrId={photoGalleryOpen.wrId} currentUser={currentUser} onClose={()=>setPhotoGalleryOpen(null)}/>}
+
+      {/* TIMELINE RÁPIDA — abierta desde el botón 📅 en filas (sin abrir WR Modal completo) */}
+      {timelineWR&&(()=>{
+        const w=timelineWR;
+        return (
+          <div className="ov" onClick={()=>setTimelineWR(null)}>
+            <div className="modal mmd" onClick={e=>e.stopPropagation()} style={{maxHeight:"85vh",display:"flex",flexDirection:"column"}}>
+              <div className="mhd">
+                <div className="mt">📅 Historia y Fechas — WR {w.id}</div>
+                <div style={{display:"flex",gap:6}}>
+                  <button className="btn-s" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>{setSelWR(w);setTimelineWR(null);}} title="Abrir detalle completo del WR">📋 Ver WR completo</button>
+                  <button className="mcl" onClick={()=>setTimelineWR(null)}>✕</button>
+                </div>
+              </div>
+              <div style={{padding:"14px 18px",overflowY:"auto",flex:1}}>
+                <div style={{background:"var(--bg4)",border:"1px solid var(--b1)",borderRadius:8,padding:"10px 14px",marginBottom:14,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+                  <StBadge st={w.status}/>
+                  <span style={{fontWeight:600,color:"var(--t1)"}}>{w.consignee||"—"}</span>
+                  <span style={{color:"var(--t3)",fontFamily:"'DM Mono',monospace"}}>{w.casillero||""}</span>
+                  <div style={{flex:1}}/>
+                  <span style={{fontSize:12,color:"var(--t3)"}}>💳 {w.tipoPago||"—"} · {w.tipoEnvio||"—"}</span>
+                </div>
+                {renderWRTimeline(w)}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* FORZAR ESTADO — modal (reemplaza window.prompt que truncaba la lista) */}
+      {overrideModal&&(()=>{
+        const m=overrideModal;
+        const w=m.wr;
+        const stTarget=WR_STATUSES.find(s=>s.code===m.codigoDestino);
+        const sameAsCurrent=stTarget&&w.status?.code===stTarget.code;
+        // Agrupar estados por phase para presentar
+        const grupos=[
+          {label:"📍 Origen",states:WR_STATUSES.filter(s=>s.phase==="origen")},
+          {label:"🛫 Tránsito",states:WR_STATUSES.filter(s=>s.phase==="transito")},
+          {label:"📥 Destino",states:WR_STATUSES.filter(s=>s.phase==="destino")},
+          {label:"⚠️ Excepciones",states:WR_STATUSES.filter(s=>s.phase==="excep")},
+          {label:"🚚 Entrega / Cierre",states:WR_STATUSES.filter(s=>s.phase==="entrega")},
+        ];
+        const aplicar=()=>{
+          if(!stTarget){window.alert("Seleccionas un estado destino.");return;}
+          if(sameAsCurrent){window.alert("El WR ya está en ese estado.");return;}
+          if(!m.motivo||!m.motivo.trim()){window.alert("El motivo es obligatorio. Quedará en el historial.");return;}
+          const upd={...w,status:stTarget,historial:[...(w.historial||[]),{code:stTarget.code,label:stTarget.label,fecha:new Date(),user:currentUser.id,nota:`OVERRIDE por ${currentUser.id||currentUser.email}: ${m.motivo.trim()}`}]};
+          setWrList(p=>p.map(x=>x.id===upd.id?upd:x));
+          if(selWR&&selWR.id===upd.id)setSelWR(upd);
+          dbUpsertWR(upd);
+          logAction(`Override estado → ${stTarget.label}`,`${upd.id} · ${m.motivo.trim()}`);
+          setOverrideModal(null);
+        };
+        return (
+          <div className="ov" onClick={()=>setOverrideModal(null)}>
+            <div className="modal mmd" onClick={e=>e.stopPropagation()}>
+              <div className="mhd">
+                <div className="mt">🛠 Forzar Estado — WR {w.id}</div>
+                <button className="mcl" onClick={()=>setOverrideModal(null)}>✕</button>
+              </div>
+              <div style={{padding:"14px 18px"}}>
+                <div style={{background:"#FFF8E1",border:"1px solid #FFC107",borderRadius:8,padding:"10px 14px",marginBottom:14,fontSize:13,color:"#7A5C00",lineHeight:1.5}}>
+                  ⚠️ <strong>Override administrativo</strong> — usalo solo para corregir errores que no se pueden arreglar desde el módulo correcto. Queda asentado en el historial del WR con tu usuario y motivo.
+                </div>
+                <div style={{marginBottom:14}}>
+                  <div style={{fontSize:13,color:"var(--t3)",fontWeight:600,marginBottom:4}}>Estado actual</div>
+                  <div style={{padding:"8px 12px",background:"var(--bg4)",border:"1px solid var(--b1)",borderRadius:6,display:"flex",alignItems:"center",gap:8}}>
+                    <StBadge st={w.status}/>
+                    <span style={{fontFamily:"'DM Mono',monospace",color:"var(--t2)",fontSize:13}}>{w.status?.code||"—"}</span>
+                  </div>
+                </div>
+                <div className="fg" style={{marginBottom:14}}>
+                  <div className="fl">Estado destino *</div>
+                  <select className="fs" value={m.codigoDestino} onChange={e=>setOverrideModal(p=>({...p,codigoDestino:e.target.value}))}>
+                    <option value="">— Seleccionar estado —</option>
+                    {grupos.map(g=>(
+                      <optgroup key={g.label} label={g.label}>
+                        {g.states.map(s=>(
+                          <option key={s.code} value={s.code} disabled={w.status?.code===s.code}>
+                            {s.code} {s.label}{w.status?.code===s.code?" (actual)":""}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </select>
+                </div>
+                {stTarget&&!sameAsCurrent&&(
+                  <div style={{padding:"8px 12px",background:"#E8F0FE",border:"1px solid #90B8F0",borderRadius:6,marginBottom:14,fontSize:13,color:"#1A6090",display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                    <StBadge st={w.status}/><span>→</span><StBadge st={stTarget}/>
+                  </div>
+                )}
+                <div className="fg" style={{marginBottom:6}}>
+                  <div className="fl">Motivo del override *</div>
+                  <textarea className="fi" rows={3} placeholder="Ej: WR quedó atrapado en Almacén tras cierre fallido de guía; movido manualmente a Por Entrega."
+                    value={m.motivo} onChange={e=>setOverrideModal(p=>({...p,motivo:e.target.value}))}
+                    style={{resize:"vertical",minHeight:64,fontFamily:"inherit",fontSize:14,lineHeight:1.5}}/>
+                </div>
+              </div>
+              <div className="mft">
+                <button className="btn-s" onClick={()=>setOverrideModal(null)}>Cancelar</button>
+                <button className="btn-p" style={{background:"var(--orange)"}} onClick={aplicar} disabled={!stTarget||sameAsCurrent||!m.motivo.trim()}>🛠 Aplicar Override</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* CARGO RELEASE INDIVIDUAL — formulario simplificado */}
       {crIndivModal&&(()=>{
