@@ -3084,9 +3084,10 @@ export default function ENEXSystem(){
             {hasPerm("borrar_wr")&&<button className="btn-s" style={{fontSize:12,padding:"4px 10px",color:"var(--red)",borderColor:"var(--red)"}} onClick={()=>{if(window.confirm(`¿Borrar WR ${selWR.id}? Esta acción no se puede deshacer.`)){setWrList(p=>p.filter(x=>x.id!==selWR.id));dbDeleteWR(selWR.id);logAction("Borró WR",selWR.id);setSelWR(null);}}}>🗑 Borrar</button>}
             {crElegible(selWR)&&hasPerm("hacer_egreso")&&<button className="btn-s" style={{fontSize:12,padding:"4px 10px",background:"#E8F5E9",borderColor:"#81C784",color:"#2E7D32",fontWeight:700}} onClick={()=>{crOpenNew([selWR.id]);setSelWR(null);}} title="Registrar egreso individual de este WR">🚀 Egresar</button>}
             {dnElegible(selWR)&&hasPerm("entregar")&&<button className="btn-s" style={{fontSize:12,padding:"4px 10px",background:"#E3F2FD",borderColor:"#64B5F6",color:"#1565C0",fontWeight:700}} onClick={()=>{dnOpenNew([selWR.id]);setSelWR(null);}} title="Registrar entrega al cliente">📝 Entregar</button>}
-            {/* Facturar — visible si el rol tiene permiso y el WR no tiene factura activa.
+            {/* Facturar — visible si el rol tiene permiso, el WR no está bloqueado
+                (no Reempacado 2.3 ni Egresado 25) y no tiene factura activa.
                 Para PREPAID factura al remitente; para COD al receptor según clienteTipo. */}
-            {(hasPerm("crear_factura")||hasPerm("facturar"))&&!facturas.some(f=>f.status!=="anulada"&&Array.isArray(f.wrIds)&&f.wrIds.includes(selWR.id))&&(()=>{
+            {(hasPerm("crear_factura")||hasPerm("facturar"))&&wrPuedeFacturarse(selWR)&&!facturas.some(f=>f.status!=="anulada"&&Array.isArray(f.wrIds)&&f.wrIds.includes(selWR.id))&&(()=>{
               const esPrepaid=(selWR.tipoPago||"").toLowerCase().includes("prepa");
               return (
                 <button className="btn-s" style={{fontSize:12,padding:"4px 10px",background:"#FFF9E7",borderColor:"#F0C040",color:"#8B6914",fontWeight:700}}
@@ -4181,6 +4182,17 @@ export default function ENEXSystem(){
   const addWRToContainer=(ci,wrId)=>{
     const wr=wrList.find(w=>w.id===wrId);
     if(!wr)return "WR no encontrado";
+    // Bloqueo por estado: solo 3 Confirmado se puede consolidar
+    if(!wrPuedeConsolidarse(wr)){
+      const code=wr.status?.code||"?";
+      if(code==="2.3")return `El WR ${wrId} está Reempacado (2.3) — no se puede consolidar. La mercancía está en el WR hijo (${wr.reempacadoEn||"otro WR"}).`;
+      if(code==="25")return `El WR ${wrId} ya fue Egresado (25) — salió del flujo y no se puede consolidar.`;
+      return `El WR ${wrId} está en estado ${wr.status?.label||code}. Solo WRs Confirmados (3) se pueden consolidar.`;
+    }
+    // Bloqueo por tipoEnvio: el WR debe ser del mismo tipo que la guía en curso
+    if(cf.tipoEnvio&&wr.tipoEnvio&&wr.tipoEnvio!==cf.tipoEnvio){
+      return `El WR ${wrId} es tipo ${wr.tipoEnvio} y la guía es ${cf.tipoEnvio}. No se mezclan tipos en un mismo embarque.`;
+    }
     if(cf.containers.some(c=>c.wr.some(r=>r.id===wrId)))return "WR ya está en un contenedor";
     scCont(ci,"wr",[...cf.containers[ci].wr,{id:wr.id,consignee:wr.consignee,cajas:wr.cajas||1,pesoLb:wr.pesoLb||0,ft3:wr.ft3||0,descripcion:wr.descripcion||""}]);
     return null;
@@ -6141,6 +6153,14 @@ export default function ENEXSystem(){
 
   const facOpenNew=(prefill={})=>{
     if(!hasPerm("crear_factura")&&!hasPerm("facturar")){window.alert("Tu rol no tiene permiso para crear facturas.");return;}
+    // Si vienen wrIds, validar que ninguno esté Reempacado o Egresado
+    if(Array.isArray(prefill.wrIds)&&prefill.wrIds.length>0){
+      const bloqueados=prefill.wrIds.map(id=>wrList.find(w=>w.id===id)).filter(w=>w&&!wrPuedeFacturarse(w));
+      if(bloqueados.length>0){
+        window.alert(`No se puede facturar — los siguientes WR están bloqueados por estado:\n${bloqueados.map(w=>`• ${w.id} (${w.status?.label||"?"})`).join("\n")}\n\nReempacados y Egresados quedan fijos.`);
+        return;
+      }
+    }
     setFacModal(recalcFactura({...emptyFactura(),...prefill}));
   };
   const facOpenEdit=(f)=>{
@@ -6332,12 +6352,13 @@ export default function ENEXSystem(){
     }
     // Hidratar WRs con el estado real de wrList (los containers pueden tener un snapshot viejo)
     const wrsHidratados=allWR.map(w=>wrList.find(x=>x.id===w.id)||w);
-    // Filtrar: solo COD (no PREPAID) y sin factura activa
+    // Filtrar: solo COD (no PREPAID), sin factura activa y no bloqueado por estado (2.3, 25)
     const facturados=new Set(facturas.filter(f=>f.status!=="anulada"&&Array.isArray(f.wrIds)).flatMap(f=>f.wrIds));
     const cods=wrsHidratados.filter(w=>{
+      if(!wrPuedeFacturarse(w))return false;            // Reempacado (2.3) y Egresado (25) NO se facturan
       const esPrepaid=(w.tipoPago||"").toLowerCase().includes("prepa");
-      if(esPrepaid)return false;
-      if(facturados.has(w.id))return false;
+      if(esPrepaid)return false;                         // PREPAID se factura aparte al remitente
+      if(facturados.has(w.id))return false;              // ya tiene factura activa
       return true;
     });
     if(cods.length===0){
@@ -6746,6 +6767,13 @@ export default function ENEXSystem(){
   // en Consolidado (4) o posterior queda FIJO: no se edita, no se confirma tipo,
   // no se reempaqueta y no se egresa. Solo es modificable cuando el código es 1, 2 o 3.
   const wrEsModificable=(w)=>["1","2","3"].includes(w?.status?.code||"");
+  // Un WR no puede facturarse si está Reempacado (2.3 — es fantasma, la mercancía
+  // está en el WR hijo) ni si ya fue Egresado (25 — debió facturarse antes del despacho).
+  // El resto de los estados sí pueden facturarse (PREPAID en origen, COD tras recepción).
+  const wrPuedeFacturarse=(w)=>!["2.3","25"].includes(w?.status?.code||"");
+  // Un WR puede consolidarse SOLO si está en estado 3 Confirmado. Reempacado (2.3) y
+  // Egresado (25) salieron del flujo; estados pre-Confirmado no están listos.
+  const wrPuedeConsolidarse=(w)=>w?.status?.code==="3";
   const openWRModalAsReempaque=(parentIds,clientePrefill)=>{
     if(!hasPerm("crear_reempaque")){window.alert("Tu rol no tiene permiso para crear reempaques.");return;}
     if(!parentIds||parentIds.length===0){window.alert("Selecciona al menos un WR para reempacar.");return;}
