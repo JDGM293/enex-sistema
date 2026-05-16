@@ -74,20 +74,20 @@ input.fi:not([type="email"]):not([type="password"]):not([type="number"]){text-tr
 .page-scroll{flex:1;overflow-y:auto;min-height:0;padding:14px 18px}
 
 /* ── STATS ───────────────────────────────────────────────────────────────── */
-.stats{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;padding:12px 16px 8px;flex-shrink:0}
+.stats{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;padding:8px 14px 6px;flex-shrink:0}
 .stat{
-  background:var(--bg2);border:1px solid var(--b1);border-radius:10px;
-  padding:11px 13px;position:relative;overflow:hidden;
+  background:var(--bg2);border:1px solid var(--b1);border-radius:8px;
+  padding:7px 9px;position:relative;overflow:hidden;
   cursor:pointer;transition:all .15s;box-shadow:var(--shadow);
 }
 .stat:hover{border-color:var(--gold2);box-shadow:var(--shadow2);transform:translateY(-1px)}
 .stat.active{border-color:var(--gold2);background:rgba(176,125,16,0.06)}
-.stat-ic{font-size:20px;margin-bottom:5px}
-.stat-v{font-family:Arial,Helvetica,sans-serif;font-size:28px;font-weight:700;color:var(--navy);line-height:1}
-.stat-l{font-size:13px;color:var(--t2);margin-top:3px;white-space:nowrap}
-.stat-d{font-size:12px;margin-top:4px}
+.stat-ic{font-size:14px;margin-bottom:2px;line-height:1}
+.stat-v{font-family:Arial,Helvetica,sans-serif;font-size:20px;font-weight:700;color:var(--navy);line-height:1}
+.stat-l{font-size:11px;color:var(--t2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat-d{font-size:10px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .stat-d.up{color:var(--green)}.stat-d.dn{color:var(--red)}.stat-d.neu{color:var(--t3)}
-.stat-bar{position:absolute;bottom:0;left:0;right:0;height:3px;border-radius:0 0 10px 10px}
+.stat-bar{position:absolute;bottom:0;left:0;right:0;height:2px;border-radius:0 0 8px 8px}
 
 /* ── DASH GRID ───────────────────────────────────────────────────────────── */
 .dash-grid{display:grid;grid-template-columns:1fr 256px;gap:12px;flex:1;min-height:0;overflow:hidden}
@@ -421,6 +421,7 @@ input.fi:not([type="email"]):not([type="password"]):not([type="number"]){text-tr
 }
 
 /* ── RESPONSIVE ───────────────────────────────────────────────────────────── */
+@media(max-width:1280px){.stats{grid-template-columns:repeat(8,1fr);gap:5px}}
 @media(max-width:900px){
   .sb{display:none}
   .stats{grid-template-columns:repeat(4,1fr)}
@@ -8253,11 +8254,35 @@ export default function ENEXSystem(){
                           {hasPerm("editar_guia")&&(
                             <button className="btn-s" style={{fontSize:12,padding:"3px 8px",color:"var(--orange)",borderColor:"var(--orange)"}} title="Desarchivar (volver a pendientes)"
                               onClick={()=>{
-                                if(!window.confirm(`¿Desarchivar la guía ${c.id}? Volverá a pendientes pero los WR permanecerán en Almacén.`))return;
-                                const upd={...c,archivada:false,fechaRecibidaAlmacen:null};
+                                // Desarchivar = revertir el cierre de recepción.
+                                // Los WRs que pasaron a "Por Entrega" (20) por el cierre
+                                // vuelven a "Almacén" (17). WRs que ya avanzaron más
+                                // (21 Entregado, 22 Por Cobrar, 23 Cobrado, 25 Egresado)
+                                // NO se tocan — esos eventos son posteriores y válidos.
+                                const allWrIds=(c.containers||[]).flatMap(ct=>(ct.wr||[]).map(w=>w.id));
+                                const wrsEnPorEntrega=wrList.filter(w=>allWrIds.includes(w.id)&&w.status?.code==="20");
+                                const wrsBloqueados=wrList.filter(w=>allWrIds.includes(w.id)&&["21","22","23","25"].includes(w.status?.code||""));
+                                if(!window.confirm(
+                                  `¿Desarchivar la guía ${c.id}?\n`+
+                                  `↩️ ${wrsEnPorEntrega.length} WR en Por Entrega volverán a Almacén (17)\n`+
+                                  (wrsBloqueados.length>0?`🔒 ${wrsBloqueados.length} WR ya avanzaron a Entregado/Cobrado/Egresado y NO se tocarán\n`:"")+
+                                  `\nLa guía vuelve a pendientes.`
+                                ))return;
+                                // Revertir 20 → 17 con entrada en historial
+                                const st17=getStatus("17");
+                                let revertidos=0;
+                                setWrList(p=>p.map(w=>{
+                                  if(!allWrIds.includes(w.id)||w.status?.code!=="20")return w;
+                                  revertidos++;
+                                  const upd={...w,status:st17,historial:[...(w.historial||[]),{code:"17",label:"Almacén",fecha:new Date(),user:currentUser.id,nota:`Desarchivado guía ${c.id} — reversión de cierre`}]};
+                                  dbUpsertWR(upd);
+                                  return upd;
+                                }));
+                                // Actualizar guía
+                                const upd={...c,archivada:false,fechaRecibidaAlmacen:null,status:"Recibida"};
                                 setConsolList(p=>p.map(x=>x.id===c.id?upd:x));
                                 dbUpsertConsolidacion(upd);
-                                logAction("Desarchivó guía",c.id);
+                                logAction("Desarchivó guía",`${c.id} · ${wrsEnPorEntrega.length} WR revertidos 20→17`);
                               }}>↩️</button>
                           )}
                         </div>
