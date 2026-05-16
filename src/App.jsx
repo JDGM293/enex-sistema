@@ -834,7 +834,7 @@ const TypeBadge=({t})=><span className={`type-b ${TYPE_CLS[t]||""}`}>{t}</span>;
 
 // ─── WR ROW ────────────────────────────────────────────────────────────────────
 const CT_LABEL_WR={agente:"🤝 Agente",vendedor_agente:"💼 Vend. Agente",autonomo:"🧑‍💻 Autónomo",oficina:"🏢 Oficina",vendedor_oficina:"🛒 Vend. Oficina",matriz:"🏛️ Matriz"};
-const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[],oficinas=[],empresaNombre="Casa Matriz",sendTypes=[],onAssignTipo,onFotoClick,onTimelineClick})=>{
+const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[],oficinas=[],empresaNombre="Casa Matriz",sendTypes=[],onAssignTipo,onFotoClick,onTimelineClick,consolList=[]})=>{
   const isIn=unitL==="in";
   const isLb=unitW==="lb";
   const showVol = isLb ? `${w.volLb}lb` : `${w.volKg}kg`;
@@ -915,13 +915,24 @@ const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[
       </td>
       {/* 2. TIPO ENVÍO (confirmación) — después de N° WR.
            Solo modificable si status ∈ {1, 2, 3}. Reempacado (2.3), Egresado (25) y
-           Consolidado en adelante (4+) muestran el badge sin permitir cambios. */}
+           Consolidado en adelante (4+) muestran el badge sin permitir cambios.
+           Si el WR no tiene tipoEnvio pero está en una guía consolidada, hace fallback
+           al tipoEnvio de la guía (display read-only, marcado con un asterisco discreto). */}
       <td onClick={e=>e.stopPropagation()} style={{minWidth:88,padding:"4px 6px"}}>
         {(()=>{
           const _wrLocked=!["1","2","3"].includes(w.status?.code||"");
+          // Fallback: si w.tipoEnvio está vacío, intentar inferirlo de la guía consolidada
+          const guiaFallback=(!w.tipoEnvio)?(consolList.find(c=>{
+            if(Array.isArray(c.wrIds)&&c.wrIds.includes(w.id))return true;
+            return (c.containers||[]).some(ct=>(ct.wr||[]).some(r=>r.id===w.id));
+          })):null;
+          const tipoMostrar=w.tipoEnvio||guiaFallback?.tipoEnvio||"";
           if(_wrLocked){
-            return w.tipoEnvio
-              ? <span style={{display:"inline-flex"}}><TypeBadge t={w.tipoEnvio}/></span>
+            return tipoMostrar
+              ? <span style={{display:"inline-flex",alignItems:"center",gap:3}} title={!w.tipoEnvio&&guiaFallback?`Heredado de guía ${guiaFallback.id}`:""}>
+                  <TypeBadge t={tipoMostrar}/>
+                  {!w.tipoEnvio&&guiaFallback&&<span style={{fontSize:10,color:"var(--t3)",fontWeight:600}}>*</span>}
+                </span>
               : <span style={{color:"var(--t4)",fontSize:11}}>—</span>;
           }
           return w.tipoEnvio
@@ -980,7 +991,7 @@ const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[
 
 // ─── WR TABLE COMPONENT ────────────────────────────────────────────────────────
 const PAGE_SIZE=50;
-const WRTable=({rows,selId,onSelect,unitL,unitW,onSort,sortCol,sortDir,dimOpen,onDimToggle,page,onPage,clients=[],agentes=[],oficinas=[],empresaNombre="Casa Matriz",sendTypes=[],onAssignTipo,onFotoClick,onTimelineClick})=>{
+const WRTable=({rows,selId,onSelect,unitL,unitW,onSort,sortCol,sortDir,dimOpen,onDimToggle,page,onPage,clients=[],agentes=[],oficinas=[],empresaNombre="Casa Matriz",sendTypes=[],onAssignTipo,onFotoClick,onTimelineClick,consolList=[]})=>{
   const totalPages=Math.max(1,Math.ceil(rows.length/PAGE_SIZE));
   const pageRows=rows.slice((page-1)*PAGE_SIZE,page*PAGE_SIZE);
   const SortTh=({col,children,align})=>(
@@ -1023,6 +1034,7 @@ const WRTable=({rows,selId,onSelect,unitL,unitW,onSort,sortCol,sortDir,dimOpen,o
               <WRRow key={w.id} w={w} sel={selId===w.id} onClick={()=>onSelect(w)}
                 unitL={unitL} unitW={unitW} clients={clients} agentes={agentes} oficinas={oficinas} empresaNombre={empresaNombre}
                 sendTypes={sendTypes} onAssignTipo={onAssignTipo} onFotoClick={onFotoClick} onTimelineClick={onTimelineClick}
+                consolList={consolList}
                 dimOpen={dimOpen===w.id} onDimToggle={()=>onDimToggle(w.id)}/>
             ))}
           </tbody>
@@ -2388,6 +2400,7 @@ export default function ENEXSystem(){
             dimOpen={dimOpen} onDimToggle={handleDimToggle}
             onFotoClick={w=>setPhotoGalleryOpen({wrId:w.id})}
             onTimelineClick={w=>setTimelineWR(w)}
+            consolList={consolList}
             page={page} onPage={setPage}/>
         </div>
 
@@ -2456,6 +2469,7 @@ export default function ENEXSystem(){
         dimOpen={dimOpen} onDimToggle={handleDimToggle}
         onFotoClick={w=>setPhotoGalleryOpen({wrId:w.id})}
         onTimelineClick={w=>setTimelineWR(w)}
+        consolList={consolList}
         page={page} onPage={setPage}/>
     </div>
   );
@@ -4275,6 +4289,23 @@ export default function ENEXSystem(){
     };
     setConsolList(p=>existing?p.map(c=>c.id===n.id?n:c):[n,...p]);
     dbUpsertConsolidacion(n);
+    // Persistir tipoEnvio en cada WR de la guía (si está vacío) + agregar entrada
+    // de Consolidado (4) al historial para que el timeline tenga fecha exacta y
+    // el Dashboard muestre el tipo correcto sin necesitar fallback.
+    const wrIdsEnGuia=new Set(allWR.map(w=>w.id));
+    setWrList(prev=>prev.map(w=>{
+      if(!wrIdsEnGuia.has(w.id))return w;
+      const yaEnHistorial=(w.historial||[]).some(h=>String(h.code)==="4");
+      const tipoCambio=!w.tipoEnvio&&!!n.tipoEnvio;
+      if(!tipoCambio&&yaEnHistorial)return w;
+      const upd={...w};
+      if(tipoCambio)upd.tipoEnvio=n.tipoEnvio;
+      if(!yaEnHistorial){
+        upd.historial=[...(w.historial||[]),{code:"4",label:"Consolidado",fecha:now,user:currentUser.id,nota:`Guía ${n.id} · ${n.tipoEnvio||""}`}];
+      }
+      dbUpsertWR(upd);
+      return upd;
+    }));
     // Subir fotos pendientes (sin id) de cada contenedor al bucket
     const uploadedCount=await uploadFotosForConsol(n.id, cf.containers, currentUser?.id||'');
     setShowNewConsol(false);
@@ -6816,15 +6847,28 @@ export default function ENEXSystem(){
       extra:w.tipoPago?`💳 ${w.tipoPago}`:null,
       reached:!!w.fecha,
     });
-    // 2) Confirmado — solo si tipoEnvio actual está seteado
+    // 2) Confirmado — alcanzado si tipoEnvio actual está seteado O si el WR ya pasó por
+    // cualquier fase posterior (consolidado/recibido/entregado/reempacado/egresado/etc).
+    // Esto cubre: (a) WR confirmado normal con tipo, (b) WR confirmado con tipo perdido
+    // por algún bug pero que ya está consolidado/recibido, (c) reempacados y egresados
+    // que necesariamente pasaron por confirmación. Solo queda "pendiente" si tipoEnvio
+    // está vacío Y el WR sigue en 1/2 (origen sin confirmar).
+    const STATES_POST_CONFIRMACION=["4","5","6","6.2","7","8","9","9.1","10","10.1","10.2","11","12","12C","12P","13","14","15","16","17","18","18.1","19","20","21","22","23","25","2.3"];
+    const hayHistorialPosterior=hist.some(h=>STATES_POST_CONFIRMACION.includes(String(h.code)));
+    const pasoConfirmacion=tieneTipo||STATES_POST_CONFIRMACION.includes(code)||hayHistorialPosterior||!!guiaConsol;
     const confEntry=[...hist].reverse().find(h=>String(h.code)==="3");
+    // Fallback de fecha: primera entrada del historial posterior a 3 (consolidado, recibido, etc.) → guía
+    const primeraPosterior=hist.find(h=>STATES_POST_CONFIRMACION.includes(String(h.code)));
+    const confFecha=confEntry?.fecha||primeraPosterior?.fecha||guiaConsol?.fecha||null;
+    // Tipo de envío a mostrar: prioriza el del WR; si está vacío, intenta el de la guía
+    const tipoEnvioMostrar=w.tipoEnvio||guiaConsol?.tipoEnvio||"";
     hitos.push({
       key:"confirmado", label:"Confirmado", ic:"✅", color:"var(--green)",
-      fecha:tieneTipo?(confEntry?.fecha||null):null,
-      user:tieneTipo?(confEntry?.user||""):"",
-      nota:tieneTipo?(confEntry?.nota||""):"",
-      extra:tieneTipo?`✈️ Tipo de envío: ${w.tipoEnvio}`:null,
-      reached:tieneTipo,
+      fecha:pasoConfirmacion?confFecha:null,
+      user:pasoConfirmacion?(confEntry?.user||""):"",
+      nota:pasoConfirmacion?(confEntry?.nota||(tieneTipo?"":"(tipo derivado de guía)")):"",
+      extra:pasoConfirmacion&&tipoEnvioMostrar?`✈️ Tipo de envío: ${tipoEnvioMostrar}${!w.tipoEnvio&&guiaConsol?` (de guía ${guiaConsol.id})`:""}`:null,
+      reached:pasoConfirmacion,
     });
 
     // 3) Camino divergente
@@ -7485,7 +7529,10 @@ export default function ENEXSystem(){
   // Al crear: los WR pasan a estado 21 Entregado. Elegible: 20 Por Entrega y 25 Egresado
   // (por ejemplo, cuando el agente de carga ya llevó la mercancía y solo queda confirmar
   // la entrega firmada por el cliente final).
-  const dnElegible=(w)=>["20","25"].includes(w.status?.code||"");
+  // Sólo los WR en estado 20 Por Entrega son elegibles para Nota de Entrega.
+  // Reempacados (2.3) son fantasmas; Egresados (25) ya salieron del sistema por
+  // Cargo Release y no se entregan otra vez.
+  const dnElegible=(w)=>w?.status?.code==="20";
   const dnBuildId=()=>{
     const d=new Date();
     const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,"0"), dd=String(d.getDate()).padStart(2,"0");
@@ -9439,7 +9486,7 @@ export default function ENEXSystem(){
                 </div>
 
                 <div style={{marginBottom:6}}>
-                  <div style={{fontSize:13,fontWeight:700,color:"var(--t2)",marginBottom:4}}>➕ Agregar WR (elegibles: 20 Por Entrega, 25 Egresado)</div>
+                  <div style={{fontSize:13,fontWeight:700,color:"var(--t2)",marginBottom:4}}>➕ Agregar WR (elegibles: 20 Por Entrega)</div>
                   <input className="fi" placeholder="Buscar por WR, consignee, tracking…" value={qRef} onChange={e=>setDnModal(p=>({...p,_q:e.target.value}))} style={{marginBottom:6}}/>
                   <div style={{maxHeight:160,overflow:"auto",border:"1px solid #E0E7EF",borderRadius:4}}>
                     {filtered.length===0?(
