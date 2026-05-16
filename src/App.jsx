@@ -4543,21 +4543,33 @@ export default function ENEXSystem(){
                       {hasPerm("borrar_guia")&&(
                         <button className="btn-s" style={{fontSize:12,padding:"3px 8px",color:"var(--red)",borderColor:"var(--red)"}} title="Borrar guía"
                           onClick={()=>{
-                            if(!window.confirm(`¿Borrar guía consolidada ${c.id}?\nLos WR asociados quedarán libres (estado Confirmado).`))return;
-                            // Liberar WR asociados → volver a estado "3" Confirmado
+                            // Solo revertir WRs que sigan en Consolidado (4). Los que
+                            // ya avanzaron (5+ tránsito, 17 almacén, 20+ entrega) NO
+                            // se tocan — esos eventos son posteriores y válidos, no
+                            // tiene sentido degradarlos a Confirmado solo porque la
+                            // guía padre se borra.
                             const stConf=WR_STATUSES.find(s=>s.code==="3");
                             const allWrIds=(c.containers||[]).flatMap(ct=>(ct.wr||[]).map(w=>w.id));
+                            const wrsEnConsolidado=wrList.filter(w=>allWrIds.includes(w.id)&&w.status?.code==="4");
+                            const wrsBloqueados=wrList.filter(w=>allWrIds.includes(w.id)&&w.status?.code&&w.status.code!=="4");
+                            if(!window.confirm(
+                              `¿Borrar guía consolidada ${c.id}?\n`+
+                              `↩️ ${wrsEnConsolidado.length} WR en Consolidado volverán a Confirmado (3)\n`+
+                              (wrsBloqueados.length>0?`🔒 ${wrsBloqueados.length} WR ya avanzaron (tránsito/almacén/entrega) y NO se tocarán\n`:"")+
+                              `\nLa guía se elimina del sistema.`
+                            ))return;
                             if(allWrIds.length>0&&stConf){
                               setWrList(p=>p.map(w=>{
                                 if(!allWrIds.includes(w.id))return w;
-                                const upd={...w,status:stConf,historial:[...(w.historial||[]),{code:stConf.code,label:stConf.label,fecha:new Date(),user:currentUser.id,nota:`Guía ${c.id} eliminada`}]};
+                                if(w.status?.code!=="4")return w;
+                                const upd={...w,status:stConf,historial:[...(w.historial||[]),{code:stConf.code,label:stConf.label,fecha:new Date(),user:currentUser.id,nota:`Guía ${c.id} eliminada — liberado del embarque`}]};
                                 dbUpsertWR(upd);
                                 return upd;
                               }));
                             }
                             setConsolList(p=>p.filter(x=>x.id!==c.id));
                             dbDeleteConsolidacion(c.id);
-                            logAction("Borró guía consolidada",c.id);
+                            logAction("Borró guía consolidada",`${c.id} · ${wrsEnConsolidado.length} WR liberados, ${wrsBloqueados.length} respetados`);
                           }}>🗑 Borrar</button>
                       )}
                     </div>
@@ -7679,20 +7691,37 @@ export default function ENEXSystem(){
     const upd={...cr,anulado:true,motivoAnulacion:motivo};
     setCargoReleases(p=>p.map(c=>c.id===cr.id?upd:c));
     dbUpsertCargoRelease(upd);
-    // Revertir WRs a 20 Por Entrega
-    const st20=getStatus("20");
+    // Revertir cada WR al estado que tenía ANTES del egreso (último h.code !== "25").
+    // Un WR pudo egresarse desde múltiples estados (1, 2, 3 — egreso temprano —
+    // o 20 — egreso post-recepción). Volver siempre a 20 sería incorrecto si el
+    // WR estaba en 1/2/3. Si no encontramos historial previo, fallback a "1".
+    // Si el WR ya avanzó a otro estado por otra vía (no debería ocurrir, pero
+    // por seguridad), respetamos su estado actual.
+    let revertidos=0;
     setWrList(p=>p.map(w=>{
       if(!cr.wrIds.includes(w.id))return w;
-      if(w.status?.code!=="25")return w; // si ya avanzó, no revertir
-      const u={...w,status:st20,historial:[...(w.historial||[]),{code:"20",label:"Por Entrega",fecha:new Date(),user:currentUser.id,nota:`Egreso ${cr.id} anulado: ${motivo}`}]};
+      if(w.status?.code!=="25")return w;
+      const hist=Array.isArray(w.historial)?w.historial:[];
+      const prev=[...hist].reverse().find(h=>h.code&&h.code!=="25");
+      const prevCode=prev?.code||"1";
+      const stPrev=getStatus(prevCode)||getStatus("1");
+      if(!stPrev)return w;
+      revertidos++;
+      const u={...w,status:stPrev,historial:[...hist,{code:stPrev.code,label:stPrev.label,fecha:new Date(),user:currentUser.id,nota:`Egreso ${cr.id} anulado: ${motivo}`}]};
       dbUpsertWR(u);
       return u;
     }));
-    logAction("Anuló egreso",`${cr.id} — ${motivo}`);
+    logAction("Anuló egreso",`${cr.id} — ${motivo} — ${revertidos} WR revertidos al estado previo`);
   };
   const crDelete=(cr)=>{
     if(!hasPerm("borrar_egreso")){window.alert("Tu rol no tiene permiso para borrar egresos.");return;}
-    if(!window.confirm(`¿Borrar permanentemente el egreso ${cr.id}? Esto NO revierte los estados de los WR. Si quieres deshacer, usa "Anular" en vez de borrar.`))return;
+    // Bloqueo: solo se puede borrar permanentemente un egreso ya anulado.
+    // Borrar uno activo dejaría WRs colgados en estado 25 sin egreso asociado.
+    if(!cr.anulado){
+      window.alert(`No se puede borrar un egreso activo.\n\nPrimero anúlalo (✕) — eso revierte los WRs al estado que tenían antes del egreso. Después podrás borrarlo permanentemente del historial.`);
+      return;
+    }
+    if(!window.confirm(`¿Borrar permanentemente el egreso ${cr.id}?\nYa está anulado, así que los WR ya fueron revertidos. Esto solo elimina el registro del log.`))return;
     setCargoReleases(p=>p.filter(c=>c.id!==cr.id));
     dbDeleteCargoRelease(cr.id);
     logAction("Borró egreso",cr.id);
@@ -7842,7 +7871,13 @@ export default function ENEXSystem(){
   };
   const dnDelete=(dn)=>{
     if(!hasPerm("borrar_entrega")){window.alert("Tu rol no tiene permiso para borrar entregas.");return;}
-    if(!window.confirm(`¿Borrar permanentemente la nota de entrega ${dn.id}? Esto NO revierte los estados de los WR. Si quieres deshacer, usa "Anular".`))return;
+    // Bloqueo simétrico a crDelete: una DN activa no puede borrarse sin anular
+    // antes, porque los WRs quedan en estado 21 con la DN ya eliminada.
+    if(!dn.anulado){
+      window.alert(`No se puede borrar una nota de entrega activa.\n\nPrimero anúlala (✕) — eso revierte los WRs de Entregado (21) a Por Entrega (20). Después podrás borrarla permanentemente del historial.`);
+      return;
+    }
+    if(!window.confirm(`¿Borrar permanentemente la nota de entrega ${dn.id}?\nYa está anulada, así que los WR ya fueron revertidos.`))return;
     setDeliveryNotes(p=>p.filter(n=>n.id!==dn.id));
     dbDeleteDeliveryNote(dn.id);
     logAction("Borró entrega",dn.id);
