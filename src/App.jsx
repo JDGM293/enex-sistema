@@ -123,6 +123,11 @@ input.fi:not([type="email"]):not([type="password"]):not([type="number"]){text-tr
 
 /* ── TABLE ───────────────────────────────────────────────────────────────── */
 .wr-scroll{overflow:auto;flex:1;min-height:0}
+.wr-scroll::-webkit-scrollbar{width:12px;height:14px}
+.wr-scroll::-webkit-scrollbar-track{background:var(--bg4);border-top:1px solid var(--b1)}
+.wr-scroll::-webkit-scrollbar-thumb{background:#9AA8BC;border-radius:7px;border:2px solid var(--bg4);min-width:40px;min-height:40px}
+.wr-scroll::-webkit-scrollbar-thumb:hover{background:var(--navy)}
+.wr-scroll{scrollbar-color:#9AA8BC var(--bg4);scrollbar-width:auto}
 .wt{width:100%;border-collapse:collapse;font-size:14.5px;white-space:nowrap}
 .wt thead{position:sticky;top:0;z-index:5}
 .wt th{background:var(--navy);color:rgba(255,255,255,0.85);font-size:12px;letter-spacing:.7px;text-transform:uppercase;font-weight:700;padding:9px 10px;border-bottom:2px solid var(--navy3);text-align:left;cursor:pointer;user-select:none;white-space:nowrap}
@@ -1905,15 +1910,25 @@ export default function ENEXSystem(){
   // Si clFilter es "" se muestra el selector y la tabla no se renderiza, así que devolvemos vacío
   const filteredCl=!clFilter?[]:clients.filter(c=>clFilter==="todos"?true:c.tipo===(clFilter==="clientes"?"cliente":"usuario"));
 
-  // Stats
+  // Stats — usar SOLO códigos del modelo actual (WR_STATUSES). Los antiguos
+  // "7.1", "6.1", "12C", "12P" fueron retirados del modelo y la tabla de
+  // migración (línea ~1777) los convierte al cargar, pero quedaron filtros
+  // viejos que daban conteos en cero. Los filtros se alinean ahora con
+  // STAT_DEFS (renderDash) — una única fuente de verdad por estado.
   const stats={
-    total:wrList.length,
-    transit:wrList.filter(w=>w.status&&["7","7.1","8"].includes(w.status.code)).length,
-    confirmed:wrList.filter(w=>w.status&&w.status.code==="3").length,
-    customs:wrList.filter(w=>w.status&&["6","6.1","9","9.1"].includes(w.status.code)).length,
-    ready:wrList.filter(w=>w.status&&w.status.code==="11").length,
-    entregadoCobrado:wrList.filter(w=>w.status&&w.status.code==="12C").length,
-    entregadoPorCobrar:wrList.filter(w=>w.status&&w.status.code==="12P").length,
+    total:              wrList.length,
+    porConfirmar:       wrList.filter(w=>w.status&&["1","2"].includes(w.status.code)).length,
+    confirmed:          wrList.filter(w=>w.status&&w.status.code==="3").length,
+    consolidados:       wrList.filter(w=>w.status&&w.status.code==="4").length,
+    transit:            wrList.filter(w=>w.status&&["5","6","6.2","7","8","9","10","11","12","13"].includes(w.status.code)).length,
+    customs:            wrList.filter(w=>w.status&&["6","6.2","10","14"].includes(w.status.code)).length,
+    almacenDestino:     wrList.filter(w=>w.status&&w.status.code==="17").length,
+    porEntrega:         wrList.filter(w=>w.status&&w.status.code==="20").length,
+    entregados:         wrList.filter(w=>w.status&&w.status.code==="21").length,
+    porCobrar:          wrList.filter(w=>w.status&&w.status.code==="22").length,
+    cobrados:           wrList.filter(w=>w.status&&w.status.code==="23").length,
+    egresados:          wrList.filter(w=>w.status&&w.status.code==="25").length,
+    excepciones:        wrList.filter(w=>w.status&&["18","18.1","19"].includes(w.status.code)).length,
   };
 
   // Scan logic: register tracking in puerta
@@ -2364,14 +2379,18 @@ export default function ENEXSystem(){
   );
 
   // ── DASHBOARD ──────────────────────────────────────────────────────────────
+  // 8 cuadros que cubren el pipeline completo, alineados con el modelo actual
+  // de WR_STATUSES. Filtros y conteos comparten códigos con el objeto `stats`
+  // de más arriba (única fuente de verdad por estado).
   const STAT_DEFS=[
-    {key:"total",ic:"📦",label:"Total WR",d:"↑ 12% este mes",cls:"up",filter:()=>wrList,color:"#1A2B4A"},
-    {key:"transit",ic:"✈️",label:"En Tránsito",d:"Activos ahora",cls:"up",filter:()=>wrList.filter(w=>["7","7.1","8"].includes(w.status.code)),color:"#0080CC"},
-    {key:"confirmed",ic:"✅",label:"Confirmados",d:"Listos para despachar",cls:"up",filter:()=>wrList.filter(w=>w.status.code==="3"),color:"#1A8A4A"},
-    {key:"customs",ic:"🛃",label:"En Aduana",d:"Requieren atención",cls:"dn",filter:()=>wrList.filter(w=>["6","6.1","9","9.1"].includes(w.status.code)),color:"#CC2233"},
-    {key:"ready",ic:"🟢",label:"Listos Entrega",d:"Pendiente retiro",cls:"up",filter:()=>wrList.filter(w=>w.status.code==="11"),color:"#1A8A4A"},
-    {key:"entregadoCobrado",ic:"💵",label:"Entregado / Cobrado",d:"Pagados",cls:"up",filter:()=>wrList.filter(w=>w.status.code==="12C"),color:"#1A6040"},
-    {key:"entregadoPorCobrar",ic:"⏳",label:"Entregado / Por Cobrar",d:"Pendiente de cobro",cls:"dn",filter:()=>wrList.filter(w=>w.status.code==="12P"),color:"#C05800"},
+    {key:"total",          ic:"📦", label:"Total WR",        d:"Todos los WR del sistema",            cls:"up", filter:()=>wrList, color:"#1A2B4A"},
+    {key:"porConfirmar",   ic:"🆕", label:"Por Confirmar",    d:"Recibido / Origen — falta tipo",       cls:"dn", filter:()=>wrList.filter(w=>w.status&&["1","2"].includes(w.status.code)), color:"#C05800"},
+    {key:"confirmed",      ic:"✅", label:"Confirmados",      d:"Listos para consolidar",               cls:"up", filter:()=>wrList.filter(w=>w.status&&w.status.code==="3"), color:"#1A8A4A"},
+    {key:"consolidados",   ic:"🗂️", label:"Consolidados",     d:"Asignados a una guía",                 cls:"up", filter:()=>wrList.filter(w=>w.status&&w.status.code==="4"), color:"#2A6FA0"},
+    {key:"transit",        ic:"✈️", label:"En Tránsito",      d:"Viajando origen → destino",            cls:"up", filter:()=>wrList.filter(w=>w.status&&["5","6","6.2","7","8","9","10","11","12","13"].includes(w.status.code)), color:"#0080CC"},
+    {key:"almacenDestino", ic:"📥", label:"Almacén Destino",  d:"Llegaron al almacén",                   cls:"up", filter:()=>wrList.filter(w=>w.status&&w.status.code==="17"), color:"#6A4FB0"},
+    {key:"porEntrega",     ic:"🚚", label:"Por Entrega",      d:"Listos para retiro / envío",            cls:"up", filter:()=>wrList.filter(w=>w.status&&w.status.code==="20"), color:"#1A6040"},
+    {key:"porCobrar",      ic:"💸", label:"Por Cobrar",       d:"Entregados sin pago",                   cls:"dn", filter:()=>wrList.filter(w=>w.status&&w.status.code==="22"), color:"#CC2233"},
   ];
 
   const renderDash=()=>(
@@ -2406,12 +2425,12 @@ export default function ENEXSystem(){
 
         <div className="rp">
           <div className="card">
-            <div className="card-tt">🔔 Alertas <span className="card-sub">{wrList.filter(w=>["6.1","10.1"].includes(w.status?.code)).length} urgentes</span></div>
+            <div className="card-tt">🔔 Alertas <span className="card-sub">{stats.excepciones} excepciones</span></div>
             {[
               stats.customs>0&&{cls:"alt-e",ic:"🛃",t:"En Aduana / Retención",b:`${stats.customs} envío${stats.customs!==1?"s":""} en proceso aduanal`},
-              wrList.filter(w=>["6.1","10.1"].includes(w.status?.code)).length>0&&{cls:"alt-w",ic:"⚠️",t:"Envíos Urgentes",b:`${wrList.filter(w=>["6.1","10.1"].includes(w.status?.code)).length} requieren atención inmediata`},
-              stats.ready>0&&{cls:"alt-i",ic:"✅",t:"Listos para Entrega",b:`${stats.ready} envío${stats.ready!==1?"s":""} esperan al cliente`},
-              stats.entregadoPorCobrar>0&&{cls:"alt-ok",ic:"💵",t:"Por Cobrar",b:`${stats.entregadoPorCobrar} envío${stats.entregadoPorCobrar!==1?"s":""} pendientes de cobro`},
+              stats.excepciones>0&&{cls:"alt-w",ic:"⚠️",t:"Excepciones",b:`${stats.excepciones} WR en Faltante / Investigación / Sobrante`},
+              stats.porEntrega>0&&{cls:"alt-i",ic:"🚚",t:"Por Entrega",b:`${stats.porEntrega} envío${stats.porEntrega!==1?"s":""} esperan al cliente`},
+              stats.porCobrar>0&&{cls:"alt-ok",ic:"💸",t:"Por Cobrar",b:`${stats.porCobrar} envío${stats.porCobrar!==1?"s":""} pendientes de cobro`},
             ].filter(Boolean).map((a,i)=>(
               <div key={i} className={`alt-row ${a.cls}`}>
                 <div className="alt-ic">{a.ic}</div>
@@ -2422,12 +2441,15 @@ export default function ENEXSystem(){
           <div className="card">
             <div className="card-tt">📊 Distribución</div>
             {[
-              {l:"En Tránsito",v:stats.transit,c:"#0080CC"},
-              {l:"Confirmados",v:stats.confirmed,c:"#1A8A4A"},
-              {l:"En Aduana",v:stats.customs,c:"#CC2233"},
-              {l:"Listos",v:stats.ready,c:"#1A6040"},
-              {l:"Cobrado",v:stats.entregadoCobrado,c:"#2A7A50"},
-              {l:"Por Cobrar",v:stats.entregadoPorCobrar,c:"#C05800"},
+              {l:"Por Confirmar", v:stats.porConfirmar,   c:"#C05800"},
+              {l:"Confirmados",   v:stats.confirmed,       c:"#1A8A4A"},
+              {l:"Consolidados",  v:stats.consolidados,    c:"#2A6FA0"},
+              {l:"En Tránsito",   v:stats.transit,         c:"#0080CC"},
+              {l:"Almacén Dest.", v:stats.almacenDestino,  c:"#6A4FB0"},
+              {l:"Por Entrega",   v:stats.porEntrega,      c:"#1A6040"},
+              {l:"Entregados",    v:stats.entregados,      c:"#2A7A50"},
+              {l:"Por Cobrar",    v:stats.porCobrar,       c:"#CC2233"},
+              {l:"Cobrados",      v:stats.cobrados,        c:"#1A6040"},
             ].map(({l,v,c})=>{
               const pct=stats.total>0?Math.round((v/stats.total)*100):0;
               return (
@@ -2441,15 +2463,13 @@ export default function ENEXSystem(){
               );
             })}
           </div>
-          <div className="card">
-            <div className="card-tt">👥 Clientes <span className="card-lnk" onClick={()=>setTab("clients")}>Ver todos →</span></div>
-            {clients.filter(c=>c.tipo==="cliente").slice(0,5).map(c=>(
-              <div key={c.id} className="cl-row">
-                <div className="cl-av">{initials(c)}</div>
-                <div style={{flex:1,minWidth:0}}><div className="cl-nm">{fullName(c)}</div><div className="cl-cas">{c.casillero}</div></div>
-                <RoleBadge code={c.rol}/>
-              </div>
-            ))}
+          {/* SLOT LIBRE — espacio reservado para una próxima tarjeta. Mantengo
+              el contenedor visible (mismo card style) pero vacío para que el
+              layout de tres columnas no se rompa. A definir su contenido. */}
+          <div className="card" style={{minHeight:120,display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <div style={{fontSize:12,color:"var(--t4)",fontStyle:"italic",textAlign:"center"}}>
+              (espacio reservado)
+            </div>
           </div>
         </div>
       </div>
@@ -3609,31 +3629,89 @@ export default function ENEXSystem(){
     setEcResults([]);
   };
 
+  // Devuelve la fecha real del evento solicitado leyendo el historial del WR.
+  // Misma filosofía que getWRTimeline: una etapa se considera alcanzada si
+  // existe su evento literal en historial O si el estado actual / cualquier
+  // evento del historial es posterior en el flujo. Las fechas se toman del
+  // evento literal cuando existe; si no, se infieren de una fuente externa
+  // autoritativa (guía consolidada para "consolidado", nota de entrega para
+  // "entregado", factura pagada para "cobrado"). NUNCA se infieren del
+  // siguiente evento posterior — eso causaría que dos columnas compartan
+  // fecha. Si está alcanzado sin fecha exacta, devuelve "—" en vez de mentir.
+  //
+  // Códigos por etapa:
+  //   recibido     → evento "1" (o w.fecha como base si "1" no está en hist)
+  //   confirmado   → evento "3"
+  //   consolidado  → evento "4" (fallback: fecha de la guía consolidada)
+  //   enviado      → primer evento de tránsito (5,6,6.2,7,8,9,10,11,12,13)
+  //   almacen_dest → evento "17"
+  //   entregado    → evento "21" (fallback: fecha de nota de entrega activa)
+  //   cobrado      → evento "23" (fallback: fechaEmision de factura pagada)
   const getStatusDate=(w,code)=>{
-    if(!w.status)return"—";
-    const base=w.fecha instanceof Date?w.fecha:new Date(w.fecha);
-    const add=(days)=>{const d=new Date(base);d.setDate(d.getDate()+days);return fmtDate(d);};
-    const stOrder=["1","2","3","4","5","6","6.2","7","8","9","10","11","12C","12P"];
-    const idx=stOrder.indexOf(w.status.code);
-    switch(code){
-      case "recibido":     return fmtDate(w.fecha);
-      case "confirmado":   return idx>=2?add(1):"—";
-      case "consolidado":  return idx>=3?add(2):"—";
-      case "enviado":      return idx>=4?add(3):"—";
-      case "almacen_dest": return idx>=9?add(8):"—";
-      case "entregado":    return(w.status.code==="12C"||w.status.code==="12P")?add(12):"—";
-      default: return"—";
+    if(!w||!w.status)return"—";
+    const hist=Array.isArray(w.historial)?w.historial:[];
+    const findFirst=(codes)=>hist.find(h=>codes.includes(String(h.code)));
+    const currentCode=w.status.code;
+    const POST={
+      recibido:     ["3","4","5","6","6.2","7","8","9","10","11","12","13","14","15","16","17","18","18.1","19","20","21","22","23","25","2.3"],
+      confirmado:   ["4","5","6","6.2","7","8","9","10","11","12","13","14","15","16","17","18","18.1","19","20","21","22","23"],
+      consolidado: ["5","6","6.2","7","8","9","10","11","12","13","14","15","16","17","18","18.1","19","20","21","22","23"],
+      enviado:      ["6","6.2","7","8","9","10","11","12","13","14","15","16","17","18","18.1","19","20","21","22","23"],
+      almacen_dest: ["18","18.1","19","20","21","22","23"],
+      entregado:    ["22","23"],
+      cobrado:      [],
+    };
+    const LITERAL={
+      recibido:     ["1"],
+      confirmado:   ["3"],
+      consolidado: ["4"],
+      enviado:      ["5","6","6.2","7","8","9","10","11","12","13"],
+      almacen_dest: ["17"],
+      entregado:    ["21"],
+      cobrado:      ["23"],
+    };
+    const reached=(cat)=>{
+      const lit=findFirst(LITERAL[cat]);
+      if(lit)return true;
+      if(LITERAL[cat].includes(currentCode))return true;
+      if(POST[cat].includes(currentCode))return true;
+      if(hist.some(h=>POST[cat].includes(String(h.code))))return true;
+      return false;
+    };
+    if(code==="recibido"){
+      // Caso especial: "recibido" es la creación del WR; siempre tiene w.fecha
+      if(!w.fecha&&!reached("recibido"))return"—";
+      const lit=findFirst(LITERAL.recibido);
+      return fmtDate(lit?.fecha||w.fecha);
     }
+    if(!reached(code))return"—";
+    const lit=findFirst(LITERAL[code]||[]);
+    if(lit)return fmtDate(lit.fecha);
+    // Fuentes externas autoritativas
+    if(code==="consolidado"){
+      const guia=consolList.find(c=>(Array.isArray(c.wrIds)&&c.wrIds.includes(w.id))||(c.containers||[]).some(ct=>(ct.wr||[]).some(r=>r.id===w.id)));
+      if(guia?.fecha)return fmtDate(guia.fecha);
+    }
+    if(code==="entregado"){
+      const dn=(deliveryNotes||[]).find(n=>!n.anulado&&Array.isArray(n.wrIds)&&n.wrIds.includes(w.id));
+      if(dn?.fecha)return fmtDate(dn.fecha);
+    }
+    if(code==="cobrado"){
+      const fac=(facturas||[]).find(f=>f.status==="pagada"&&Array.isArray(f.wrIds)&&f.wrIds.includes(w.id));
+      if(fac?.fechaEmision||fac?.fecha)return fmtDate(fac.fechaEmision||fac.fecha);
+    }
+    return "—";
   };
 
-  // N° Guía se genera al consolidar (simulado como ID de consolidación)
+  // N° Guía: lee el ID real de la guía consolidada del WR (consolList).
+  // Antes generaba un placeholder fake "GU-" + slice del ID del WR.
   const getNumGuia=(w)=>{
-    if(!w.status)return"—";
-    const stOrder=["1","2","3","4","5","6","6.2","7","8","9","10","11","12C","12P"];
-    const idx=stOrder.indexOf(w.status.code);
-    if(idx<3)return"—"; // no consolidado aún
-    // Generar número de guía basado en el WR (simula número asignado al consolidar)
-    return "GU-"+w.id.slice(8,14);
+    if(!w)return"—";
+    const guia=consolList.find(c=>{
+      if(Array.isArray(c.wrIds)&&c.wrIds.includes(w.id))return true;
+      return (c.containers||[]).some(ct=>(ct.wr||[]).some(r=>r.id===w.id));
+    });
+    return guia?.id||"—";
   };
 
   // ── IMPRESIÓN DE GUÍA ARCHIVADA (Recepción en Almacén) ────────────────────
@@ -3943,7 +4021,7 @@ export default function ENEXSystem(){
                         const idx=parseInt(sel,10)-1;
                         if(isNaN(idx)||idx<0||idx>=elegiblesCli.length){window.alert("Número inválido.");return;}
                         crOpenIndivPorWR(elegiblesCli[idx]);
-                      }}>🚀 Cargo Release{elegiblesCli.length>0?` (${elegiblesCli.length})`:""}</button>
+                      }}>🚀 Cargo Release</button>
                   );
                 })()}
               </div>
@@ -4018,19 +4096,30 @@ export default function ENEXSystem(){
                   const hideMiddle = showOrigen;
                   // Tipo Envío va siempre al final, salvo en Reempacados (que queda fijo en 2.3)
                   const showTipoEnvio = !showOrigen;
+                  // Orden de columnas (pedido por usuario, mayo 2026):
+                  //   Estado · N° WR · [Origen?] · Cajas · Peso · P.Vol · Ft³ · M³
+                  //   · Contenido · Valor   ← movidas aquí (entre M³ y Recibido)
+                  //   · Recibido · Confirmado · Consolidado · Enviado
+                  //   · Alm. Destino · Entregado · Cobrado   ← columna nueva
+                  //   · N° Guía · [Tipo Envío?]
                   const baseCols = [
                     "Estado","N° WR",
                     ...(showOrigen?["Origen"]:[]),
                     "Cajas","Peso lb","P.Vol lb","Ft³","M³",
-                    "Recibido",
-                    ...(hideMiddle?[]:["Confirmado","Consolidado","Enviado","Alm. Destino","Entregado","N° Guía"]),
                     "Contenido","Valor",
+                    "Recibido",
+                    ...(hideMiddle?[]:["Confirmado","Consolidado","Enviado","Alm. Destino","Entregado","Cobrado","N° Guía"]),
                     ...(showTipoEnvio?["Tipo Envío"]:[])
                   ];
-                  // Totales: columnas de texto que no suman (Estado, N° WR, [Origen])
-                  const firstColspan = 2 + (showOrigen?1:0); // TOTALES ocupa Estado+N°WR(+Origen)
-                  // Columnas entre M³ y Valor que no suman: Recibido..Contenido
-                  const middleColspan = hideMiddle ? 2 : 8;
+                  // Totales: la fila de TOTALES debe encajar con las celdas
+                  // que SÍ suman (Cajas, Peso, P.Vol, Ft³, M³, Valor).
+                  // - firstColspan cubre Estado+N°WR(+Origen) hasta Cajas (excl.)
+                  // - midColspanBeforeValor cubre desde Contenido (excluida — descrip.)
+                  //   hasta antes del Valor (que mostramos en su propia celda).
+                  //   Aquí no hay celdas que sumar entre M³ y Valor (Contenido es texto).
+                  // - tailColspan cubre Recibido..N°Guía (+Tipo Envío), todas no-sumables.
+                  const firstColspan = 2 + (showOrigen?1:0);
+                  const tailColspan  = 1 /*Recibido*/ + (hideMiddle?0:7 /*Confirmado..N°Guía*/) + (showTipoEnvio?1:0);
                 return (
                 <table style={{width:"100%",borderCollapse:"collapse",fontSize:12.5,whiteSpace:"nowrap"}}>
                   <thead>
@@ -4080,6 +4169,10 @@ export default function ENEXSystem(){
                         <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",fontWeight:600,color:"var(--orange)"}}>{w.volLb||"—"}lb</td>
                         <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",color:"var(--sky)"}}>{w.ft3}</td>
                         <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",color:"var(--teal)"}}>{w.m3}</td>
+                        {/* Contenido / Valor — movidas aquí (antes estaban al final). */}
+                        <td style={{padding:"7px 8px",maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",color:"var(--t2)"}}>{cleanReempaqueDesc(w.descripcion)||"—"}</td>
+                        <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--green)"}}>${w.valor?.toFixed(2)||"0.00"}</td>
+                        {/* Fechas del flujo, leídas del historial real (no inventadas). */}
                         <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",fontSize:12}}>{getStatusDate(w,"recibido")}</td>
                         {!hideMiddle && (
                           <>
@@ -4088,11 +4181,11 @@ export default function ENEXSystem(){
                             <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",fontSize:12,color:getStatusDate(w,"enviado")==="—"?"var(--t3)":"var(--t1)"}}>{getStatusDate(w,"enviado")}</td>
                             <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",fontSize:12,color:getStatusDate(w,"almacen_dest")==="—"?"var(--t3)":"var(--t1)"}}>{getStatusDate(w,"almacen_dest")}</td>
                             <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",fontSize:12,color:getStatusDate(w,"entregado")==="—"?"var(--t3)":"var(--green)",fontWeight:getStatusDate(w,"entregado")==="—"?400:700}}>{getStatusDate(w,"entregado")}</td>
+                            {/* Nueva columna Cobrado — antes de N° Guía. */}
+                            <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",fontSize:12,color:getStatusDate(w,"cobrado")==="—"?"var(--t3)":"var(--gold2)",fontWeight:getStatusDate(w,"cobrado")==="—"?400:700}}>{getStatusDate(w,"cobrado")}</td>
                             <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--purple)",fontWeight:600}}>{getNumGuia(w)}</td>
                           </>
                         )}
-                        <td style={{padding:"7px 8px",maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",color:"var(--t2)"}}>{cleanReempaqueDesc(w.descripcion)||"—"}</td>
-                        <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--green)"}}>${w.valor?.toFixed(2)||"0.00"}</td>
                         {/* TIPO ENVÍO — al final de la fila (mismo patrón que Dashboard).
                             Bloqueado para Reempacado (2.3), Egresado (25) y Consolidado en adelante (4+). */}
                         {showTipoEnvio && (
@@ -4127,9 +4220,9 @@ export default function ENEXSystem(){
                         <td style={{padding:"8px",fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--orange)"}}>{totalVolLbC}lb</td>
                         <td style={{padding:"8px",fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--sky)"}}>{totalFt3C}</td>
                         <td style={{padding:"8px",fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--teal)"}}>{totalM3C}</td>
-                        <td colSpan={middleColspan}/>
+                        <td/>{/* Contenido — texto, no suma */}
                         <td style={{padding:"8px",fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--green)"}}>${totalValorC}</td>
-                        {showTipoEnvio&&<td/>}
+                        <td colSpan={tailColspan}/>
                       </tr>
                     </tfoot>
                   )}
@@ -6855,7 +6948,9 @@ export default function ENEXSystem(){
     // terminales que pueden ocurrir desde 1/2 sin confirmar nunca el tipo
     // de envío (egreso en origen, reempaque de mercancía sin enviar).
     // ─────────────────────────────────────────────────────────────────────
-    const STATES_REQUIRE_CONFIRM=["4","5","6","6.2","7","8","9","9.1","10","10.1","10.2","11","12","12C","12P","13","14","15","16","17","18","18.1","19","20","21","22","23"];
+    // Lista alineada con WR_STATUSES actual: sin "9.1", "10.1", "10.2",
+    // "12C", "12P" (códigos retirados del modelo).
+    const STATES_REQUIRE_CONFIRM=["4","5","6","6.2","7","8","9","10","11","12","13","14","15","16","17","18","18.1","19","20","21","22","23"];
 
     // Helper: construye un hito "alcanzado por estado actual o evento
     // posterior". La fecha solo se usa cuando proviene del evento literal
@@ -6930,7 +7025,7 @@ export default function ENEXSystem(){
     //      Fuente externa autoritativa: fecha de creación de la guía
     //      consolidada (cuando el WR está incluido en una y no hay
     //      evento "4" registrado).
-    const POST_CONSOLIDADO=["5","6","6.2","7","8","9","9.1","10","10.1","10.2","11","12","12C","12P","13","14","15","16","17","18","18.1","19","20","21","22","23"];
+    const POST_CONSOLIDADO=["5","6","6.2","7","8","9","10","11","12","13","14","15","16","17","18","18.1","19","20","21","22","23"];
     const hCons=buildHito("4",POST_CONSOLIDADO,guiaConsol?.fecha||null,guiaConsol?`(según fecha de guía ${guiaConsol.id})`:"");
     lineal.push({
       key:"consolidado", label:"Consolidado", ic:"🗂️", color:"var(--cyan)",
@@ -7773,7 +7868,11 @@ export default function ENEXSystem(){
     // Candidatos globales (cuando NO hay guía seleccionada): WRs en tránsito destino o liberados
     const candidatos=wrList.filter(w=>{
       const c=w.status?.code||"";
-      const esTransitoDest=["13","14","15","16","9.1","10.1","10.2"].includes(c);
+      // Códigos válidos en el modelo actual (sin "9.1", "10.1", "10.2"
+      // que fueron retirados). "Tránsito destino" = últimos pasos antes
+      // de llegar a almacén (14 Aduana Dest., 15 Aud.3, 16 Lib.3) + tránsito
+      // final (13). Más liberados de tránsito previo (8, 12).
+      const esTransitoDest=["13","14","15","16"].includes(c);
       const puedoRecibir=esTransitoDest||["8","12"].includes(c);
       if(!puedoRecibir)return false;
       if(!q)return true;
