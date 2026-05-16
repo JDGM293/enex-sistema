@@ -6826,7 +6826,16 @@ export default function ENEXSystem(){
   // Consolidado hace fallback a consolList si no hay entrada "4" en historial.
   // Cobrado hace fallback a facturas pagadas si no hay entrada "23" en historial.
   const getWRTimeline=(w)=>{
-    if(!w)return [];
+    // Retorna { lineal, especial }:
+    //   - lineal: array de 7 hitos SIEMPRE en el mismo orden (Registrado,
+    //     Confirmado, Consolidado, Recibido, Por Entrega, Entregado, Cobrado).
+    //     Cada hito tiene reached:bool y fecha:Date|null. Hitos no alcanzados
+    //     se ven en estado "pendiente". El timeline lineal es idéntico en
+    //     estructura para todos los WRs — no hay ramas que rompan la lectura.
+    //   - especial: hito único (Reempacado o Egresado) o null. Se renderiza
+    //     en una sección APARTE para que el evento de rama (que puede o no
+    //     pasar por el flujo normal) no se confunda con la secuencia lineal.
+    if(!w)return {lineal:[],especial:null};
     const hist=Array.isArray(w.historial)?w.historial:[];
     const findFirst=(codes)=>hist.find(h=>codes.includes(String(h.code)));
     const findLast =(codes)=>[...hist].reverse().find(h=>codes.includes(String(h.code)));
@@ -6866,12 +6875,12 @@ export default function ENEXSystem(){
       return {reached:true,fecha:null,fechaAprox:false,user:"",nota:""};
     };
 
-    const hitos=[];
+    const lineal=[];
 
     // ─────────────────────────────────────────────────────────────────────
     // 1) Registrado — siempre
     // ─────────────────────────────────────────────────────────────────────
-    hitos.push({
+    lineal.push({
       key:"registrado", label:"Registrado", ic:"📦", color:"var(--navy)",
       fecha:w.fecha, user:w.usuario||"", nota:`WR creado · ${w.id}`,
       extra:w.tipoPago?`💳 ${w.tipoPago}`:null,
@@ -6886,46 +6895,35 @@ export default function ENEXSystem(){
     //        por confirmación (lista STATES_REQUIRE_CONFIRM — sin 25/2.3), o
     //    (d) WR incluido en una guía consolidada (implica confirmación).
     //
-    //    Para WRs egresados o reempacados que NO tienen evidencia de
-    //    confirmación, este hito se OMITE: nunca fueron confirmados, no
-    //    debe inventarse una fecha de confirmación derivada del egreso
-    //    o reempaque.
+    //    Si no hay evidencia (p.ej. WR reempacado/egresado que nunca se
+    //    confirmó), el hito se muestra en "pendiente". El timeline lineal
+    //    siempre tiene los mismos 7 hitos, en el mismo orden, para todos
+    //    los WRs — los estados rama (Reempacado/Egresado) viven en la
+    //    sección "especial" separada y no rompen esta secuencia.
     // ─────────────────────────────────────────────────────────────────────
     const confEntry=findLast(["3"]);
     const codeImplicaConfirm=STATES_REQUIRE_CONFIRM.includes(code);
     const histImplicaConfirm=hist.some(h=>STATES_REQUIRE_CONFIRM.includes(String(h.code)));
     const pasoConfirmacion=!!confEntry||tieneTipo||codeImplicaConfirm||histImplicaConfirm||!!guiaConsol;
-    const ocultarConfirmado=(esEgresado||esReempacado)&&!pasoConfirmacion;
-    if(!ocultarConfirmado){
-      // La fecha de Confirmado SOLO se considera exacta cuando existe el
-      // evento literal "3" en historial. No la inferimos de eventos
-      // posteriores (eso causa que Confirmado y Almacén compartan la
-      // misma fecha falsa). Si no hay evento "3" pero sabemos que sí
-      // se confirmó, el hito queda alcanzado y sin fecha registrada.
-      const tipoEnvioMostrar=w.tipoEnvio||guiaConsol?.tipoEnvio||"";
-      hitos.push({
-        key:"confirmado", label:"Confirmado", ic:"✅", color:"var(--green)",
-        fecha:confEntry?.fecha||null, fechaAprox:false,
-        user:confEntry?.user||"",
-        nota:confEntry?.nota||(pasoConfirmacion&&!confEntry?"(fecha exacta no registrada)":""),
-        extra:pasoConfirmacion&&tipoEnvioMostrar?`✈️ Tipo de envío: ${tipoEnvioMostrar}${!w.tipoEnvio&&guiaConsol?` (de guía ${guiaConsol.id})`:""}`:null,
-        reached:pasoConfirmacion,
-      });
-    }
+    const tipoEnvioMostrar=w.tipoEnvio||guiaConsol?.tipoEnvio||"";
+    lineal.push({
+      key:"confirmado", label:"Confirmado", ic:"✅", color:"var(--green)",
+      fecha:confEntry?.fecha||null, fechaAprox:false,
+      user:confEntry?.user||"",
+      nota:confEntry?.nota||(pasoConfirmacion&&!confEntry?"(fecha exacta no registrada)":""),
+      extra:pasoConfirmacion&&tipoEnvioMostrar?`✈️ Tipo de envío: ${tipoEnvioMostrar}${!w.tipoEnvio&&guiaConsol?` (de guía ${guiaConsol.id})`:""}`:null,
+      reached:pasoConfirmacion,
+    });
 
     // ─────────────────────────────────────────────────────────────────────
     // 3) Flujo normal: Consolidado → Recibido → Por Entrega → Entregado → Cobrado.
-    //    Se construye SIEMPRE — también para egresados y reempacados —
-    //    porque un WR egresado por Cargo Release pudo haber pasado por
-    //    almacén y estar Por Entrega antes del egreso, y esa historia
-    //    debe verse en el timeline. Cada hito queda alcanzado solo con
-    //    evidencia real (evento literal, estado actual posterior, evento
-    //    posterior en historial, o fuente externa autoritativa). Si el
-    //    WR salió temprano del flujo (p.ej. reempacado desde 1/2 sin
-    //    consolidar), los hitos que nunca ocurrieron quedan en
-    //    "pendiente" — sin inventar fechas.
-    //
-    //    Reempacado / Egresado se añaden como hito terminal al final.
+    //    Cada hito queda alcanzado solo con evidencia real (evento literal,
+    //    estado actual posterior, evento posterior en historial, o fuente
+    //    externa autoritativa). La fecha es exacta solo si proviene del
+    //    evento literal del propio hito o de una fuente autoritativa
+    //    (guía / nota de entrega / factura) — nunca se infiere de la
+    //    fecha de un evento posterior. Si un WR salió temprano del flujo,
+    //    los hitos posteriores quedan en "pendiente" sin inventar nada.
     // ─────────────────────────────────────────────────────────────────────
 
     // 3.a) Consolidado (4) — posteriores: 5..16, 17..23.
@@ -6934,7 +6932,7 @@ export default function ENEXSystem(){
     //      evento "4" registrado).
     const POST_CONSOLIDADO=["5","6","6.2","7","8","9","9.1","10","10.1","10.2","11","12","12C","12P","13","14","15","16","17","18","18.1","19","20","21","22","23"];
     const hCons=buildHito("4",POST_CONSOLIDADO,guiaConsol?.fecha||null,guiaConsol?`(según fecha de guía ${guiaConsol.id})`:"");
-    hitos.push({
+    lineal.push({
       key:"consolidado", label:"Consolidado", ic:"🗂️", color:"var(--cyan)",
       fecha:hCons.fecha, fechaAprox:hCons.fechaAprox,
       user:hCons.user,
@@ -6948,7 +6946,7 @@ export default function ENEXSystem(){
     //      fecha queda no registrada (no inferimos del evento posterior).
     const POST_ALMACEN=["18","18.1","19","20","21","22","23"];
     const hRec=buildHito("17",POST_ALMACEN);
-    hitos.push({
+    lineal.push({
       key:"recibido", label:"Recibido en Almacén", ic:"📥", color:"var(--purple)",
       fecha:hRec.fecha, fechaAprox:hRec.fechaAprox,
       user:hRec.user,
@@ -6959,7 +6957,7 @@ export default function ENEXSystem(){
     // 3.c) Por Entrega (20) — posteriores: 21, 22, 23. Sin fuente externa.
     const POST_PORENTREGA=["21","22","23"];
     const hPE=buildHito("20",POST_PORENTREGA);
-    hitos.push({
+    lineal.push({
       key:"porentrega", label:"Por Entrega", ic:"🚚", color:"var(--sky)",
       fecha:hPE.fecha, fechaAprox:hPE.fechaAprox,
       user:hPE.user,
@@ -6973,7 +6971,7 @@ export default function ENEXSystem(){
     const dnRel=deliveryNotes.find(n=>!n.anulado&&Array.isArray(n.wrIds)&&n.wrIds.includes(w.id));
     const hEnt=buildHito("21",POST_ENTREGADO,dnRel?.fecha||null,dnRel?`(según nota ${dnRel.id})`:"");
     const entReached=hEnt.reached||!!dnRel;
-    hitos.push({
+    lineal.push({
       key:"entregado", label:"Entregado", ic:"📝", color:"var(--green)",
       fecha:hEnt.fecha, fechaAprox:hEnt.fechaAprox,
       user:hEnt.user,
@@ -6989,7 +6987,7 @@ export default function ENEXSystem(){
     const facPagada=facturas.find(f=>f.status==="pagada"&&Array.isArray(f.wrIds)&&f.wrIds.includes(w.id));
     const cobradoReached=!!cobradoEntry||!!facPagada;
     const cobradoFecha=cobradoEntry?.fecha||facPagada?.fechaEmision||facPagada?.fecha||null;
-    hitos.push({
+    lineal.push({
       key:"cobrado", label:"Cobrado", ic:"💰", color:"var(--gold2)",
       fecha:cobradoFecha, fechaAprox:!cobradoEntry&&!!facPagada,
       user:cobradoEntry?.user||"",
@@ -6999,78 +6997,104 @@ export default function ENEXSystem(){
     });
 
     // ─────────────────────────────────────────────────────────────────────
-    // 4) Hito terminal — Reempacado o Egresado. Se añade al final para
-    //    que conviva con cualquier recorrido previo del WR. Si el WR
-    //    no es terminal, no se agrega nada.
+    // 4) Sección especial — Reempacado o Egresado. Estados rama que
+    //    NO forman parte del flujo lineal: se renderizan en un bloque
+    //    APARTE para no romper la secuencia normal. Un WR puede haber
+    //    pasado por todo el flujo (Recibido, Por Entrega…) y luego
+    //    ser egresado: ambas cosas se ven al mismo tiempo, sin que el
+    //    evento rama interfiera con el seguimiento lineal.
     // ─────────────────────────────────────────────────────────────────────
+    let especial=null;
     if(esReempacado){
       const reempEntry=findFirst(["2.3"]);
-      hitos.push({
+      especial={
         key:"reempacado", label:"Reempacado", ic:"🔁", color:"var(--purple)",
         fecha:reempEntry?.fecha||null, user:reempEntry?.user||"", nota:reempEntry?.nota||"",
         extra:w.reempacadoEn?`📦 Reempacado en: ${w.reempacadoEn}`:null,
         reached:true, terminal:true,
-      });
+        seccionTitulo:"🔁 Estado especial · Reempacado",
+      };
     }else if(esEgresado){
       const egresEntry=findFirst(["25"]);
       const cr=(cargoReleases||[]).find(c=>!c.anulado&&Array.isArray(c.wrIds)&&c.wrIds.includes(w.id));
-      hitos.push({
+      especial={
         key:"despachado", label:"Despachado (Egresado)", ic:"🚀", color:"var(--orange)",
         fecha:egresEntry?.fecha||cr?.fecha||null, user:egresEntry?.user||cr?.usuario||"", nota:egresEntry?.nota||"",
         extra:cr?`📋 Egreso ${cr.id} → ${cr.agenteCarga||"agente"}`:null,
         reached:true, terminal:true,
-      });
+        seccionTitulo:"🚀 Estado especial · Egresado (Cargo Release)",
+      };
     }
-    return hitos;
+    return {lineal,especial};
   };
 
-  // Render una timeline visual (lista vertical) — usada en WR Modal y en timeline modal rápido
+  // Render una timeline visual (lista vertical) — usada en WR Modal y en timeline modal rápido.
+  // Estructura:
+  //   • Bloque LINEAL (7 hitos siempre, en el mismo orden, marcando alcanzado/pendiente).
+  //   • Bloque ESPECIAL aparte (solo si el WR es Reempacado o Egresado) — visualmente
+  //     separado con borde y título para no romper la lectura del flujo lineal.
   const renderWRTimeline=(w)=>{
-    const tl=getWRTimeline(w);
+    const {lineal,especial}=getWRTimeline(w);
     const hist=Array.isArray(w?.historial)?w.historial:[];
+    // Sub-render de un hito individual. Lo extraigo para reutilizarlo entre
+    // el bloque lineal y el bloque especial sin duplicar JSX.
+    const renderHito=(h,opts={})=>{
+      const {isLast=true,nextReached=false}=opts;
+      const dotColor=h.reached?h.color:"var(--b1)";
+      return (
+        <div key={h.key} style={{display:"flex",gap:12,alignItems:"flex-start"}}>
+          <div style={{display:"flex",flexDirection:"column",alignItems:"center",minWidth:24}}>
+            <div style={{width:24,height:24,borderRadius:"50%",background:dotColor,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,flexShrink:0,opacity:h.reached?1:.3}}>
+              {h.ic}
+            </div>
+            {!isLast&&<div style={{width:2,flex:1,minHeight:24,background:h.reached&&nextReached?h.color:"var(--b2)",marginTop:2,marginBottom:2,opacity:h.reached?.4:.2}}/>}
+          </div>
+          <div style={{flex:1,paddingBottom:isLast?0:14}}>
+            <div style={{display:"flex",alignItems:"baseline",gap:8,flexWrap:"wrap"}}>
+              <span style={{fontSize:14,fontWeight:700,color:h.reached?"var(--t1)":"var(--t4)"}}>{h.label}</span>
+              {h.terminal&&<span style={{fontSize:10,padding:"1px 6px",borderRadius:8,background:"#FFF8E1",border:"1px solid #FFC107",color:"#7A5C00",fontWeight:700,letterSpacing:.4,textTransform:"uppercase"}}>terminal</span>}
+              {h.reached&&h.fecha
+                ?<span style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:h.fechaAprox?"var(--t3)":"var(--t2)",fontWeight:600}}>
+                   {h.fechaAprox?"≈ ":""}{fmtDate(h.fecha)} {fmtTime(h.fecha)}
+                   {h.fechaAprox&&<span style={{fontSize:10,fontWeight:500,color:"var(--t4)",marginLeft:4,fontStyle:"italic",fontFamily:"Arial,sans-serif"}}>aprox.</span>}
+                 </span>
+                :h.reached
+                  ?<span style={{fontSize:11,color:"var(--t4)",fontStyle:"italic"}}>fecha no registrada</span>
+                  :<span style={{fontSize:11,color:"var(--t4)",fontStyle:"italic"}}>pendiente</span>}
+            </div>
+            {h.extra&&h.reached&&(
+              <div style={{fontSize:12,color:h.color,marginTop:3,fontWeight:600}}>{h.extra}</div>
+            )}
+            {h.reached&&(h.user||h.nota)&&(
+              <div style={{fontSize:11,color:"var(--t3)",marginTop:2}}>
+                {h.user&&<>por <b style={{color:"var(--t2)"}}>{h.user}</b>{h.nota?" · ":""}</>}
+                {h.nota&&<span style={{color:"var(--t2)"}}>{h.nota}</span>}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    };
     return (
       <div>
+        {/* Bloque LINEAL — siempre 7 hitos, mismo orden */}
         <div style={{display:"flex",flexDirection:"column",gap:0,position:"relative"}}>
-          {tl.map((h,i)=>{
-            const isLast=i===tl.length-1;
-            const dotColor=h.reached?h.color:"var(--b1)";
-            return (
-              <div key={h.key} style={{display:"flex",gap:12,alignItems:"flex-start"}}>
-                {/* Columna del punto + línea vertical */}
-                <div style={{display:"flex",flexDirection:"column",alignItems:"center",minWidth:24}}>
-                  <div style={{width:24,height:24,borderRadius:"50%",background:dotColor,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,flexShrink:0,opacity:h.reached?1:.3}}>
-                    {h.ic}
-                  </div>
-                  {!isLast&&<div style={{width:2,flex:1,minHeight:24,background:h.reached&&tl[i+1]?.reached?h.color:"var(--b2)",marginTop:2,marginBottom:2,opacity:h.reached?.4:.2}}/>}
-                </div>
-                {/* Columna del contenido */}
-                <div style={{flex:1,paddingBottom:isLast?0:14}}>
-                  <div style={{display:"flex",alignItems:"baseline",gap:8,flexWrap:"wrap"}}>
-                    <span style={{fontSize:14,fontWeight:700,color:h.reached?"var(--t1)":"var(--t4)"}}>{h.label}</span>
-                    {h.terminal&&<span style={{fontSize:10,padding:"1px 6px",borderRadius:8,background:"#FFF8E1",border:"1px solid #FFC107",color:"#7A5C00",fontWeight:700,letterSpacing:.4,textTransform:"uppercase"}}>terminal</span>}
-                    {h.reached&&h.fecha
-                      ?<span style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:h.fechaAprox?"var(--t3)":"var(--t2)",fontWeight:600}}>
-                         {h.fechaAprox?"≈ ":""}{fmtDate(h.fecha)} {fmtTime(h.fecha)}
-                         {h.fechaAprox&&<span style={{fontSize:10,fontWeight:500,color:"var(--t4)",marginLeft:4,fontStyle:"italic",fontFamily:"Arial,sans-serif"}}>aprox.</span>}
-                       </span>
-                      :h.reached
-                        ?<span style={{fontSize:11,color:"var(--t4)",fontStyle:"italic"}}>fecha no registrada</span>
-                        :<span style={{fontSize:11,color:"var(--t4)",fontStyle:"italic"}}>pendiente</span>}
-                  </div>
-                  {h.extra&&h.reached&&(
-                    <div style={{fontSize:12,color:h.color,marginTop:3,fontWeight:600}}>{h.extra}</div>
-                  )}
-                  {h.reached&&(h.user||h.nota)&&(
-                    <div style={{fontSize:11,color:"var(--t3)",marginTop:2}}>
-                      {h.user&&<>por <b style={{color:"var(--t2)"}}>{h.user}</b>{h.nota?" · ":""}</>}
-                      {h.nota&&<span style={{color:"var(--t2)"}}>{h.nota}</span>}
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+          {lineal.map((h,i)=>renderHito(h,{
+            isLast:i===lineal.length-1,
+            nextReached:!!lineal[i+1]?.reached,
+          }))}
         </div>
+
+        {/* Bloque ESPECIAL — Reempacado / Egresado, aparte del flujo lineal */}
+        {especial&&(
+          <div style={{marginTop:18,paddingTop:12,borderTop:`2px dashed ${especial.color}`,position:"relative"}}>
+            <div style={{display:"inline-block",background:"var(--bg2)",padding:"2px 10px",borderRadius:10,fontSize:11,fontWeight:700,color:especial.color,letterSpacing:.5,textTransform:"uppercase",marginBottom:10,border:`1px solid ${especial.color}`}}>
+              {especial.seccionTitulo||"Evento especial"}
+            </div>
+            {renderHito(especial,{isLast:true,nextReached:false})}
+          </div>
+        )}
+
         {/* Historial completo (incluye estados intermedios de tránsito, excepciones, etc.) */}
         {hist.length>0&&(
           <details style={{marginTop:14,borderTop:"1px dashed var(--b1)",paddingTop:10}}>
