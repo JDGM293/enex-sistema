@@ -6829,6 +6829,7 @@ export default function ENEXSystem(){
     if(!w)return [];
     const hist=Array.isArray(w.historial)?w.historial:[];
     const findFirst=(codes)=>hist.find(h=>codes.includes(String(h.code)));
+    const findLast =(codes)=>[...hist].reverse().find(h=>codes.includes(String(h.code)));
     const code=w.status?.code||"1";
     const esReempacado=code==="2.3"||!!w.reempacadoEn;
     const esEgresado=code==="25";
@@ -6839,39 +6840,87 @@ export default function ENEXSystem(){
       return (c.containers||[]).some(ct=>(ct.wr||[]).some(r=>r.id===w.id));
     });
 
+    // ─────────────────────────────────────────────────────────────────────
+    // Estados que SOLO pueden alcanzarse habiendo pasado por Confirmación.
+    // OJO: 25 (Egresado) y 2.3 (Reempacado) NO están aquí — son ramas
+    // terminales que pueden ocurrir desde 1/2 sin confirmar nunca el tipo
+    // de envío (egreso en origen, reempaque de mercancía sin enviar).
+    // ─────────────────────────────────────────────────────────────────────
+    const STATES_REQUIRE_CONFIRM=["4","5","6","6.2","7","8","9","9.1","10","10.1","10.2","11","12","12C","12P","13","14","15","16","17","18","18.1","19","20","21","22","23"];
+
+    // Helper: construye un hito "alcanzado por estado actual o evento
+    // posterior". Toma el code literal del hito y la lista de codes que
+    // implican que el WR YA pasó por él. Si hay evento literal usa esa
+    // fecha (exacta). Si no, infiere la fecha del primer evento posterior
+    // conocido y marca fechaAprox=true. Si no hay nada, queda reached=true
+    // sin fecha (caso de datos viejos donde se perdió el evento).
+    const buildHito=(literal, posteriores, fechaFallback=null)=>{
+      const lit=findLast([literal]);
+      const codeImplica=(code===literal)||posteriores.includes(code);
+      const histImplica=hist.some(h=>posteriores.includes(String(h.code)));
+      const reached=!!lit||codeImplica||histImplica;
+      if(!reached)return {reached:false,fecha:null,fechaAprox:false,user:"",nota:""};
+      if(lit)return {reached:true,fecha:lit.fecha,fechaAprox:false,user:lit.user||"",nota:lit.nota||""};
+      // Inferir: primer evento posterior conocido > fallback externo
+      const primPos=hist.find(h=>posteriores.includes(String(h.code)));
+      if(primPos)return {reached:true,fecha:primPos.fecha,fechaAprox:true,user:"",nota:""};
+      if(fechaFallback)return {reached:true,fecha:fechaFallback,fechaAprox:true,user:"",nota:""};
+      return {reached:true,fecha:null,fechaAprox:false,user:"",nota:""};
+    };
+
     const hitos=[];
+
+    // ─────────────────────────────────────────────────────────────────────
     // 1) Registrado — siempre
+    // ─────────────────────────────────────────────────────────────────────
     hitos.push({
       key:"registrado", label:"Registrado", ic:"📦", color:"var(--navy)",
       fecha:w.fecha, user:w.usuario||"", nota:`WR creado · ${w.id}`,
       extra:w.tipoPago?`💳 ${w.tipoPago}`:null,
       reached:!!w.fecha,
     });
-    // 2) Confirmado — alcanzado si tipoEnvio actual está seteado O si el WR ya pasó por
-    // cualquier fase posterior (consolidado/recibido/entregado/reempacado/egresado/etc).
-    // Esto cubre: (a) WR confirmado normal con tipo, (b) WR confirmado con tipo perdido
-    // por algún bug pero que ya está consolidado/recibido, (c) reempacados y egresados
-    // que necesariamente pasaron por confirmación. Solo queda "pendiente" si tipoEnvio
-    // está vacío Y el WR sigue en 1/2 (origen sin confirmar).
-    const STATES_POST_CONFIRMACION=["4","5","6","6.2","7","8","9","9.1","10","10.1","10.2","11","12","12C","12P","13","14","15","16","17","18","18.1","19","20","21","22","23","25","2.3"];
-    const hayHistorialPosterior=hist.some(h=>STATES_POST_CONFIRMACION.includes(String(h.code)));
-    const pasoConfirmacion=tieneTipo||STATES_POST_CONFIRMACION.includes(code)||hayHistorialPosterior||!!guiaConsol;
-    const confEntry=[...hist].reverse().find(h=>String(h.code)==="3");
-    // Fallback de fecha: primera entrada del historial posterior a 3 (consolidado, recibido, etc.) → guía
-    const primeraPosterior=hist.find(h=>STATES_POST_CONFIRMACION.includes(String(h.code)));
-    const confFecha=confEntry?.fecha||primeraPosterior?.fecha||guiaConsol?.fecha||null;
-    // Tipo de envío a mostrar: prioriza el del WR; si está vacío, intenta el de la guía
-    const tipoEnvioMostrar=w.tipoEnvio||guiaConsol?.tipoEnvio||"";
-    hitos.push({
-      key:"confirmado", label:"Confirmado", ic:"✅", color:"var(--green)",
-      fecha:pasoConfirmacion?confFecha:null,
-      user:pasoConfirmacion?(confEntry?.user||""):"",
-      nota:pasoConfirmacion?(confEntry?.nota||(tieneTipo?"":"(tipo derivado de guía)")):"",
-      extra:pasoConfirmacion&&tipoEnvioMostrar?`✈️ Tipo de envío: ${tipoEnvioMostrar}${!w.tipoEnvio&&guiaConsol?` (de guía ${guiaConsol.id})`:""}`:null,
-      reached:pasoConfirmacion,
-    });
 
-    // 3) Camino divergente
+    // ─────────────────────────────────────────────────────────────────────
+    // 2) Confirmado — alcanzado SOLO con evidencia real:
+    //    (a) evento "3" en historial, o
+    //    (b) tipoEnvio asignado actualmente, o
+    //    (c) estado actual / evento histórico que requiere haber pasado
+    //        por confirmación (lista STATES_REQUIRE_CONFIRM — sin 25/2.3), o
+    //    (d) WR incluido en una guía consolidada (implica confirmación).
+    //
+    //    Para WRs egresados o reempacados que NO tienen evidencia de
+    //    confirmación, este hito se OMITE: nunca fueron confirmados, no
+    //    debe inventarse una fecha de confirmación derivada del egreso
+    //    o reempaque.
+    // ─────────────────────────────────────────────────────────────────────
+    const confEntry=findLast(["3"]);
+    const codeImplicaConfirm=STATES_REQUIRE_CONFIRM.includes(code);
+    const histImplicaConfirm=hist.some(h=>STATES_REQUIRE_CONFIRM.includes(String(h.code)));
+    const pasoConfirmacion=!!confEntry||tieneTipo||codeImplicaConfirm||histImplicaConfirm||!!guiaConsol;
+    const ocultarConfirmado=(esEgresado||esReempacado)&&!pasoConfirmacion;
+    if(!ocultarConfirmado){
+      let confFecha=null, confAprox=false, confUser="", confNota="";
+      if(confEntry){
+        confFecha=confEntry.fecha; confUser=confEntry.user||""; confNota=confEntry.nota||"";
+      }else if(pasoConfirmacion){
+        const primera=hist.find(h=>STATES_REQUIRE_CONFIRM.includes(String(h.code)));
+        if(primera){confFecha=primera.fecha; confAprox=true;}
+        else if(guiaConsol?.fecha){confFecha=guiaConsol.fecha; confAprox=true;}
+      }
+      const tipoEnvioMostrar=w.tipoEnvio||guiaConsol?.tipoEnvio||"";
+      hitos.push({
+        key:"confirmado", label:"Confirmado", ic:"✅", color:"var(--green)",
+        fecha:confFecha, fechaAprox:confAprox,
+        user:confUser,
+        nota:confNota||(pasoConfirmacion&&!confEntry?"(inferido de etapas posteriores)":""),
+        extra:pasoConfirmacion&&tipoEnvioMostrar?`✈️ Tipo de envío: ${tipoEnvioMostrar}${!w.tipoEnvio&&guiaConsol?` (de guía ${guiaConsol.id})`:""}`:null,
+        reached:pasoConfirmacion,
+      });
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // 3) Caminos divergentes terminales — Reempacado / Egresado
+    // ─────────────────────────────────────────────────────────────────────
     if(esReempacado){
       const reempEntry=findFirst(["2.3"]);
       hitos.push({
@@ -6895,42 +6944,74 @@ export default function ENEXSystem(){
       return hitos;
     }
 
-    // 4) Flujo normal completo
-    const consolEntry=findFirst(["4"]);
-    const consolFecha=consolEntry?.fecha||guiaConsol?.fecha||null;
+    // ─────────────────────────────────────────────────────────────────────
+    // 4) Flujo normal: Consolidado → Recibido → Por Entrega → Entregado → Cobrado.
+    //    Cada hito se considera alcanzado si existe su evento literal en
+    //    historial, o si el estado actual / cualquier evento del historial
+    //    es posterior a él en el flujo. La fecha es exacta solo cuando
+    //    proviene del evento literal; en caso contrario se marca aprox.
+    // ─────────────────────────────────────────────────────────────────────
+
+    // 4.a) Consolidado (4) — posteriores: 5..16, 17..23
+    const POST_CONSOLIDADO=["5","6","6.2","7","8","9","9.1","10","10.1","10.2","11","12","12C","12P","13","14","15","16","17","18","18.1","19","20","21","22","23"];
+    const hCons=buildHito("4",POST_CONSOLIDADO,guiaConsol?.fecha||null);
     hitos.push({
       key:"consolidado", label:"Consolidado", ic:"🗂️", color:"var(--cyan)",
-      fecha:consolFecha, user:consolEntry?.user||"", nota:consolEntry?.nota||"",
+      fecha:hCons.fecha, fechaAprox:hCons.fechaAprox,
+      user:hCons.user,
+      nota:hCons.nota||(hCons.reached&&hCons.fechaAprox?"(inferido de etapas posteriores)":""),
       extra:guiaConsol?`📋 Guía: ${guiaConsol.id} · ${guiaConsol.destino||""}`:null,
-      reached:!!consolFecha,
+      reached:hCons.reached,
     });
-    const recibidoEntry=findFirst(["17"]);
+
+    // 4.b) Recibido en Almacén (17) — posteriores: 18, 18.1, 19, 20, 21, 22, 23
+    const POST_ALMACEN=["18","18.1","19","20","21","22","23"];
+    const hRec=buildHito("17",POST_ALMACEN);
     hitos.push({
       key:"recibido", label:"Recibido en Almacén", ic:"📥", color:"var(--purple)",
-      fecha:recibidoEntry?.fecha||null, user:recibidoEntry?.user||"", nota:recibidoEntry?.nota||"",
-      reached:!!recibidoEntry,
+      fecha:hRec.fecha, fechaAprox:hRec.fechaAprox,
+      user:hRec.user,
+      nota:hRec.nota||(hRec.reached&&hRec.fechaAprox?"(inferido de etapas posteriores)":""),
+      reached:hRec.reached,
     });
-    const porEntregaEntry=findFirst(["20"]);
+
+    // 4.c) Por Entrega (20) — posteriores: 21, 22, 23
+    const POST_PORENTREGA=["21","22","23"];
+    const hPE=buildHito("20",POST_PORENTREGA);
     hitos.push({
       key:"porentrega", label:"Por Entrega", ic:"🚚", color:"var(--sky)",
-      fecha:porEntregaEntry?.fecha||null, user:porEntregaEntry?.user||"", nota:porEntregaEntry?.nota||"",
-      reached:!!porEntregaEntry,
+      fecha:hPE.fecha, fechaAprox:hPE.fechaAprox,
+      user:hPE.user,
+      nota:hPE.nota||(hPE.reached&&hPE.fechaAprox?"(inferido de etapas posteriores)":""),
+      reached:hPE.reached,
     });
-    const entregadoEntry=findFirst(["21"]);
+
+    // 4.d) Entregado (21) — posteriores: 22, 23. Una Nota de Entrega
+    //      activa también prueba la entrega y aporta su fecha.
+    const POST_ENTREGADO=["22","23"];
+    const hEnt=buildHito("21",POST_ENTREGADO);
     const dnRel=deliveryNotes.find(n=>!n.anulado&&Array.isArray(n.wrIds)&&n.wrIds.includes(w.id));
+    let entReached=hEnt.reached||!!dnRel;
+    let entFecha=hEnt.fecha, entAprox=hEnt.fechaAprox, entUser=hEnt.user, entNota=hEnt.nota;
+    if(!entFecha&&dnRel){entFecha=dnRel.fecha||null; entAprox=true;}
     hitos.push({
       key:"entregado", label:"Entregado", ic:"📝", color:"var(--green)",
-      fecha:entregadoEntry?.fecha||null, user:entregadoEntry?.user||"", nota:entregadoEntry?.nota||"",
+      fecha:entFecha, fechaAprox:entAprox,
+      user:entUser,
+      nota:entNota||(entReached&&!hEnt.reached?"(según nota de entrega)":(entReached&&entAprox?"(inferido de etapas posteriores)":"")),
       extra:dnRel?`📋 Nota ${dnRel.id} → ${dnRel.receptorNombre||dnRel.consignatario||""}`:null,
-      reached:!!entregadoEntry,
+      reached:entReached,
     });
-    // Cobrado: historial "23" OR factura pagada vinculada
-    const cobradoEntry=findFirst(["23"]);
+
+    // 4.e) Cobrado (23) — combinable con factura pagada
+    const cobradoEntry=findLast(["23"]);
     const facPagada=facturas.find(f=>f.status==="pagada"&&Array.isArray(f.wrIds)&&f.wrIds.includes(w.id));
     const cobradoFecha=cobradoEntry?.fecha||facPagada?.fechaEmision||facPagada?.fecha||null;
     hitos.push({
       key:"cobrado", label:"Cobrado", ic:"💰", color:"var(--gold2)",
-      fecha:cobradoFecha, user:cobradoEntry?.user||"", nota:cobradoEntry?.nota||"",
+      fecha:cobradoFecha, fechaAprox:!cobradoEntry&&!!facPagada,
+      user:cobradoEntry?.user||"",
+      nota:cobradoEntry?.nota||(!cobradoEntry&&facPagada?"(según factura pagada)":""),
       extra:facPagada?`📋 Factura ${facPagada.id} · ${facPagada.moneda} ${(parseFloat(facPagada.total)||0).toFixed(2)}`:null,
       reached:!!cobradoFecha,
     });
@@ -6962,8 +7043,13 @@ export default function ENEXSystem(){
                     <span style={{fontSize:14,fontWeight:700,color:h.reached?"var(--t1)":"var(--t4)"}}>{h.label}</span>
                     {h.terminal&&<span style={{fontSize:10,padding:"1px 6px",borderRadius:8,background:"#FFF8E1",border:"1px solid #FFC107",color:"#7A5C00",fontWeight:700,letterSpacing:.4,textTransform:"uppercase"}}>terminal</span>}
                     {h.reached&&h.fecha
-                      ?<span style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--t2)",fontWeight:600}}>{fmtDate(h.fecha)} {fmtTime(h.fecha)}</span>
-                      :(!h.reached&&<span style={{fontSize:11,color:"var(--t4)",fontStyle:"italic"}}>pendiente</span>)}
+                      ?<span style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:h.fechaAprox?"var(--t3)":"var(--t2)",fontWeight:600}}>
+                         {h.fechaAprox?"≈ ":""}{fmtDate(h.fecha)} {fmtTime(h.fecha)}
+                         {h.fechaAprox&&<span style={{fontSize:10,fontWeight:500,color:"var(--t4)",marginLeft:4,fontStyle:"italic",fontFamily:"Arial,sans-serif"}}>aprox.</span>}
+                       </span>
+                      :h.reached
+                        ?<span style={{fontSize:11,color:"var(--t4)",fontStyle:"italic"}}>fecha no registrada</span>
+                        :<span style={{fontSize:11,color:"var(--t4)",fontStyle:"italic"}}>pendiente</span>}
                   </div>
                   {h.extra&&h.reached&&(
                     <div style={{fontSize:12,color:h.color,marginTop:3,fontWeight:600}}>{h.extra}</div>
