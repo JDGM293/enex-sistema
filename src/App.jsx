@@ -7077,12 +7077,18 @@ export default function ENEXSystem(){
     };
     return (
       <div>
-        {/* Bloque LINEAL — siempre 7 hitos, mismo orden */}
+        {/* Bloque LINEAL — solo los hitos efectivamente alcanzados.
+            Mantienen el orden cronológico definido en getWRTimeline. Los
+            pendientes (hitos no alcanzados todavía) se ocultan para no
+            ensuciar visualmente el timeline. */}
         <div style={{display:"flex",flexDirection:"column",gap:0,position:"relative"}}>
-          {lineal.map((h,i)=>renderHito(h,{
-            isLast:i===lineal.length-1,
-            nextReached:!!lineal[i+1]?.reached,
-          }))}
+          {(()=>{
+            const visibles=lineal.filter(h=>h.reached);
+            return visibles.map((h,i)=>renderHito(h,{
+              isLast:i===visibles.length-1,
+              nextReached:true,
+            }));
+          })()}
         </div>
 
         {/* Bloque ESPECIAL — Reempacado / Egresado, aparte del flujo lineal */}
