@@ -3657,6 +3657,21 @@ export default function ENEXSystem(){
     const hist=Array.isArray(w.historial)?w.historial:[];
     const findFirst=(codes)=>hist.find(h=>codes.includes(String(h.code)));
     const currentCode=w.status.code;
+    // Detector de confirmación vigente: si después del último evento "3"
+    // aparece en historial un evento con code "1" o "2", la confirmación
+    // se revirtió y no debe contarse como vigente (aunque el evento "3"
+    // siga en el log para auditoría).
+    const findConfirmacionVigente=()=>{
+      const lastConfIdx=(()=>{
+        for(let i=hist.length-1;i>=0;i--){
+          if(String(hist[i].code)==="3")return i;
+        }
+        return -1;
+      })();
+      if(lastConfIdx<0)return null;
+      const revertido=hist.slice(lastConfIdx+1).some(h=>["1","2"].includes(String(h.code)));
+      return revertido?null:hist[lastConfIdx];
+    };
     const POST={
       recibido:     ["3","4","5","6","6.2","7","8","9","10","11","12","13","14","15","16","17","18","18.1","19","20","21","22","23","25","2.3"],
       confirmado:   ["4","5","6","6.2","7","8","9","10","11","12","13","14","15","16","17","18","18.1","19","20","21","22","23"],
@@ -3688,6 +3703,20 @@ export default function ENEXSystem(){
       if(!w.fecha&&!reached("recibido"))return"—";
       const lit=findFirst(LITERAL.recibido);
       return fmtDate(lit?.fecha||w.fecha);
+    }
+    if(code==="confirmado"){
+      // Caso especial: la confirmación puede haber sido revertida.
+      // Si fue revertida y el WR no avanzó después por otra vía
+      // (no hay estados posteriores que impliquen confirmación), no
+      // mostrar fecha. Si hubo avance posterior real, mostramos la
+      // fecha de la confirmación vigente (o "—" si no se conserva).
+      const confVig=findConfirmacionVigente();
+      if(confVig)return fmtDate(confVig.fecha);
+      // Sin confirmación vigente: si el WR está/estuvo en estados
+      // que implican confirmación (17, 20, etc.), conservamos "reached"
+      // pero sin fecha. Si no, devolvemos "—".
+      if(!reached("confirmado"))return"—";
+      return "—"; // alcanzado por inferencia pero sin fecha exacta confiable
     }
     if(!reached(code))return"—";
     const lit=findFirst(LITERAL[code]||[]);
@@ -7013,16 +7042,29 @@ export default function ENEXSystem(){
     //    los WRs — los estados rama (Reempacado/Egresado) viven en la
     //    sección "especial" separada y no rompen esta secuencia.
     // ─────────────────────────────────────────────────────────────────────
+    // Detectar última confirmación VIGENTE (no revertida).
+    // Una confirmación se considera revertida cuando después del evento "3"
+    // aparece en historial un evento con code "1" o "2" (estado de origen),
+    // que es lo que hace `revertirConfirmacion` / blanqueo de tipo: empuja al
+    // WR al estado previo y agrega esa entrada al historial. En ese caso el
+    // evento "3" queda en el log como auditoría, pero no representa una
+    // confirmación vigente — el timeline no debe contarla.
     const confEntry=findLast(["3"]);
+    let confEffective=confEntry;
+    if(confEntry){
+      const idx=hist.lastIndexOf(confEntry);
+      const revertido=hist.slice(idx+1).some(h=>["1","2"].includes(String(h.code)));
+      if(revertido)confEffective=null;
+    }
     const codeImplicaConfirm=STATES_REQUIRE_CONFIRM.includes(code);
     const histImplicaConfirm=hist.some(h=>STATES_REQUIRE_CONFIRM.includes(String(h.code)));
-    const pasoConfirmacion=!!confEntry||tieneTipo||codeImplicaConfirm||histImplicaConfirm||!!guiaConsol;
+    const pasoConfirmacion=!!confEffective||tieneTipo||codeImplicaConfirm||histImplicaConfirm||!!guiaConsol;
     const tipoEnvioMostrar=w.tipoEnvio||guiaConsol?.tipoEnvio||"";
     lineal.push({
       key:"confirmado", label:"Confirmado", ic:"✅", color:"var(--green)",
-      fecha:confEntry?.fecha||null, fechaAprox:false,
-      user:confEntry?.user||"",
-      nota:confEntry?.nota||(pasoConfirmacion&&!confEntry?"(fecha exacta no registrada)":""),
+      fecha:confEffective?.fecha||null, fechaAprox:false,
+      user:confEffective?.user||"",
+      nota:confEffective?.nota||(pasoConfirmacion&&!confEffective?"(fecha exacta no registrada)":""),
       extra:pasoConfirmacion&&tipoEnvioMostrar?`✈️ Tipo de envío: ${tipoEnvioMostrar}${!w.tipoEnvio&&guiaConsol?` (de guía ${guiaConsol.id})`:""}`:null,
       reached:pasoConfirmacion,
     });
