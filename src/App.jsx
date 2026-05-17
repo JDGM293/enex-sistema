@@ -1075,11 +1075,15 @@ const emptyCaja=()=>({
   descripcion:"", tipoEmbalaje:"",
   fotos:[], // [{id?, file, url, path?, source:'upload'|'webcam', mime, sizeBytes, filename, createdAt}]
 });
-const emptyWRF=()=>({
+// El tipoPago por defecto viene de la configuración del sistema (PAY_TYPES[0]).
+// El usuario administra esa lista en Configuración → Tipos de Pago, y el primer
+// elemento del listado es el que predetermina cada Nuevo WR. Si no hay nada
+// configurado (caso límite), queda vacío y el select queda en el primer option.
+const emptyWRF=(defaultTipoPago="")=>({
   consignee:"",casilleroSearch:"",casillero:"",clienteId:"",
   remitente:"",remitenteDir:"",remitenteTel:"",remitenteEmail:"",
   chofer:"",idChofer:"",proNumber:"",ocNumber:"",
-  tipoPago:"Prepago",tipoEnvio:"",
+  tipoPago:defaultTipoPago,tipoEnvio:"",
   notas:"",cargos:[],
   unitDim:"in",unitPeso:"lb",
   cajas:[emptyCaja()],
@@ -1696,7 +1700,7 @@ export default function ENEXSystem(){
   const [tarifaTipoTab,setTarifaTipoTab]=useState("aereo");
   const [showNewFactura,setShowNewFactura]=useState(false);
   const [date,setDate]=useState(new Date().toISOString().slice(0,10));
-  const [wrf,setWrf]=useState(emptyWRF());
+  const [wrf,setWrf]=useState(emptyWRF(PAY_TYPES[0]));
   const [clientSearch,setClientSearch]=useState("");
   const [clientResults,setClientResults]=useState([]);
   const [showLabels,setShowLabels]=useState(null);
@@ -2202,7 +2206,7 @@ export default function ENEXSystem(){
       setWrList(p=>p.map(x=>x.id===editWR.id?updated:x));
       dbUpsertWR(updated);
       setShowNewWR(false);setEditWR(null);
-      setWrf(emptyWRF());setClientSearch("");
+      setWrf(emptyWRF(PAY_TYPES[0]));setClientSearch("");
       logAction("Editó WR",editWR.id);
       if(uploadedCount>0) logAction("Subió fotos WR",`${editWR.id} (${uploadedCount})`);
     } else {
@@ -2255,7 +2259,7 @@ export default function ENEXSystem(){
       setWrList(p=>[n,...p.map(w=>padresUpd.find(pa=>pa.id===w.id)||w)]);
       padresUpd.forEach(dbUpsertWR);
       setShowNewWR(false);
-      setWrf(emptyWRF());setClientSearch("");
+      setWrf(emptyWRF(PAY_TYPES[0]));setClientSearch("");
       if(esReempaque){logAction("Creó Reempaque",`${n.id} ← [${reempaqueIds.join(", ")}]`);setRpqSel([]);}
       logAction("Creó WR",wrNumPrev);
       if(uploadedCount>0) logAction("Subió fotos WR",`${n.id} (${uploadedCount})`);
@@ -2354,7 +2358,7 @@ export default function ENEXSystem(){
   const renderWRToolbar=()=>(
     <div className="wr-toolbar">
       {/* Nuevo WR — IZQUIERDA */}
-      {hasPerm("crear_wr")&&<button className="btn-p" onClick={()=>{setWrf(emptyWRF());setShowNewWR(true);}}>+ Nuevo WR</button>}
+      {hasPerm("crear_wr")&&<button className="btn-p" onClick={()=>{setWrf(emptyWRF(PAY_TYPES[0]));setShowNewWR(true);}}>+ Nuevo WR</button>}
       {/* Búsqueda avanzada */}
       <div className="srch-adv">
         <select className="srch-param" value={searchParam} onChange={e=>{setSearchParam(e.target.value);setSearch("");}}>
@@ -2804,7 +2808,7 @@ export default function ENEXSystem(){
       <div className="modal mxl" onClick={e=>e.stopPropagation()}>
         <div className="mhd">
           <div className="mt">{editWR?"✏️ Editar WR — "+editWR.id:"📦 Nuevo Warehouse Receipt"} — {wrf.cajas.length} {wrf.cajas.length===1?"caja":"cajas"}</div>
-          <button className="mcl" onClick={()=>{setShowNewWR(false);setEditWR(null);setWrf(emptyWRF());setClientSearch("");}}>✕</button>
+          <button className="mcl" onClick={()=>{setShowNewWR(false);setEditWR(null);setWrf(emptyWRF(PAY_TYPES[0]));setClientSearch("");}}>✕</button>
         </div>
 
         {/* N° WR AUTOMÁTICO */}
@@ -3084,7 +3088,7 @@ export default function ENEXSystem(){
         </div>
 
         <div className="mft">
-          <button className="btn-s" onClick={()=>{setShowNewWR(false);setEditWR(null);setWrf(emptyWRF());setClientSearch("");}}>Cancelar</button>
+          <button className="btn-s" onClick={()=>{setShowNewWR(false);setEditWR(null);setWrf(emptyWRF(PAY_TYPES[0]));setClientSearch("");}}>Cancelar</button>
           <button className="btn-c">👁 Vista Previa</button>
           <button className="btn-p" onClick={submitWR}>{editWR?"Guardar Cambios ✅":"Registrar WR ✅"}</button>
         </div>
@@ -3121,11 +3125,11 @@ export default function ENEXSystem(){
                     numFactura:d.factura||"",descripcion:cleanReempaqueDesc(d.descripcion||""),
                   }))
                 :[emptyCaja()];
-              setWrf({...emptyWRF(),
+              setWrf({...emptyWRF(PAY_TYPES[0]),
                 unitDim:"in",unitPeso:"lb", // mostrar en pulg/lb (unidades originales)
                 cajas:_rawCajas,
                 consignee:selWR.consignee||"",casilleroSearch:selWR.casillero||"",casillero:selWR.casillero||"",clienteId:selWR.clienteId||"",
-                remitente:selWR.shipper||"",remitenteDir:selWR.remitenteDir||"",tipoPago:selWR.tipoPago||"Prepago",tipoEnvio:selWR.tipoEnvio||"",
+                remitente:selWR.shipper||"",remitenteDir:selWR.remitenteDir||"",tipoPago:selWR.tipoPago||PAY_TYPES[0]||"",tipoEnvio:selWR.tipoEnvio||"",
                 notas:selWR.notas||"",cargos:selWR.cargos||[],
               });
               setShowNewWR(true);setSelWR(null);
@@ -7244,7 +7248,7 @@ export default function ENEXSystem(){
       return;
     }
     const c=clientePrefill||null;
-    setWrf({...emptyWRF(),
+    setWrf({...emptyWRF(PAY_TYPES[0]),
       consignee:c?fullName(c):"",
       casilleroSearch:c?c.casillero:"",
       casillero:c?c.casillero:"",
@@ -7261,7 +7265,7 @@ export default function ENEXSystem(){
   // Nuevo WR prellenado con un cliente (desde Estado de Cuenta)
   const openWRModalForClient=(c)=>{
     if(!hasPerm("crear_wr")){window.alert("Tu rol no tiene permiso para crear WR.");return;}
-    setWrf({...emptyWRF(),
+    setWrf({...emptyWRF(PAY_TYPES[0]),
       consignee:fullName(c),
       casilleroSearch:c.casillero||"",
       casillero:c.casillero||"",
