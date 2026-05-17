@@ -1675,6 +1675,7 @@ export default function ENEXSystem(){
   const [deliveryNotes,setDeliveryNotes]=useState([]);
   const [dnModal,setDnModal]=useState(null); // null | {wrIds, consignatario, clienteId, receptorNombre, receptorDocumento, receptorTelefono, direccionEntrega, metodoEntrega, transportista, notas, editId?}
   const [dnSearch,setDnSearch]=useState("");
+  const [dnTipoFiltro,setDnTipoFiltro]=useState("todos"); // "todos" | "entrega" | "despacho"
   const [dnPrint,setDnPrint]=useState(null); // nota a imprimir
   const [labelTipo,setLabelTipo]=useState("WR");
   const [openDays,setOpenDays]=useState({});
@@ -7826,6 +7827,64 @@ export default function ENEXSystem(){
   // Reempacados (2.3) son fantasmas; Egresados (25) ya salieron del sistema por
   // Cargo Release y no se entregan otra vez.
   const dnElegible=(w)=>w?.status?.code==="20";
+
+  // ── Helpers de Entregas y Despachos ────────────────────────────────────────
+  // Una guía es "aérea" si su tipoEnvio empieza con "Aer" (Aéreo, Aereo, AER).
+  // El resto se considera marítima (incluye Marítimo, Maritimo, etc.).
+  const dnGuiaEsAerea=(g)=>{
+    const t=String(g?.tipoEnvio||"").toLowerCase();
+    return t.startsWith("aer")||t.startsWith("aér");
+  };
+  // Peso/volumen facturable de un WR según el modo de transporte de la guía.
+  // Aéreo: max(pesoLb, volLb) — estándar de la industria; lo voluminoso paga
+  //        más que su peso bruto.
+  // Marítimo: ft³ (también devolvemos m³ para mostrar ambos).
+  const wrPesoFacturable=(w,isAereo)=>{
+    if(isAereo){
+      const real=parseFloat(w.pesoLb)||0;
+      const vol =parseFloat(w.volLb )||0;
+      return {valor:Math.max(real,vol), unidad:"lb", real, vol};
+    }
+    return {valor:parseFloat(w.ft3)||0, unidad:"ft³", ft3:parseFloat(w.ft3)||0, m3:parseFloat(w.m3)||0};
+  };
+  // Resuelve a qué "dominio" pertenece un cliente:
+  //   matriz → null (sin dominio, es cliente directo)
+  //   agente / vendedor_agente   → { tipo:"agente",   id: agenteId,   nombre }
+  //   oficina / vendedor_oficina → { tipo:"oficina",  id: oficinaId,  nombre }
+  //   autonomo                   → { tipo:"autonomo", id: autonomoId, nombre }
+  const dnDominioDeCliente=(c)=>{
+    if(!c)return null;
+    const ct=c.clienteTipo||"matriz";
+    if(ct==="agente"||ct==="vendedor_agente"){
+      const ag=agentes.find(a=>a.id===c.agenteId);
+      return ag?{tipo:"agente",id:ag.id,nombre:ag.nombre||ag.codigo||"Agente"}:null;
+    }
+    if(ct==="oficina"||ct==="vendedor_oficina"){
+      const of=oficinas.find(o=>o.id===c.oficinaId);
+      return of?{tipo:"oficina",id:of.id,nombre:of.nombre||of.codigo||"Oficina"}:null;
+    }
+    if(ct==="autonomo"){
+      const au=clients.find(x=>x.id===c.autonomoId);
+      return au?{tipo:"autonomo",id:au.id,nombre:`${au.primerNombre||""} ${au.primerApellido||""}`.trim()||"Autónomo"}:null;
+    }
+    return null;
+  };
+  // Lista guías que tienen al menos un WR en estado 20 (Por Entrega).
+  // Estas son las guías "abiertas" para generar entregas/despachos.
+  const dnGuiasConPorEntregar=()=>{
+    const ids=new Set(wrList.filter(w=>w.status?.code==="20").map(w=>w.id));
+    return consolList.filter(c=>{
+      const wrIds=(c.containers||[]).flatMap(ct=>(ct.wr||[]).map(w=>w.id));
+      return wrIds.some(id=>ids.has(id));
+    });
+  };
+  // WRs en estado 20 de la guía dada
+  const dnWRsPorEntregarEnGuia=(guia)=>{
+    if(!guia)return [];
+    const ids=(guia.containers||[]).flatMap(ct=>(ct.wr||[]).map(w=>w.id));
+    return wrList.filter(w=>ids.includes(w.id)&&w.status?.code==="20");
+  };
+
   const dnBuildId=()=>{
     const d=new Date();
     const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,"0"), dd=String(d.getDate()).padStart(2,"0");
@@ -7834,10 +7893,14 @@ export default function ENEXSystem(){
     const n=String(sameDay.length+1).padStart(3,"0");
     return `${prefix}-${n}`;
   };
-  const dnOpenNew=(preselectedIds=[])=>{
+  // Abre el modal en modo "Entrega" (cliente directo) o "Despacho" (a agente/
+  // oficina/autónomo). Ambos comparten el mismo modal pero el flujo de
+  // selección de receptor y WRs cambia según el tipo. preselectedIds permite
+  // arrancar con WRs ya marcados (caso "Entregar este WR" desde el WR Modal).
+  const dnOpenNew=(preselectedIds=[],opts={})=>{
     if(!hasPerm("entregar")){window.alert("Tu rol no tiene permiso para registrar entregas.");return;}
-    // Intentar auto-completar consignatario/clienteId si todos los WR preseleccionados son del mismo cliente
-    let auto={consignatario:"",clienteId:"",direccionEntrega:""};
+    const tipo=opts.tipo||"entrega"; // "entrega" | "despacho"
+    let auto={consignatario:"",clienteId:"",direccionEntrega:"",guiaId:"",receptorEntidad:null};
     if(preselectedIds.length>0){
       const pre=preselectedIds.map(id=>wrList.find(w=>w.id===id)).filter(Boolean);
       const uniqCli=[...new Set(pre.map(w=>w.clienteId||"").filter(Boolean))];
@@ -7848,12 +7911,38 @@ export default function ENEXSystem(){
         const cli=clients.find(c=>c.id===uniqCli[0]);
         if(cli)auto.direccionEntrega=[cli.dir,cli.municipio,cli.estado].filter(Boolean).join(", ");
       }
+      // Inferir guía: si todos los WR pertenecen a una misma guía consolidada
+      const guias=pre.map(w=>{
+        return consolList.find(c=>(c.containers||[]).some(ct=>(ct.wr||[]).some(r=>r.id===w.id)));
+      }).filter(Boolean);
+      const uniqGuias=[...new Set(guias.map(g=>g.id))];
+      if(uniqGuias.length===1)auto.guiaId=uniqGuias[0];
     }
-    setDnModal({wrIds:preselectedIds,consignatario:auto.consignatario,clienteId:auto.clienteId,receptorNombre:"",receptorDocumento:"",receptorTelefono:"",direccionEntrega:auto.direccionEntrega,metodoEntrega:"retiro_oficina",transportista:"",notas:"",editId:null});
+    setDnModal({
+      tipo,
+      guiaId:auto.guiaId,
+      receptorEntidad:auto.receptorEntidad,
+      wrIds:preselectedIds,
+      consignatario:auto.consignatario,clienteId:auto.clienteId,
+      receptorNombre:"",receptorDocumento:"",receptorTelefono:"",
+      direccionEntrega:auto.direccionEntrega,
+      metodoEntrega:"retiro_oficina",transportista:"",notas:"",
+      editId:null,
+    });
   };
   const dnOpenEdit=(dn)=>{
     if(!hasPerm("editar_entrega")){window.alert("Tu rol no tiene permiso para editar entregas.");return;}
-    setDnModal({wrIds:dn.wrIds||[],consignatario:dn.consignatario||"",clienteId:dn.clienteId||"",receptorNombre:dn.receptorNombre||"",receptorDocumento:dn.receptorDocumento||"",receptorTelefono:dn.receptorTelefono||"",direccionEntrega:dn.direccionEntrega||"",metodoEntrega:dn.metodoEntrega||"retiro_oficina",transportista:dn.transportista||"",notas:dn.notas||"",editId:dn.id});
+    setDnModal({
+      tipo:dn.tipo||"entrega",
+      guiaId:dn.guiaId||"",
+      receptorEntidad:dn.receptorEntidad||null,
+      wrIds:dn.wrIds||[],
+      consignatario:dn.consignatario||"",clienteId:dn.clienteId||"",
+      receptorNombre:dn.receptorNombre||"",receptorDocumento:dn.receptorDocumento||"",receptorTelefono:dn.receptorTelefono||"",
+      direccionEntrega:dn.direccionEntrega||"",
+      metodoEntrega:dn.metodoEntrega||"retiro_oficina",transportista:dn.transportista||"",notas:dn.notas||"",
+      editId:dn.id,
+    });
   };
   const dnSubmit=()=>{
     const f=dnModal; if(!f)return;
@@ -7865,6 +7954,13 @@ export default function ENEXSystem(){
     const now=new Date();
     const dn={
       id,fecha:editing?(deliveryNotes.find(n=>n.id===id)?.fecha||now):now,
+      // Nuevos campos: tipo + guía + receptor estructurado. tipo es "entrega"
+      // (cliente directo) o "despacho" (agente/oficina/autónomo). guiaId
+      // identifica el embarque al que pertenecen los WR. receptorEntidad
+      // describe a quién se le entregó la mercancía.
+      tipo:f.tipo||"entrega",
+      guiaId:f.guiaId||"",
+      receptorEntidad:f.receptorEntidad||null,
       wrIds:f.wrIds,
       clienteId:f.clienteId||"",
       consignatario:f.consignatario.trim(),
@@ -8641,54 +8737,89 @@ export default function ENEXSystem(){
 
   const renderDeliveryNotes=()=>{
     const q=(dnSearch||"").toLowerCase().trim();
+    const tipoFiltro=dnTipoFiltro||"todos"; // "todos" | "entrega" | "despacho"
+    const tipoDe=(n)=>n.tipo||"entrega"; // notas viejas sin campo tipo se tratan como "entrega"
     const activas=deliveryNotes.filter(n=>!n.anulado);
     const anuladas=deliveryNotes.filter(n=>n.anulado);
-    const lista=deliveryNotes.filter(n=>!q||[n.id,n.consignatario,n.receptorNombre,n.receptorDocumento,n.transportista].some(v=>String(v||"").toLowerCase().includes(q)));
+    const totEntrega =deliveryNotes.filter(n=>tipoDe(n)==="entrega"&&!n.anulado).length;
+    const totDespacho=deliveryNotes.filter(n=>tipoDe(n)==="despacho"&&!n.anulado).length;
+    const lista=deliveryNotes.filter(n=>{
+      if(tipoFiltro!=="todos"&&tipoDe(n)!==tipoFiltro)return false;
+      if(!q)return true;
+      return [n.id,n.consignatario,n.receptorNombre,n.receptorDocumento,n.transportista,n.guiaId].some(v=>String(v||"").toLowerCase().includes(q));
+    });
     const metodoLabel={retiro_oficina:"🏢 Retiro oficina",domicilio:"🏠 Domicilio",transportista:"🚚 Transportista"};
+    const tipoBadge=(t)=>t==="despacho"
+      ?<span style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:8,background:"#FFF3E0",color:"#E65100",border:"1px solid #FFCC80",letterSpacing:.4}}>🚚 DESPACHO</span>
+      :<span style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:8,background:"#E8F5E9",color:"#2E7D32",border:"1px solid #A5D6A7",letterSpacing:.4}}>📦 ENTREGA</span>;
     return(
       <div className="page-scroll">
-        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
-          <div style={{flex:1}}>
-            <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:18,fontWeight:700,color:"var(--navy)"}}>📝 Notas de Entrega</div>
-            <div style={{fontSize:13,color:"var(--t3)",marginTop:2}}>Entrega física al cliente final. Los WR pasan a Entregado (21). Estado elegible: 20 Por Entrega o 25 Egresado.</div>
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,flexWrap:"wrap"}}>
+          <div style={{flex:1,minWidth:240}}>
+            <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:18,fontWeight:700,color:"var(--navy)"}}>📝 Entregas y Despachos</div>
+            <div style={{fontSize:13,color:"var(--t3)",marginTop:2}}>Entrega física al cliente directo o despacho grupal a Agente / Oficina / Autónomo. Los WR pasan a Entregado (21).</div>
           </div>
           <div style={{display:"flex",gap:6,fontSize:13}}>
             <span style={{background:"#E8F5E9",color:"#2E7D32",padding:"4px 10px",borderRadius:10,fontWeight:700,border:"1px solid #A5D6A7"}}>✓ {activas.length} activas</span>
             <span style={{background:"#FFF3E0",color:"#E65100",padding:"4px 10px",borderRadius:10,fontWeight:700,border:"1px solid #FFCC80"}}>✕ {anuladas.length} anuladas</span>
           </div>
-          {hasPerm("entregar")&&<button className="btn-p" onClick={()=>dnOpenNew()}>➕ Nueva Entrega</button>}
+          {hasPerm("entregar")&&(
+            <div style={{display:"flex",gap:6}}>
+              <button className="btn-p" onClick={()=>dnOpenNew([],{tipo:"entrega"})} title="Entrega individual a un cliente directo">📦 Nueva Entrega</button>
+              <button className="btn-p" style={{background:"#E65100",borderColor:"#E65100"}} onClick={()=>dnOpenNew([],{tipo:"despacho"})} title="Despacho grupal a Agente / Oficina / Autónomo">🚚 Nuevo Despacho</button>
+            </div>
+          )}
         </div>
 
         {/* PANEL DE AYUDA — qué se hace en este módulo */}
         <div style={{background:"#E8F0FE",border:"1px solid #90B8F0",borderRadius:8,padding:"8px 14px",marginBottom:10,fontSize:12,color:"#1A6090",lineHeight:1.5}}>
-          <strong style={{color:"#1865C0"}}>📍 Este módulo maneja:</strong> <strong>📝 Por Entrega (20) → Entregado (21)</strong> — entrega física firmada al cliente final. Una vez entregado, el cobro se gestiona desde <b>Facturación</b> (Por Cobrar 22 / Cobrado 23). Para egresar antes de la entrega usá <b>Cargo Release</b>.
+          <strong style={{color:"#1865C0"}}>📍 Cómo funciona:</strong> Ambos flujos se hacen <b>por guía</b>. <b>Entrega</b>: a un cliente directo, uno o varios de sus WR. <b>Despacho</b>: a un Agente / Oficina / Autónomo agrupando todos los WR de los clientes bajo su dominio. La nota muestra el peso facturable según el modo (aéreo: max real vs volumétreo · marítimo: ft³/m³).
         </div>
 
-        <div className="card" style={{marginBottom:10}}>
-          <input className="fi" placeholder="Buscar por N° nota, consignatario, receptor, documento, transportista…"
-            value={dnSearch} onChange={e=>setDnSearch(e.target.value)} style={{fontSize:14,width:"100%",padding:"8px 12px"}}/>
+        <div className="card" style={{marginBottom:10,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+          <div style={{display:"flex",gap:4,background:"var(--bg4)",borderRadius:7,padding:"3px",border:"1px solid var(--b1)"}}>
+            {[
+              {k:"todos",l:"Todos",n:deliveryNotes.length},
+              {k:"entrega",l:"📦 Entregas",n:totEntrega},
+              {k:"despacho",l:"🚚 Despachos",n:totDespacho},
+            ].map(t=>(
+              <button key={t.k} onClick={()=>setDnTipoFiltro(t.k)}
+                style={{padding:"4px 12px",borderRadius:5,border:"none",cursor:"pointer",fontSize:13,fontWeight:600,
+                  background:tipoFiltro===t.k?"var(--navy)":"transparent",
+                  color:tipoFiltro===t.k?"#fff":"var(--t2)",display:"flex",alignItems:"center",gap:6}}>
+                {t.l}
+                <span style={{background:tipoFiltro===t.k?"rgba(255,255,255,.2)":"var(--bg5)",borderRadius:3,padding:"0 6px",fontSize:11,fontWeight:800}}>{t.n}</span>
+              </button>
+            ))}
+          </div>
+          <input className="fi" placeholder="Buscar por N° nota, consignatario, receptor, guía…"
+            value={dnSearch} onChange={e=>setDnSearch(e.target.value)} style={{fontSize:14,flex:1,minWidth:240,padding:"8px 12px"}}/>
         </div>
 
         <div className="card" style={{padding:0,overflow:"hidden"}}>
           {lista.length===0?(
-            <div style={{textAlign:"center",padding:60,color:"var(--t3)"}}>No hay entregas registradas.</div>
+            <div style={{textAlign:"center",padding:60,color:"var(--t3)"}}>No hay {tipoFiltro==="todos"?"entregas ni despachos":(tipoFiltro==="entrega"?"entregas":"despachos")} registrados.</div>
           ):(
             <table className="ct">
               <thead><tr>
-                <th>N° Nota</th><th>Fecha</th><th>Consignatario</th><th>Receptor</th><th>Método</th>
+                <th>N° Nota</th><th>Tipo</th><th>Fecha</th><th>Guía</th><th>Receptor</th><th>Método</th>
                 <th style={{textAlign:"center"}}>WR</th><th>Factura</th><th>Usuario</th><th>Estado</th><th style={{width:200}}>Acciones</th>
               </tr></thead>
               <tbody>
                 {lista.map(n=>{
-                  // Facturas asociadas (no anuladas) que comparten algún WR con esta nota
                   const facsRel=facturas.filter(f=>f.status!=="anulada"&&Array.isArray(f.wrIds)&&(n.wrIds||[]).some(id=>f.wrIds.includes(id)));
                   const statusBadge={borrador:"📝 Borrador",emitida:"📤 Emitida",pagada_parcial:"💵 Parcial",pagada:"✅ Pagada"};
+                  const t=tipoDe(n);
                   return (
                   <tr key={n.id} style={{background:n.anulado?"#FFF5F5":""}}>
                     <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",background:"#EEF3FF",padding:"2px 6px",borderRadius:4,border:"1px solid #B8C8F0",fontSize:13}}>{n.id}</span></td>
+                    <td>{tipoBadge(t)}</td>
                     <td style={{fontFamily:"'DM Mono',monospace",fontSize:12}}>{fmtDate(n.fecha)} {fmtTime(n.fecha)}</td>
-                    <td style={{fontWeight:600,color:"var(--t1)"}}>{n.consignatario||"—"}</td>
-                    <td style={{fontSize:13,color:"var(--t2)"}}>{n.receptorNombre||"—"}{n.receptorDocumento?` · ${n.receptorDocumento}`:""}</td>
+                    <td style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--purple)",fontWeight:600}}>{n.guiaId||"—"}</td>
+                    <td style={{fontWeight:600,color:"var(--t1)"}}>
+                      {n.receptorEntidad?.nombre||n.consignatario||"—"}
+                      {n.receptorNombre&&<div style={{fontSize:11,color:"var(--t3)",fontWeight:500}}>{n.receptorNombre}{n.receptorDocumento?` · ${n.receptorDocumento}`:""}</div>}
+                    </td>
                     <td style={{fontSize:12,color:"var(--t2)"}}>{metodoLabel[n.metodoEntrega]||"—"}</td>
                     <td style={{textAlign:"center",fontWeight:700,color:"var(--navy)"}}>{(n.wrIds||[]).length}</td>
                     <td style={{fontSize:12}}>
@@ -9715,124 +9846,282 @@ export default function ENEXSystem(){
       {dnModal&&(()=>{
         const f=dnModal;
         const editing=!!f.editId;
-        const elegibles=wrList.filter(w=>dnElegible(w)||f.wrIds.includes(w.id));
-        const sel=f.wrIds.map(id=>wrList.find(w=>w.id===id)).filter(Boolean);
-        const qRef=f._q||"";
-        const filtered=elegibles.filter(w=>{
-          if(f.wrIds.includes(w.id))return false;
-          if(!qRef)return true;
-          const qq=qRef.toLowerCase();
-          return [w.id,w.consignee,w.shipper,w.tracking,w.proNumber].some(v=>String(v||"").toLowerCase().includes(qq));
-        }).slice(0,30);
-        const clientesMatriz=clients.filter(c=>c.tipo==="cliente");
+        const esDespacho=f.tipo==="despacho";
+        const guiaSel=f.guiaId?consolList.find(c=>c.id===f.guiaId):null;
+        const isAereo=dnGuiaEsAerea(guiaSel);
+        // WRs en estado 20 de la guía elegida (o todos los preseleccionados al
+        // editar, para no perder los ya marcados aunque cambien de estado).
+        const wrsGuia=guiaSel?dnWRsPorEntregarEnGuia(guiaSel):[];
+        const wrsEdit=editing?(f.wrIds||[]).map(id=>wrList.find(w=>w.id===id)).filter(Boolean):[];
+        const wrsBase=[...wrsGuia,...wrsEdit.filter(w=>!wrsGuia.some(x=>x.id===w.id))];
+        // Para Entrega: agrupar WRs por cliente
+        // Para Despacho: agrupar WRs por dominio (agente/oficina/autónomo del cliente)
+        const wrsDelReceptor=wrsBase.filter(w=>{
+          if(!f.receptorEntidad)return false;
+          const cli=clients.find(c=>c.id===w.clienteId);
+          if(esDespacho){
+            const dom=dnDominioDeCliente(cli);
+            return dom&&dom.tipo===f.receptorEntidad.tipo&&dom.id===f.receptorEntidad.id;
+          }else{
+            return f.receptorEntidad.tipo==="cliente"&&cli?.id===f.receptorEntidad.id;
+          }
+        });
+        // Receptores disponibles según el tipo
+        const receptoresDisponibles=(()=>{
+          if(!guiaSel)return [];
+          if(esDespacho){
+            const acc=new Map();
+            wrsGuia.forEach(w=>{
+              const cli=clients.find(c=>c.id===w.clienteId);
+              const dom=dnDominioDeCliente(cli);
+              if(!dom)return;
+              const k=`${dom.tipo}:${dom.id}`;
+              if(!acc.has(k))acc.set(k,{...dom,count:0});
+              acc.get(k).count++;
+            });
+            return [...acc.values()];
+          }else{
+            const acc=new Map();
+            wrsGuia.forEach(w=>{
+              const cli=clients.find(c=>c.id===w.clienteId);
+              if(!cli)return;
+              if(!acc.has(cli.id)){
+                acc.set(cli.id,{
+                  tipo:"cliente",id:cli.id,
+                  nombre:[cli.primerNombre,cli.primerApellido].filter(Boolean).join(" "),
+                  casillero:cli.casillero||"",
+                  count:0,
+                });
+              }
+              acc.get(cli.id).count++;
+            });
+            return [...acc.values()];
+          }
+        })();
+        // Prefill datos del receptor al elegir
+        const elegirReceptor=(rec)=>{
+          let pref={consignatario:"",direccionEntrega:"",receptorTelefono:""};
+          if(rec.tipo==="cliente"){
+            const cli=clients.find(c=>c.id===rec.id);
+            if(cli){
+              pref.consignatario=[cli.primerNombre,cli.segundoNombre,cli.primerApellido,cli.segundoApellido].filter(Boolean).join(" ");
+              pref.direccionEntrega=[cli.dir,cli.municipio,cli.estado].filter(Boolean).join(", ");
+              pref.receptorTelefono=cli.tel1||"";
+            }
+          }else if(rec.tipo==="agente"){
+            const ag=agentes.find(a=>a.id===rec.id);
+            if(ag){pref.consignatario=ag.nombre||ag.codigo||"";pref.direccionEntrega=[ag.dir,ag.ciudad].filter(Boolean).join(", ");pref.receptorTelefono=ag.tel||"";}
+          }else if(rec.tipo==="oficina"){
+            const of=oficinas.find(o=>o.id===rec.id);
+            if(of){pref.consignatario=of.nombre||of.codigo||"";pref.direccionEntrega=[of.dir,of.ciudad].filter(Boolean).join(", ");pref.receptorTelefono=of.tel||"";}
+          }else if(rec.tipo==="autonomo"){
+            const au=clients.find(c=>c.id===rec.id);
+            if(au){pref.consignatario=[au.primerNombre,au.primerApellido].filter(Boolean).join(" ");pref.direccionEntrega=[au.dir,au.municipio,au.estado].filter(Boolean).join(", ");pref.receptorTelefono=au.tel1||"";}
+          }
+          // Auto-seleccionar todos los WRs del receptor por defecto
+          const wrIdsAuto=wrsBase.filter(w=>{
+            const cli=clients.find(c=>c.id===w.clienteId);
+            if(esDespacho){
+              const dom=dnDominioDeCliente(cli);
+              return dom&&dom.tipo===rec.tipo&&dom.id===rec.id;
+            }
+            return rec.tipo==="cliente"&&cli?.id===rec.id;
+          }).map(w=>w.id);
+          setDnModal(p=>({
+            ...p,
+            receptorEntidad:{tipo:rec.tipo,id:rec.id,nombre:rec.nombre},
+            clienteId:rec.tipo==="cliente"?rec.id:p.clienteId,
+            consignatario:pref.consignatario||p.consignatario,
+            direccionEntrega:pref.direccionEntrega||p.direccionEntrega,
+            receptorTelefono:pref.receptorTelefono||p.receptorTelefono,
+            wrIds:wrIdsAuto,
+          }));
+        };
+        const guiasDisponibles=dnGuiasConPorEntregar();
+        const guiasParaUI=editing&&guiaSel&&!guiasDisponibles.some(g=>g.id===guiaSel.id)
+          ?[guiaSel,...guiasDisponibles]:guiasDisponibles;
+        const toggleWR=(wrId)=>setDnModal(p=>({...p,wrIds:p.wrIds.includes(wrId)?p.wrIds.filter(x=>x!==wrId):[...p.wrIds,wrId]}));
+        // Totales del peso facturable seleccionado
+        const totalFact=wrsDelReceptor
+          .filter(w=>f.wrIds.includes(w.id))
+          .reduce((s,w)=>s+wrPesoFacturable(w,isAereo).valor,0);
+        const colorTipo=esDespacho?"#E65100":"#2E7D32";
         return(
           <div className="ov">
             <div className="modal mlg" style={{maxWidth:1100,width:"96%"}} onClick={e=>e.stopPropagation()}>
-              <div className="mhd">
+              <div className="mhd" style={{borderTop:`4px solid ${colorTipo}`}}>
                 <div style={{flex:1}}>
-                  <div className="mt">📝 {editing?`Editar Nota de Entrega ${f.editId}`:"Nueva Nota de Entrega"}</div>
-                  <div style={{fontSize:12,color:"var(--t3)",marginTop:2}}>Los WR seleccionados pasarán a <b>Entregado (21)</b> al guardar.</div>
+                  <div className="mt">{esDespacho?"🚚":"📦"} {editing?`Editar Nota ${f.editId}`:(esDespacho?"Nuevo Despacho":"Nueva Entrega")}</div>
+                  <div style={{fontSize:12,color:"var(--t3)",marginTop:2}}>
+                    {esDespacho
+                      ?<>Despacho grupal a <b>Agente / Oficina / Autónomo</b>. Los WR seleccionados pasarán a <b>Entregado (21)</b>.</>
+                      :<>Entrega directa al <b>cliente</b>. Los WR seleccionados pasarán a <b>Entregado (21)</b>.</>}
+                  </div>
                 </div>
                 <button className="mcl" onClick={()=>setDnModal(null)}>✕</button>
               </div>
               <div className="mbd" style={{maxHeight:"72vh",overflow:"auto"}}>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
-                  <div><div style={{fontSize:12,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Cliente (casillero)</div>
-                    <select className="fs" value={f.clienteId} onChange={e=>{
-                      const cid=e.target.value;
-                      const cli=clients.find(c=>c.id===cid);
-                      setDnModal(p=>({
-                        ...p,
-                        clienteId:cid,
-                        consignatario:cli?[cli.primerNombre,cli.segundoNombre,cli.primerApellido,cli.segundoApellido].filter(Boolean).join(" "):p.consignatario,
-                        direccionEntrega:cli?[cli.dir,cli.municipio,cli.estado].filter(Boolean).join(", "):p.direccionEntrega,
-                      }));
-                    }} style={{width:"100%"}}>
-                      <option value="">— Sin cliente asociado —</option>
-                      {clientesMatriz.map(c=>(<option key={c.id} value={c.id}>{c.casillero||c.id} · {[c.primerNombre,c.primerApellido].filter(Boolean).join(" ")}</option>))}
-                    </select>
-                  </div>
-                  <div><div style={{fontSize:12,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Consignatario *</div>
-                    <input className="fi" value={f.consignatario} onChange={e=>setDnModal(p=>({...p,consignatario:e.target.value}))} placeholder="Nombre del destinatario/empresa"/>
-                  </div>
-                  <div><div style={{fontSize:12,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Receptor (persona que firma) *</div>
-                    <input className="fi" value={f.receptorNombre} onChange={e=>setDnModal(p=>({...p,receptorNombre:e.target.value}))} placeholder="Nombre y apellido"/>
-                  </div>
-                  <div><div style={{fontSize:12,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Documento/Cédula</div>
-                    <input className="fi" value={f.receptorDocumento} onChange={e=>setDnModal(p=>({...p,receptorDocumento:e.target.value}))} placeholder="V-12345678"/>
-                  </div>
-                  <div><div style={{fontSize:12,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Teléfono</div>
-                    <input className="fi" value={f.receptorTelefono} onChange={e=>setDnModal(p=>({...p,receptorTelefono:e.target.value}))} placeholder="0414-1234567"/>
-                  </div>
-                  <div><div style={{fontSize:12,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Método de entrega</div>
-                    <select className="fs" value={f.metodoEntrega} onChange={e=>setDnModal(p=>({...p,metodoEntrega:e.target.value}))} style={{width:"100%"}}>
-                      <option value="retiro_oficina">🏢 Retiro en oficina</option>
-                      <option value="domicilio">🏠 Entrega a domicilio</option>
-                      <option value="transportista">🚚 Transportista / Agente</option>
-                    </select>
-                  </div>
-                </div>
-
-                {f.metodoEntrega==="domicilio"&&(
-                  <div style={{marginBottom:10}}>
-                    <div style={{fontSize:12,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Dirección de entrega</div>
-                    <input className="fi" value={f.direccionEntrega} onChange={e=>setDnModal(p=>({...p,direccionEntrega:e.target.value}))} placeholder="Av. Principal, Edif X, piso Y — Municipio, Estado"/>
-                  </div>
-                )}
-                {f.metodoEntrega==="transportista"&&(
-                  <div style={{marginBottom:10}}>
-                    <div style={{fontSize:12,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Transportista / Agente</div>
-                    <input className="fi" value={f.transportista} onChange={e=>setDnModal(p=>({...p,transportista:e.target.value}))} placeholder="MRW, Zoom, agente, etc."/>
-                  </div>
-                )}
-                <div style={{marginBottom:12}}>
-                  <div style={{fontSize:12,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Notas</div>
-                  <textarea className="fi" rows={2} value={f.notas} onChange={e=>setDnModal(p=>({...p,notas:e.target.value}))} placeholder="Observaciones de la entrega…" style={{resize:"vertical"}}/>
-                </div>
-
-                <div style={{background:"#F5F7FB",padding:10,borderRadius:6,marginBottom:10}}>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-                    <div style={{fontSize:13,fontWeight:700,color:"var(--navy)"}}>📦 WR Seleccionados ({sel.length})</div>
-                    {sel.length>0&&<button className="btn-s" style={{fontSize:12,padding:"2px 8px"}} onClick={()=>setDnModal(p=>({...p,wrIds:[]}))}>Limpiar todos</button>}
-                  </div>
-                  {sel.length===0?(
-                    <div style={{fontSize:13,color:"var(--t3)",padding:"6px 0"}}>Sin WR — agrega abajo.</div>
-                  ):(
-                    <div style={{display:"flex",flexDirection:"column",gap:4}}>
-                      {sel.map(w=>(
-                        <div key={w.id} style={{display:"flex",alignItems:"center",gap:8,background:"#fff",padding:"4px 8px",borderRadius:4,border:"1px solid #E0E7EF",fontSize:13}}>
-                          <span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",minWidth:80}}>{w.id}</span>
-                          <span className={`st ${w.status?.cls||"s1"}`} style={{fontSize:11}}>{w.status?.label||"—"}</span>
-                          <span style={{flex:1,color:"var(--t2)"}}>{w.consignee||"—"}</span>
-                          <span style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--t3)"}}>{w.tracking||"—"}</span>
-                          <button className="btn-s" style={{fontSize:11,padding:"2px 6px",color:"var(--red)",borderColor:"var(--red)"}} onClick={()=>setDnModal(p=>({...p,wrIds:p.wrIds.filter(id=>id!==w.id)}))}>✕</button>
-                        </div>
-                      ))}
+                {/* PASO 1 — Selección de guía */}
+                <div style={{background:"#F5F7FB",borderRadius:6,padding:10,marginBottom:10}}>
+                  <div style={{fontSize:12,fontWeight:700,color:"var(--navy)",marginBottom:4}}>1️⃣ Guía consolidada *</div>
+                  <select className="fs" value={f.guiaId} onChange={e=>setDnModal(p=>({...p,guiaId:e.target.value,receptorEntidad:null,wrIds:[]}))} style={{width:"100%"}}>
+                    <option value="">— Selecciona una guía con WR por entregar —</option>
+                    {guiasParaUI.map(g=>(
+                      <option key={g.id} value={g.id}>{g.id} · {g.destino||"?"} · {g.tipoEnvio||"?"} · {dnWRsPorEntregarEnGuia(g).length} WR por entregar</option>
+                    ))}
+                  </select>
+                  {guiaSel&&(
+                    <div style={{fontSize:11,color:"var(--t3)",marginTop:6,display:"flex",gap:14,flexWrap:"wrap"}}>
+                      <span>📦 <b>Destino:</b> {guiaSel.destino||"—"}</span>
+                      <span>{isAereo?"✈️":"🚢"} <b>Modo:</b> {guiaSel.tipoEnvio||"—"} {isAereo&&<span style={{color:"#1A6090",fontWeight:700}}>(cobra max(peso, peso vol.) lb)</span>}{!isAereo&&<span style={{color:"#1A6090",fontWeight:700}}>(cobra ft³/m³)</span>}</span>
+                      <span>📋 <b>Total WR x entregar:</b> {wrsGuia.length}</span>
                     </div>
                   )}
                 </div>
 
-                <div style={{marginBottom:6}}>
-                  <div style={{fontSize:13,fontWeight:700,color:"var(--t2)",marginBottom:4}}>➕ Agregar WR (elegibles: 20 Por Entrega)</div>
-                  <input className="fi" placeholder="Buscar por WR, consignee, tracking…" value={qRef} onChange={e=>setDnModal(p=>({...p,_q:e.target.value}))} style={{marginBottom:6}}/>
-                  <div style={{maxHeight:160,overflow:"auto",border:"1px solid #E0E7EF",borderRadius:4}}>
-                    {filtered.length===0?(
-                      <div style={{padding:10,color:"var(--t3)",fontSize:13,textAlign:"center"}}>No hay WR disponibles{qRef?` para "${qRef}"`:""}</div>
-                    ):filtered.map(w=>(
-                      <div key={w.id} style={{display:"flex",alignItems:"center",gap:8,padding:"4px 8px",borderBottom:"1px solid #EEF",fontSize:13,cursor:"pointer"}} onClick={()=>setDnModal(p=>({...p,wrIds:[...p.wrIds,w.id]}))}>
-                        <span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",minWidth:80}}>{w.id}</span>
-                        <span className={`st ${w.status?.cls||"s1"}`} style={{fontSize:11}}>{w.status?.label||"—"}</span>
-                        <span style={{flex:1,color:"var(--t2)"}}>{w.consignee||"—"}</span>
-                        <span style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--t3)"}}>{w.tracking||"—"}</span>
-                        <span style={{color:"var(--cyan)",fontSize:12,fontWeight:700}}>+ agregar</span>
+                {/* PASO 2 — Selección de receptor */}
+                {guiaSel&&(
+                  <div style={{background:"#F5F7FB",borderRadius:6,padding:10,marginBottom:10}}>
+                    <div style={{fontSize:12,fontWeight:700,color:"var(--navy)",marginBottom:4}}>2️⃣ {esDespacho?"Agente / Oficina / Autónomo *":"Cliente *"}</div>
+                    {receptoresDisponibles.length===0?(
+                      <div style={{fontSize:13,color:"var(--t3)",padding:6}}>
+                        {esDespacho
+                          ?"No hay clientes bajo agente/oficina/autónomo con WR por entregar en esta guía."
+                          :"No hay clientes con WR por entregar en esta guía."}
                       </div>
-                    ))}
+                    ):(
+                      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:6,maxHeight:180,overflow:"auto"}}>
+                        {receptoresDisponibles.map(r=>{
+                          const isSel=f.receptorEntidad?.tipo===r.tipo&&f.receptorEntidad?.id===r.id;
+                          const icon={cliente:"👤",agente:"🤝",oficina:"🏢",autonomo:"🧑‍💻"}[r.tipo]||"•";
+                          return (
+                            <div key={`${r.tipo}:${r.id}`} onClick={()=>elegirReceptor(r)}
+                              style={{cursor:"pointer",padding:"6px 10px",borderRadius:6,
+                                background:isSel?"#1A2B4A":"#fff",
+                                color:isSel?"#fff":"var(--t1)",
+                                border:`1px solid ${isSel?"#1A2B4A":"#E0E7EF"}`,
+                                display:"flex",alignItems:"center",gap:8,fontSize:13}}>
+                              <span style={{fontSize:16}}>{icon}</span>
+                              <div style={{flex:1,minWidth:0}}>
+                                <div style={{fontWeight:700,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{r.nombre}</div>
+                                {r.casillero&&<div style={{fontSize:11,opacity:.8,fontFamily:"'DM Mono',monospace"}}>{r.casillero}</div>}
+                              </div>
+                              <span style={{fontSize:11,fontWeight:700,padding:"1px 6px",borderRadius:4,background:isSel?"rgba(255,255,255,.2)":"var(--bg4)"}}>{r.count} WR</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
-                </div>
+                )}
+
+                {/* PASO 3 — Selección de WRs del receptor */}
+                {guiaSel&&f.receptorEntidad&&(
+                  <div style={{background:"#F5F7FB",borderRadius:6,padding:10,marginBottom:10}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6,flexWrap:"wrap",gap:8}}>
+                      <div style={{fontSize:12,fontWeight:700,color:"var(--navy)"}}>3️⃣ WR a entregar — {f.wrIds.length} de {wrsDelReceptor.length} seleccionados</div>
+                      <div style={{display:"flex",gap:6}}>
+                        <button className="btn-s" style={{fontSize:11,padding:"2px 8px"}} onClick={()=>setDnModal(p=>({...p,wrIds:wrsDelReceptor.map(w=>w.id)}))}>✓ Todos</button>
+                        <button className="btn-s" style={{fontSize:11,padding:"2px 8px"}} onClick={()=>setDnModal(p=>({...p,wrIds:[]}))}>✕ Ninguno</button>
+                      </div>
+                    </div>
+                    <div style={{maxHeight:220,overflow:"auto",border:"1px solid #E0E7EF",borderRadius:4,background:"#fff"}}>
+                      <table style={{width:"100%",fontSize:12,borderCollapse:"collapse"}}>
+                        <thead><tr style={{background:"#F5F7FB",position:"sticky",top:0}}>
+                          <th style={{padding:"4px 6px",textAlign:"center",width:28}}></th>
+                          <th style={{padding:"4px 6px",textAlign:"left"}}>N° WR</th>
+                          <th style={{padding:"4px 6px",textAlign:"left"}}>Cliente</th>
+                          <th style={{padding:"4px 6px",textAlign:"left"}}>Descripción</th>
+                          <th style={{padding:"4px 6px",textAlign:"center"}}>Cajas</th>
+                          <th style={{padding:"4px 6px",textAlign:"right"}}>Peso</th>
+                          <th style={{padding:"4px 6px",textAlign:"right"}}>{isAereo?"P. Vol.":"M³"}</th>
+                          <th style={{padding:"4px 6px",textAlign:"right",background:"#FFF3E0"}}>{isAereo?"A cobrar (lb)":"Ft³"}</th>
+                        </tr></thead>
+                        <tbody>
+                          {wrsDelReceptor.map(w=>{
+                            const fact=wrPesoFacturable(w,isAereo);
+                            const cli=clients.find(c=>c.id===w.clienteId);
+                            const check=f.wrIds.includes(w.id);
+                            return (
+                              <tr key={w.id} style={{borderTop:"1px solid #EEF",cursor:"pointer",background:check?"#FFF9E6":""}} onClick={()=>toggleWR(w.id)}>
+                                <td style={{padding:"4px 6px",textAlign:"center"}}><input type="checkbox" checked={check} readOnly/></td>
+                                <td style={{padding:"4px 6px",fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)"}}>{w.id}</td>
+                                <td style={{padding:"4px 6px",color:"var(--t2)"}}>{cli?[cli.primerNombre,cli.primerApellido].filter(Boolean).join(" "):w.consignee||"—"}</td>
+                                <td style={{padding:"4px 6px",color:"var(--t2)",maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{cleanReempaqueDesc(w.descripcion)||"—"}</td>
+                                <td style={{padding:"4px 6px",textAlign:"center"}}>{w.cajas||1}</td>
+                                <td style={{padding:"4px 6px",textAlign:"right",fontFamily:"'DM Mono',monospace"}}>{w.pesoLb||0}lb</td>
+                                <td style={{padding:"4px 6px",textAlign:"right",fontFamily:"'DM Mono',monospace",color:"var(--orange)"}}>{isAereo?`${w.volLb||0}lb`:(w.m3||0)}</td>
+                                <td style={{padding:"4px 6px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontWeight:700,color:"#E65100",background:"#FFF8E1"}}>{fact.valor.toFixed(isAereo?1:2)}{isAereo?" lb":" ft³"}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                        {f.wrIds.length>0&&(
+                          <tfoot>
+                            <tr style={{background:"#FFF3E0",fontWeight:700,borderTop:"2px solid #E65100"}}>
+                              <td colSpan={7} style={{padding:"5px 8px",textAlign:"right"}}>TOTAL A COBRAR:</td>
+                              <td style={{padding:"5px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",color:"#BF360C",fontSize:13}}>{totalFact.toFixed(isAereo?1:2)}{isAereo?" lb":" ft³"}</td>
+                            </tr>
+                          </tfoot>
+                        )}
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* PASO 4 — Datos del receptor */}
+                {guiaSel&&f.receptorEntidad&&f.wrIds.length>0&&(
+                  <div style={{background:"#F5F7FB",borderRadius:6,padding:10,marginBottom:10}}>
+                    <div style={{fontSize:12,fontWeight:700,color:"var(--navy)",marginBottom:6}}>4️⃣ Datos del receptor que firma</div>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                      <div><div style={{fontSize:11,fontWeight:600,color:"var(--t2)",marginBottom:2}}>Consignatario *</div>
+                        <input className="fi" value={f.consignatario} onChange={e=>setDnModal(p=>({...p,consignatario:e.target.value}))} placeholder="Nombre del destinatario / empresa"/>
+                      </div>
+                      <div><div style={{fontSize:11,fontWeight:600,color:"var(--t2)",marginBottom:2}}>Persona que firma *</div>
+                        <input className="fi" value={f.receptorNombre} onChange={e=>setDnModal(p=>({...p,receptorNombre:e.target.value}))} placeholder="Nombre y apellido"/>
+                      </div>
+                      <div><div style={{fontSize:11,fontWeight:600,color:"var(--t2)",marginBottom:2}}>Documento / Cédula</div>
+                        <input className="fi" value={f.receptorDocumento} onChange={e=>setDnModal(p=>({...p,receptorDocumento:e.target.value}))} placeholder="V-12345678"/>
+                      </div>
+                      <div><div style={{fontSize:11,fontWeight:600,color:"var(--t2)",marginBottom:2}}>Teléfono</div>
+                        <input className="fi" value={f.receptorTelefono} onChange={e=>setDnModal(p=>({...p,receptorTelefono:e.target.value}))} placeholder="0414-1234567"/>
+                      </div>
+                      <div><div style={{fontSize:11,fontWeight:600,color:"var(--t2)",marginBottom:2}}>Método de entrega</div>
+                        <select className="fs" value={f.metodoEntrega} onChange={e=>setDnModal(p=>({...p,metodoEntrega:e.target.value}))} style={{width:"100%"}}>
+                          <option value="retiro_oficina">🏢 Retiro en oficina</option>
+                          <option value="domicilio">🏠 Entrega a domicilio</option>
+                          <option value="transportista">🚚 Transportista / Agente</option>
+                        </select>
+                      </div>
+                      {f.metodoEntrega==="transportista"&&(
+                        <div><div style={{fontSize:11,fontWeight:600,color:"var(--t2)",marginBottom:2}}>Transportista</div>
+                          <input className="fi" value={f.transportista} onChange={e=>setDnModal(p=>({...p,transportista:e.target.value}))} placeholder="MRW, Zoom…"/>
+                        </div>
+                      )}
+                      <div style={{gridColumn:"1/-1"}}>
+                        <div style={{fontSize:11,fontWeight:600,color:"var(--t2)",marginBottom:2}}>Dirección de entrega</div>
+                        <input className="fi" value={f.direccionEntrega} onChange={e=>setDnModal(p=>({...p,direccionEntrega:e.target.value}))} placeholder="Av. Principal, Edif X — Municipio, Estado"/>
+                      </div>
+                      <div style={{gridColumn:"1/-1"}}>
+                        <div style={{fontSize:11,fontWeight:600,color:"var(--t2)",marginBottom:2}}>Notas</div>
+                        <textarea className="fi" rows={2} value={f.notas} onChange={e=>setDnModal(p=>({...p,notas:e.target.value}))} placeholder="Observaciones de la entrega…" style={{resize:"vertical"}}/>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
-              <div className="mft" style={{display:"flex",justifyContent:"flex-end",gap:8}}>
-                <button className="btn-s" onClick={()=>setDnModal(null)}>Cancelar</button>
-                <button className="btn-p" onClick={dnSubmit}>{editing?"💾 Guardar cambios":"📝 Crear Nota de Entrega"}</button>
+              <div className="mft" style={{display:"flex",justifyContent:"space-between",gap:8,alignItems:"center"}}>
+                <div style={{fontSize:12,color:"var(--t3)"}}>
+                  {!f.guiaId?"Paso 1: elegí la guía":(!f.receptorEntidad?"Paso 2: elegí el receptor":(f.wrIds.length===0?"Paso 3: marcá al menos 1 WR":"Paso 4: completá datos del receptor"))}
+                </div>
+                <div style={{display:"flex",gap:8}}>
+                  <button className="btn-s" onClick={()=>setDnModal(null)}>Cancelar</button>
+                  <button className="btn-p" style={{background:colorTipo,borderColor:colorTipo}}
+                    disabled={!f.guiaId||!f.receptorEntidad||f.wrIds.length===0||!f.consignatario.trim()||!f.receptorNombre.trim()}
+                    onClick={dnSubmit}>
+                    {editing?"💾 Guardar cambios":(esDespacho?"🚚 Crear Despacho":"📦 Crear Entrega")}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -9843,14 +10132,32 @@ export default function ENEXSystem(){
       {dnPrint&&(()=>{
         const dn=dnPrint;
         const wrs=(dn.wrIds||[]).map(id=>wrList.find(w=>w.id===id)).filter(Boolean);
-        const totalCajas=wrs.reduce((s,w)=>s+(w.dims?.length||0),0);
-        const totalLb=wrs.reduce((s,w)=>s+(w.dims||[]).reduce((a,d)=>a+parseFloat(d.pkLb||d.pk*2.205||0),0),0);
+        const esDespacho=(dn.tipo||"entrega")==="despacho";
+        const guia=dn.guiaId?consolList.find(c=>c.id===dn.guiaId):null;
+        const isAereo=dnGuiaEsAerea(guia);
+        const totalCajas=wrs.reduce((s,w)=>s+(w.cajas||0),0);
+        const totalRealLb=wrs.reduce((s,w)=>s+(parseFloat(w.pesoLb)||0),0);
+        const totalVolLb =wrs.reduce((s,w)=>s+(parseFloat(w.volLb )||0),0);
+        const totalFt3   =wrs.reduce((s,w)=>s+(parseFloat(w.ft3   )||0),0);
+        const totalM3    =wrs.reduce((s,w)=>s+(parseFloat(w.m3    )||0),0);
+        const totalFact  =wrs.reduce((s,w)=>s+wrPesoFacturable(w,isAereo).valor,0);
         const metodoLabel={retiro_oficina:"Retiro en oficina",domicilio:"Entrega a domicilio",transportista:"Transportista / Agente"};
+        // Para despacho, agrupar visualmente los WR por cliente
+        const grupos=esDespacho?(()=>{
+          const m=new Map();
+          wrs.forEach(w=>{
+            const cli=clients.find(c=>c.id===w.clienteId);
+            const k=cli?.id||"sin_cliente";
+            if(!m.has(k))m.set(k,{cliente:cli,nombre:cli?[cli.primerNombre,cli.primerApellido].filter(Boolean).join(" "):(w.consignee||"—"),casillero:cli?.casillero||"",wrs:[]});
+            m.get(k).wrs.push(w);
+          });
+          return [...m.values()];
+        })():null;
         return(
           <div className="ov">
             <div className="modal mlg" style={{maxWidth:900,width:"96%"}}>
               <div className="mhd no-print">
-                <div className="mt">🖨️ Nota de Entrega — {dn.id}</div>
+                <div className="mt">🖨️ Nota de {esDespacho?"Despacho":"Entrega"} — {dn.id}</div>
                 <div style={{display:"flex",gap:6}}>
                   <button className="btn-p" style={{fontSize:13,padding:"4px 12px"}} onClick={()=>window.print()}>🖨️ Imprimir</button>
                   <button className="mcl" onClick={()=>setDnPrint(null)}>✕</button>
@@ -9862,11 +10169,12 @@ export default function ENEXSystem(){
                     <div>
                       <div style={{fontSize:22,fontWeight:900,letterSpacing:2}}>ENEX</div>
                       <div style={{fontSize:12}}>{empresaNombre||"Int'l Courier"}</div>
-                      <div style={{fontSize:11,color:"#555"}}>Nota de Entrega al Cliente</div>
+                      <div style={{fontSize:11,color:"#555"}}>Nota de {esDespacho?"Despacho a Agente / Oficina / Autónomo":"Entrega al Cliente"}</div>
                     </div>
                     <div style={{textAlign:"right"}}>
                       <div style={{fontSize:13,fontWeight:700}}>N° {dn.id}</div>
                       <div style={{fontSize:12}}>Fecha: {fmtDate(dn.fecha)} {fmtTime(dn.fecha)}</div>
+                      <div style={{fontSize:12}}>Guía: <b>{dn.guiaId||"—"}</b>{guia?.tipoEnvio?` · ${guia.tipoEnvio}`:""}</div>
                       <div style={{fontSize:12}}>Usuario: {dn.usuario||"—"}</div>
                       {dn.anulado&&<div style={{fontSize:13,fontWeight:900,color:"#C62828",marginTop:4,border:"2px solid #C62828",padding:"2px 6px",display:"inline-block"}}>ANULADA</div>}
                     </div>
@@ -9874,8 +10182,8 @@ export default function ENEXSystem(){
 
                   <table style={{width:"100%",fontSize:13,marginBottom:12}}>
                     <tbody>
-                      <tr><td style={{fontWeight:700,width:140,paddingBottom:3}}>Consignatario:</td><td style={{paddingBottom:3}}>{dn.consignatario||"—"}</td></tr>
-                      <tr><td style={{fontWeight:700,paddingBottom:3}}>Receptor:</td><td style={{paddingBottom:3}}>{dn.receptorNombre||"—"}</td></tr>
+                      <tr><td style={{fontWeight:700,width:140,paddingBottom:3}}>{esDespacho?"Receptor (entidad):":"Consignatario:"}</td><td style={{paddingBottom:3}}>{dn.consignatario||dn.receptorEntidad?.nombre||"—"}</td></tr>
+                      <tr><td style={{fontWeight:700,paddingBottom:3}}>Persona que firma:</td><td style={{paddingBottom:3}}>{dn.receptorNombre||"—"}</td></tr>
                       <tr><td style={{fontWeight:700,paddingBottom:3}}>Documento:</td><td style={{paddingBottom:3}}>{dn.receptorDocumento||"—"}</td></tr>
                       <tr><td style={{fontWeight:700,paddingBottom:3}}>Teléfono:</td><td style={{paddingBottom:3}}>{dn.receptorTelefono||"—"}</td></tr>
                       <tr><td style={{fontWeight:700,paddingBottom:3}}>Método:</td><td style={{paddingBottom:3}}>{metodoLabel[dn.metodoEntrega]||"—"}</td></tr>
@@ -9886,45 +10194,113 @@ export default function ENEXSystem(){
                     </tbody>
                   </table>
 
-                  <div style={{fontSize:13,fontWeight:700,marginBottom:4}}>Detalle de la entrega ({wrs.length} WR · {totalCajas} cajas · {totalLb.toFixed(1)} lb)</div>
+                  <div style={{fontSize:13,fontWeight:700,marginBottom:4}}>
+                    Detalle de la {esDespacho?"despacho":"entrega"} · {wrs.length} WR · {totalCajas} cajas
+                    {isAereo
+                      ?<> · Peso real {totalRealLb.toFixed(1)}lb · P.Vol {totalVolLb.toFixed(1)}lb</>
+                      :<> · {totalFt3.toFixed(2)}ft³ · {totalM3.toFixed(3)}m³</>}
+                  </div>
                   <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,marginBottom:16}}>
                     <thead>
                       <tr style={{background:"#EEE"}}>
                         <th style={{border:"1px solid #999",padding:"4px 6px",textAlign:"left"}}>#</th>
                         <th style={{border:"1px solid #999",padding:"4px 6px",textAlign:"left"}}>WR</th>
+                        {esDespacho&&<th style={{border:"1px solid #999",padding:"4px 6px",textAlign:"left"}}>Cliente</th>}
                         <th style={{border:"1px solid #999",padding:"4px 6px",textAlign:"left"}}>Descripción</th>
-                        <th style={{border:"1px solid #999",padding:"4px 6px",textAlign:"left"}}>Tracking</th>
                         <th style={{border:"1px solid #999",padding:"4px 6px",textAlign:"center"}}>Cajas</th>
-                        <th style={{border:"1px solid #999",padding:"4px 6px",textAlign:"right"}}>Peso (lb)</th>
+                        {isAereo?(
+                          <>
+                            <th style={{border:"1px solid #999",padding:"4px 6px",textAlign:"right"}}>Peso real (lb)</th>
+                            <th style={{border:"1px solid #999",padding:"4px 6px",textAlign:"right"}}>P. Vol. (lb)</th>
+                            <th style={{border:"1px solid #999",padding:"4px 6px",textAlign:"right",background:"#FFF3E0"}}>A cobrar (lb)</th>
+                          </>
+                        ):(
+                          <>
+                            <th style={{border:"1px solid #999",padding:"4px 6px",textAlign:"right"}}>Peso (lb)</th>
+                            <th style={{border:"1px solid #999",padding:"4px 6px",textAlign:"right",background:"#FFF3E0"}}>Ft³</th>
+                            <th style={{border:"1px solid #999",padding:"4px 6px",textAlign:"right",background:"#FFF3E0"}}>M³</th>
+                          </>
+                        )}
                       </tr>
                     </thead>
                     <tbody>
-                      {wrs.map((w,i)=>{
-                        const c=(w.dims||[]).length;
-                        const lb=(w.dims||[]).reduce((a,d)=>a+parseFloat(d.pkLb||d.pk*2.205||0),0);
-                        const desc=(w.dims||[]).map(d=>cleanReempaqueDesc(d.descripcion)).filter(Boolean).join(" · ")||cleanReempaqueDesc(w.notas)||"—";
-                        return(
-                          <tr key={w.id}>
-                            <td style={{border:"1px solid #999",padding:"3px 6px"}}>{i+1}</td>
-                            <td style={{border:"1px solid #999",padding:"3px 6px",fontWeight:700}}>{w.id}</td>
-                            <td style={{border:"1px solid #999",padding:"3px 6px"}}>{desc.length>60?desc.slice(0,57)+"…":desc}</td>
-                            <td style={{border:"1px solid #999",padding:"3px 6px",fontFamily:"monospace"}}>{w.tracking||"—"}</td>
-                            <td style={{border:"1px solid #999",padding:"3px 6px",textAlign:"center"}}>{c}</td>
-                            <td style={{border:"1px solid #999",padding:"3px 6px",textAlign:"right"}}>{lb.toFixed(1)}</td>
+                      {(()=>{
+                        const totCols=esDespacho?(isAereo?8:8):(isAereo?7:7);
+                        const rows=[];
+                        const renderRow=(w,i)=>{
+                          const desc=cleanReempaqueDesc(w.descripcion)||"—";
+                          const cli=clients.find(c=>c.id===w.clienteId);
+                          const cliLabel=cli?`${[cli.primerNombre,cli.primerApellido].filter(Boolean).join(" ")}${cli.casillero?` · ${cli.casillero}`:""}`:w.consignee||"—";
+                          const fact=wrPesoFacturable(w,isAereo);
+                          return(
+                            <tr key={w.id}>
+                              <td style={{border:"1px solid #999",padding:"3px 6px"}}>{i+1}</td>
+                              <td style={{border:"1px solid #999",padding:"3px 6px",fontWeight:700,fontFamily:"monospace"}}>{w.id}</td>
+                              {esDespacho&&<td style={{border:"1px solid #999",padding:"3px 6px"}}>{cliLabel}</td>}
+                              <td style={{border:"1px solid #999",padding:"3px 6px"}}>{desc.length>60?desc.slice(0,57)+"…":desc}</td>
+                              <td style={{border:"1px solid #999",padding:"3px 6px",textAlign:"center"}}>{w.cajas||1}</td>
+                              {isAereo?(
+                                <>
+                                  <td style={{border:"1px solid #999",padding:"3px 6px",textAlign:"right",fontFamily:"monospace"}}>{(parseFloat(w.pesoLb)||0).toFixed(1)}</td>
+                                  <td style={{border:"1px solid #999",padding:"3px 6px",textAlign:"right",fontFamily:"monospace"}}>{(parseFloat(w.volLb)||0).toFixed(1)}</td>
+                                  <td style={{border:"1px solid #999",padding:"3px 6px",textAlign:"right",fontFamily:"monospace",fontWeight:700,background:"#FFF8E1"}}>{fact.valor.toFixed(1)}</td>
+                                </>
+                              ):(
+                                <>
+                                  <td style={{border:"1px solid #999",padding:"3px 6px",textAlign:"right",fontFamily:"monospace"}}>{(parseFloat(w.pesoLb)||0).toFixed(1)}</td>
+                                  <td style={{border:"1px solid #999",padding:"3px 6px",textAlign:"right",fontFamily:"monospace",fontWeight:700,background:"#FFF8E1"}}>{(parseFloat(w.ft3)||0).toFixed(2)}</td>
+                                  <td style={{border:"1px solid #999",padding:"3px 6px",textAlign:"right",fontFamily:"monospace",background:"#FFF8E1"}}>{(parseFloat(w.m3)||0).toFixed(3)}</td>
+                                </>
+                              )}
+                            </tr>
+                          );
+                        };
+                        let idx=0;
+                        if(esDespacho&&grupos&&grupos.length>0){
+                          grupos.forEach((g,gi)=>{
+                            rows.push(
+                              <tr key={`hdr-${gi}`} style={{background:"#F0F4FA"}}>
+                                <td colSpan={totCols} style={{border:"1px solid #999",padding:"4px 8px",fontWeight:700}}>👤 {g.nombre}{g.casillero?` · ${g.casillero}`:""} ({g.wrs.length} WR)</td>
+                              </tr>
+                            );
+                            g.wrs.forEach(w=>{rows.push(renderRow(w,idx));idx++;});
+                          });
+                        }else{
+                          wrs.forEach(w=>{rows.push(renderRow(w,idx));idx++;});
+                        }
+                        if(wrs.length===0){
+                          rows.push(<tr key="empty"><td colSpan={totCols} style={{border:"1px solid #999",padding:"8px 6px",textAlign:"center",color:"#999"}}>(sin WR)</td></tr>);
+                        }
+                        // Totales
+                        rows.push(
+                          <tr key="tot" style={{background:"#F8F8F8",fontWeight:700}}>
+                            <td colSpan={esDespacho?4:3} style={{border:"1px solid #999",padding:"4px 6px",textAlign:"right"}}>TOTALES:</td>
+                            <td style={{border:"1px solid #999",padding:"4px 6px",textAlign:"center"}}>{totalCajas}</td>
+                            {isAereo?(
+                              <>
+                                <td style={{border:"1px solid #999",padding:"4px 6px",textAlign:"right",fontFamily:"monospace"}}>{totalRealLb.toFixed(1)}</td>
+                                <td style={{border:"1px solid #999",padding:"4px 6px",textAlign:"right",fontFamily:"monospace"}}>{totalVolLb.toFixed(1)}</td>
+                                <td style={{border:"1px solid #999",padding:"4px 6px",textAlign:"right",fontFamily:"monospace",fontWeight:900,background:"#FFE0B2",fontSize:13,color:"#BF360C"}}>{totalFact.toFixed(1)} lb</td>
+                              </>
+                            ):(
+                              <>
+                                <td style={{border:"1px solid #999",padding:"4px 6px",textAlign:"right",fontFamily:"monospace"}}>{totalRealLb.toFixed(1)}</td>
+                                <td style={{border:"1px solid #999",padding:"4px 6px",textAlign:"right",fontFamily:"monospace",fontWeight:900,background:"#FFE0B2",fontSize:13,color:"#BF360C"}}>{totalFt3.toFixed(2)} ft³</td>
+                                <td style={{border:"1px solid #999",padding:"4px 6px",textAlign:"right",fontFamily:"monospace",fontWeight:900,background:"#FFE0B2",fontSize:13,color:"#BF360C"}}>{totalM3.toFixed(3)} m³</td>
+                              </>
+                            )}
                           </tr>
                         );
-                      })}
-                      {wrs.length===0&&(<tr><td colSpan={6} style={{border:"1px solid #999",padding:"8px 6px",textAlign:"center",color:"#999"}}>(sin WR)</td></tr>)}
-                      <tr style={{background:"#F8F8F8",fontWeight:700}}>
-                        <td colSpan={4} style={{border:"1px solid #999",padding:"4px 6px",textAlign:"right"}}>TOTALES:</td>
-                        <td style={{border:"1px solid #999",padding:"4px 6px",textAlign:"center"}}>{totalCajas}</td>
-                        <td style={{border:"1px solid #999",padding:"4px 6px",textAlign:"right"}}>{totalLb.toFixed(1)}</td>
-                      </tr>
+                        return rows;
+                      })()}
                     </tbody>
                   </table>
 
                   <div style={{border:"1px solid #000",padding:"8px 10px",fontSize:12,background:"#FAFAFA",marginBottom:30}}>
                     <b>DECLARACIÓN DE RECEPCIÓN:</b> El receptor declara haber recibido conforme, en buen estado y en la cantidad indicada, la mercancía descrita en esta nota. Cualquier discrepancia o daño visible debe ser reportado al momento de la firma. Una vez firmada, ENEX queda liberado de toda responsabilidad sobre la custodia de la mercancía listada.
+                    {isAereo
+                      ?<div style={{marginTop:4,fontStyle:"italic",fontSize:11}}>Peso a facturar: el mayor entre el peso real y el peso volumétrico de cada WR (estándar de carga aérea).</div>
+                      :<div style={{marginTop:4,fontStyle:"italic",fontSize:11}}>Volumen a facturar: pies cúbicos / metros cúbicos del embarque marítimo.</div>}
                   </div>
 
                   <div style={{display:"flex",justifyContent:"space-between",gap:40,marginTop:40}}>

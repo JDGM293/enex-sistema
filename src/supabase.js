@@ -288,6 +288,15 @@ export const dbGetDeliveryNotes = async () => {
   return data.map(r => ({
     id: r.id,
     fecha: r.fecha ? new Date(r.fecha) : new Date(),
+    // Campos nuevos (migración 20260517_delivery_notes_tipo_y_guia):
+    //   tipo: "entrega" (cliente directo) | "despacho" (agente/oficina/autónomo)
+    //   guiaId: ID de la guía consolidada de origen
+    //   receptorEntidad: { tipo, id, nombre } — a quién se entregó
+    // Notas anteriores a la migración llegan sin estos campos; las trato
+    // como "entrega" por defecto para mantener compatibilidad.
+    tipo: r.tipo || 'entrega',
+    guiaId: r.guia_id || '',
+    receptorEntidad: r.receptor_entidad || null,
     wrIds: r.wr_ids || [],
     clienteId: r.cliente_id || '',
     consignatario: r.consignatario || '',
@@ -309,6 +318,10 @@ export const dbUpsertDeliveryNote = async (dn) => {
   const { error } = await supabase.from('delivery_notes').upsert({
     id: dn.id,
     fecha: dn.fecha instanceof Date ? dn.fecha.toISOString() : dn.fecha,
+    // Campos nuevos (migración 20260517_delivery_notes_tipo_y_guia)
+    tipo: dn.tipo || 'entrega',
+    guia_id: dn.guiaId || '',
+    receptor_entidad: dn.receptorEntidad || null,
     wr_ids: dn.wrIds || [],
     cliente_id: dn.clienteId || '',
     consignatario: dn.consignatario || '',
