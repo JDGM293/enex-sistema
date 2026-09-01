@@ -19,12 +19,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Ping Supabase REST API
+        env:
+          SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJoeWh5Y25qdHR3Y3p2aW5meGJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0MDgzODksImV4cCI6MjA5MDk4NDM4OX0.l0o9z4sjek1W-3GDnjs3xrwXiaceZg6XqT5TLfSt90s
         run: |
           HTTP_CODE=$(curl -s -o /tmp/response.txt -w "%{http_code}" \
             "https://bhyhycnjttwczvinfxbu.supabase.co/rest/v1/configuracion?select=id&limit=1" \
-            -H "apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJoeWh5Y25qdHR3Y3p2aW5meGJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0MDgzODksImV4cCI6MjA5MDk4NDM4OX0.l0o9z4sjek1W-3GDnjs3xrwXiaceZg6XqT5TLfSt90s")
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY")
           echo "HTTP status: $HTTP_CODE"
           cat /tmp/response.txt
+          echo ""
           if [ "$HTTP_CODE" -ge 400 ]; then
             echo "::error::Supabase respondio $HTTP_CODE - revisar si el proyecto sigue activo"
             exit 1
