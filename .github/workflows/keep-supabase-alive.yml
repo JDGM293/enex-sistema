@@ -1,0 +1,31 @@
+name: Keep Supabase Alive
+
+# ENEX Sistema usa el plan gratuito de Supabase, que pausa el proyecto
+# automaticamente tras ~1 semana sin actividad. Este workflow le pega
+# al REST API cada 3 dias con una consulta minima para que Supabase
+# lo siga viendo como "activo" y no lo pause.
+#
+# La API key usada es la "anon"/"publishable" del proyecto: es publica
+# por diseno (ya viaja embebida en el bundle JS del frontend), asi que
+# no hace falta guardarla como secret.
+
+on:
+  schedule:
+    - cron: '0 8 */3 * *'   # cada 3 dias a las 08:00 UTC
+  workflow_dispatch: {}      # permite dispararlo a mano desde la pestana Actions
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase REST API
+        run: |
+          HTTP_CODE=$(curl -s -o /tmp/response.txt -w "%{http_code}" \
+            "https://bhyhycnjttwczvinfxbu.supabase.co/rest/v1/configuracion?select=id&limit=1" \
+            -H "apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJoeWh5Y25qdHR3Y3p2aW5meGJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0MDgzODksImV4cCI6MjA5MDk4NDM4OX0.l0o9z4sjek1W-3GDnjs3xrwXiaceZg6XqT5TLfSt90s")
+          echo "HTTP status: $HTTP_CODE"
+          cat /tmp/response.txt
+          if [ "$HTTP_CODE" -ge 400 ]; then
+            echo "::error::Supabase respondio $HTTP_CODE - revisar si el proyecto sigue activo"
+            exit 1
+          fi
