@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, Fragment } from "react";
+import { createPortal } from "react-dom";
 import { dbGetClientes, dbUpsertCliente, dbDeleteCliente, dbGetWR, dbUpsertWR, dbDeleteWR, dbGetAgentes, dbUpsertAgente, dbDeleteAgente, dbGetOficinas, dbUpsertOficina, dbDeleteOficina, dbGetTarifas, dbUpsertTarifa, dbDeleteTarifa, dbGetConsolidaciones, dbUpsertConsolidacion, dbDeleteConsolidacion, dbGetCargoReleases, dbUpsertCargoRelease, dbDeleteCargoRelease, dbGetDeliveryNotes, dbUpsertDeliveryNote, dbDeleteDeliveryNote, dbGetFacturas, dbUpsertFactura, dbDeleteFactura, dbGetPagos, dbUpsertPago, dbDeletePago, dbLogActividad, dbGetActividad, dbGetConfig, dbSetConfig, dbGetScanLog, dbInsertScan, dbSetScanRegistered, dbDeleteScanIds, storageUploadFoto, storageDeleteFoto, dbGetFotosByWR, dbInsertFoto, dbDeleteFoto, storageUploadFotoConsol, storageDeleteFotoConsol, dbGetFotosByConsol, dbInsertFotoConsol, dbDeleteFotoConsol } from "./supabase";
 
 // ─── TEMA CLARO PROFESIONAL ───────────────────────────────────────────────────
@@ -843,6 +844,39 @@ const CT_LABEL_WR={agente:"🤝 Agente",vendedor_agente:"💼 Vend. Agente",auto
 const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[],oficinas=[],empresaNombre="Casa Matriz",sendTypes=[],onAssignTipo,onFotoClick,onTimelineClick,consolList=[]})=>{
   const isIn=unitL==="in";
   const isLb=unitW==="lb";
+  // Popup de cajas: se renderiza en un portal con position:fixed porque el
+  // contenedor de la tabla (.wr-scroll overflow:auto / .wr-panel overflow:hidden)
+  // recortaba el popup absoluto y lo dejaba invisible en la mayoria de las filas.
+  const dimBtnRef=useRef(null);
+  const dimPopRef=useRef(null);
+  const [dimPos,setDimPos]=useState(null);
+  useEffect(()=>{
+    if(!dimOpen){setDimPos(null);return;}
+    const n=(w.dims||[]).length;
+    const place=()=>{
+      const el=dimBtnRef.current;if(!el)return;
+      const r=el.getBoundingClientRect();
+      const W=420,H=Math.min(window.innerHeight*0.7,210+n*30);
+      let left=r.left,top=r.bottom+6;
+      if(left+W>window.innerWidth-8)left=Math.max(8,window.innerWidth-W-8);
+      if(top+H>window.innerHeight-8)top=Math.max(8,r.top-H-6);
+      setDimPos({top,left});
+    };
+    place();
+    const onDoc=e=>{
+      if(dimPopRef.current&&dimPopRef.current.contains(e.target))return;
+      if(dimBtnRef.current&&dimBtnRef.current.contains(e.target))return;
+      onDimToggle();
+    };
+    window.addEventListener("scroll",place,true);
+    window.addEventListener("resize",place);
+    document.addEventListener("mousedown",onDoc);
+    return()=>{
+      window.removeEventListener("scroll",place,true);
+      window.removeEventListener("resize",place);
+      document.removeEventListener("mousedown",onDoc);
+    };
+  },[dimOpen,w.dims]);
   const showVol = isLb ? `${w.volLb}lb` : `${w.volKg}kg`;
   const showPeso = isLb ? `${w.pesoLb}lb` : `${w.pesoKg}kg`;
 
@@ -862,11 +896,11 @@ const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[
     </div>
   ):(
     <div className="pos-rel">
-      <button className="dim-btn" style={{padding:"4px 10px",fontSize:13,fontWeight:600,background:"#E8F0FE",borderColor:"#90B8F0",color:"var(--navy)"}} onClick={e=>{e.stopPropagation();onDimToggle();}}>
+      <button ref={dimBtnRef} className="dim-btn" style={{padding:"4px 10px",fontSize:13,fontWeight:600,background:"#E8F0FE",borderColor:"#90B8F0",color:"var(--navy)"}} onClick={e=>{e.stopPropagation();onDimToggle();}}>
         📦 {w.dims.length} cajas {dimOpen?"▲":"▼"}
       </button>
-      {dimOpen&&(
-        <div className="dim-pop" onClick={e=>e.stopPropagation()}>
+      {dimOpen&&dimPos&&createPortal(
+        <div ref={dimPopRef} className="dim-pop" style={{position:"fixed",top:dimPos.top,left:dimPos.left,maxHeight:"70vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
           <div className="dim-pop-ttl">📐 Detalle — {w.dims.length} cajas · {isIn?"Pulgadas":"Centímetros"} · {isLb?"Libras":"Kilos"}</div>
           <div className="dr">
             {["#","Largo","Ancho","Alto","Peso","Peso Vol."].map(h=><span key={h} className="dh">{h}</span>)}
@@ -901,7 +935,7 @@ const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[
             </div>
           </div>
         </div>
-      )}
+      ,document.body)}
     </div>
   );
   return (
