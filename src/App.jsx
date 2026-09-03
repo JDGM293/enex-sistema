@@ -839,6 +839,78 @@ const StBadge=({st})=>{if(!st||!st.cls)return <span className="st s1"><span clas
 const CarBadge=({c})=><span className={`car ${CAR_CLS[c]||"car-def"}`}>{c}</span>;
 const TypeBadge=({t})=><span className={`type-b ${TYPE_CLS[t]||""}`}>{t}</span>;
 
+// ─── CELDA CON UN VALOR DISTINTO POR CAJA ─────────────────────────────────────
+// Un WR de varias cajas puede traer un tracking (o una descripcion, o una
+// factura) distinto en cada caja, pero en la tabla solo entra un valor: hasta
+// ahora se mostraba el de la primera caja y los demas quedaban invisibles.
+// Cuando los valores difieren se muestra un boton "📦 N seguimientos" y al
+// hacer click se abre el detalle caja por caja, igual que el popup de medidas.
+// Mismo patron de portal + position:fixed (ver TxtCell / dim-pop).
+const MultiCell=({dims=[],titulo,btn,columnas=[],tdStyle={},color="var(--navy)"})=>{
+  const btnRef=useRef(null);
+  const popRef=useRef(null);
+  const [open,setOpen]=useState(false);
+  const [pos,setPos]=useState(null);
+
+  useEffect(()=>{
+    if(!open){setPos(null);return;}
+    const place=()=>{
+      const el=btnRef.current;if(!el)return;
+      const r=el.getBoundingClientRect();
+      const W=420,H=Math.min(window.innerHeight*0.6,120+dims.length*30);
+      let left=r.left,top=r.bottom+6;
+      if(left+W>window.innerWidth-8)left=Math.max(8,window.innerWidth-W-8);
+      if(top+H>window.innerHeight-8)top=Math.max(8,r.top-H-6);
+      setPos({top,left});
+    };
+    place();
+    const onDoc=e=>{
+      if(popRef.current&&popRef.current.contains(e.target))return;
+      const cell=btnRef.current&&btnRef.current.closest("td");
+      if(cell&&cell.contains(e.target))return;
+      setOpen(false);
+    };
+    window.addEventListener("scroll",place,true);
+    window.addEventListener("resize",place);
+    document.addEventListener("mousedown",onDoc);
+    return()=>{
+      window.removeEventListener("scroll",place,true);
+      window.removeEventListener("resize",place);
+      document.removeEventListener("mousedown",onDoc);
+    };
+  },[open,dims.length]);
+
+  const grid=`26px ${columnas.map(c=>c.w||"1fr").join(" ")}`;
+  return (
+    <td style={tdStyle} onClick={e=>{e.stopPropagation();setOpen(o=>!o);}}>
+      <button ref={btnRef} type="button" className="dim-btn"
+        style={{padding:"4px 10px",fontSize:13,fontWeight:600,background:"#E8F0FE",borderColor:"#90B8F0",color}}>
+        {btn} {open?"▲":"▼"}
+      </button>
+      {open&&pos&&createPortal(
+        <div ref={popRef} className="dim-pop"
+          style={{position:"fixed",top:pos.top,left:pos.left,maxWidth:440,maxHeight:"60vh",overflowY:"auto"}}
+          onClick={e=>e.stopPropagation()}>
+          <div className="dim-pop-ttl">{titulo}</div>
+          <div style={{display:"grid",gridTemplateColumns:grid,gap:8,padding:"5px 0",borderBottom:"1px solid var(--b1)"}}>
+            <span className="dh">#</span>
+            {columnas.map(c=><span key={c.h} className="dh">{c.h}</span>)}
+          </div>
+          {dims.map((d,i)=>(
+            <div key={i} style={{display:"grid",gridTemplateColumns:grid,gap:8,padding:"6px 0",borderBottom:"1px solid var(--b3)",alignItems:"start"}}>
+              <span className="dv" style={{color:"var(--t3)",fontWeight:600}}>{i+1}</span>
+              {columnas.map(c=>(
+                <span key={c.h} style={{fontSize:13,color:"var(--t1)",lineHeight:1.45,wordBreak:"break-word",
+                  fontFamily:c.mono?"'DM Mono',monospace":"Arial,Helvetica,sans-serif"}}>{c.get(d)||"—"}</span>
+              ))}
+            </div>
+          ))}
+        </div>
+      ,document.body)}
+    </td>
+  );
+};
+
 // ─── CELDA DE TEXTO CON POPUP DE CONTENIDO COMPLETO ───────────────────────────
 // Cuando el texto no cabe en el ancho de la columna queda cortado con "…".
 // En ese caso aparece un ⤢ al final de la celda y al hacer click se abre una
@@ -961,6 +1033,14 @@ const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[
   },[dimOpen,w.dims]);
   const showVol = isLb ? `${w.volLb}lb` : `${w.volKg}kg`;
   const showPeso = isLb ? `${w.pesoLb}lb` : `${w.pesoKg}kg`;
+
+  // Valores que pueden variar caja por caja (cada entrada de dims guarda su
+  // propio carrier / tracking / factura / descripcion). Si difieren, la celda
+  // pasa a mostrar un boton con el detalle por caja en vez de solo el 1er valor.
+  const dimsArr=Array.isArray(w.dims)?w.dims:[];
+  const distintos=k=>[...new Set(dimsArr.map(d=>String(d?.[k]??"").trim()).filter(Boolean))];
+  const trkDist=distintos("tracking");
+  const descDist=distintos("descripcion");
 
   const fmtDim=(d)=>isIn?`${toIn(d)}`:`${d}`;
   const fmtW=(pk)=>isLb?`${toLb(pk)}lb`:`${pk}kg`;
@@ -1089,10 +1169,20 @@ const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[
       <td style={{maxWidth:72,overflow:"hidden",textOverflow:"ellipsis"}}>
         <span style={{fontWeight:700,fontSize:13,color:"var(--navy)"}}>{w.carrier||"—"}</span>
       </td>
-      <TxtCell value={w.tracking} titulo="🔗 Nº de seguimiento" mono
-        tdStyle={{maxWidth:170,overflow:"hidden"}} txtClass="c-trk"/>
-      <TxtCell value={cleanReempaqueDesc(w.descripcion)} titulo="📝 Descripción de la mercancía"
-        tdStyle={{minWidth:200,maxWidth:260,overflow:"hidden"}} color="var(--navy)"/>
+      {trkDist.length>1
+        ? <MultiCell dims={dimsArr} tdStyle={{maxWidth:190}} color="var(--cyan)"
+            btn={`📦 ${trkDist.length} seguimientos`}
+            titulo={`🔗 Seguimiento por caja — ${dimsArr.length} cajas · ${trkDist.length} números distintos`}
+            columnas={[{h:"Transp.",w:"78px",get:d=>d.carrier},{h:"Nº de seguimiento",w:"1fr",mono:true,get:d=>d.tracking}]}/>
+        : <TxtCell value={w.tracking} titulo="🔗 Nº de seguimiento" mono
+            tdStyle={{maxWidth:170,overflow:"hidden"}} txtClass="c-trk"/>}
+      {descDist.length>1
+        ? <MultiCell dims={dimsArr} tdStyle={{minWidth:200,maxWidth:260}} color="var(--navy)"
+            btn={`📦 ${descDist.length} descripciones`}
+            titulo={`📝 Descripción por caja — ${dimsArr.length} cajas · ${descDist.length} descripciones distintas`}
+            columnas={[{h:"Descripción",w:"1fr",get:d=>cleanReempaqueDesc(d.descripcion)},{h:"Factura",w:"88px",get:d=>d.factura}]}/>
+        : <TxtCell value={cleanReempaqueDesc(w.descripcion)} titulo="📝 Descripción de la mercancía"
+            tdStyle={{minWidth:200,maxWidth:260,overflow:"hidden"}} color="var(--navy)"/>}
       <td style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--t1)",maxWidth:100,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={w.factura||""}>{w.factura?w.factura:"—"}</td>
       <td style={{textAlign:"right"}}><span className="c-val">${w.valor?.toFixed(2)||"0.00"}</span></td>
       <td>{dimCell}</td>
@@ -1708,6 +1798,8 @@ export default function ENEXSystem(){
   // Default vacío: el módulo abre en blanco y obliga a elegir Clientes / Usuarios / Todos
   const [clFilter,setClFilter]=useState("");
   const [dimOpen,setDimOpen]=useState(null);
+  // Atajo a Reempaque / Cargo Release en ventana, sin abandonar la pantalla actual
+  const [quickTab,setQuickTab]=useState(null);
   const [unitL,setUnitL]=useState("in");
   const [unitW,setUnitW]=useState("lb");
   const [sortCol,setSortCol]=useState("fecha");
@@ -2478,6 +2570,14 @@ export default function ENEXSystem(){
     <div className="wr-toolbar">
       {/* Nuevo WR — IZQUIERDA */}
       {hasPerm("crear_wr")&&<button className="btn-p" onClick={()=>{setWrf(emptyWRF(PAY_TYPES[0]));setShowNewWR(true);}}>+ Nuevo WR</button>}
+      {/* ATAJOS — abren el módulo en una ventana encima, sin salir de esta pantalla */}
+      {[{id:"reempaque",ic:"🔁",l:"Reempaque",c:"#5B3FB5"},{id:"cargorelease",ic:"🚀",l:"Cargo Release",c:"#0080CC"}].map(a=>(
+        <button key={a.id} type="button" className="btn-s" title={`Abrir ${a.l} en una ventana, sin salir de esta pantalla`}
+          onClick={()=>setQuickTab(a.id)}
+          style={{color:a.c,borderColor:`${a.c}55`,background:`${a.c}12`,fontWeight:700}}>
+          {a.ic} {a.l}
+        </button>
+      ))}
       {/* Búsqueda avanzada */}
       <div className="srch-adv">
         <select className="srch-param" value={searchParam} onChange={e=>{setSearchParam(e.target.value);setSearch("");}}>
@@ -2596,7 +2696,7 @@ export default function ENEXSystem(){
                 {id:"reempaque",    ic:"🔁", l:"Reempaque",     n:wrList.filter(w=>w.status?.code==="2.3").length, sub:"reempacados", c:"#5B3FB5"},
                 {id:"cargorelease", ic:"🚀", l:"Cargo Release", n:wrList.filter(w=>w.status?.code==="25").length,  sub:"egresados",   c:"#0080CC"},
               ].map(b=>(
-                <button key={b.id} type="button" title={`Ir a ${b.l}`} onClick={()=>setTab(b.id)}
+                <button key={b.id} type="button" title={`Abrir ${b.l} en una ventana, sin salir del Dashboard`} onClick={()=>setQuickTab(b.id)}
                   style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,padding:"11px 6px",
                     borderRadius:9,border:`1px solid ${b.c}40`,background:`${b.c}10`,cursor:"pointer",transition:"all .12s"}}
                   onMouseEnter={e=>{e.currentTarget.style.background=`${b.c}22`;e.currentTarget.style.transform="translateY(-1px)";}}
@@ -9108,6 +9208,24 @@ export default function ENEXSystem(){
       </div>
 
       {/* MODALS */}
+      {/* VENTANA DE ATAJO — Reempaque / Cargo Release encima de la pantalla actual.
+          El módulo se renderiza igual que a pantalla completa; al cerrar se vuelve
+          exactamente a donde estabas (Dashboard, WR, lo que sea). */}
+      {quickTab&&(
+        <div className="ov" style={{alignItems:"stretch",padding:10}}>
+          <div className="modal" style={{maxWidth:1600,padding:16,display:"flex",flexDirection:"column",maxHeight:"calc(100vh - 20px)"}}>
+            <div className="mhd">
+              <div className="mt">{quickTab==="reempaque"?"🔁 Reempaque":"🚀 Cargo Release (Egreso)"}</div>
+              <button type="button" className="btn-s" title="Abrir el módulo a pantalla completa"
+                onClick={()=>{const t=quickTab;setQuickTab(null);setTab(t);}}>⛶ Pantalla completa</button>
+              <button type="button" className="mcl" title="Cerrar y volver" onClick={()=>setQuickTab(null)}>✕</button>
+            </div>
+            <div style={{flex:1,minHeight:0,display:"flex",flexDirection:"column",overflow:"hidden",margin:"0 -16px -16px"}}>
+              {quickTab==="reempaque"?renderReempaque():renderCargoRelease()}
+            </div>
+          </div>
+        </div>
+      )}
       {showNewWR&&renderNewWRModal()}
       {selWR&&renderWRDetail()}
       {showStatModal&&renderStatModal()}
