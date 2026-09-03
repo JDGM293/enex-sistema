@@ -839,6 +839,88 @@ const StBadge=({st})=>{if(!st||!st.cls)return <span className="st s1"><span clas
 const CarBadge=({c})=><span className={`car ${CAR_CLS[c]||"car-def"}`}>{c}</span>;
 const TypeBadge=({t})=><span className={`type-b ${TYPE_CLS[t]||""}`}>{t}</span>;
 
+// ─── CELDA DE TEXTO CON POPUP DE CONTENIDO COMPLETO ───────────────────────────
+// Cuando el texto no cabe en el ancho de la columna queda cortado con "…".
+// En ese caso aparece un ⤢ al final de la celda y al hacer click se abre una
+// ventanita con el contenido completo, igual que el popup de dimensiones
+// cuando el WR tiene mas de una caja.
+// Se renderiza en un portal con position:fixed porque .wr-scroll{overflow:auto}
+// y .wr-panel{overflow:hidden} recortan cualquier popup absoluto.
+const TxtCell=({value,titulo,tdStyle={},txtClass,txtStyle={},mono=false,color="var(--cyan)"})=>{
+  const txt=(value===null||value===undefined||value==="")?"":String(value);
+  const boxRef=useRef(null);
+  const popRef=useRef(null);
+  const [trunc,setTrunc]=useState(false);
+  const [open,setOpen]=useState(false);
+  const [pos,setPos]=useState(null);
+
+  // ¿el texto esta cortado? scrollWidth > clientWidth significa que no cabe.
+  // Se vuelve a medir al terminar de cargar las fuentes (DM Mono viene de
+  // Google Fonts y cambia el ancho del texto) y al redimensionar la ventana.
+  useEffect(()=>{
+    let vivo=true;
+    const check=()=>{const el=boxRef.current;if(el&&vivo)setTrunc(el.scrollWidth>el.clientWidth+1);};
+    check();
+    if(document.fonts&&document.fonts.ready)document.fonts.ready.then(check).catch(()=>{});
+    window.addEventListener("resize",check);
+    return()=>{vivo=false;window.removeEventListener("resize",check);};
+  },[txt]);
+
+  useEffect(()=>{
+    if(!open){setPos(null);return;}
+    const place=()=>{
+      const el=boxRef.current;if(!el)return;
+      const r=el.getBoundingClientRect();
+      const W=400,H=Math.min(window.innerHeight*0.5,110+Math.ceil(txt.length/46)*22);
+      let left=r.left,top=r.bottom+6;
+      if(left+W>window.innerWidth-8)left=Math.max(8,window.innerWidth-W-8);
+      if(top+H>window.innerHeight-8)top=Math.max(8,r.top-H-6);
+      setPos({top,left});
+    };
+    place();
+    const onDoc=e=>{
+      if(popRef.current&&popRef.current.contains(e.target))return;
+      const cell=boxRef.current&&boxRef.current.closest("td");
+      if(cell&&cell.contains(e.target))return;
+      setOpen(false);
+    };
+    window.addEventListener("scroll",place,true);
+    window.addEventListener("resize",place);
+    document.addEventListener("mousedown",onDoc);
+    return()=>{
+      window.removeEventListener("scroll",place,true);
+      window.removeEventListener("resize",place);
+      document.removeEventListener("mousedown",onDoc);
+    };
+  },[open,txt]);
+
+  return (
+    <td style={tdStyle}
+      onClick={trunc?(e=>{e.stopPropagation();setOpen(o=>!o);}):undefined}
+      title={trunc?"Click para ver el contenido completo":undefined}>
+      <div style={{display:"flex",alignItems:"center",gap:4,maxWidth:"100%",cursor:trunc?"pointer":"inherit"}}>
+        <div ref={boxRef} className={txtClass}
+          style={{...txtStyle,flex:1,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+          {txt||"—"}
+        </div>
+        {trunc&&(
+          <span style={{flexShrink:0,fontSize:10,lineHeight:1,fontWeight:700,color,
+            background:"var(--bg4)",border:"1px solid var(--b1)",borderRadius:4,padding:"3px 4px"}}>⤢</span>
+        )}
+      </div>
+      {open&&pos&&createPortal(
+        <div ref={popRef} className="dim-pop"
+          style={{position:"fixed",top:pos.top,left:pos.left,maxWidth:400,maxHeight:"50vh",overflowY:"auto"}}
+          onClick={e=>e.stopPropagation()}>
+          <div className="dim-pop-ttl">{titulo}</div>
+          <div style={{fontSize:13.5,color:"var(--t1)",lineHeight:1.55,whiteSpace:"pre-wrap",wordBreak:"break-word",
+            fontFamily:mono?"'DM Mono',monospace":"Arial,Helvetica,sans-serif"}}>{txt||"—"}</div>
+        </div>
+      ,document.body)}
+    </td>
+  );
+};
+
 // ─── WR ROW ────────────────────────────────────────────────────────────────────
 const CT_LABEL_WR={agente:"🤝 Agente",vendedor_agente:"💼 Vend. Agente",autonomo:"🧑‍💻 Autónomo",oficina:"🏢 Oficina",vendedor_oficina:"🛒 Vend. Oficina",matriz:"🏛️ Matriz"};
 const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[],oficinas=[],empresaNombre="Casa Matriz",sendTypes=[],onAssignTipo,onFotoClick,onTimelineClick,consolList=[]})=>{
@@ -1007,8 +1089,10 @@ const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[
       <td style={{maxWidth:72,overflow:"hidden",textOverflow:"ellipsis"}}>
         <span style={{fontWeight:700,fontSize:13,color:"var(--navy)"}}>{w.carrier||"—"}</span>
       </td>
-      <td><span className="c-trk">{w.tracking||"—"}</span></td>
-      <td style={{minWidth:200,maxWidth:260,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{cleanReempaqueDesc(w.descripcion)||"—"}</td>
+      <TxtCell value={w.tracking} titulo="🔗 Nº de seguimiento" mono
+        tdStyle={{maxWidth:170,overflow:"hidden"}} txtClass="c-trk"/>
+      <TxtCell value={cleanReempaqueDesc(w.descripcion)} titulo="📝 Descripción de la mercancía"
+        tdStyle={{minWidth:200,maxWidth:260,overflow:"hidden"}} color="var(--navy)"/>
       <td style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--t1)",maxWidth:100,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={w.factura||""}>{w.factura?w.factura:"—"}</td>
       <td style={{textAlign:"right"}}><span className="c-val">${w.valor?.toFixed(2)||"0.00"}</span></td>
       <td>{dimCell}</td>
@@ -2503,12 +2587,25 @@ export default function ENEXSystem(){
               );
             })}
           </div>
-          {/* SLOT LIBRE — espacio reservado para una próxima tarjeta. Mantengo
-              el contenedor visible (mismo card style) pero vacío para que el
-              layout de tres columnas no se rompa. A definir su contenido. */}
-          <div className="card" style={{minHeight:120,display:"flex",alignItems:"center",justifyContent:"center"}}>
-            <div style={{fontSize:12,color:"var(--t4)",fontStyle:"italic",textAlign:"center"}}>
-              (espacio reservado)
+          {/* ACCESOS DIRECTOS — atajos a los modulos que no tienen cuadro de stat
+              propio arriba. Ocupa el slot que estaba reservado en el panel derecho. */}
+          <div className="card">
+            <div className="card-tt">⚡ Accesos Directos</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+              {[
+                {id:"reempaque",    ic:"🔁", l:"Reempaque",     n:wrList.filter(w=>w.status?.code==="2.3").length, sub:"reempacados", c:"#5B3FB5"},
+                {id:"cargorelease", ic:"🚀", l:"Cargo Release", n:wrList.filter(w=>w.status?.code==="25").length,  sub:"egresados",   c:"#0080CC"},
+              ].map(b=>(
+                <button key={b.id} type="button" title={`Ir a ${b.l}`} onClick={()=>setTab(b.id)}
+                  style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,padding:"11px 6px",
+                    borderRadius:9,border:`1px solid ${b.c}40`,background:`${b.c}10`,cursor:"pointer",transition:"all .12s"}}
+                  onMouseEnter={e=>{e.currentTarget.style.background=`${b.c}22`;e.currentTarget.style.transform="translateY(-1px)";}}
+                  onMouseLeave={e=>{e.currentTarget.style.background=`${b.c}10`;e.currentTarget.style.transform="none";}}>
+                  <span style={{fontSize:21,lineHeight:1}}>{b.ic}</span>
+                  <span style={{fontSize:12.5,fontWeight:700,color:b.c,whiteSpace:"nowrap"}}>{b.l}</span>
+                  <span style={{fontSize:11,color:"var(--t3)"}}>{b.n} {b.sub}</span>
+                </button>
+              ))}
             </div>
           </div>
         </div>
