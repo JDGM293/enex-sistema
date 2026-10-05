@@ -4357,7 +4357,7 @@ export default function ENEXSystem(){
                   // Tipo Envío va siempre al final, salvo en Reempacados (que queda fijo en 2.3)
                   const showTipoEnvio = !showOrigen;
                   // Orden de columnas (pedido por usuario, mayo 2026):
-                  //   Estado · N° WR · [Origen?] · Cajas · Peso · P.Vol · Ft³ · M³
+                  //   Estado · N° WR · [Origen?] · Tracking · Cajas · Peso · P.Vol · Ft³ · M³
                   //   · Contenido · Valor   ← movidas aquí (entre M³ y Recibido)
                   //   · Recibido · Confirmado · Consolidado · Enviado
                   //   · Alm. Destino · Entregado · Cobrado   ← columna nueva
@@ -4365,6 +4365,7 @@ export default function ENEXSystem(){
                   const baseCols = [
                     "Estado","N° WR",
                     ...(showOrigen?["Origen"]:[]),
+                    "Tracking",
                     "Cajas","Peso lb","P.Vol lb","Ft³","M³",
                     "Contenido","Valor",
                     "Recibido",
@@ -4378,7 +4379,7 @@ export default function ENEXSystem(){
                   //   hasta antes del Valor (que mostramos en su propia celda).
                   //   Aquí no hay celdas que sumar entre M³ y Valor (Contenido es texto).
                   // - tailColspan cubre Recibido..N°Guía (+Tipo Envío), todas no-sumables.
-                  const firstColspan = 2 + (showOrigen?1:0);
+                  const firstColspan = 3 /*Estado+N°WR+Tracking*/ + (showOrigen?1:0);
                   const tailColspan  = 1 /*Recibido*/ + (hideMiddle?0:7 /*Confirmado..N°Guía*/) + (showTipoEnvio?1:0);
                 return (
                 <table style={{width:"100%",borderCollapse:"collapse",fontSize:12.5,whiteSpace:"nowrap"}}>
@@ -4423,6 +4424,20 @@ export default function ENEXSystem(){
                                   : "—")}
                           </td>
                         )}
+                        {/* Tracking — igual que en el Dashboard: si las cajas traen
+                            seguimientos distintos, botón con el detalle caja por caja
+                            (MultiCell); si no, el número con ⤢ cuando se corta (TxtCell). */}
+                        {(()=>{
+                          const dimsArr=Array.isArray(w.dims)?w.dims:[];
+                          const trkDist=[...new Set(dimsArr.map(d=>String(d?.tracking??"").trim()).filter(Boolean))];
+                          return trkDist.length>1
+                            ? <MultiCell dims={dimsArr} tdStyle={{padding:"7px 8px",maxWidth:190}} color="var(--cyan)"
+                                btn={`📦 ${trkDist.length} seguimientos`}
+                                titulo={`🔗 Seguimiento por caja — ${dimsArr.length} cajas · ${trkDist.length} números distintos`}
+                                columnas={[{h:"Transp.",w:"78px",get:d=>d.carrier},{h:"Nº de seguimiento",w:"1fr",mono:true,get:d=>d.tracking}]}/>
+                            : <TxtCell value={w.tracking} titulo="🔗 Nº de seguimiento" mono
+                                tdStyle={{padding:"7px 8px",maxWidth:170,overflow:"hidden"}} txtClass="c-trk"/>;
+                        })()}
                         {/* Cajas — número simple, sin click */}
                         <td style={{padding:"7px 8px",textAlign:"center",fontWeight:700,color:"var(--navy)"}}>{w.cajas}</td>
                         <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",fontWeight:600,color:"var(--t1)"}}>{w.pesoLb}lb</td>
