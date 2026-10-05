@@ -1787,6 +1787,10 @@ export default function ENEXSystem(){
   // Dashboard: tabla de WR ampliada (oculta stats y panel derecho). Reemplaza la
   // antigua pantalla "Warehouse Receipt", que era la misma tabla a pantalla completa.
   const [dashWide,setDashWide]=useState(false);
+  // Loading Master: agrupa Consolidación, Recepción en Almacén y Estatus de guías
+  // en una sola opción del menú, con sub-pestañas.
+  const [lmTab,setLmTab]=useState("consolidacion"); // "consolidacion" | "recepcion" | "estatus"
+  const [lmSearch,setLmSearch]=useState("");
   const [wrList,setWrList]=useState(WR_INIT);
   const [clients,setClients]=useState(CLIENTS_INIT);
   const [selWR,setSelWR]=useState(null);
@@ -4740,50 +4744,19 @@ export default function ENEXSystem(){
                   <td style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--cyan)"}}>{c.numVuelo||"—"}</td>
                   <td style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--purple)"}}>{c.awb||c.bl||"—"}</td>
                   <td style={{fontFamily:"'DM Mono',monospace",fontSize:12}}>{c.fechaSalida||"—"}</td>
-                  <td style={{minWidth:480,padding:"6px 8px"}}>
+                  <td style={{minWidth:260,padding:"6px 8px"}}>
                     {/* Estado actual destacado */}
                     <div style={{marginBottom:6,display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
                       <StBadge st={stActual||{cls:"s3",label:c.status||"En preparación"}}/>
                       <span style={{fontSize:12,color:"var(--t3)"}}>
                         {curPhaseIdx>=0?`Fase ${curPhaseIdx+1}/${GUIDE_PHASES.length}`:"Pre-consolidado"}
                       </span>
-                      {isLocked&&<span style={{fontSize:11,color:"#7B1FA2",fontWeight:700,background:"#F3E5F5",padding:"2px 8px",borderRadius:10,border:"1px solid #CE93D8"}}>🔒 Bloqueada — pasar a Recepción en Almacén</span>}
+                      {isLocked&&<span style={{fontSize:11,color:"#7B1FA2",fontWeight:700,background:"#F3E5F5",padding:"2px 8px",borderRadius:10,border:"1px solid #CE93D8"}}>🔒 Bloqueada — fases de destino en Estatusén</span>}
                     </div>
-                    {/* Barra de progreso 9 fases (Línea → Tránsito 2) — más alta para que quepa todo */}
-                    <div style={{display:"flex",alignItems:"stretch",gap:2,background:"#F3F5F9",border:"1px solid #DFE4EE",borderRadius:6,padding:3,overflow:"hidden"}}>
-                      {GUIDE_PHASES.map((ph,i)=>{
-                        const isDone=curPhaseIdx>i;
-                        const isCur=curPhaseIdx===i;
-                        const isNext=curPhaseIdx+1===i;
-                        // Una vez bloqueada (Tránsito 2 fijado), ningún botón es editable.
-                        const editable=!isLocked&&statusInChannel(ph.advance,"consolidacion");
-                        const bg=isDone?"var(--navy)":isCur?"var(--cyan)":isNext&&editable?"#EEF3FF":"#fff";
-                        const color=isDone||isCur?"#fff":editable?"var(--t2)":"var(--t3)";
-                        const tip=isLocked
-                          ?`${i+1}. ${ph.label} — guía bloqueada (ya pasó a Tránsito 2)`
-                          :editable
-                            ?`${i+1}. ${ph.label} — click para fijar esta fase${ph.advance==="13"?"\n⚠️ Al confirmar Tránsito 2 ya no se podrá retroceder.":""}`
-                            :`${i+1}. ${ph.label} — se asigna automáticamente`;
-                        const onClick=editable?(()=>{
-                          if(ph.advance==="13"&&!window.confirm("⚠️ Al fijar Tránsito 2, esta guía quedará BLOQUEADA en Consolidación.\nNo podrás regresar a fases anteriores.\nLa guía pasará a manejarse desde Recepción en Almacén.\n\n¿Confirmar?"))return;
-                          updateGuideStatus(c.id,ph.advance);
-                        }):undefined;
-                        return (
-                          <span key={ph.key} title={tip} onClick={onClick}
-                            style={{
-                              flex:1,cursor:editable?"pointer":"not-allowed",padding:"7px 2px 6px",textAlign:"center",
-                              background:bg,color,borderRadius:4,opacity:editable?1:isLocked&&isDone?1:.6,
-                              fontSize:11,fontWeight:isCur?700:600,minHeight:48,
-                              display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center",
-                              border:isCur?"1.5px solid var(--navy)":"1px solid transparent",
-                              transition:"all .15s",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",
-                            }}>
-                            <span style={{display:"block",fontSize:15,lineHeight:1}}>{ph.icon}</span>
-                            <span style={{display:"block",fontSize:10,marginTop:3,lineHeight:1.1,fontWeight:600}}>{ph.short}</span>
-                          </span>
-                        );
-                      })}
-                    </div>
+                    {/* La barra de fases se movió a Loading Master → pestaña Estatus */}
+                    <button type="button" className="btn-s" style={{fontSize:12,padding:"3px 10px",fontWeight:700}}
+                      title="Cambiar el estatus de esta guía en la pestaña Estatus"
+                      onClick={()=>{setLmSearch(c.id);setLmTab("estatus");}}>📶 Cambiar estatus</button>
                   </td>
                   <td style={{minWidth:170}}>
                     <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
@@ -8266,6 +8239,142 @@ export default function ENEXSystem(){
     logAction("Borró entrega",dn.id);
   };
 
+  // ── LOADING MASTER · ESTATUS DE GUÍAS ───────────────────────────────────────
+  // Una barra única de 12 fases por guía: 9 de origen/tránsito (GUIDE_PHASES,
+  // canal "consolidacion", updateGuideStatus) + 3 de destino (RECEP_PHASES,
+  // canal "recepcion", updateGuideStatusRecep). Mismas reglas que tenían las
+  // barras cuando vivían dentro de Consolidación y Recepción:
+  //  - Tránsito 2 (13) pide confirmación y bloquea las fases de origen.
+  //  - Las fases de destino se habilitan desde Tránsito 2 y requieren
+  //    permiso hacer_recepcion_dest. Con la guía en Almacén (17+) todo queda fijo.
+  const renderGuiaEstatus=()=>{
+    const q=(lmSearch||"").toLowerCase().trim();
+    const guias=consolList.filter(c=>!c.archivada)
+      .filter(c=>!q||[c.id,c.destino,c.awb,c.bl,c.numVuelo,c.tipoEnvio].some(v=>String(v||"").toLowerCase().includes(q)));
+    const FASES=[
+      ...GUIDE_PHASES.map(p=>({...p,canal:"consolidacion"})),
+      ...RECEP_PHASES.map(p=>({...p,canal:"recepcion"})),
+    ];
+    const faseIdx=(code)=>{
+      const g=GUIDE_PHASES.findIndex(p=>p.codes.includes(String(code)));
+      if(g>=0)return g;
+      const r=RECEP_PHASES.findIndex(p=>p.codes.includes(String(code)));
+      if(r>=0)return GUIDE_PHASES.length+r;
+      const n=parseFloat(code);
+      if(!isNaN(n)&&n<=4)return -1;
+      if(!isNaN(n)&&n>=17)return FASES.length; // ya en almacén: todas completadas
+      return -1;
+    };
+    const puedeRecep=hasPerm("hacer_recepcion_dest");
+    return(
+    <div className="page-scroll">
+      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,flexWrap:"wrap"}}>
+        <div style={{flex:1,minWidth:240}}>
+          <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:18,fontWeight:700,color:"var(--navy)"}}>📶 Estatus de Guías</div>
+          <div style={{fontSize:13,color:"var(--t3)",marginTop:2}}>Actualiza el estatus de cada guía consolidada. El cambio se aplica a todos sus WR.</div>
+        </div>
+        <div style={{position:"relative"}}>
+          <input className="fi" placeholder="Buscar guía, destino, AWB/BL, vuelo…" value={lmSearch} onChange={e=>setLmSearch(e.target.value)}
+            style={{fontSize:14,padding:"7px 30px 7px 10px",width:280}}/>
+          {lmSearch&&<span onClick={()=>setLmSearch("")} title="Limpiar búsqueda"
+            style={{position:"absolute",right:9,top:"50%",transform:"translateY(-50%)",cursor:"pointer",color:"var(--t3)",fontSize:15}}>✕</span>}
+        </div>
+      </div>
+
+      {guias.length===0?(
+        <div className="card" style={{textAlign:"center",padding:50,color:"var(--t3)"}}>
+          {q?"Ninguna guía activa coincide con la búsqueda.":"No hay guías activas. Las guías archivadas (recepción cerrada) no aparecen aquí."}
+        </div>
+      ):guias.map(c=>{
+        const st=WR_STATUSES.find(s=>s.label===c.status)||getStatus("4");
+        const code=st?.code||"4";
+        const n=parseFloat(code)||0;
+        const cur=faseIdx(code);
+        const origenBloqueado=n>=13;
+        const enAlmacen=n>=17;
+        const renderFase=(ph,i)=>{
+          const isDone=cur>i, isCur=cur===i, isNext=cur+1===i;
+          let editable,tip;
+          if(ph.canal==="consolidacion"){
+            editable=!origenBloqueado&&statusInChannel(ph.advance,"consolidacion");
+            tip=origenBloqueado?`${ph.label} — bloqueada (la guía ya pasó a Tránsito 2)`
+              :`${ph.label} — click para fijar esta fase${ph.advance==="13"?"\n⚠️ Al confirmar Tránsito 2 ya no se podrá retroceder.":""}`;
+          }else{
+            editable=origenBloqueado&&!enAlmacen&&puedeRecep&&statusInChannel(ph.advance,"recepcion");
+            tip=enAlmacen?`${ph.label} — la guía ya está en almacén`
+              :!origenBloqueado?`${ph.label} — se habilita cuando la guía llegue a Tránsito 2`
+              :!puedeRecep?`${ph.label} — tu rol no tiene permiso de recepción en destino`
+              :`${ph.label} — click para fijar esta fase`;
+          }
+          const onClick=editable?(()=>{
+            if(ph.canal==="consolidacion"){
+              if(ph.advance==="13"&&!window.confirm(`⚠️ Al fijar Tránsito 2, la guía ${c.id} quedará BLOQUEADA en las fases de origen/tránsito.\nNo podrás regresar a fases anteriores.\nSe habilitarán las fases de destino (Ad. Dest., Auditoría 3, Liberado 3).\n\n¿Confirmar?`))return;
+              updateGuideStatus(c.id,ph.advance);
+            }else{
+              if(window.confirm(`¿Fijar el estado "${ph.label}" en la guía ${c.id}?\nSe aplicará a todos los WR pendientes de la guía.`))
+                updateGuideStatusRecep(c.id,ph.advance);
+            }
+          }):undefined;
+          const bg=isDone?"var(--navy)":isCur?"var(--cyan)":isNext&&editable?"#EEF3FF":"#fff";
+          const color=isDone||isCur?"#fff":editable?"var(--t2)":"var(--t3)";
+          return(
+            <span key={ph.key} title={`${i+1}. ${tip}`} onClick={onClick}
+              style={{flex:1,minWidth:62,cursor:editable?"pointer":"not-allowed",padding:"7px 2px 6px",textAlign:"center",
+                background:bg,color,borderRadius:4,opacity:editable||isDone||isCur?1:.6,
+                fontWeight:isCur?700:600,minHeight:50,display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center",
+                border:isCur?"1.5px solid var(--navy)":"1px solid transparent",transition:"all .15s",whiteSpace:"nowrap",overflow:"hidden"}}>
+              <span style={{display:"block",fontSize:15,lineHeight:1}}>{ph.icon}</span>
+              <span style={{display:"block",fontSize:10,marginTop:3,lineHeight:1.1,fontWeight:600}}>{ph.short}</span>
+            </span>
+          );
+        };
+        const grupo=(titulo,fases,offset)=>(
+          <div style={{flex:fases.length,minWidth:0}}>
+            <div style={{fontSize:10.5,fontWeight:700,color:"var(--t3)",letterSpacing:.6,textTransform:"uppercase",margin:"0 0 4px 2px"}}>{titulo}</div>
+            <div style={{display:"flex",gap:2,background:"#F3F5F9",border:"1px solid #DFE4EE",borderRadius:6,padding:3}}>
+              {fases.map((ph,k)=>renderFase(ph,offset+k))}
+            </div>
+          </div>
+        );
+        return(
+          <div key={c.id} className="card" style={{marginBottom:12}}>
+            <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:10}}>
+              <span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",background:"#EEF3FF",padding:"3px 8px",borderRadius:4,border:"1px solid #B8C8F0",fontSize:14}}>{c.id}</span>
+              <TypeBadge t={c.tipoEnvio}/>
+              <span style={{fontWeight:700,color:"var(--t1)"}}>{c.destino||"—"}</span>
+              <span style={{fontSize:12,color:"var(--t3)"}}>{c.totalWR||0} WR · {c.totalCajas||0} cajas · {c.totalLb||0}lb</span>
+              {(c.numVuelo||c.awb||c.bl)&&<span style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--purple)"}}>{[c.numVuelo,c.awb||c.bl].filter(Boolean).join(" · ")}</span>}
+              <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:6}}>
+                <StBadge st={st||{cls:"s3",label:c.status||"En preparación"}}/>
+                <span style={{fontSize:12,color:"var(--t3)"}}>
+                  {cur<0?"Pre-tránsito":cur>=FASES.length?"En almacén":`Fase ${cur+1}/${FASES.length}`}
+                </span>
+              </div>
+            </div>
+            <div style={{display:"flex",gap:10,overflowX:"auto"}}>
+              {grupo("Origen · Tránsito",GUIDE_PHASES.map(p=>({...p,canal:"consolidacion"})),0)}
+              {grupo("Destino",RECEP_PHASES.map(p=>({...p,canal:"recepcion"})),GUIDE_PHASES.length)}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+    );
+  };
+
+  const renderLoadingMaster=()=>(
+    <div className="cnt">
+      <div style={{padding:"12px 18px 0"}}>
+        <div className="tabs" style={{marginBottom:0}}>
+          {[["consolidacion","🗂️ Consolidación"],["recepcion","📬 Recepción en Almacén"],["estatus","📶 Estatus"]].map(([v,l])=>(
+            <div key={v} className={`tab ${lmTab===v?"on":""}`} onClick={()=>setLmTab(v)}>{l}</div>
+          ))}
+        </div>
+      </div>
+      {lmTab==="consolidacion"?renderConsolidacion():lmTab==="recepcion"?renderRecepcionDest():renderGuiaEstatus()}
+    </div>
+  );
+
   const renderRecepcionDest=()=>{
     const q=(rdSearch||"").toLowerCase().trim();
     // Guías activas (no archivadas): se muestran para selección manual o escaneo
@@ -8397,46 +8506,16 @@ export default function ENEXSystem(){
                 <input className="fi" placeholder="Buscar en checklist…" value={rdSearch} onChange={e=>setRdSearch(e.target.value)} style={{fontSize:14,padding:"6px 10px",width:200,marginLeft:"auto"}}/>
               </div>
 
-              {/* FRANJA RECEPCIÓN — 3 fases: Ad. Dest. / Auditoría 3 / Liberado 3 */}
-              <div style={{marginBottom:10,padding:"8px 10px",background:"#F8FAFE",border:"1px solid #DCE4F2",borderRadius:8}}>
-                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6,flexWrap:"wrap"}}>
-                  <span style={{fontSize:12,fontWeight:700,color:"var(--navy)"}}>Estado de la guía en Recepción:</span>
-                  <StBadge st={stGuiaActual||{cls:"s3",label:guiaSel.status||"—"}}/>
-                  <span style={{fontSize:11,color:"var(--t3)"}}>
-                    {recPhaseIdx>=0?`Fase ${recPhaseIdx+1}/${RECEP_PHASES.length}`:"Aún no inicia recepción"}
-                  </span>
-                </div>
-                <div style={{display:"flex",alignItems:"stretch",gap:3,background:"#fff",border:"1px solid #DFE4EE",borderRadius:6,padding:3}}>
-                  {RECEP_PHASES.map((ph,i)=>{
-                    const isDone=recPhaseIdx>i;
-                    const isCur=recPhaseIdx===i;
-                    const isNext=recPhaseIdx+1===i;
-                    const editable=hasPerm("hacer_recepcion_dest")&&statusInChannel(ph.advance,"recepcion");
-                    const bg=isDone?"var(--navy)":isCur?"var(--cyan)":isNext&&editable?"#EEF3FF":"#fff";
-                    const color=isDone||isCur?"#fff":editable?"var(--t2)":"var(--t3)";
-                    const tip=editable
-                      ?`${i+1}. ${ph.label} — click para fijar esta fase`
-                      :`${i+1}. ${ph.label}`;
-                    const onClick=editable?(()=>{
-                      if(window.confirm(`¿Fijar el estado "${ph.label}" en la guía ${guiaSel.id}?\nSe aplicará a todos los WR pendientes de la guía.`))
-                        updateGuideStatusRecep(guiaSel.id,ph.advance);
-                    }):undefined;
-                    return(
-                      <span key={ph.key} title={tip} onClick={onClick}
-                        style={{
-                          flex:1,cursor:editable?"pointer":"not-allowed",padding:"8px 4px 7px",textAlign:"center",
-                          background:bg,color,borderRadius:4,opacity:editable?1:.7,
-                          fontSize:12,fontWeight:isCur?700:600,minHeight:54,
-                          display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center",
-                          border:isCur?"1.5px solid var(--navy)":"1px solid transparent",
-                          transition:"all .15s",
-                        }}>
-                        <span style={{display:"block",fontSize:17,lineHeight:1}}>{ph.icon}</span>
-                        <span style={{display:"block",fontSize:11,marginTop:3,lineHeight:1.1,fontWeight:700}}>{ph.short}</span>
-                      </span>
-                    );
-                  })}
-                </div>
+              {/* Estado de la guía — la franja de fases se movió a Loading Master → Estatus */}
+              <div style={{marginBottom:10,padding:"8px 10px",background:"#F8FAFE",border:"1px solid #DCE4F2",borderRadius:8,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                <span style={{fontSize:12,fontWeight:700,color:"var(--navy)"}}>Estado de la guía:</span>
+                <StBadge st={stGuiaActual||{cls:"s3",label:guiaSel.status||"—"}}/>
+                <span style={{fontSize:11,color:"var(--t3)"}}>
+                  {recPhaseIdx>=0?`Destino · fase ${recPhaseIdx+1}/${RECEP_PHASES.length}`:"Aún no inicia fases de destino"}
+                </span>
+                <button type="button" className="btn-s" style={{fontSize:12,padding:"3px 10px",fontWeight:700,marginLeft:"auto"}}
+                  title="Cambiar el estatus de esta guía en la pestaña Estatus"
+                  onClick={()=>{setLmSearch(guiaSel.id);setLmTab("estatus");}}>📶 Cambiar estatus</button>
               </div>
 
               <div style={{maxHeight:"42vh",overflow:"auto",border:"1px solid var(--b1)",borderRadius:8}}>
@@ -9107,8 +9186,7 @@ export default function ENEXSystem(){
     ]},
     {label:"Operación",items:[
       {id:"scan",ic:"📡",l:"Recepción en Puerta",badge:scanLog.filter(s=>!s.registered).length>0?String(scanLog.filter(s=>!s.registered).length):null,red:true},
-      {id:"consolidation",ic:"🗂️",l:"Consolidación"},
-      {id:"recepciondest",ic:"📬",l:"Recepción en Almacén"},
+      {id:"loadingmaster",ic:"🚢",l:"Loading Master"},
       {id:"reempaque",ic:"🔁",l:"Reempaque"},
       {id:"cargorelease",ic:"🚀",l:"Cargo Release"},
     ]},
@@ -9139,7 +9217,7 @@ export default function ENEXSystem(){
     ]},
   ];
 
-  const PAGE_TITLES={dashboard:"Dashboard General",scan:"Recepción en Puerta",etiquetas:"Imprimir Etiquetas",clients:"Clientes & Usuarios",estadocuenta:"Estado de Cuenta",roles:"Roles & Permisos",consolidation:"Consolidación",tracking:"Tracking",pickup:"Pick-up",contabilidad:"Contabilidad",calculadora:"Calculadora de Envío",chat:"Chat Interno",docs:"Documentos",reports:"Reportes",alerts:"Alertas",settings:"Configuración",reempaque:"Reempaque",recepciondest:"Recepción en Almacén",cargorelease:"Cargo Release (Egreso)",entregas:"Notas de Entrega",entregasydespachos:"Entregas y Despachos",facturacion:"Facturación"};
+  const PAGE_TITLES={dashboard:"Dashboard General",loadingmaster:"Loading Master",scan:"Recepción en Puerta",etiquetas:"Imprimir Etiquetas",clients:"Clientes & Usuarios",estadocuenta:"Estado de Cuenta",roles:"Roles & Permisos",consolidation:"Consolidación",tracking:"Tracking",pickup:"Pick-up",contabilidad:"Contabilidad",calculadora:"Calculadora de Envío",chat:"Chat Interno",docs:"Documentos",reports:"Reportes",alerts:"Alertas",settings:"Configuración",reempaque:"Reempaque",recepciondest:"Recepción en Almacén",cargorelease:"Cargo Release (Egreso)",entregas:"Notas de Entrega",entregasydespachos:"Entregas y Despachos",facturacion:"Facturación"};
 
   const renderPage=()=>{
     switch(tab){
@@ -9148,7 +9226,7 @@ export default function ENEXSystem(){
       case "etiquetas":    return renderEtiquetasPage();
       case "clients":      return renderClients();
       case "estadocuenta": return renderEstadoCuenta();
-      case "consolidation":return renderConsolidacion();
+      case "loadingmaster":return renderLoadingMaster();
       case "tracking":     return renderTracking();
       case "pickup":       return renderPickup();
       case "contabilidad": return renderContabilidad();
@@ -9157,7 +9235,6 @@ export default function ENEXSystem(){
       case "roles":        return renderRoles();
       case "settings":     return renderSettings();
       case "reempaque":    return renderReempaque();
-      case "recepciondest":return renderRecepcionDest();
       case "cargorelease": return renderCargoRelease();
       case "entregasydespachos": return renderDeliveryNotes();
       // case "entregas" — Notas de Entrega también accesible desde Impresión (etqMode="entregas")
