@@ -142,6 +142,8 @@ input.fi:not([type="email"]):not([type="password"]):not([type="number"]){text-tr
 .wt tbody tr.sel td{background:#E8F0FE}
 .wt tbody tr.sel td:first-child{background:#E8F0FE}
 .wt tbody tr:last-child td{border-bottom:none}
+.wt tbody tr.wr-row td{cursor:default}
+.wt tbody tr.wr-row td:first-child{cursor:pointer}
 /* Estado y Tipo Envío en la tabla WR: 1 nivel más pequeño que el resto (sin tocar el header) */
 .wt td .st{font-size:11.5px;padding:2px 8px}
 .wt td .type-b{font-size:11.5px;padding:2px 6px}
@@ -1101,9 +1103,11 @@ const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[
     </div>
   );
   return (
-    <tr className={sel?"sel":""} onClick={onClick}>
-      {/* 1. N° WR — primera columna */}
-      <td>
+    <tr className={"wr-row"+(sel?" sel":"")}>
+      {/* 1. N° WR — primera columna. Es la UNICA celda que abre el detalle del WR:
+           antes el onClick estaba en todo el <tr>, y al cerrar un popup (cajas,
+           seguimientos, etc.) haciendo clic fuera se abria sin querer otro WR. */}
+      <td onClick={onClick} title="Abrir detalle del WR">
         <div className="c-wr" style={{display:"inline-flex",alignItems:"center",gap:6}}>
           {w.id}
           {onTimelineClick&&(
