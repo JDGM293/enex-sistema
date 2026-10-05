@@ -4357,16 +4357,16 @@ export default function ENEXSystem(){
                   // Tipo Envío va siempre al final, salvo en Reempacados (que queda fijo en 2.3)
                   const showTipoEnvio = !showOrigen;
                   // Orden de columnas (pedido por usuario, mayo 2026):
-                  //   Estado · N° WR · [Origen?] · Tracking · Cajas · Peso · P.Vol · Ft³ · M³
-                  //   · Contenido · Valor   ← movidas aquí (entre M³ y Recibido)
+                  //   Estado · N° WR · [Origen?] · Cajas · Peso · P.Vol · Ft³ · M³
+                  //   · Tracking · Contenido · Valor   ← movidas aquí (entre M³ y Recibido)
                   //   · Recibido · Confirmado · Consolidado · Enviado
                   //   · Alm. Destino · Entregado · Cobrado   ← columna nueva
                   //   · N° Guía · [Tipo Envío?]
                   const baseCols = [
                     "Estado","N° WR",
                     ...(showOrigen?["Origen"]:[]),
-                    "Tracking",
                     "Cajas","Peso lb","P.Vol lb","Ft³","M³",
+                    "Tracking",
                     "Contenido","Valor",
                     "Recibido",
                     ...(hideMiddle?[]:["Confirmado","Consolidado","Enviado","Alm. Destino","Entregado","Cobrado","N° Guía"]),
@@ -4379,7 +4379,7 @@ export default function ENEXSystem(){
                   //   hasta antes del Valor (que mostramos en su propia celda).
                   //   Aquí no hay celdas que sumar entre M³ y Valor (Contenido es texto).
                   // - tailColspan cubre Recibido..N°Guía (+Tipo Envío), todas no-sumables.
-                  const firstColspan = 3 /*Estado+N°WR+Tracking*/ + (showOrigen?1:0);
+                  const firstColspan = 2 + (showOrigen?1:0);
                   const tailColspan  = 1 /*Recibido*/ + (hideMiddle?0:7 /*Confirmado..N°Guía*/) + (showTipoEnvio?1:0);
                 return (
                 <table style={{width:"100%",borderCollapse:"collapse",fontSize:12.5,whiteSpace:"nowrap"}}>
@@ -4424,6 +4424,12 @@ export default function ENEXSystem(){
                                   : "—")}
                           </td>
                         )}
+                        {/* Cajas — número simple, sin click */}
+                        <td style={{padding:"7px 8px",textAlign:"center",fontWeight:700,color:"var(--navy)"}}>{w.cajas}</td>
+                        <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",fontWeight:600,color:"var(--t1)"}}>{w.pesoLb}lb</td>
+                        <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",fontWeight:600,color:"var(--orange)"}}>{w.volLb||"—"}lb</td>
+                        <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",color:"var(--sky)"}}>{w.ft3}</td>
+                        <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",color:"var(--teal)"}}>{w.m3}</td>
                         {/* Tracking — igual que en el Dashboard: si las cajas traen
                             seguimientos distintos, botón con el detalle caja por caja
                             (MultiCell); si no, el número con ⤢ cuando se corta (TxtCell). */}
@@ -4438,12 +4444,6 @@ export default function ENEXSystem(){
                             : <TxtCell value={w.tracking} titulo="🔗 Nº de seguimiento" mono
                                 tdStyle={{padding:"7px 8px",maxWidth:170,overflow:"hidden"}} txtClass="c-trk"/>;
                         })()}
-                        {/* Cajas — número simple, sin click */}
-                        <td style={{padding:"7px 8px",textAlign:"center",fontWeight:700,color:"var(--navy)"}}>{w.cajas}</td>
-                        <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",fontWeight:600,color:"var(--t1)"}}>{w.pesoLb}lb</td>
-                        <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",fontWeight:600,color:"var(--orange)"}}>{w.volLb||"—"}lb</td>
-                        <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",color:"var(--sky)"}}>{w.ft3}</td>
-                        <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",color:"var(--teal)"}}>{w.m3}</td>
                         {/* Contenido / Valor — movidas aquí (antes estaban al final). */}
                         <td style={{padding:"7px 8px",maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",color:"var(--t2)"}}>{cleanReempaqueDesc(w.descripcion)||"—"}</td>
                         <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--green)"}}>${w.valor?.toFixed(2)||"0.00"}</td>
@@ -4495,6 +4495,7 @@ export default function ENEXSystem(){
                         <td style={{padding:"8px",fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--orange)"}}>{totalVolLbC}lb</td>
                         <td style={{padding:"8px",fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--sky)"}}>{totalFt3C}</td>
                         <td style={{padding:"8px",fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--teal)"}}>{totalM3C}</td>
+                        <td/>{/* Tracking — texto, no suma */}
                         <td/>{/* Contenido — texto, no suma */}
                         <td style={{padding:"8px",fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--green)"}}>${totalValorC}</td>
                         <td colSpan={tailColspan}/>
