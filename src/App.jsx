@@ -425,6 +425,10 @@ input.fi:not([type="email"]):not([type="password"]):not([type="number"]){text-tr
 
 /* ── RESPONSIVE ───────────────────────────────────────────────────────────── */
 @media(max-width:1280px){.stats{grid-template-columns:repeat(8,1fr);gap:5px}}
+/* Master de guías: 5 tarjetas */
+.stats.stats-5{grid-template-columns:repeat(5,1fr)}
+@media(max-width:900px){.stats.stats-5{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:540px){.stats.stats-5{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:900px){
   .sb{display:none}
   .stats{grid-template-columns:repeat(4,1fr)}
@@ -1789,8 +1793,8 @@ export default function ENEXSystem(){
   const [dashWide,setDashWide]=useState(false);
   // Loading Master: agrupa Consolidación, Recepción en Almacén y Estatus de guías
   // en una sola opción del menú, con sub-pestañas.
-  const [lmTab,setLmTab]=useState("consolidacion"); // "consolidacion" | "recepcion" | "estatus"
-  const [lmSearch,setLmSearch]=useState("");
+  const [lmTab,setLmTab]=useState("master"); // "master" | "recepcion" | "cerradas"
+  const [lmFilter,setLmFilter]=useState("todas"); // filtro de las tarjetas del Master
   const [wrList,setWrList]=useState(WR_INIT);
   const [clients,setClients]=useState(CLIENTS_INIT);
   const [selWR,setSelWR]=useState(null);
@@ -4697,16 +4701,64 @@ export default function ENEXSystem(){
   };
 
   // ── ETIQUETAS ───────────────────────────────────────────────────────────────
+  // ── LOADING MASTER · helpers de guía ─────────────────────────────────────────
+  // Código de estado de una guía (c.status guarda el label). "Recibida" es el
+  // estado que deja el botón Desarchivar: se trata como 17 Almacén.
+  const guiaCode=(c)=>{
+    const st=WR_STATUSES.find(s=>s.label===c.status);
+    if(st)return st.code;
+    if(c.status==="Recibida")return "17";
+    return "4";
+  };
+  // Grupos de guías (tarjetas del Master y pestañas de Loading Master):
+  //  preparacion ≤4 · transito 5–12 · recepcion ≥13 (Tránsito 2 en adelante,
+  //  aún abierta) · cerradas = archivadas (recepción cerrada).
+  const guiaGrupo=(c)=>{
+    if(c.archivada)return "cerradas";
+    const n=parseFloat(guiaCode(c))||0;
+    if(n>=13)return "recepcion";
+    if(n>=5)return "transito";
+    return "preparacion";
+  };
+  const guiaEnFiltro=(c,f)=>f==="todas"||guiaGrupo(c)===f;
+
   const renderConsolidacion=()=>(
     <div className="page-scroll">
       {/* HEADER */}
       <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
         <div style={{flex:1}}>
-          <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:18,fontWeight:700,color:"var(--navy)"}}>🗂️ Consolidación de Embarques</div>
-          <div style={{fontSize:13,color:"var(--t3)",marginTop:2}}>Agrupa WR confirmados en contenedores y genera el embarque.</div>
+          <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:18,fontWeight:700,color:"var(--navy)"}}>🗂️ Master de Guías</div>
+          <div style={{fontSize:13,color:"var(--t3)",marginTop:2}}>Todas las guías consolidadas con su correlativo. Agrupa WR confirmados en contenedores y genera el embarque.</div>
         </div>
         <button className="btn-p" onClick={()=>{setCf(emptyConsol());setEditConsolId(null);setContScanVal({});setContScanErr({});setShowNewConsol(true);}}>+ Nuevo Embarque</button>
       </div>
+
+      {/* TARJETAS — estilo Dashboard, pero de guías. Click = filtrar la lista. */}
+      {consolList.length>0&&(
+        <div className="stats stats-5" style={{padding:0,marginBottom:14}}>
+          {[
+            {k:"todas",      ic:"📦", l:"Total Guías",    d:"Todas, abiertas y cerradas",       c:"#1A2B4A"},
+            {k:"preparacion",ic:"🗂️", l:"En Preparación", d:"Consolidadas, sin despachar",       c:"#C05800"},
+            {k:"transito",   ic:"✈️", l:"En Tránsito",    d:"Línea → Liberado 2",                c:"#0080CC"},
+            {k:"recepcion",  ic:"📬", l:"En Recepción",   d:"Tránsito 2 en adelante",            c:"#6A4FB0"},
+            {k:"cerradas",   ic:"🗄️", l:"Cerradas",       d:"Recepción cerrada / archivadas",    c:"#1A6040"},
+          ].map(t=>{
+            const n=consolList.filter(c=>guiaEnFiltro(c,t.k)).length;
+            const on=lmFilter===t.k;
+            return(
+              <div key={t.k} className="stat" onClick={()=>setLmFilter(on&&t.k!=="todas"?"todas":t.k)}
+                title={on&&t.k!=="todas"?"Click para ver todas":"Click para filtrar la lista"}
+                style={on?{outline:`2px solid ${t.c}`,outlineOffset:-2}:undefined}>
+                <div className="stat-bar" style={{background:t.c,opacity:.7}}/>
+                <div className="stat-ic">{t.ic}</div>
+                <div className="stat-v">{n}</div>
+                <div className="stat-l">{t.l}</div>
+                <div className="stat-d">{t.d}</div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* LISTA DE EMBARQUES */}
       {consolList.length===0?(
@@ -4725,8 +4777,11 @@ export default function ENEXSystem(){
               <th style={{minWidth:170}}>Acciones</th>
             </tr></thead>
             <tbody>
-              {consolList.filter(c=>!c.archivada).map(c=>{
-                const stActual=WR_STATUSES.find(s=>s.label===c.status)||WR_STATUSES.find(s=>s.code==="4");
+              {consolList.filter(c=>guiaEnFiltro(c,lmFilter)).length===0&&(
+                <tr><td colSpan={14} style={{textAlign:"center",padding:40,color:"var(--t3)"}}>No hay guías en este grupo.</td></tr>
+              )}
+              {consolList.filter(c=>guiaEnFiltro(c,lmFilter)).map(c=>{
+                const stActual=getStatus(guiaCode(c))||WR_STATUSES.find(s=>s.code==="4");
                 const curPhaseIdx=currentGuidePhaseIdx(stActual?.code||"4");
                 // Una vez en Tránsito 2 (13) o más allá: la guía está bloqueada en Consolidación.
                 const isLocked=isGuideFinalConsolPhase(stActual?.code)||(parseFloat(stActual?.code||"0")>=13);
@@ -4744,19 +4799,59 @@ export default function ENEXSystem(){
                   <td style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--cyan)"}}>{c.numVuelo||"—"}</td>
                   <td style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--purple)"}}>{c.awb||c.bl||"—"}</td>
                   <td style={{fontFamily:"'DM Mono',monospace",fontSize:12}}>{c.fechaSalida||"—"}</td>
-                  <td style={{minWidth:260,padding:"6px 8px"}}>
+                  <td style={{minWidth:480,padding:"6px 8px"}}>
+                    {c.archivada?(
+                      <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                        <span style={{fontSize:12,fontWeight:700,color:"#1A6040",background:"#E8F5E9",padding:"3px 10px",borderRadius:10,border:"1px solid #A5D6A7"}}>🗄️ Cerrada</span>
+                        {c.fechaRecibidaAlmacen&&<span style={{fontSize:12,color:"var(--t3)"}}>Recibida {fmtDate(c.fechaRecibidaAlmacen)}</span>}
+                        <button type="button" className="btn-s" style={{fontSize:12,padding:"3px 8px"}}
+                          onClick={()=>{setRdArchSearch(c.id);setLmTab("cerradas");}}>👁 Ver en Cerradas</button>
+                      </div>
+                    ):(<>
                     {/* Estado actual destacado */}
                     <div style={{marginBottom:6,display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
                       <StBadge st={stActual||{cls:"s3",label:c.status||"En preparación"}}/>
                       <span style={{fontSize:12,color:"var(--t3)"}}>
                         {curPhaseIdx>=0?`Fase ${curPhaseIdx+1}/${GUIDE_PHASES.length}`:"Pre-consolidado"}
                       </span>
-                      {isLocked&&<span style={{fontSize:11,color:"#7B1FA2",fontWeight:700,background:"#F3E5F5",padding:"2px 8px",borderRadius:10,border:"1px solid #CE93D8"}}>🔒 Bloqueada — fases de destino en Estatusén</span>}
+                      {isLocked&&<span style={{fontSize:11,color:"#7B1FA2",fontWeight:700,background:"#F3E5F5",padding:"2px 8px",borderRadius:10,border:"1px solid #CE93D8"}}>🔒 Bloqueada — pasa a Recepciónén</span>}
                     </div>
-                    {/* La barra de fases se movió a Loading Master → pestaña Estatus */}
-                    <button type="button" className="btn-s" style={{fontSize:12,padding:"3px 10px",fontWeight:700}}
-                      title="Cambiar el estatus de esta guía en la pestaña Estatus"
-                      onClick={()=>{setLmSearch(c.id);setLmTab("estatus");}}>📶 Cambiar estatus</button>
+                    {/* Barra de progreso 9 fases (Línea → Tránsito 2) — más alta para que quepa todo */}
+                    <div style={{display:"flex",alignItems:"stretch",gap:2,background:"#F3F5F9",border:"1px solid #DFE4EE",borderRadius:6,padding:3,overflow:"hidden"}}>
+                      {GUIDE_PHASES.map((ph,i)=>{
+                        const isDone=curPhaseIdx>i;
+                        const isCur=curPhaseIdx===i;
+                        const isNext=curPhaseIdx+1===i;
+                        // Una vez bloqueada (Tránsito 2 fijado), ningún botón es editable.
+                        const editable=!isLocked&&statusInChannel(ph.advance,"consolidacion");
+                        const bg=isDone?"var(--navy)":isCur?"var(--cyan)":isNext&&editable?"#EEF3FF":"#fff";
+                        const color=isDone||isCur?"#fff":editable?"var(--t2)":"var(--t3)";
+                        const tip=isLocked
+                          ?`${i+1}. ${ph.label} — guía bloqueada (ya pasó a Tránsito 2)`
+                          :editable
+                            ?`${i+1}. ${ph.label} — click para fijar esta fase${ph.advance==="13"?"\n⚠️ Al confirmar Tránsito 2 ya no se podrá retroceder.":""}`
+                            :`${i+1}. ${ph.label} — se asigna automáticamente`;
+                        const onClick=editable?(()=>{
+                          if(ph.advance==="13"&&!window.confirm("⚠️ Al fijar Tránsito 2, esta guía quedará BLOQUEADA en Consolidación.\nNo podrás regresar a fases anteriores.\nLa guía pasará a manejarse desde Recepción en Almacén.\n\n¿Confirmar?"))return;
+                          updateGuideStatus(c.id,ph.advance);
+                        }):undefined;
+                        return (
+                          <span key={ph.key} title={tip} onClick={onClick}
+                            style={{
+                              flex:1,cursor:editable?"pointer":"not-allowed",padding:"7px 2px 6px",textAlign:"center",
+                              background:bg,color,borderRadius:4,opacity:editable?1:isLocked&&isDone?1:.6,
+                              fontSize:11,fontWeight:isCur?700:600,minHeight:48,
+                              display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center",
+                              border:isCur?"1.5px solid var(--navy)":"1px solid transparent",
+                              transition:"all .15s",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",
+                            }}>
+                            <span style={{display:"block",fontSize:15,lineHeight:1}}>{ph.icon}</span>
+                            <span style={{display:"block",fontSize:10,marginTop:3,lineHeight:1.1,fontWeight:600}}>{ph.short}</span>
+                          </span>
+                        );
+                      })}
+                    </div>
+                    </>)}
                   </td>
                   <td style={{minWidth:170}}>
                     <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
@@ -4767,7 +4862,7 @@ export default function ENEXSystem(){
                         dims:c.containers.map((ct,i)=>({l:0,a:0,h:0,pk:0,pkLb:parseFloat(ct.pesoLb)||0,volLb:0,ft3:0,m3:0,tracking:`Cont. ${i+1} · ${ct.tipo} · Sello: ${ct.sello||"—"}`})),
                         remitente:"ENEX",tipoEnvio:c.tipoEnvio,
                       })}>🏷️ Etiquetas</button>
-                      {hasPerm("editar_guia")&&(
+                      {!c.archivada&&hasPerm("editar_guia")&&(
                         <button className="btn-s" style={{fontSize:12,padding:"3px 8px"}} title="Editar guía"
                           onClick={async()=>{
                             // Cargar fotos guardadas del bucket consol-fotos para esta guía
@@ -4788,7 +4883,7 @@ export default function ENEXSystem(){
                             setEditConsolId(c.id);setShowNewConsol(true);
                           }}>✏️ Editar</button>
                       )}
-                      {hasPerm("borrar_guia")&&(
+                      {!c.archivada&&hasPerm("borrar_guia")&&(
                         <button className="btn-s" style={{fontSize:12,padding:"3px 8px",color:"var(--red)",borderColor:"var(--red)"}} title="Borrar guía"
                           onClick={()=>{
                             // Solo revertir WRs que sigan en Consolidado (4). Los que
@@ -8239,147 +8334,33 @@ export default function ENEXSystem(){
     logAction("Borró entrega",dn.id);
   };
 
-  // ── LOADING MASTER · ESTATUS DE GUÍAS ───────────────────────────────────────
-  // Una barra única de 12 fases por guía: 9 de origen/tránsito (GUIDE_PHASES,
-  // canal "consolidacion", updateGuideStatus) + 3 de destino (RECEP_PHASES,
-  // canal "recepcion", updateGuideStatusRecep). Mismas reglas que tenían las
-  // barras cuando vivían dentro de Consolidación y Recepción:
-  //  - Tránsito 2 (13) pide confirmación y bloquea las fases de origen.
-  //  - Las fases de destino se habilitan desde Tránsito 2 y requieren
-  //    permiso hacer_recepcion_dest. Con la guía en Almacén (17+) todo queda fijo.
-  const renderGuiaEstatus=()=>{
-    const q=(lmSearch||"").toLowerCase().trim();
-    const guias=consolList.filter(c=>!c.archivada)
-      .filter(c=>!q||[c.id,c.destino,c.awb,c.bl,c.numVuelo,c.tipoEnvio].some(v=>String(v||"").toLowerCase().includes(q)));
-    const FASES=[
-      ...GUIDE_PHASES.map(p=>({...p,canal:"consolidacion"})),
-      ...RECEP_PHASES.map(p=>({...p,canal:"recepcion"})),
-    ];
-    const faseIdx=(code)=>{
-      const g=GUIDE_PHASES.findIndex(p=>p.codes.includes(String(code)));
-      if(g>=0)return g;
-      const r=RECEP_PHASES.findIndex(p=>p.codes.includes(String(code)));
-      if(r>=0)return GUIDE_PHASES.length+r;
-      const n=parseFloat(code);
-      if(!isNaN(n)&&n<=4)return -1;
-      if(!isNaN(n)&&n>=17)return FASES.length; // ya en almacén: todas completadas
-      return -1;
-    };
-    const puedeRecep=hasPerm("hacer_recepcion_dest");
+  const renderLoadingMaster=()=>{
+    const nRecep=consolList.filter(c=>guiaGrupo(c)==="recepcion").length;
+    const nCerr=consolList.filter(c=>c.archivada).length;
     return(
-    <div className="page-scroll">
-      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,flexWrap:"wrap"}}>
-        <div style={{flex:1,minWidth:240}}>
-          <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:18,fontWeight:700,color:"var(--navy)"}}>📶 Estatus de Guías</div>
-          <div style={{fontSize:13,color:"var(--t3)",marginTop:2}}>Actualiza el estatus de cada guía consolidada. El cambio se aplica a todos sus WR.</div>
-        </div>
-        <div style={{position:"relative"}}>
-          <input className="fi" placeholder="Buscar guía, destino, AWB/BL, vuelo…" value={lmSearch} onChange={e=>setLmSearch(e.target.value)}
-            style={{fontSize:14,padding:"7px 30px 7px 10px",width:280}}/>
-          {lmSearch&&<span onClick={()=>setLmSearch("")} title="Limpiar búsqueda"
-            style={{position:"absolute",right:9,top:"50%",transform:"translateY(-50%)",cursor:"pointer",color:"var(--t3)",fontSize:15}}>✕</span>}
+    <div className="cnt">
+      <div style={{padding:"12px 18px 0"}}>
+        <div className="tabs" style={{marginBottom:0}}>
+          {[["master","🗂️ Master",consolList.length],["recepcion","📬 Recepción",nRecep],["cerradas","🗄️ Cerradas",nCerr]].map(([v,l,n])=>(
+            <div key={v} className={`tab ${lmTab===v?"on":""}`} onClick={()=>setLmTab(v)}>{l}<span className="t-cnt">{n}</span></div>
+          ))}
         </div>
       </div>
-
-      {guias.length===0?(
-        <div className="card" style={{textAlign:"center",padding:50,color:"var(--t3)"}}>
-          {q?"Ninguna guía activa coincide con la búsqueda.":"No hay guías activas. Las guías archivadas (recepción cerrada) no aparecen aquí."}
-        </div>
-      ):guias.map(c=>{
-        const st=WR_STATUSES.find(s=>s.label===c.status)||getStatus("4");
-        const code=st?.code||"4";
-        const n=parseFloat(code)||0;
-        const cur=faseIdx(code);
-        const origenBloqueado=n>=13;
-        const enAlmacen=n>=17;
-        const renderFase=(ph,i)=>{
-          const isDone=cur>i, isCur=cur===i, isNext=cur+1===i;
-          let editable,tip;
-          if(ph.canal==="consolidacion"){
-            editable=!origenBloqueado&&statusInChannel(ph.advance,"consolidacion");
-            tip=origenBloqueado?`${ph.label} — bloqueada (la guía ya pasó a Tránsito 2)`
-              :`${ph.label} — click para fijar esta fase${ph.advance==="13"?"\n⚠️ Al confirmar Tránsito 2 ya no se podrá retroceder.":""}`;
-          }else{
-            editable=origenBloqueado&&!enAlmacen&&puedeRecep&&statusInChannel(ph.advance,"recepcion");
-            tip=enAlmacen?`${ph.label} — la guía ya está en almacén`
-              :!origenBloqueado?`${ph.label} — se habilita cuando la guía llegue a Tránsito 2`
-              :!puedeRecep?`${ph.label} — tu rol no tiene permiso de recepción en destino`
-              :`${ph.label} — click para fijar esta fase`;
-          }
-          const onClick=editable?(()=>{
-            if(ph.canal==="consolidacion"){
-              if(ph.advance==="13"&&!window.confirm(`⚠️ Al fijar Tránsito 2, la guía ${c.id} quedará BLOQUEADA en las fases de origen/tránsito.\nNo podrás regresar a fases anteriores.\nSe habilitarán las fases de destino (Ad. Dest., Auditoría 3, Liberado 3).\n\n¿Confirmar?`))return;
-              updateGuideStatus(c.id,ph.advance);
-            }else{
-              if(window.confirm(`¿Fijar el estado "${ph.label}" en la guía ${c.id}?\nSe aplicará a todos los WR pendientes de la guía.`))
-                updateGuideStatusRecep(c.id,ph.advance);
-            }
-          }):undefined;
-          const bg=isDone?"var(--navy)":isCur?"var(--cyan)":isNext&&editable?"#EEF3FF":"#fff";
-          const color=isDone||isCur?"#fff":editable?"var(--t2)":"var(--t3)";
-          return(
-            <span key={ph.key} title={`${i+1}. ${tip}`} onClick={onClick}
-              style={{flex:1,minWidth:62,cursor:editable?"pointer":"not-allowed",padding:"7px 2px 6px",textAlign:"center",
-                background:bg,color,borderRadius:4,opacity:editable||isDone||isCur?1:.6,
-                fontWeight:isCur?700:600,minHeight:50,display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center",
-                border:isCur?"1.5px solid var(--navy)":"1px solid transparent",transition:"all .15s",whiteSpace:"nowrap",overflow:"hidden"}}>
-              <span style={{display:"block",fontSize:15,lineHeight:1}}>{ph.icon}</span>
-              <span style={{display:"block",fontSize:10,marginTop:3,lineHeight:1.1,fontWeight:600}}>{ph.short}</span>
-            </span>
-          );
-        };
-        const grupo=(titulo,fases,offset)=>(
-          <div style={{flex:fases.length,minWidth:0}}>
-            <div style={{fontSize:10.5,fontWeight:700,color:"var(--t3)",letterSpacing:.6,textTransform:"uppercase",margin:"0 0 4px 2px"}}>{titulo}</div>
-            <div style={{display:"flex",gap:2,background:"#F3F5F9",border:"1px solid #DFE4EE",borderRadius:6,padding:3}}>
-              {fases.map((ph,k)=>renderFase(ph,offset+k))}
-            </div>
-          </div>
-        );
-        return(
-          <div key={c.id} className="card" style={{marginBottom:12}}>
-            <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:10}}>
-              <span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",background:"#EEF3FF",padding:"3px 8px",borderRadius:4,border:"1px solid #B8C8F0",fontSize:14}}>{c.id}</span>
-              <TypeBadge t={c.tipoEnvio}/>
-              <span style={{fontWeight:700,color:"var(--t1)"}}>{c.destino||"—"}</span>
-              <span style={{fontSize:12,color:"var(--t3)"}}>{c.totalWR||0} WR · {c.totalCajas||0} cajas · {c.totalLb||0}lb</span>
-              {(c.numVuelo||c.awb||c.bl)&&<span style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--purple)"}}>{[c.numVuelo,c.awb||c.bl].filter(Boolean).join(" · ")}</span>}
-              <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:6}}>
-                <StBadge st={st||{cls:"s3",label:c.status||"En preparación"}}/>
-                <span style={{fontSize:12,color:"var(--t3)"}}>
-                  {cur<0?"Pre-tránsito":cur>=FASES.length?"En almacén":`Fase ${cur+1}/${FASES.length}`}
-                </span>
-              </div>
-            </div>
-            <div style={{display:"flex",gap:10,overflowX:"auto"}}>
-              {grupo("Origen · Tránsito",GUIDE_PHASES.map(p=>({...p,canal:"consolidacion"})),0)}
-              {grupo("Destino",RECEP_PHASES.map(p=>({...p,canal:"recepcion"})),GUIDE_PHASES.length)}
-            </div>
-          </div>
-        );
-      })}
+      {lmTab==="master"?renderConsolidacion():lmTab==="recepcion"?renderRecepcionDest("pendientes"):renderRecepcionDest("archivadas")}
     </div>
     );
   };
 
-  const renderLoadingMaster=()=>(
-    <div className="cnt">
-      <div style={{padding:"12px 18px 0"}}>
-        <div className="tabs" style={{marginBottom:0}}>
-          {[["consolidacion","🗂️ Consolidación"],["recepcion","📬 Recepción en Almacén"],["estatus","📶 Estatus"]].map(([v,l])=>(
-            <div key={v} className={`tab ${lmTab===v?"on":""}`} onClick={()=>setLmTab(v)}>{l}</div>
-          ))}
-        </div>
-      </div>
-      {lmTab==="consolidacion"?renderConsolidacion():lmTab==="recepcion"?renderRecepcionDest():renderGuiaEstatus()}
-    </div>
-  );
-
-  const renderRecepcionDest=()=>{
+  // modo: "pendientes" (pestaña Recepción) | "archivadas" (pestaña Cerradas).
+  // Sin modo usa rdTab y muestra sus propios botones de pestaña.
+  const renderRecepcionDest=(modo)=>{
+    const vista=modo||rdTab;
     const q=(rdSearch||"").toLowerCase().trim();
     // Guías activas (no archivadas): se muestran para selección manual o escaneo
     const guiasActivas=consolList.filter(c=>!c.archivada);
     const guiasArchivadas=consolList.filter(c=>c.archivada);
+    // Guías que corresponden a Recepción: abiertas y desde Tránsito 2 (13) en adelante.
+    const guiasRecep=guiasActivas.filter(c=>guiaGrupo(c)==="recepcion");
     const guiaSel=guiasActivas.find(c=>c.id===rdSelGuia);
     // WRs de la guía seleccionada
     const guiaWrIds=guiaSel?(guiaSel.containers||[]).flatMap(ct=>(ct.wr||[]).map(w=>w.id)):[];
@@ -8442,21 +8423,25 @@ export default function ENEXSystem(){
         {/* HEADER + TABS */}
         <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
           <div style={{flex:1}}>
-            <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:18,fontWeight:700,color:"var(--navy)"}}>📬 Recepción en Almacén</div>
-            <div style={{fontSize:13,color:"var(--t3)",marginTop:2}}>Recibe guías completas o WR individuales. Las guías recibidas se archivan automáticamente.</div>
+            <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:18,fontWeight:700,color:"var(--navy)"}}>{vista==="archivadas"?"🗄️ Guías Cerradas":"📬 Recepción en Almacén"}</div>
+            <div style={{fontSize:13,color:"var(--t3)",marginTop:2}}>{vista==="archivadas"?"Guías cuya recepción ya se cerró (archivadas). Se pueden ver, imprimir o desarchivar.":"Guías desde Tránsito 2 en adelante. Recibe guías completas o WR individuales; al cerrar la recepción la guía pasa a Cerradas."}</div>
           </div>
+          {!modo&&(
           <div style={{display:"flex",gap:4,background:"#EEF2F7",border:"1px solid #DCE2EC",borderRadius:8,padding:3}}>
             <button onClick={()=>setRdTab("pendientes")} style={{fontSize:13,fontWeight:600,padding:"6px 14px",borderRadius:6,border:"none",cursor:"pointer",background:rdTab==="pendientes"?"var(--navy)":"transparent",color:rdTab==="pendientes"?"#fff":"var(--t2)"}}>⏳ Pendientes ({guiasActivas.length})</button>
             <button onClick={()=>setRdTab("archivadas")} style={{fontSize:13,fontWeight:600,padding:"6px 14px",borderRadius:6,border:"none",cursor:"pointer",background:rdTab==="archivadas"?"var(--navy)":"transparent",color:rdTab==="archivadas"?"#fff":"var(--t2)"}}>📦 Archivadas ({guiasArchivadas.length})</button>
           </div>
+          )}
         </div>
 
         {/* PANEL DE AYUDA — qué se hace en este módulo */}
+        {vista==="pendientes"&&(
         <div style={{background:"#EEF7F0",border:"1px solid #B8DCC0",borderRadius:8,padding:"8px 14px",marginBottom:10,fontSize:12,color:"#1A6040",lineHeight:1.5}}>
           <strong style={{color:"#1A8A4A"}}>📍 Este módulo maneja:</strong> Recepción de guía en Almacén Destino (estados 14→17), <strong style={{color:"#C62828"}}>⚠️ Faltante (18) e Investigación (18.1)</strong> y <strong style={{color:"#7B1FA2"}}>➕ Sobrante (19)</strong>. Para Entregado y Egresado usá los módulos respectivos.
         </div>
+        )}
 
-        {rdTab==="pendientes"&&<>
+        {vista==="pendientes"&&<>
           {/* SCAN / MANUAL */}
           <div className="card" style={{marginBottom:14}}>
             <div style={{fontSize:15,fontWeight:700,color:"var(--navy)",marginBottom:8}}>🔎 Escanear o seleccionar guía</div>
@@ -8472,8 +8457,8 @@ export default function ENEXSystem(){
                 <div style={{fontSize:12,color:"var(--t3)",marginBottom:3,fontWeight:600}}>Seleccionar guía manualmente</div>
                 <div style={{display:"flex",gap:6}}>
                   <select className="fi" value={rdSelGuia} onChange={e=>setRdSelGuia(e.target.value)} style={{flex:1,fontSize:14,padding:"8px 10px"}}>
-                    <option value="">— Todas las guías pendientes —</option>
-                    {guiasActivas.map(c=>(<option key={c.id} value={c.id}>{c.id} · {c.destino} · {c.totalWR||0} WR · {c.status||"—"}</option>))}
+                    <option value="">— Todas las guías en recepción —</option>
+                    {guiasRecep.map(c=>(<option key={c.id} value={c.id}>{c.id} · {c.destino} · {c.totalWR||0} WR · {c.status||"—"}</option>))}
                   </select>
                   {guiaSel&&hasPerm("hacer_recepcion_dest")&&(
                     <button className="btn-s" title={`Marcar como recibidos todos los ${guiaWrIds.length} WR pendientes de ${guiaSel.id} (bulk → estado 17 Almacén). No archiva.`}
@@ -8485,6 +8470,48 @@ export default function ENEXSystem(){
               </div>
             </div>
             {!hasPerm("hacer_recepcion_dest")&&<div style={{fontSize:13,color:"var(--red)",fontWeight:600,marginTop:6}}>⚠️ Tu rol no tiene permiso para registrar recepciones.</div>}
+          </div>
+
+          {/* GUÍAS EN RECEPCIÓN — listado estilo Dashboard; click = abrir checklist */}
+          <div className="card" style={{marginBottom:14,padding:0}}>
+            <div style={{padding:"10px 14px",fontSize:15,fontWeight:700,color:"var(--navy)",borderBottom:"1px solid var(--b1)"}}>
+              📬 Guías en recepción ({guiasRecep.length})
+              <span style={{fontSize:12,fontWeight:400,color:"var(--t3)",marginLeft:8}}>Click en una guía para abrir su checklist</span>
+            </div>
+            {guiasRecep.length===0?(
+              <div style={{textAlign:"center",padding:30,color:"var(--t3)",fontSize:13}}>No hay guías en Tránsito 2 o en destino. Aparecen aquí cuando en el Master se fija Tránsito 2.</div>
+            ):(
+              <table className="ct">
+                <thead><tr>
+                  <th>N° Guía</th><th>Fecha</th><th>Destino</th><th>Tipo</th><th>WR</th><th>Cajas</th>
+                  <th>Vuelo/Barco</th><th>AWB / BL</th><th>Estado</th><th>Recibidos</th>
+                </tr></thead>
+                <tbody>
+                  {guiasRecep.map(c=>{
+                    const ids=(c.containers||[]).flatMap(ct=>(ct.wr||[]).map(w=>w.id));
+                    const ws=wrList.filter(w=>ids.includes(w.id));
+                    const rec=ws.filter(w=>["17","20","21","22","23","25"].includes(w.status?.code||"")).length;
+                    const sel=rdSelGuia===c.id;
+                    const sb=sel?{background:"#E8F0FE"}:{};
+                    return(
+                      <tr key={c.id} onClick={()=>setRdSelGuia(sel?"":c.id)} style={{cursor:"pointer"}}
+                        title={sel?"Click para cerrar el checklist":"Click para abrir el checklist"}>
+                        <td style={sb}><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",background:"#EEF3FF",padding:"2px 6px",borderRadius:4,border:`${sel?2:1}px solid ${sel?"var(--navy)":"#B8C8F0"}`,fontSize:13}}>{c.id}</span></td>
+                        <td style={{fontFamily:"'DM Mono',monospace",fontSize:12,...sb}}>{fmtDate(c.fecha)}</td>
+                        <td style={{fontWeight:600,color:"var(--t1)",...sb}}>{c.destino}</td>
+                        <td style={sb}><TypeBadge t={c.tipoEnvio}/></td>
+                        <td style={{textAlign:"center",fontWeight:700,color:"var(--navy)",...sb}}>{c.totalWR||ids.length}</td>
+                        <td style={{textAlign:"center",...sb}}>{c.totalCajas||0}</td>
+                        <td style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--cyan)",...sb}}>{c.numVuelo||"—"}</td>
+                        <td style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--purple)",...sb}}>{c.awb||c.bl||"—"}</td>
+                        <td style={sb}><StBadge st={getStatus(guiaCode(c))||{cls:"s3",label:c.status||"—"}}/></td>
+                        <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:rec===ws.length&&ws.length>0?"var(--green)":"var(--t2)",...sb}}>{rec}/{ws.length}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
           </div>
 
           {/* CHECKLIST DE GUÍA SELECCIONADA */}
@@ -8506,16 +8533,46 @@ export default function ENEXSystem(){
                 <input className="fi" placeholder="Buscar en checklist…" value={rdSearch} onChange={e=>setRdSearch(e.target.value)} style={{fontSize:14,padding:"6px 10px",width:200,marginLeft:"auto"}}/>
               </div>
 
-              {/* Estado de la guía — la franja de fases se movió a Loading Master → Estatus */}
-              <div style={{marginBottom:10,padding:"8px 10px",background:"#F8FAFE",border:"1px solid #DCE4F2",borderRadius:8,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-                <span style={{fontSize:12,fontWeight:700,color:"var(--navy)"}}>Estado de la guía:</span>
-                <StBadge st={stGuiaActual||{cls:"s3",label:guiaSel.status||"—"}}/>
-                <span style={{fontSize:11,color:"var(--t3)"}}>
-                  {recPhaseIdx>=0?`Destino · fase ${recPhaseIdx+1}/${RECEP_PHASES.length}`:"Aún no inicia fases de destino"}
-                </span>
-                <button type="button" className="btn-s" style={{fontSize:12,padding:"3px 10px",fontWeight:700,marginLeft:"auto"}}
-                  title="Cambiar el estatus de esta guía en la pestaña Estatus"
-                  onClick={()=>{setLmSearch(guiaSel.id);setLmTab("estatus");}}>📶 Cambiar estatus</button>
+              {/* FRANJA RECEPCIÓN — 3 fases: Ad. Dest. / Auditoría 3 / Liberado 3 */}
+              <div style={{marginBottom:10,padding:"8px 10px",background:"#F8FAFE",border:"1px solid #DCE4F2",borderRadius:8}}>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6,flexWrap:"wrap"}}>
+                  <span style={{fontSize:12,fontWeight:700,color:"var(--navy)"}}>Estado de la guía en Recepción:</span>
+                  <StBadge st={stGuiaActual||{cls:"s3",label:guiaSel.status||"—"}}/>
+                  <span style={{fontSize:11,color:"var(--t3)"}}>
+                    {recPhaseIdx>=0?`Fase ${recPhaseIdx+1}/${RECEP_PHASES.length}`:"Aún no inicia recepción"}
+                  </span>
+                </div>
+                <div style={{display:"flex",alignItems:"stretch",gap:3,background:"#fff",border:"1px solid #DFE4EE",borderRadius:6,padding:3}}>
+                  {RECEP_PHASES.map((ph,i)=>{
+                    const isDone=recPhaseIdx>i;
+                    const isCur=recPhaseIdx===i;
+                    const isNext=recPhaseIdx+1===i;
+                    const editable=hasPerm("hacer_recepcion_dest")&&statusInChannel(ph.advance,"recepcion");
+                    const bg=isDone?"var(--navy)":isCur?"var(--cyan)":isNext&&editable?"#EEF3FF":"#fff";
+                    const color=isDone||isCur?"#fff":editable?"var(--t2)":"var(--t3)";
+                    const tip=editable
+                      ?`${i+1}. ${ph.label} — click para fijar esta fase`
+                      :`${i+1}. ${ph.label}`;
+                    const onClick=editable?(()=>{
+                      if(window.confirm(`¿Fijar el estado "${ph.label}" en la guía ${guiaSel.id}?\nSe aplicará a todos los WR pendientes de la guía.`))
+                        updateGuideStatusRecep(guiaSel.id,ph.advance);
+                    }):undefined;
+                    return(
+                      <span key={ph.key} title={tip} onClick={onClick}
+                        style={{
+                          flex:1,cursor:editable?"pointer":"not-allowed",padding:"8px 4px 7px",textAlign:"center",
+                          background:bg,color,borderRadius:4,opacity:editable?1:.7,
+                          fontSize:12,fontWeight:isCur?700:600,minHeight:54,
+                          display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center",
+                          border:isCur?"1.5px solid var(--navy)":"1px solid transparent",
+                          transition:"all .15s",
+                        }}>
+                        <span style={{display:"block",fontSize:17,lineHeight:1}}>{ph.icon}</span>
+                        <span style={{display:"block",fontSize:11,marginTop:3,lineHeight:1.1,fontWeight:700}}>{ph.short}</span>
+                      </span>
+                    );
+                  })}
+                </div>
               </div>
 
               <div style={{maxHeight:"42vh",overflow:"auto",border:"1px solid var(--b1)",borderRadius:8}}>
@@ -8673,7 +8730,7 @@ export default function ENEXSystem(){
           )}
         </>}
 
-        {rdTab==="archivadas"&&(()=>{
+        {vista==="archivadas"&&(()=>{
           const qa=(rdArchSearch||"").toLowerCase().trim();
           const tipoF=(rdArchTipo||"").trim();
           const fromTs=rdArchFrom?new Date(rdArchFrom+"T00:00:00").getTime():null;
