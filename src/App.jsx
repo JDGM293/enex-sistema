@@ -1784,6 +1784,9 @@ export default function ENEXSystem(){
   const [loginErr,setLoginErr]=useState("");
 
   const [tab,setTab]=useState("dashboard");
+  // Dashboard: tabla de WR ampliada (oculta stats y panel derecho). Reemplaza la
+  // antigua pantalla "Warehouse Receipt", que era la misma tabla a pantalla completa.
+  const [dashWide,setDashWide]=useState(false);
   const [wrList,setWrList]=useState(WR_INIT);
   const [clients,setClients]=useState(CLIENTS_INIT);
   const [selWR,setSelWR]=useState(null);
@@ -2603,6 +2606,11 @@ export default function ENEXSystem(){
         {WR_STATUSES.map(s=><option key={s.code} value={s.code}>{s.code} – {s.label}</option>)}
       </select>
       <span className="wr-cnt">{filteredWR.length} registros</span>
+      <button type="button" className="btn-s" onClick={()=>setDashWide(v=>!v)}
+        title={dashWide?"Volver a mostrar estadísticas y panel lateral":"Ocultar estadísticas y panel lateral para ver más filas y columnas"}
+        style={{fontWeight:700,whiteSpace:"nowrap"}}>
+        {dashWide?"🗗 Reducir tabla":"⛶ Ampliar tabla"}
+      </button>
     </div>
   );
 
@@ -2623,8 +2631,8 @@ export default function ENEXSystem(){
 
   const renderDash=()=>(
     <>
-      {/* STATS CLICKEABLES */}
-      <div className="stats">
+      {/* STATS CLICKEABLES — ocultos con "Ampliar tabla" */}
+      {!dashWide&&<div className="stats">
         {STAT_DEFS.map(s=>(
           <div key={s.key} className="stat" onClick={()=>setShowStatModal({...s,rows:s.filter()})}>
             <div className="stat-bar" style={{background:s.color,opacity:.7}}/>
@@ -2634,10 +2642,10 @@ export default function ENEXSystem(){
             <div className={`stat-d ${s.cls}`}>{s.d}</div>
           </div>
         ))}
-      </div>
+      </div>}
 
       {/* DASH GRID */}
-      <div className="dash-grid" style={{flex:1,minHeight:0,overflow:"hidden",padding:"0 16px 14px"}}>
+      <div className="dash-grid" style={{flex:1,minHeight:0,overflow:"hidden",padding:dashWide?"10px 16px 14px":"0 16px 14px",...(dashWide?{gridTemplateColumns:"1fr"}:{})}}>
         <div className="wr-panel">
           {renderWRToolbar()}
           <WRTable rows={filteredWR} selId={selWR?.id} onSelect={setSelWR}
@@ -2651,7 +2659,7 @@ export default function ENEXSystem(){
             page={page} onPage={setPage}/>
         </div>
 
-        <div className="rp">
+        {!dashWide&&<div className="rp">
           <div className="card">
             <div className="card-tt">🔔 Alertas <span className="card-sub">{stats.excepciones} excepciones</span></div>
             {[
@@ -2712,27 +2720,9 @@ export default function ENEXSystem(){
               ))}
             </div>
           </div>
-        </div>
+        </div>}
       </div>
     </>
-  );
-
-  // ── WR PAGE ────────────────────────────────────────────────────────────────
-  // Vista simple y enfocada: solo tabla (sin stats, sin panel derecho).
-  // El Dashboard muestra la vista panorámica con métricas + tabla + alertas.
-  const renderWR=()=>(
-    <div className="wr-panel" style={{margin:"0 16px 14px",flex:1,minHeight:0}}>
-      {renderWRToolbar()}
-      <WRTable rows={filteredWR} selId={selWR?.id} onSelect={setSelWR}
-        unitL={unitL} unitW={unitW} clients={clients} agentes={agentes} oficinas={oficinas} empresaNombre={empresaNombre}
-        sendTypes={SEND_TYPES} onAssignTipo={assignTipoEnvio}
-        onSort={handleSort} sortCol={sortCol} sortDir={sortDir}
-        dimOpen={dimOpen} onDimToggle={handleDimToggle}
-        onFotoClick={w=>setPhotoGalleryOpen({wrId:w.id})}
-        onTimelineClick={w=>setTimelineWR(w)}
-        consolList={consolList}
-        page={page} onPage={setPage}/>
-    </div>
   );
 
   // ── SCAN ────────────────────────────────────────────────────────────────────
@@ -9101,7 +9091,6 @@ export default function ENEXSystem(){
     ]},
     {label:"Operación",items:[
       {id:"scan",ic:"📡",l:"Recepción en Puerta",badge:scanLog.filter(s=>!s.registered).length>0?String(scanLog.filter(s=>!s.registered).length):null,red:true},
-      {id:"wr",ic:"📦",l:"Warehouse Receipt",badge:String(filteredWR.length)},
       {id:"consolidation",ic:"🗂️",l:"Consolidación"},
       {id:"recepciondest",ic:"📬",l:"Recepción en Almacén"},
       {id:"reempaque",ic:"🔁",l:"Reempaque"},
@@ -9134,12 +9123,11 @@ export default function ENEXSystem(){
     ]},
   ];
 
-  const PAGE_TITLES={dashboard:"Dashboard General",wr:"Warehouse Receipts",scan:"Recepción en Puerta",etiquetas:"Imprimir Etiquetas",clients:"Clientes & Usuarios",estadocuenta:"Estado de Cuenta",roles:"Roles & Permisos",consolidation:"Consolidación",tracking:"Tracking",pickup:"Pick-up",contabilidad:"Contabilidad",calculadora:"Calculadora de Envío",chat:"Chat Interno",docs:"Documentos",reports:"Reportes",alerts:"Alertas",settings:"Configuración",reempaque:"Reempaque",recepciondest:"Recepción en Almacén",cargorelease:"Cargo Release (Egreso)",entregas:"Notas de Entrega",entregasydespachos:"Entregas y Despachos",facturacion:"Facturación"};
+  const PAGE_TITLES={dashboard:"Dashboard General",scan:"Recepción en Puerta",etiquetas:"Imprimir Etiquetas",clients:"Clientes & Usuarios",estadocuenta:"Estado de Cuenta",roles:"Roles & Permisos",consolidation:"Consolidación",tracking:"Tracking",pickup:"Pick-up",contabilidad:"Contabilidad",calculadora:"Calculadora de Envío",chat:"Chat Interno",docs:"Documentos",reports:"Reportes",alerts:"Alertas",settings:"Configuración",reempaque:"Reempaque",recepciondest:"Recepción en Almacén",cargorelease:"Cargo Release (Egreso)",entregas:"Notas de Entrega",entregasydespachos:"Entregas y Despachos",facturacion:"Facturación"};
 
   const renderPage=()=>{
     switch(tab){
       case "dashboard":    try{return <div className="cnt">{renderDash()}</div>;}catch(e){return <div style={{padding:20,color:"red"}}><b>Dashboard error:</b><pre>{String(e)}</pre></div>;}
-      case "wr":           return <div className="cnt" style={{display:"flex",flexDirection:"column",padding:"10px 0 0"}}>{renderWR()}</div>;
       case "scan":         return renderScan();
       case "etiquetas":    return renderEtiquetasPage();
       case "clients":      return renderClients();
