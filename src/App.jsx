@@ -4596,6 +4596,8 @@ export default function ENEXSystem(){
       return `El WR ${wrId} es tipo ${wr.tipoEnvio} y la guía es ${cf.tipoEnvio}. No se mezclan tipos en un mismo embarque.`;
     }
     if(cf.containers.some(c=>c.wr.some(r=>r.id===wrId)))return "WR ya está en un contenedor";
+    {const otra=consolList.find(g=>g.id!==editConsolId&&(g.containers||[]).some(ct=>(ct.wr||[]).some(r=>r.id===wrId)));
+     if(otra)return `El WR ${wrId} ya está en la guía ${otra.id}.`;}
     scCont(ci,"wr",[...cf.containers[ci].wr,{id:wr.id,consignee:wr.consignee,cajas:wr.cajas||1,pesoLb:wr.pesoLb||0,ft3:wr.ft3||0,descripcion:wr.descripcion||""}]);
     return null;
   };
@@ -4671,14 +4673,28 @@ export default function ENEXSystem(){
     // de Consolidado (4) al historial para que el timeline tenga fecha exacta y
     // el Dashboard muestre el tipo correcto sin necesitar fallback.
     const wrIdsEnGuia=new Set(allWR.map(w=>w.id));
+    // WR que estaban en la guía y se quitaron al editarla: vuelven a 3 Confirmado
+    // (solo si siguen en 4; si ya avanzaron no se tocan).
+    const quitados=new Set(existing?(existing.containers||[]).flatMap(ct=>(ct.wr||[]).map(r=>r.id)).filter(id=>!wrIdsEnGuia.has(id)):[]);
+    const st4=getStatus("4"), st3=getStatus("3");
     setWrList(prev=>prev.map(w=>{
+      if(quitados.has(w.id)){
+        if(w.status?.code!=="4")return w;
+        const upd={...w,status:st3,historial:[...(w.historial||[]),{code:"3",label:st3.label,fecha:now,user:currentUser.id,nota:`Quitado de la guía ${n.id}`}]};
+        dbUpsertWR(upd);
+        return upd;
+      }
       if(!wrIdsEnGuia.has(w.id))return w;
       const yaEnHistorial=(w.historial||[]).some(h=>String(h.code)==="4");
       const tipoCambio=!w.tipoEnvio&&!!n.tipoEnvio;
-      if(!tipoCambio&&yaEnHistorial)return w;
+      // FIX: antes solo se agregaba el "4" al historial y el estado seguía en
+      // 3 Confirmado, así que el WR volvía a ofrecerse para otra guía.
+      const subirA4=w.status?.code==="3";
+      if(!tipoCambio&&yaEnHistorial&&!subirA4)return w;
       const upd={...w};
       if(tipoCambio)upd.tipoEnvio=n.tipoEnvio;
-      if(!yaEnHistorial){
+      if(subirA4)upd.status=st4;
+      if(!yaEnHistorial||subirA4){
         upd.historial=[...(w.historial||[]),{code:"4",label:"Consolidado",fecha:now,user:currentUser.id,nota:`Guía ${n.id} · ${n.tipoEnvio||""}`}];
       }
       dbUpsertWR(upd);
@@ -4934,10 +4950,13 @@ export default function ENEXSystem(){
               {!cf.tipoEnvio?(
                 <div style={{color:"var(--orange)",fontSize:13,padding:"8px 0",fontWeight:600}}>⚠️ Selecciona el Tipo de Envío en la sección de arriba para ver los WR confirmados disponibles.</div>
               ):(()=>{
+                // WR ya metidos en OTRA guía (la que se edita no cuenta)
+                const enOtraGuia=new Set(consolList.filter(g=>g.id!==editConsolId).flatMap(g=>(g.containers||[]).flatMap(ct=>(ct.wr||[]).map(r=>r.id))));
                 const elegibles=wrList.filter(w=>
                   w.status?.code==="3"
                   && (w.tipoEnvio||"")===cf.tipoEnvio
                   && !cf.containers.some(c=>c.wr.some(r=>r.id===w.id))
+                  && !enOtraGuia.has(w.id)
                 );
                 if(elegibles.length===0){
                   return <div style={{color:"var(--t3)",fontSize:13,padding:"8px 0"}}>No hay WR confirmados disponibles para tipo <b>{cf.tipoEnvio}</b>.</div>;
