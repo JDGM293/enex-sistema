@@ -8550,9 +8550,10 @@ export default function ENEXSystem(){
     const guiasArchivadas=consolList.filter(c=>c.archivada);
     // Guías que corresponden a Recepción: abiertas y desde Tránsito 2 (13) en adelante.
     const guiasRecep=guiasActivas.filter(c=>guiaGrupo(c)==="recepcion");
-    // Solo se recibe cuando la guía llegó a Liberado 3 (16) o más.
-    const puedeRecibir=!!guiaSel&&(parseFloat(guiaCode(guiaSel))||0)>=16;
     const guiaSel=guiasActivas.find(c=>c.id===rdSelGuia);
+    // Solo se recibe cuando la guía llegó a Liberado 3 (16) o más.
+    // (debe ir DESPUÉS de guiaSel: usarla antes rompía la pestaña en blanco)
+    const puedeRecibir=!!guiaSel&&(parseFloat(guiaCode(guiaSel))||0)>=16;
     // WRs de la guía seleccionada
     const guiaWrIds=guiaSel?(guiaSel.containers||[]).flatMap(ct=>(ct.wr||[]).map(w=>w.id)):[];
     // Checklist completo de la guía (WRs en su estado actual, sean pre-destino, 17, 18, etc.)
