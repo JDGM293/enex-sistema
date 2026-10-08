@@ -763,6 +763,13 @@ const currentRecepPhaseIdx=(code)=>{
   if(!isNaN(n)&&n>=17) return RECEP_PHASES.length-1;
   return 0;
 };
+// Sesión guardada en el navegador para que recargar la página (Ctrl+F5) no
+// saque al usuario. Solo se guarda el id del usuario y la hora de vencimiento.
+const SESS_KEY="enex_sess";
+const SESS_HORAS=12;
+const sessRead=()=>{try{const o=JSON.parse(localStorage.getItem(SESS_KEY)||"null");return o&&o.id&&o.exp>Date.now()?o:null;}catch{return null;}};
+const sessSave=(id)=>{try{localStorage.setItem(SESS_KEY,JSON.stringify({id,exp:Date.now()+SESS_HORAS*3600*1000}));}catch{}};
+const sessClear=()=>{try{localStorage.removeItem(SESS_KEY);}catch{}};
 const SEND_TYPES_INIT=["Aéreo Express","Aéreo Económico","Marítimo FCL","Marítimo LCL","Terrestre"];
 const PAY_TYPES_INIT=["Prepago","Crédito","Contra Entrega","Corporativo","Gobierno"];
 const CURR_SYM={USD:"$",EUR:"€",VES:"Bs.",COP:"$",MXN:"$",ARS:"$",CLP:"$",PEN:"S/",BRL:"R$",DOP:"RD$",PAB:"B/."};
@@ -1783,6 +1790,13 @@ function PhotoGalleryModal({ wrId, currentUser, onClose }){
 export default function ENEXSystem(){
   // ── LOGIN STATE ────────────────────────────────────────────────────────────
   const [currentUser,setCurrentUser]=useState(null);
+  // true mientras se cargan los datos y hay una sesión guardada que restaurar
+  // (evita que se vea el login un instante antes de entrar solo).
+  const [sessRestoring,setSessRestoring]=useState(()=>!!sessRead());
+  // Usuarios ya cargados desde la base de datos (el login solo acepta esos).
+  const [clientsDb,setClientsDb]=useState(false);
+  // Si la base de datos no responde, no quedarse en "Cargando…" para siempre.
+  useEffect(()=>{if(!sessRestoring)return;const t=setTimeout(()=>setSessRestoring(false),10000);return()=>clearTimeout(t);},[sessRestoring]);
   const [loginEmail,setLoginEmail]=useState("");
   const [loginPass,setLoginPass]=useState("");
   const [loginErr,setLoginErr]=useState("");
@@ -2007,7 +2021,14 @@ export default function ENEXSystem(){
         dbGetConfig('empresa_slug'),dbGetConfig('label_wr_tipo'),dbGetConfig('label_csa_tipo'),
         dbGetConfig('factura_sec_next'),
       ]);
-      if(cls.length>0)setClients(cls);
+      if(cls.length>0){setClients(cls);setClientsDb(true);}
+      // Restaurar la sesión guardada (si sigue vigente y el usuario existe en la BD)
+      {const ses=sessRead();
+       if(ses){
+         const u=cls.find(c=>c.id===ses.id);
+         if(u)setCurrentUser(u);else sessClear();
+       }
+       setSessRestoring(false);}
       if(wrs.length>0){
         // Mapeo de códigos viejos → nuevos (migración automática al cargar)
         const OLD_MAP={"1":"1","2":"1","2.1":"2","2.2":"3","2.3":"3",
@@ -2066,13 +2087,18 @@ export default function ENEXSystem(){
   // ── LOGIN HANDLER ──────────────────────────────────────────────────────────
   const doLogin=()=>{
     const email=loginEmail.toLowerCase().trim();
-    const u=clients.find(c=>c.email===email&&c.password===loginPass)
-           ||CLIENTS_INIT.find(c=>c.email===email&&c.password===loginPass);
-    if(u){setCurrentUser(u);setLoginErr("");}
+    // Solo usuarios de la base de datos. Antes también se aceptaba la lista de
+    // ejemplo del código (CLIENTS_INIT), que tiene admin@enex.com / admin123:
+    // cualquiera podía entrar como administrador.
+    if(!email||!loginPass){setLoginErr("Escribe tu correo y contraseña");return;}
+    if(!clientsDb){setLoginErr("Conectando con la base de datos… intenta de nuevo en unos segundos.");return;}
+    const u=clients.find(c=>(c.email||"").toLowerCase()===email&&c.password===loginPass);
+    if(u){setCurrentUser(u);setLoginErr("");sessSave(u.id);}
     else setLoginErr("Correo o contraseña incorrectos");
   };
 
   const doLogout=()=>{
+    sessClear();
     setCurrentUser(null);
     setLoginEmail("");
     setLoginPass("");
@@ -2080,6 +2106,12 @@ export default function ENEXSystem(){
   };
 
   // ── LOGIN GATE ─────────────────────────────────────────────────────────────
+  if(!currentUser&&sessRestoring)return(
+    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"var(--navy)",color:"#fff",fontFamily:"Arial,Helvetica,sans-serif",fontSize:16}}>
+      <style>{S}</style>
+      Cargando…
+    </div>
+  );
   if(!currentUser)return(
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"var(--navy)"}}>
       <style>{S}</style>
@@ -2094,7 +2126,6 @@ export default function ENEXSystem(){
           {loginErr&&<div style={{color:"var(--red)",fontSize:14,textAlign:"center"}}>{loginErr}</div>}
           <button className="btn-p" onClick={doLogin} style={{marginTop:8}}>Ingresar</button>
         </div>
-        <div style={{fontSize:12,color:"var(--t3)",marginTop:16,textAlign:"center"}}>Demo: admin@enex.com / admin123</div>
       </div>
     </div>
   );
