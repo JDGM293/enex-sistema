@@ -9722,6 +9722,7 @@ export default function ENEXSystem(){
     {label:"Operación",items:[
       {id:"scan",ic:"📡",l:"Recepción en Puerta",badge:scanLog.filter(s=>!s.registered).length>0?String(scanLog.filter(s=>!s.registered).length):null,red:true},
       {id:"loadingmaster",ic:"🚢",l:"Loading Master"},
+      {id:"alerts",ic:"🔔",l:"Alertas",badge:(()=>{const n=wrList.filter(w=>["18","18.1","19"].includes(w.status?.code||"")).length;return n>0?String(n):null;})(),red:true},
       {id:"reempaque",ic:"🔁",l:"Reempaque"},
       {id:"cargorelease",ic:"🚀",l:"Cargo Release"},
     ]},
@@ -9729,7 +9730,6 @@ export default function ENEXSystem(){
       {id:"entregasydespachos",ic:"📝",l:"Entregas y Despachos"},
       {id:"facturacion",ic:"🧾",l:"Facturación",onClick:()=>{setTab("contabilidad");setContabTab("facturas");},activeWhen:()=>tab==="contabilidad"&&contabTab==="facturas"},
       {id:"contabilidad",ic:"💰",l:"Contabilidad"},
-      {id:"alerts",ic:"🔔",l:"Alertas",badge:(()=>{const n=wrList.filter(w=>["18","18.1","19"].includes(w.status?.code||"")).length;return n>0?String(n):null;})(),red:true},
     ]},
     {label:"Gestión",items:[
       {id:"clients",ic:"👥",l:"Clientes & Usuarios"},
