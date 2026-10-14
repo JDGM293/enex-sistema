@@ -1008,7 +1008,7 @@ const TxtCell=({value,titulo,tdStyle={},txtClass,txtStyle={},mono=false,color="v
 
 // ─── WR ROW ────────────────────────────────────────────────────────────────────
 const CT_LABEL_WR={agente:"🤝 Agente",vendedor_agente:"💼 Vend. Agente",autonomo:"🧑‍💻 Autónomo",oficina:"🏢 Oficina",vendedor_oficina:"🛒 Vend. Oficina",matriz:"🏛️ Matriz"};
-const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[],oficinas=[],empresaNombre="Casa Matriz",sendTypes=[],onAssignTipo,onFotoClick,onTimelineClick,consolList=[]})=>{
+const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[],oficinas=[],empresaNombre="Casa Matriz",sendTypes=[],onAssignTipo,onFotoClick,onTimelineClick,consolList=[],onGuiaClick})=>{
   const isIn=unitL==="in";
   const isLb=unitW==="lb";
   // Popup de cajas: se renderiza en un portal con position:fixed porque el
@@ -1167,6 +1167,19 @@ const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[
       </td>
       {/* 3. ESTADO */}
       <td style={{minWidth:100,padding:"4px 6px"}} title={w.status?.label||""}><StBadge st={w.status}/></td>
+      {/* 4. GUÍA — guía consolidada en la que se envió la carga (clic = abrirla) */}
+      <td style={{minWidth:86,padding:"4px 6px",whiteSpace:"nowrap"}}>
+        {(()=>{
+          const g=consolList.find(c=>(Array.isArray(c.wrIds)&&c.wrIds.includes(w.id))||(c.containers||[]).some(ct=>(ct.wr||[]).some(r=>r.id===w.id)));
+          if(!g)return <span style={{color:"var(--t4)",fontSize:12}}>—</span>;
+          return(
+            <span onClick={onGuiaClick?()=>onGuiaClick(g):undefined} title={onGuiaClick?`Abrir guía ${g.id}`:`Guía ${g.id}`}
+              style={{fontFamily:"'DM Mono',monospace",fontWeight:700,fontSize:12,color:"var(--navy)",background:"#EEF3FF",border:"1px solid #B8C8F0",borderRadius:4,padding:"2px 6px",cursor:onGuiaClick?"pointer":"default"}}>
+              {g.id}
+            </span>
+          );
+        })()}
+      </td>
       <td style={{textAlign:"center",fontWeight:700,color:"var(--navy)"}}>{w.cajas}</td>
       <td>{(()=>{
         const cl=clients.find(c=>c.id===w.clienteId)||clients.find(c=>c.casillero===w.casillero);
@@ -1220,7 +1233,7 @@ const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[
 
 // ─── WR TABLE COMPONENT ────────────────────────────────────────────────────────
 const PAGE_SIZE=50;
-const WRTable=({rows,selId,onSelect,unitL,unitW,onSort,sortCol,sortDir,dimOpen,onDimToggle,page,onPage,clients=[],agentes=[],oficinas=[],empresaNombre="Casa Matriz",sendTypes=[],onAssignTipo,onFotoClick,onTimelineClick,consolList=[]})=>{
+const WRTable=({rows,selId,onSelect,unitL,unitW,onSort,sortCol,sortDir,dimOpen,onDimToggle,page,onPage,clients=[],agentes=[],oficinas=[],empresaNombre="Casa Matriz",sendTypes=[],onAssignTipo,onFotoClick,onTimelineClick,consolList=[],onGuiaClick})=>{
   const totalPages=Math.max(1,Math.ceil(rows.length/PAGE_SIZE));
   const pageRows=rows.slice((page-1)*PAGE_SIZE,page*PAGE_SIZE);
   const SortTh=({col,children,align})=>(
@@ -1237,6 +1250,7 @@ const WRTable=({rows,selId,onSelect,unitL,unitW,onSort,sortCol,sortDir,dimOpen,o
               <SortTh col="id">N° WR</SortTh>
               <th style={{minWidth:88}}>Tipo Envío</th>
               <th style={{minWidth:100}}>Estado</th>
+              <th style={{minWidth:86}}>Guía</th>
               <SortTh col="cajas" align="center">Cajas</SortTh>
               <SortTh col="branch">Branch</SortTh>
               <SortTh col="fecha">Fecha / Hora</SortTh>
@@ -1258,12 +1272,12 @@ const WRTable=({rows,selId,onSelect,unitL,unitW,onSort,sortCol,sortDir,dimOpen,o
           </thead>
           <tbody>
             {pageRows.length===0?(
-              <tr><td colSpan={20} style={{textAlign:"center",padding:40,color:"var(--t3)"}}>No se encontraron registros.</td></tr>
+              <tr><td colSpan={21} style={{textAlign:"center",padding:40,color:"var(--t3)"}}>No se encontraron registros.</td></tr>
             ):pageRows.map(w=>(
               <WRRow key={w.id} w={w} sel={selId===w.id} onClick={()=>onSelect(w)}
                 unitL={unitL} unitW={unitW} clients={clients} agentes={agentes} oficinas={oficinas} empresaNombre={empresaNombre}
                 sendTypes={sendTypes} onAssignTipo={onAssignTipo} onFotoClick={onFotoClick} onTimelineClick={onTimelineClick}
-                consolList={consolList}
+                consolList={consolList} onGuiaClick={onGuiaClick}
                 dimOpen={dimOpen===w.id} onDimToggle={()=>onDimToggle(w.id)}/>
             ))}
           </tbody>
@@ -2700,6 +2714,7 @@ export default function ENEXSystem(){
             onFotoClick={w=>setPhotoGalleryOpen({wrId:w.id})}
             onTimelineClick={w=>setTimelineWR(w)}
             consolList={consolList}
+            onGuiaClick={g=>{setRdArchView(g);setLmTab("master");setTab("loadingmaster");}}
             page={page} onPage={setPage}/>
         </div>
 
