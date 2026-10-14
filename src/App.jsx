@@ -2714,7 +2714,7 @@ export default function ENEXSystem(){
             onFotoClick={w=>setPhotoGalleryOpen({wrId:w.id})}
             onTimelineClick={w=>setTimelineWR(w)}
             consolList={consolList}
-            onGuiaClick={g=>{setRdArchView(g);setLmTab("master");setTab("loadingmaster");}}
+            onGuiaClick={g=>setRdArchView(g)}
             page={page} onPage={setPage}/>
         </div>
 
@@ -4621,7 +4621,12 @@ export default function ENEXSystem(){
                             <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",fontSize:12,color:getStatusDate(w,"entregado")==="—"?"var(--t3)":"var(--green)",fontWeight:getStatusDate(w,"entregado")==="—"?400:700}}>{getStatusDate(w,"entregado")}</td>
                             {/* Nueva columna Cobrado — antes de N° Guía. */}
                             <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",fontSize:12,color:getStatusDate(w,"cobrado")==="—"?"var(--t3)":"var(--gold2)",fontWeight:getStatusDate(w,"cobrado")==="—"?400:700}}>{getStatusDate(w,"cobrado")}</td>
-                            <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--purple)",fontWeight:600}}>{getNumGuia(w)}</td>
+                            <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--purple)",fontWeight:600}}>
+                              {(()=>{const gid=getNumGuia(w);const g=consolList.find(c=>c.id===gid);
+                                return g
+                                  ? <span onClick={()=>setRdArchView(g)} title={`Abrir guía ${g.id}`} style={{cursor:"pointer",textDecoration:"underline"}}>{g.id}</span>
+                                  : gid;})()}
+                            </td>
                           </>
                         )}
                         {/* TIPO ENVÍO — al final de la fila (mismo patrón que Dashboard).
@@ -8685,7 +8690,7 @@ export default function ENEXSystem(){
                     <button className="btn-s" onClick={()=>printGuiaArchivada(c)}>🖨 Imprimir guía</button>
                   )}
                   {!c.archivada&&hasPerm("editar_guia")&&(
-                    <button className="btn-p" onClick={()=>{setRdArchView(null);guiaEditar(c);}}>✏️ Editar</button>
+                    <button className="btn-p" onClick={()=>{setRdArchView(null);setLmTab("master");setTab("loadingmaster");guiaEditar(c);}}>✏️ Editar</button>
                   )}
                 </div>
               </div>
@@ -8708,7 +8713,6 @@ export default function ENEXSystem(){
         </div>
       </div>
       {lmTab==="master"?renderConsolidacion():lmTab==="status"?renderGuiaEstatus():renderRecepcionDest()}
-      {renderGuiaDetalle()}
     </div>
     );
   };
@@ -9591,6 +9595,9 @@ export default function ENEXSystem(){
       </div>
 
       {/* MODALS */}
+      {/* Detalle de guía — se abre desde Loading Master, el Dashboard (columna Guía)
+          y el Estado de Cuenta (columna N° Guía), encima de la pantalla actual. */}
+      {renderGuiaDetalle()}
       {/* VENTANA DE ATAJO — Reempaque / Cargo Release encima de la pantalla actual.
           El módulo se renderiza igual que a pantalla completa; al cerrar se vuelve
           exactamente a donde estabas (Dashboard, WR, lo que sea). */}
