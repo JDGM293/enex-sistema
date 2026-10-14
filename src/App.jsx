@@ -1864,6 +1864,10 @@ export default function ENEXSystem(){
   const [ecSearch,setEcSearch]=useState("");
   const [ecCliente,setEcCliente]=useState(null);
   const [ecResults,setEcResults]=useState([]);
+  // Estado de Cuenta por grupo: además de un cliente, se puede elegir un agente,
+  // una oficina o un autónomo y ver los WR de todos los clientes bajo su dominio.
+  const [ecModo,setEcModo]=useState("cliente"); // "cliente" | "agente" | "oficina" | "autonomo"
+  const [ecGrupo,setEcGrupo]=useState(null);    // {tipo,id,nombre,sub,email,tel}
   const [ecFiltro,setEcFiltro]=useState("todos");
   const [ecMes,setEcMes]=useState("");
   const [ecAnio,setEcAnio]=useState("");
@@ -3894,6 +3898,21 @@ export default function ENEXSystem(){
     setEcResults(res);
   };
 
+  // Clientes que pertenecen a un agente / oficina / autónomo (misma regla que la
+  // columna "Branch" del Dashboard: tipo de cliente + id del responsable).
+  const clientesDeGrupo=(g)=>{
+    if(!g)return [];
+    return clients.filter(c=>{
+      if(c.tipo!=="cliente")return false;
+      const ct=c.clienteTipo||"";
+      if(g.tipo==="agente")  return ["agente","vendedor_agente"].includes(ct)&&c.agenteId===g.id;
+      if(g.tipo==="oficina") return ["oficina","vendedor_oficina"].includes(ct)&&c.oficinaId===g.id;
+      if(g.tipo==="autonomo")return ct==="autonomo"&&c.autonomoId===g.id;
+      return false;
+    });
+  };
+  const ecCambiarModo=(m)=>{setEcModo(m);setEcCliente(null);setEcGrupo(null);setEcSearch("");setEcResults([]);};
+  const selEcGrupo=(g)=>{setEcGrupo(g);setEcSearch(g.nombre+(g.sub?" — "+g.sub:""));};
   const selEcCliente=(c)=>{
     setEcCliente(c);
     setEcSearch(fullName(c)+" — "+c.casillero);
@@ -4108,8 +4127,12 @@ export default function ENEXSystem(){
   // ── IMPRESIÓN DEL ESTADO DE CUENTA ────────────────────────────────────────
   // Abre una ventana con un HTML profesional del estado de cuenta del cliente
   // (header, cliente, tab/filtros activos, tabla de WRs, totales) y lanza print.
-  const printEstadoCuenta=(cli,wrs,filtros,totales)=>{
-    if(!cli){window.alert("Selecciona un cliente primero.");return;}
+  // grupo (opcional): {tipo,nombre,sub,email,tel,nClientes,cliDe} — estado de cuenta
+  // de un agente / oficina / autónomo; agrega la columna Cliente.
+  const printEstadoCuenta=(cli,wrs,filtros,totales,grupo=null)=>{
+    if(!cli&&!grupo){window.alert("Selecciona un cliente primero.");return;}
+    const esc=(v)=>String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;");
+    const tituloNom=grupo?grupo.nombre:fullName(cli);
     const tabLabel={todos:"Todos",pendientes:"Pendientes",porconfirmar:"Por Confirmar",reempacados:"Reempacados",egresados:"Egresados",entregadoscob:"Entregados / Por Cobrar"}[filtros.tab]||filtros.tab;
     const MESES_P=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
     const periodo=(filtros.mes||filtros.anio)
@@ -4120,6 +4143,7 @@ export default function ENEXSystem(){
       <tr>
         <td style="padding:5px 6px;border-bottom:1px solid #ddd"><span style="background:#eef;color:#222;padding:2px 6px;border-radius:3px;font-size:10px;font-weight:700">${w.status?.code||"—"}</span> ${w.status?.label||""}</td>
         <td style="padding:5px 6px;border-bottom:1px solid #ddd;font-family:monospace;font-weight:700">${w.id}</td>
+        ${grupo?(()=>{const c=grupo.cliDe(w);return `<td style="padding:5px 6px;border-bottom:1px solid #ddd">${esc(c?fullName(c):(w.consignee||"—"))}<div style="font-size:9px;color:#777">${esc(c?.casillero||w.casillero||"")}</div></td>`;})():""}
         <td style="padding:5px 6px;border-bottom:1px solid #ddd;text-align:center">${w.cajas||0}</td>
         <td style="padding:5px 6px;border-bottom:1px solid #ddd;font-family:monospace">${w.pesoLb||0}lb</td>
         <td style="padding:5px 6px;border-bottom:1px solid #ddd;font-family:monospace">${w.volLb||"—"}lb</td>
@@ -4130,7 +4154,7 @@ export default function ENEXSystem(){
         <td style="padding:5px 6px;border-bottom:1px solid #ddd;font-family:monospace;font-weight:700;text-align:right">$${(w.valor||0).toFixed(2)}</td>
       </tr>`).join("");
     const totalCajas=wrs.reduce((s,w)=>s+(w.cajas||0),0);
-    const html=`<!doctype html><html><head><title>Estado de Cuenta — ${fullName(cli)}</title>
+    const html=`<!doctype html><html><head><title>Estado de Cuenta — ${esc(tituloNom)}</title>
 <style>
   body{margin:0;padding:20px;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#111;background:#fff}
   .hd{border-bottom:3px solid #1A2B4A;padding-bottom:10px;margin-bottom:14px}
@@ -4150,13 +4174,19 @@ export default function ENEXSystem(){
     <h1>${empresaNombre||"ENEX"} — ESTADO DE CUENTA</h1>
     <div class="sub">Generado: ${fechaImp}</div>
   </div>
-  <div class="cli-box">
+  ${grupo?`<div class="cli-box">
+    <div><b>${grupo.tipo==="agente"?"Agente":grupo.tipo==="oficina"?"Oficina":"Autónomo"}:</b> ${esc(grupo.nombre)}</div>
+    <div><b>Código / Ref.:</b> ${esc(grupo.sub||"—")}</div>
+    <div><b>Email:</b> ${esc(grupo.email||"—")}</div>
+    <div><b>Teléfono:</b> ${esc(grupo.tel||"—")}</div>
+    <div style="grid-column:1/-1"><b>Clientes bajo su dominio:</b> ${grupo.nClientes}</div>
+  </div>`:`<div class="cli-box">
     <div><b>Cliente:</b> ${fullName(cli)||"—"}</div>
     <div><b>Casillero:</b> ${cli.casillero||"—"}</div>
     <div><b>Email:</b> ${cli.email||"—"}</div>
     <div><b>Teléfono:</b> ${cli.tel1||"—"}</div>
     <div style="grid-column:1/-1"><b>Dirección:</b> ${[cli.municipio,cli.estado,cli.pais].filter(Boolean).join(", ")||"—"}</div>
-  </div>
+  </div>`}
   <div class="meta">
     <span><b>Filtro:</b> ${tabLabel}</span>
     <span><b>Período:</b> ${periodo}</span>
@@ -4165,15 +4195,15 @@ export default function ENEXSystem(){
   <table>
     <thead>
       <tr>
-        <th>Estado</th><th>N° WR</th><th>Cajas</th><th>Peso</th><th>P.Vol</th><th>Ft³</th><th>M³</th><th>Tipo</th><th>Descripción</th><th style="text-align:right">Valor</th>
+        <th>Estado</th><th>N° WR</th>${grupo?"<th>Cliente</th>":""}<th>Cajas</th><th>Peso</th><th>P.Vol</th><th>Ft³</th><th>M³</th><th>Tipo</th><th>Descripción</th><th style="text-align:right">Valor</th>
       </tr>
     </thead>
     <tbody>
-      ${rows||`<tr><td colspan="10" style="padding:30px;text-align:center;color:#888">Sin registros para este filtro.</td></tr>`}
+      ${rows||`<tr><td colspan="${grupo?11:10}" style="padding:30px;text-align:center;color:#888">Sin registros para este filtro.</td></tr>`}
     </tbody>
     ${wrs.length>0?`<tfoot>
       <tr>
-        <td colspan="2">TOTALES</td>
+        <td colspan="${grupo?3:2}">TOTALES</td>
         <td style="text-align:center">${totalCajas}</td>
         <td style="font-family:monospace">${totales.pesoLb}lb</td>
         <td style="font-family:monospace">${totales.volLb}lb</td>
@@ -4194,11 +4224,25 @@ export default function ENEXSystem(){
   };
 
   const renderEstadoCuenta=()=>{
+    // Modo grupo: clientes del agente / oficina / autónomo elegido
+    const ecCliGrupo=ecGrupo?clientesDeGrupo(ecGrupo):[];
+    const ecGrpIds=new Set(ecCliGrupo.map(c=>c.id));
+    const ecGrpCas=new Set(ecCliGrupo.map(c=>c.casillero).filter(Boolean));
+    const ecCliDeWR=(w)=>clients.find(c=>c.id===w.clienteId)||clients.find(c=>c.casillero&&c.casillero===w.casillero);
     const wrTodos=ecCliente?wrList.filter(w=>
       w.clienteId===ecCliente.id||
       w.casillero===ecCliente.casillero||
       (w.consignee||"").trim().toUpperCase()===(fullName(ecCliente)||"").trim().toUpperCase()
-    ):[];
+    ):ecGrupo?wrList.filter(w=>ecGrpIds.has(w.clienteId)||(w.casillero&&ecGrpCas.has(w.casillero))):[];
+    // Resultados de búsqueda en modo grupo (lista corta: se muestra completa sin escribir)
+    const ecGrpResults=(ecModo==="cliente"||ecGrupo)?[]:(()=>{
+      const q=(ecSearch||"").toLowerCase().trim();
+      let base=[];
+      if(ecModo==="agente")  base=agentes.map(a=>({tipo:"agente",id:a.id,nombre:a.nombre||a.codigo||"Agente",sub:[a.codigo,a.ciudad].filter(Boolean).join(" · "),email:a.email||"",tel:a.tel||""}));
+      if(ecModo==="oficina") base=oficinas.map(o=>({tipo:"oficina",id:o.id,nombre:o.nombre||o.codigo||"Oficina",sub:[o.codigo,o.ciudad].filter(Boolean).join(" · "),email:o.email||"",tel:o.tel||""}));
+      if(ecModo==="autonomo")base=clients.filter(c=>c.tipo==="usuario"&&c.rol==="F").map(c=>({tipo:"autonomo",id:c.id,nombre:fullName(c),sub:[c.casillero,c.email].filter(Boolean).join(" · "),email:c.email||"",tel:c.tel1||""}));
+      return base.filter(g=>!q||[g.nombre,g.sub].some(v=>String(v||"").toLowerCase().includes(q)));
+    })();
 
     // Filtro por mes/año
     const wrFecha=wrTodos.filter(w=>{
@@ -4257,14 +4301,22 @@ export default function ENEXSystem(){
         {/* BÚSQUEDA */}
         <div className="card" style={{marginBottom:14,maxWidth:700}}>
           <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:16,fontWeight:700,color:"var(--navy)",marginBottom:12}}>
-            👤 Estado de Cuenta — Búsqueda de Cliente
+            👤 Estado de Cuenta — Búsqueda
+          </div>
+          {/* Buscar por: cliente / agente / oficina / autónomo */}
+          <div style={{display:"flex",gap:3,background:"var(--bg4)",borderRadius:7,padding:3,border:"1px solid var(--b1)",marginBottom:10,width:"fit-content",flexWrap:"wrap"}}>
+            {[["cliente","👤 Cliente"],["agente","🤝 Agente"],["oficina","🏢 Oficina"],["autonomo","🧑‍💻 Autónomo"]].map(([k,l])=>(
+              <button key={k} type="button" onClick={()=>ecCambiarModo(k)}
+                style={{padding:"5px 12px",borderRadius:5,border:"none",cursor:"pointer",fontSize:13,fontWeight:600,
+                  background:ecModo===k?"var(--navy)":"transparent",color:ecModo===k?"#fff":"var(--t2)"}}>{l}</button>
+            ))}
           </div>
           <div style={{position:"relative"}}>
             <div style={{display:"flex",gap:8}}>
               <input className="fi" style={{flex:1,fontSize:15}} value={ecSearch}
-                onChange={e=>buscarCliente(e.target.value)}
-                placeholder="Buscar por nombre, casillero, email o teléfono…"/>
-              {ecCliente&&<button className="btn-s" onClick={()=>{setEcCliente(null);setEcSearch("");setEcResults([]);}}>✕ Limpiar</button>}
+                onChange={e=>{if(ecModo==="cliente")buscarCliente(e.target.value);else{setEcGrupo(null);setEcSearch(e.target.value);}}}
+                placeholder={ecModo==="cliente"?"Buscar por nombre, casillero, email o teléfono…":ecModo==="agente"?"Buscar agente por nombre o código…":ecModo==="oficina"?"Buscar oficina por nombre o código…":"Buscar autónomo por nombre, casillero o email…"}/>
+              {(ecCliente||ecGrupo)&&<button className="btn-s" onClick={()=>{setEcCliente(null);setEcGrupo(null);setEcSearch("");setEcResults([]);}}>✕ Limpiar</button>}
             </div>
             {ecResults.length>0&&(
               <div style={{position:"absolute",top:"calc(100% + 4px)",left:0,right:0,background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:8,boxShadow:"0 8px 24px rgba(0,0,0,.12)",zIndex:50,maxHeight:220,overflowY:"auto"}}>
@@ -4282,11 +4334,50 @@ export default function ENEXSystem(){
                 ))}
               </div>
             )}
+            {ecGrpResults.length>0&&(
+              <div style={{position:"absolute",top:"calc(100% + 4px)",left:0,right:0,background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:8,boxShadow:"0 8px 24px rgba(0,0,0,.12)",zIndex:50,maxHeight:320,overflowY:"auto"}}>
+                {ecGrpResults.map(g=>{
+                  const n=clientesDeGrupo(g).length;
+                  return(
+                  <div key={g.tipo+g.id} onClick={()=>selEcGrupo(g)}
+                    style={{padding:"10px 14px",cursor:"pointer",borderBottom:"1px solid var(--b2)",display:"flex",alignItems:"center",gap:10}}
+                    onMouseEnter={e=>e.currentTarget.style.background="#EEF3FF"}
+                    onMouseLeave={e=>e.currentTarget.style.background=""}>
+                    <div style={{width:32,height:32,borderRadius:8,background:"var(--navy)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>{g.tipo==="agente"?"🤝":g.tipo==="oficina"?"🏢":"🧑‍💻"}</div>
+                    <div style={{flex:1}}>
+                      <div style={{fontWeight:600,color:"var(--t1)",fontSize:15}}>{g.nombre}</div>
+                      <div style={{fontSize:13,color:"var(--t3)"}}>{g.sub||"—"}</div>
+                    </div>
+                    <span style={{fontSize:12,color:"var(--t3)",whiteSpace:"nowrap"}}>{n} cliente{n!==1?"s":""}</span>
+                  </div>
+                  );
+                })}
+              </div>
+            )}
+            {ecModo!=="cliente"&&!ecGrupo&&ecGrpResults.length===0&&(
+              <div style={{fontSize:13,color:"var(--t3)",marginTop:8}}>{ecSearch?"No hay coincidencias.":`No hay ${ecModo==="agente"?"agentes":ecModo==="oficina"?"oficinas":"autónomos"} registrados.`}</div>
+            )}
           </div>
         </div>
 
-        {ecCliente&&(
+        {(ecCliente||ecGrupo)&&(
           <>
+            {ecGrupo?(
+              /* HEADER GRUPO — agente / oficina / autónomo */
+              <div style={{display:"grid",gridTemplateColumns:"auto 1fr",gap:16,marginBottom:14,background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:12,padding:"16px 20px",boxShadow:"var(--shadow)",alignItems:"center"}}>
+                <div style={{width:56,height:56,borderRadius:12,background:"var(--navy)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:26}}>{ecGrupo.tipo==="agente"?"🤝":ecGrupo.tipo==="oficina"?"🏢":"🧑‍💻"}</div>
+                <div>
+                  <div style={{fontSize:12,fontWeight:700,color:"var(--t3)",letterSpacing:.8,textTransform:"uppercase"}}>{ecGrupo.tipo==="agente"?"Agente":ecGrupo.tipo==="oficina"?"Oficina":"Autónomo"}</div>
+                  <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:22,fontWeight:700,color:"var(--navy)"}}>{ecGrupo.nombre}</div>
+                  <div style={{display:"flex",gap:16,marginTop:4,fontSize:13,color:"var(--t2)",flexWrap:"wrap"}}>
+                    {ecGrupo.sub&&<span>🏷️ {ecGrupo.sub}</span>}
+                    {ecGrupo.email&&<span>📧 {ecGrupo.email}</span>}
+                    {ecGrupo.tel&&<span>📞 {ecGrupo.tel}</span>}
+                    <span>👥 <strong>{ecCliGrupo.length}</strong> cliente{ecCliGrupo.length!==1?"s":""} bajo su dominio</span>
+                  </div>
+                </div>
+              </div>
+            ):(<>
             {/* HEADER CLIENTE */}
             <div style={{display:"grid",gridTemplateColumns:"auto 1fr auto",gap:16,marginBottom:14,background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:12,padding:"16px 20px",boxShadow:"var(--shadow)",alignItems:"center"}}>
               <div style={{width:56,height:56,borderRadius:12,background:"var(--navy)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:22}}>{initials(ecCliente)}</div>
@@ -4326,6 +4417,8 @@ export default function ENEXSystem(){
                 })()}
               </div>
             </div>
+
+            </>)}
 
             {/* MINI STATS */}
             <div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:8,marginBottom:14}}>
@@ -4382,7 +4475,7 @@ export default function ENEXSystem(){
                   </select>
                   <span style={{fontSize:12,color:"var(--t3)",padding:"2px 8px",background:"var(--bg4)",border:"1px solid var(--b1)",borderRadius:4}}>{wrCliente.length} registros</span>
                   <button className="btn-p" style={{fontSize:12,padding:"4px 10px"}}
-                    onClick={()=>printEstadoCuenta(ecCliente,wrCliente,{tab:ecFiltro,mes:ecMes,anio:ecAnio},{pesoLb:totalPesoLbC,volLb:totalVolLbC,ft3:totalFt3C,m3:totalM3C,valor:totalValorC})}>
+                    onClick={()=>printEstadoCuenta(ecCliente,wrCliente,{tab:ecFiltro,mes:ecMes,anio:ecAnio},{pesoLb:totalPesoLbC,volLb:totalVolLbC,ft3:totalFt3C,m3:totalM3C,valor:totalValorC},ecGrupo?{...ecGrupo,nClientes:ecCliGrupo.length,cliDe:ecCliDeWR}:null)}>
                     🖨 Imprimir Estado
                   </button>
                 </div>
@@ -4404,6 +4497,7 @@ export default function ENEXSystem(){
                   //   · N° Guía · [Tipo Envío?]
                   const baseCols = [
                     "Estado","N° WR",
+                    ...(ecGrupo?["Cliente"]:[]),
                     ...(showOrigen?["Origen"]:[]),
                     "Cajas","Peso lb","P.Vol lb","Ft³","M³",
                     "Tracking",
@@ -4419,7 +4513,7 @@ export default function ENEXSystem(){
                   //   hasta antes del Valor (que mostramos en su propia celda).
                   //   Aquí no hay celdas que sumar entre M³ y Valor (Contenido es texto).
                   // - tailColspan cubre Recibido..N°Guía (+Tipo Envío), todas no-sumables.
-                  const firstColspan = 2 + (showOrigen?1:0);
+                  const firstColspan = 2 + (ecGrupo?1:0) + (showOrigen?1:0);
                   const tailColspan  = 1 /*Recibido*/ + (hideMiddle?0:7 /*Confirmado..N°Guía*/) + (showTipoEnvio?1:0);
                 return (
                 <table style={{width:"100%",borderCollapse:"collapse",fontSize:12.5,whiteSpace:"nowrap"}}>
@@ -4452,6 +4546,20 @@ export default function ENEXSystem(){
                             {w.id}
                           </div>
                         </td>
+                        {/* Cliente — solo en estado de cuenta de agente / oficina / autónomo.
+                            Click abre el estado de cuenta de ese cliente. */}
+                        {ecGrupo&&(()=>{
+                          const cl=ecCliDeWR(w);
+                          return(
+                            <td style={{padding:"7px 8px"}}>
+                              {cl
+                                ? <span onClick={()=>{setEcModo("cliente");setEcGrupo(null);selEcCliente(cl);}} title="Ver el estado de cuenta de este cliente"
+                                    style={{cursor:"pointer",fontWeight:600,color:"var(--navy)",textDecoration:"underline"}}>{fullName(cl)}</span>
+                                : <span style={{fontWeight:600}}>{w.consignee||"—"}</span>}
+                              <div style={{fontSize:11,color:"var(--t3)",fontFamily:"'DM Mono',monospace"}}>{cl?.casillero||w.casillero||""}</div>
+                            </td>
+                          );
+                        })()}
                         {/* Origen — solo en tab Reempacados (en qué WR se reempacó / WR padre) */}
                         {showOrigen && (
                           <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--purple)",fontWeight:600}}>
