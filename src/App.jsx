@@ -3926,6 +3926,15 @@ export default function ENEXSystem(){
       return false;
     });
   };
+  // Branch al que pertenece un cliente — misma regla que la columna "Branch" del Dashboard.
+  const branchDeCliente=(cl)=>{
+    const ct=cl?.clienteTipo||"";
+    if(ct==="matriz")return{ic:"🏛️",nombre:empresaNombre||"Casa Matriz",tipo:"Casa Matriz"};
+    if(ct==="agente"||ct==="vendedor_agente"){const ag=agentes.find(a=>a.id===cl.agenteId);return{ic:ct==="agente"?"🤝":"💼",nombre:ag?.nombre||ag?.codigo||"⚠️ Sin agente",tipo:ct==="agente"?"Agente":"Vend. Agente"};}
+    if(ct==="oficina"||ct==="vendedor_oficina"){const of=oficinas.find(o=>o.id===cl.oficinaId);return{ic:ct==="oficina"?"🏢":"🛒",nombre:of?.nombre||of?.codigo||"⚠️ Sin oficina",tipo:ct==="oficina"?"Oficina":"Vend. Oficina"};}
+    if(ct==="autonomo"){const au=clients.find(c=>c.id===cl.autonomoId);return{ic:"🧑‍💻",nombre:au?`${au.primerNombre||""} ${au.primerApellido||""}`.trim():"⚠️ Sin autónomo",tipo:"Autónomo"};}
+    return null;
+  };
   const ecCambiarModo=(m)=>{setEcModo(m);setEcCliente(null);setEcGrupo(null);setEcSearch("");setEcResults([]);};
   const selEcGrupo=(g)=>{setEcGrupo(g);setEcSearch(g.nombre+(g.sub?" — "+g.sub:""));};
   const selEcCliente=(c)=>{
@@ -4200,6 +4209,7 @@ export default function ENEXSystem(){
     <div><b>Casillero:</b> ${cli.casillero||"—"}</div>
     <div><b>Email:</b> ${cli.email||"—"}</div>
     <div><b>Teléfono:</b> ${cli.tel1||"—"}</div>
+    <div style="grid-column:1/-1"><b>Branch:</b> ${(()=>{const b=branchDeCliente(cli);return b?esc(`${b.nombre} (${b.tipo})`):"—";})()}</div>
     <div style="grid-column:1/-1"><b>Dirección:</b> ${[cli.municipio,cli.estado,cli.pais].filter(Boolean).join(", ")||"—"}</div>
   </div>`}
   <div class="meta">
@@ -4397,7 +4407,15 @@ export default function ENEXSystem(){
             <div style={{display:"grid",gridTemplateColumns:"auto 1fr auto",gap:16,marginBottom:14,background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:12,padding:"16px 20px",boxShadow:"var(--shadow)",alignItems:"center"}}>
               <div style={{width:56,height:56,borderRadius:12,background:"var(--navy)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:22}}>{initials(ecCliente)}</div>
               <div>
-                <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:22,fontWeight:700,color:"var(--navy)"}}>{fullName(ecCliente)}</div>
+                <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+                  <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:22,fontWeight:700,color:"var(--navy)"}}>{fullName(ecCliente)}</div>
+                  {(()=>{const b=branchDeCliente(ecCliente);
+                    return b
+                      ? <span title={`Branch: ${b.tipo}`} style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:13,fontWeight:700,color:"var(--navy)",background:"#EEF3FF",border:"1px solid #B8C8F0",borderRadius:14,padding:"3px 10px"}}>
+                          {b.ic} {b.nombre}<span style={{fontWeight:500,color:"var(--t3)",fontSize:12}}>· {b.tipo}</span>
+                        </span>
+                      : <span style={{fontSize:12,color:"var(--t3)",background:"var(--bg4)",border:"1px solid var(--b1)",borderRadius:14,padding:"3px 10px"}}>Sin branch asignado</span>;})()}
+                </div>
                 <div style={{display:"flex",gap:16,marginTop:4,fontSize:13,color:"var(--t2)",flexWrap:"wrap"}}>
                   <span>📦 Casillero: <strong style={{color:"var(--gold2)",fontFamily:"'DM Mono',monospace"}}>{ecCliente.casillero}</strong></span>
                   <span>📧 {ecCliente.email}</span>
