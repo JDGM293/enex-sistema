@@ -699,6 +699,9 @@ const WR_STATUSES=[
   {code:"16",  label:"Liberado 3",      cls:"s3", phase:"destino",  auto:false, manual:true,  channels:["dashboard","cliente","recepcion"]},
   {code:"17",  label:"Almacén",         cls:"s6", phase:"destino",  auto:true,  manual:false, channels:["dashboard","recepcion"]},
   {code:"18",  label:"Faltante",        cls:"s4", phase:"excep",    auto:true,  manual:false, channels:["dashboard"],             exc:true},
+  // Cierres de un faltante (se resuelven en Alertas). No cuentan como excepción abierta.
+  {code:"18.2",label:"Indemnizado",     cls:"s3", phase:"excep",    auto:false, manual:false, channels:["dashboard"]},
+  {code:"18.3",label:"Pérdida cerrada", cls:"s4", phase:"excep",    auto:false, manual:false, channels:["dashboard"]},
   {code:"18.1",label:"Investigación",   cls:"s4", phase:"excep",    auto:false, manual:true,  channels:["dashboard","recepcion"], exc:true},
   {code:"19",  label:"Sobrante",        cls:"s5", phase:"excep",    auto:true,  manual:false, channels:["dashboard","recepcion"], exc:true},
   {code:"20",  label:"Por Entrega",     cls:"s3", phase:"entrega",  auto:true,  manual:false, channels:["dashboard","cliente"]},
@@ -1824,6 +1827,12 @@ export default function ENEXSystem(){
   const [lmTab,setLmTab]=useState("master"); // "master" | "status" | "recepcion"
   const [lmFilter,setLmFilter]=useState("todas"); // filtro de las tarjetas del Master
   const [lmSearch,setLmSearch]=useState(""); // búsqueda de la pestaña Status
+  // Alertas — faltantes y sobrantes: se detectan en Recepción y se resuelven aquí.
+  const [alTab,setAlTab]=useState("abiertas");   // "abiertas" | "historial"
+  const [alFiltro,setAlFiltro]=useState("todos"); // "todos" | "faltantes" | "sobrantes"
+  const [alSearch,setAlSearch]=useState("");
+  const [alModal,setAlModal]=useState(null);      // {w, accion}
+  const [alForm,setAlForm]=useState({montoCliente:"",montoTransportista:"",referencia:"",nota:""});
   const [wrList,setWrList]=useState(WR_INIT);
   const [clients,setClients]=useState(CLIENTS_INIT);
   const [selWR,setSelWR]=useState(null);
@@ -2720,7 +2729,7 @@ export default function ENEXSystem(){
 
         {!dashWide&&<div className="rp">
           <div className="card">
-            <div className="card-tt">🔔 Alertas <span className="card-sub">{stats.excepciones} excepciones</span></div>
+            <div className="card-tt" onClick={()=>setTab("alerts")} title="Ver faltantes y sobrantes en Alertas" style={{cursor:"pointer"}}>🔔 Alertas <span className="card-sub">{stats.excepciones} excepciones ›</span></div>
             {[
               stats.customs>0&&{cls:"alt-e",ic:"🛃",t:"En Aduana / Retención",b:`${stats.customs} envío${stats.customs!==1?"s":""} en proceso aduanal`},
               stats.excepciones>0&&{cls:"alt-w",ic:"⚠️",t:"Excepciones",b:`${stats.excepciones} WR en Faltante / Investigación / Sobrante`},
@@ -3982,11 +3991,11 @@ export default function ENEXSystem(){
       return revertido?null:hist[lastConfIdx];
     };
     const POST={
-      recibido:     ["3","4","5","6","6.2","7","8","9","10","11","12","13","14","15","16","17","18","18.1","19","20","21","22","23","25","2.3"],
-      confirmado:   ["4","5","6","6.2","7","8","9","10","11","12","13","14","15","16","17","18","18.1","19","20","21","22","23"],
-      consolidado: ["5","6","6.2","7","8","9","10","11","12","13","14","15","16","17","18","18.1","19","20","21","22","23"],
-      enviado:      ["6","6.2","7","8","9","10","11","12","13","14","15","16","17","18","18.1","19","20","21","22","23"],
-      almacen_dest: ["18","18.1","19","20","21","22","23"],
+      recibido:     ["3","4","5","6","6.2","7","8","9","10","11","12","13","14","15","16","17","18","18.1","18.2","18.3","19","20","21","22","23","25","2.3"],
+      confirmado:   ["4","5","6","6.2","7","8","9","10","11","12","13","14","15","16","17","18","18.1","18.2","18.3","19","20","21","22","23"],
+      consolidado: ["5","6","6.2","7","8","9","10","11","12","13","14","15","16","17","18","18.1","18.2","18.3","19","20","21","22","23"],
+      enviado:      ["6","6.2","7","8","9","10","11","12","13","14","15","16","17","18","18.1","18.2","18.3","19","20","21","22","23"],
+      almacen_dest: ["18","18.1","18.2","18.3","19","20","21","22","23"],
       entregado:    ["22","23"],
       cobrado:      [],
     };
@@ -7455,7 +7464,7 @@ export default function ENEXSystem(){
     // ─────────────────────────────────────────────────────────────────────
     // Lista alineada con WR_STATUSES actual: sin "9.1", "10.1", "10.2",
     // "12C", "12P" (códigos retirados del modelo).
-    const STATES_REQUIRE_CONFIRM=["4","5","6","6.2","7","8","9","10","11","12","13","14","15","16","17","18","18.1","19","20","21","22","23"];
+    const STATES_REQUIRE_CONFIRM=["4","5","6","6.2","7","8","9","10","11","12","13","14","15","16","17","18","18.1","18.2","18.3","19","20","21","22","23"];
 
     // Helper: construye un hito "alcanzado por estado actual o evento
     // posterior". La fecha solo se usa cuando proviene del evento literal
@@ -7543,7 +7552,7 @@ export default function ENEXSystem(){
     //      Fuente externa autoritativa: fecha de creación de la guía
     //      consolidada (cuando el WR está incluido en una y no hay
     //      evento "4" registrado).
-    const POST_CONSOLIDADO=["5","6","6.2","7","8","9","10","11","12","13","14","15","16","17","18","18.1","19","20","21","22","23"];
+    const POST_CONSOLIDADO=["5","6","6.2","7","8","9","10","11","12","13","14","15","16","17","18","18.1","18.2","18.3","19","20","21","22","23"];
     const hCons=buildHito("4",POST_CONSOLIDADO,guiaConsol?.fecha||null,guiaConsol?`(según fecha de guía ${guiaConsol.id})`:"");
     lineal.push({
       key:"consolidado", label:"Consolidado", ic:"🗂️", color:"var(--cyan)",
@@ -7557,7 +7566,7 @@ export default function ENEXSystem(){
     // 3.b) Recibido en Almacén (17) — posteriores: 18, 18.1, 19, 20, 21, 22, 23.
     //      Sin fuente externa autoritativa: si no hay evento "17", la
     //      fecha queda no registrada (no inferimos del evento posterior).
-    const POST_ALMACEN=["18","18.1","19","20","21","22","23"];
+    const POST_ALMACEN=["18","18.1","18.2","18.3","19","20","21","22","23"];
     const hRec=buildHito("17",POST_ALMACEN);
     lineal.push({
       key:"recibido", label:"Recibido en Almacén", ic:"📥", color:"var(--purple)",
@@ -7955,7 +7964,7 @@ export default function ENEXSystem(){
   const marcarFaltante=(w,guiaId="")=>{
     if(!w)return;
     if(!hasPerm("hacer_recepcion_dest")){window.alert("Tu rol no tiene permiso.");return;}
-    if(w.status?.code==="18"||w.status?.code==="18.1"){window.alert(`El WR ${w.id} ya está marcado como faltante.`);return;}
+    if(["18","18.1","18.2","18.3"].includes(w.status?.code)){window.alert(`El WR ${w.id} ya está marcado como faltante.`);return;}
     if(!window.confirm(`¿Marcar WR ${w.id} como FALTANTE (18)?\nEsto indica que el paquete no llegó físicamente y debe investigarse.`))return;
     const st=getStatus("18");
     const upd={...w,status:st,historial:[...(w.historial||[]),{code:"18",label:"Faltante",fecha:new Date(),user:currentUser.id,nota:`Faltante en recepción${guiaId?` — guía ${guiaId}`:""}`}]};
@@ -7988,6 +7997,37 @@ export default function ENEXSystem(){
     if(selWR&&selWR.id===w.id)setSelWR(upd);
     dbUpsertWR(upd);
     logAction("Marcó sobrante",`${w.id}${guiaId?` (guía ${guiaId})`:""}`);
+  };
+  // ── ALERTAS: resolución de faltantes (18 / 18.1) y sobrantes (19) ───────────
+  // Cada acción agrega una entrada al historial del WR con `alerta:<acción>` y, si
+  // corresponde, los montos (montoCliente = pagado al cliente, montoTransportista =
+  // recuperado del transportista). El historial ya se guarda en la BD (jsonb).
+  const ALERTA_ACC={
+    investigar:{code:"18.1",txt:"Abrió investigación"},
+    aparecio:  {code:"17",  txt:"Faltante apareció — recibido en almacén"},
+    indemnizado:{code:"18.2",txt:"Faltante cerrado — indemnizado"},
+    perdida:   {code:"18.3",txt:"Faltante cerrado — pérdida sin indemnización"},
+    recobro:   {code:null,  txt:"Recobro al transportista registrado"},
+    entregar:  {code:"20",  txt:"Sobrante → Por Entrega"},
+    devolver:  {code:"3",   txt:"Sobrante devuelto a origen (vuelve a Confirmado)"},
+    otraguia:  {code:"17",  txt:"Sobrante recibido en su guía correcta"},
+  };
+  const alertaResolver=(w,accion,datos={})=>{
+    if(!w)return false;
+    if(!hasPerm("hacer_recepcion_dest")){window.alert("Tu rol no tiene permiso para resolver faltantes y sobrantes.");return false;}
+    const a=ALERTA_ACC[accion];if(!a)return false;
+    const st=a.code?getStatus(a.code):w.status;
+    const mC=parseFloat(datos.montoCliente)||0, mT=parseFloat(datos.montoTransportista)||0;
+    const nota=[a.txt,datos.guia?`guía ${datos.guia}`:"",datos.referencia?`ref. ${datos.referencia}`:"",datos.nota||""].filter(Boolean).join(" — ");
+    const entry={code:st.code,label:st.label,fecha:new Date(),user:currentUser.id,nota,alerta:accion,
+      ...(mC?{montoCliente:mC}:{}),...(mT?{montoTransportista:mT}:{}),...(datos.referencia?{referencia:datos.referencia}:{})};
+    const upd={...w,status:st,historial:[...(w.historial||[]),entry]};
+    if(["entregar","devolver","otraguia"].includes(accion))upd.sobranteDeGuia="";
+    setWrList(p=>p.map(x=>x.id===w.id?upd:x));
+    if(selWR&&selWR.id===w.id)setSelWR(upd);
+    dbUpsertWR(upd);
+    logAction(`Alerta: ${a.txt}`,`${w.id}${mC?` · cliente $${mC}`:""}${mT?` · transportista $${mT}`:""}`);
+    return true;
   };
   // Resuelve un SOBRANTE (19). destino: "20" (Por Entrega) o "4" (vuelve a Consolidado para próxima guía).
   const resolverSobrante=(w,destino)=>{
@@ -8043,7 +8083,7 @@ export default function ENEXSystem(){
     setWrList(p=>p.map(w=>{
       if(!allWrIds.includes(w.id))return w;
       // No retroceder WRs ya recibidos/excep/entrega
-      if(["17","18","18.1","19","20","21","22","23","25"].includes(w.status?.code||""))return w;
+      if(["17","18","18.1","18.2","18.3","19","20","21","22","23","25"].includes(w.status?.code||""))return w;
       const upd={...w,status:st,historial:[...(w.historial||[]),{code:st.code,label:st.label,fecha:new Date(),user:currentUser.id,nota:`Recepción → ${st.label} (guía ${consolId})`}]};
       dbUpsertWR(upd);
       return upd;
@@ -8062,7 +8102,7 @@ export default function ENEXSystem(){
     const pendientes=wrs.filter(w=>{
       const c=w.status?.code||"";
       // WR todavía sin resolución: no está recibido (17), ni es excepción (18/18.1/19)
-      return !["17","18","18.1","19","20","21","22","23","25"].includes(c);
+      return !["17","18","18.1","18.2","18.3","19","20","21","22","23","25"].includes(c);
     });
     if(pendientes.length>0){
       window.alert(
@@ -8126,7 +8166,7 @@ export default function ENEXSystem(){
     setWrList(p=>p.map(w=>{
       if(!allWrIds.includes(w.id))return w;
       // respetar WRs ya procesados (Almacén, Faltante, Investigación, Sobrante, Por Entrega, etc.)
-      if(["17","18","18.1","19","20","21","22","23","25"].includes(w.status?.code||""))return w;
+      if(["17","18","18.1","18.2","18.3","19","20","21","22","23","25"].includes(w.status?.code||""))return w;
       cambiados++;
       const upd={...w,status:st,historial:[...(w.historial||[]),{code:"17",label:"Almacén",fecha:new Date(),user:currentUser.id,nota:`${nota} — guía ${guia.id}`}]};
       dbUpsertWR(upd);
@@ -8758,9 +8798,9 @@ export default function ENEXSystem(){
     // Stats de la guía seleccionada
     const chkCode=(w)=>w.status?.code||"";
     const nRecibidos=checklist.filter(w=>chkCode(w)==="17").length;
-    const nFaltantes=checklist.filter(w=>["18","18.1"].includes(chkCode(w))).length;
+    const nFaltantes=checklist.filter(w=>["18","18.1","18.2","18.3"].includes(chkCode(w))).length;
     const nPorEntrega=checklist.filter(w=>["20","21","22","23","25"].includes(chkCode(w))).length;
-    const nPendientes=checklist.filter(w=>{const c=chkCode(w);return c&&!["17","18","18.1","19","20","21","22","23","25"].includes(c);}).length;
+    const nPendientes=checklist.filter(w=>{const c=chkCode(w);return c&&!["17","18","18.1","18.2","18.3","19","20","21","22","23","25"].includes(c);}).length;
     // Candidatos globales (cuando NO hay guía seleccionada): WRs en tránsito destino o liberados
     const candidatos=wrList.filter(w=>{
       const c=w.status?.code||"";
@@ -8780,7 +8820,7 @@ export default function ENEXSystem(){
       const c=chkCode(w);
       if(!hasPerm("hacer_recepcion_dest"))return<span style={{fontSize:12,color:"var(--t4)"}}>—</span>;
       // Pre-destino (14/15/16/13/etc) o estados de tránsito
-      if(!["17","18","18.1","19","20","21","22","23","25"].includes(c)){
+      if(!["17","18","18.1","18.2","18.3","19","20","21","22","23","25"].includes(c)){
         if(guiaSel&&!puedeRecibir)return<span style={{fontSize:11,fontWeight:600,color:"#8A6100"}}>⏳ Esperando Liberado 3</span>;
         return(<div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
           <button className="btn-s" style={{fontSize:11,padding:"3px 7px",background:"#E8F5E9",borderColor:"#81C784",color:"#2E7D32"}}
@@ -8795,14 +8835,15 @@ export default function ENEXSystem(){
           {hasPerm("editar_recepcion_dest")&&<button className="btn-s" style={{fontSize:11,padding:"3px 7px"}} onClick={()=>revertirRecepcion(w)}>↩️ Revertir</button>}
         </div>);
       }
-      if(c==="18"){
-        return(<div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-          <span style={{fontSize:11,fontWeight:700,color:"#C62828"}}>⚠️ Faltante</span>
-          <button className="btn-s" style={{fontSize:11,padding:"3px 7px",background:"#FFF3E0",borderColor:"#FFB74D",color:"#E65100"}}
-            onClick={()=>marcarInvestigacion(w)}>🔍 Investigar</button>
+      // Faltantes: se resuelven en Alertas (investigar, apareció, indemnizado, pérdida)
+      if(["18","18.1"].includes(c)){
+        return(<div style={{display:"flex",gap:4,flexWrap:"wrap",alignItems:"center"}}>
+          <span style={{fontSize:11,fontWeight:700,color:c==="18"?"#C62828":"#E65100"}}>{c==="18"?"⚠️ Faltante":"🔍 En investigación"}</span>
+          <button className="btn-s" style={{fontSize:11,padding:"3px 7px"}} onClick={()=>{setAlTab("abiertas");setAlSearch(w.id);setTab("alerts");}}>🔔 Ver en Alertas</button>
         </div>);
       }
-      if(c==="18.1")return<span style={{fontSize:11,fontWeight:700,color:"#E65100"}}>🔍 En investigación</span>;
+      if(c==="18.2")return<span style={{fontSize:11,fontWeight:700,color:"#2E7D32"}}>💵 Indemnizado</span>;
+      if(c==="18.3")return<span style={{fontSize:11,fontWeight:700,color:"var(--t3)"}}>❌ Pérdida cerrada</span>;
       if(c==="19")return<span style={{fontSize:11,fontWeight:700,color:"#7B1FA2"}}>➕ Sobrante</span>;
       return<span style={{fontSize:11,fontWeight:700,color:"var(--t3)"}}>{c} {w.status?.label||""}</span>;
     };
@@ -8945,7 +8986,7 @@ export default function ENEXSystem(){
                       ?<tr><td colSpan={7} style={{textAlign:"center",padding:40,color:"var(--t3)"}}>No hay WR que coincidan con la búsqueda.</td></tr>
                       :checklist.map((w,i)=>{
                         const c=chkCode(w);
-                        const rowBg=c==="17"?"#F1F8E9":["18","18.1"].includes(c)?"#FFF5F5":c==="19"?"#FAF4FC":["20","21","22","23","25"].includes(c)?"#F0F7FF":"";
+                        const rowBg=c==="17"?"#F1F8E9":["18","18.1","18.2","18.3"].includes(c)?"#FFF5F5":c==="19"?"#FAF4FC":["20","21","22","23","25"].includes(c)?"#F0F7FF":"";
                         return(
                           <tr key={w.id} style={{background:rowBg}}>
                             <td style={{textAlign:"center",fontSize:12,color:"var(--t3)",fontFamily:"'DM Mono',monospace"}}>{i+1}</td>
@@ -8977,10 +9018,9 @@ export default function ENEXSystem(){
                             <td><span className="c-trk">{w.tracking||"—"}</span></td>
                             <td>{hasPerm("hacer_recepcion_dest")?(
                               <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-                                <button className="btn-s" style={{fontSize:11,padding:"3px 7px",background:"#E3F2FD",borderColor:"#64B5F6",color:"#1565C0"}}
-                                  onClick={()=>resolverSobrante(w,"20")}>🚚 A Por Entrega (20)</button>
+                                {/* Los sobrantes se resuelven en Alertas */}
                                 <button className="btn-s" style={{fontSize:11,padding:"3px 7px"}}
-                                  onClick={()=>resolverSobrante(w,"4")}>🔄 Próx. guía (4)</button>
+                                  onClick={()=>{setAlTab("abiertas");setAlSearch(w.id);setTab("alerts");}}>🔔 Resolver en Alertas</button>
                               </div>
                             ):<span style={{fontSize:12,color:"var(--t4)"}}>—</span>}</td>
                           </tr>
@@ -9210,6 +9250,181 @@ export default function ENEXSystem(){
         })()}
 
       </div>
+    );
+  };
+
+  // ── ALERTAS — faltantes y sobrantes ─────────────────────────────────────────
+  // Recepción solo DETECTA (faltante / sobrante); aquí la oficina los RESUELVE,
+  // aunque la guía ya esté archivada. Un caso = un WR con historial de 18 o 19.
+  const renderAlertas=()=>{
+    const OPEN=["18","18.1","19"];
+    const esFaltante=c=>["18","18.1","18.2","18.3"].includes(c);
+    const guiaDeWR=(id)=>consolList.find(c=>(Array.isArray(c.wrIds)&&c.wrIds.includes(id))||(c.containers||[]).some(ct=>(ct.wr||[]).some(r=>r.id===id)));
+    const cliDeWR=(w)=>clients.find(c=>c.id===w.clienteId)||clients.find(c=>c.casillero&&c.casillero===w.casillero);
+    const userName=(id)=>{const u=clients.find(c=>c.id===id);return u?fullName(u):(id||"—");};
+    const dias=(f)=>f?Math.max(0,Math.floor((Date.now()-new Date(f).getTime())/864e5)):0;
+    const money=(n)=>`$${(n||0).toFixed(2)}`;
+    const caso=(w)=>{
+      const h=w.historial||[];
+      const inicio=[...h].reverse().find(e=>["18","19"].includes(String(e.code)));
+      const tipo=inicio?(String(inicio.code)==="19"?"sobrante":"faltante"):(w.status?.code==="19"?"sobrante":"faltante");
+      const cierre=[...h].reverse().find(e=>e.alerta&&e.alerta!=="investigar"&&e.alerta!=="recobro");
+      const ultNota=[...h].reverse().find(e=>e.nota)?.nota||"";
+      const mC=h.reduce((t,e)=>t+(parseFloat(e.montoCliente)||0),0);
+      const mT=h.reduce((t,e)=>t+(parseFloat(e.montoTransportista)||0),0);
+      const g=tipo==="faltante"?guiaDeWR(w.id):(consolList.find(c=>c.id===w.sobranteDeGuia)||null);
+      const gCorrecta=tipo==="sobrante"?(consolList.find(c=>c.id!==w.sobranteDeGuia&&((c.containers||[]).some(ct=>(ct.wr||[]).some(r=>r.id===w.id))))||null):null;
+      return {w,tipo,inicio,cierre,ultNota,mC,mT,g,gCorrecta,cli:cliDeWR(w)};
+    };
+    const abiertos=wrList.filter(w=>OPEN.includes(w.status?.code||"")).map(caso);
+    const cerrados=wrList.filter(w=>!OPEN.includes(w.status?.code||"")&&(w.historial||[]).some(e=>["18","19"].includes(String(e.code)))).map(caso)
+      .sort((a,b)=>new Date(b.cierre?.fecha||0)-new Date(a.cierre?.fecha||0));
+    const q=(alSearch||"").toLowerCase().trim();
+    const lista=(alTab==="abiertas"?abiertos:cerrados)
+      .filter(k=>alFiltro==="todos"||(alFiltro==="faltantes"?k.tipo==="faltante":k.tipo==="sobrante"))
+      .filter(k=>!q||[k.w.id,k.w.consignee,k.w.casillero,k.w.tracking,k.g?.id,k.cli&&fullName(k.cli)].some(v=>String(v||"").toLowerCase().includes(q)));
+    if(alTab==="abiertas")lista.sort((a,b)=>new Date(a.inicio?.fecha||0)-new Date(b.inicio?.fecha||0)); // más antiguos primero
+    const hoy=new Date();
+    const cerradosMes=cerrados.filter(k=>{const f=k.cierre?.fecha&&new Date(k.cierre.fecha);return f&&f.getMonth()===hoy.getMonth()&&f.getFullYear()===hoy.getFullYear();}).length;
+    const delAnio=cerrados.filter(k=>{const f=k.cierre?.fecha&&new Date(k.cierre.fecha);return f&&f.getFullYear()===hoy.getFullYear();});
+    const pagadoAnio=delAnio.reduce((t,k)=>t+k.mC,0), recupAnio=delAnio.reduce((t,k)=>t+k.mT,0);
+    const puede=hasPerm("hacer_recepcion_dest");
+    const abrir=(w,accion)=>{setAlForm({montoCliente:"",montoTransportista:"",referencia:"",nota:""});setAlModal({w,accion});};
+    const btn=(label,onClick,col)=><button className="btn-s" style={{fontSize:11,padding:"3px 7px",...(col?{color:col,borderColor:col}:{})}} onClick={onClick}>{label}</button>;
+    const acciones=(k)=>{
+      if(!puede)return <span style={{fontSize:12,color:"var(--t4)"}}>—</span>;
+      const c=k.w.status?.code;
+      if(alTab==="historial")return (["18.2","18.3"].includes(c))?btn("💲 Registrar recobro",()=>abrir(k.w,"recobro")):<span style={{fontSize:12,color:"var(--t4)"}}>—</span>;
+      if(k.tipo==="faltante")return(<div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+        {c==="18"&&btn("🔍 Investigar",()=>abrir(k.w,"investigar"),"#E65100")}
+        {btn("📦 Apareció",()=>abrir(k.w,"aparecio"),"#2E7D32")}
+        {btn("💵 Indemnizado",()=>abrir(k.w,"indemnizado"),"#1565C0")}
+        {btn("❌ Pérdida",()=>abrir(k.w,"perdida"),"var(--red)")}
+      </div>);
+      return(<div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+        {btn("🚚 Entregar",()=>abrir(k.w,"entregar"),"#1565C0")}
+        {k.gCorrecta
+          ? btn(`📦 Es de ${k.gCorrecta.id}`,()=>abrir(k.w,"otraguia"),"#2E7D32")
+          : btn("↩️ Devolver a origen",()=>abrir(k.w,"devolver"))}
+      </div>);
+    };
+    const Card=({ic,v,l,d,c})=>(
+      <div className="stat" style={{cursor:"default"}}>
+        <div className="stat-bar" style={{background:c,opacity:.7}}/>
+        <div className="stat-ic">{ic}</div><div className="stat-v">{v}</div>
+        <div className="stat-l">{l}</div><div className="stat-d">{d}</div>
+      </div>
+    );
+    // ---- ventana de resolución ----
+    const modal=alModal&&(()=>{
+      const {w,accion}=alModal; const k=caso(w); const a=ALERTA_ACC[accion];
+      const pideCli=accion==="indemnizado", pideTr=["indemnizado","perdida","recobro"].includes(accion);
+      const notaObl=["investigar","perdida"].includes(accion);
+      const titulo={investigar:"🔍 Abrir investigación",aparecio:"📦 El paquete apareció",indemnizado:"💵 Cerrar como indemnizado",perdida:"❌ Cerrar como pérdida",
+        recobro:"💲 Registrar recobro al transportista",entregar:"🚚 Entregar sobrante al cliente",devolver:"↩️ Devolver sobrante a origen",otraguia:"📦 Recibir en su guía correcta"}[accion];
+      const explica={investigar:"El caso queda abierto en investigación con tu nota.",aparecio:"El WR pasa a 17 Almacén y el caso se cierra.",
+        indemnizado:"El WR pasa a 18.2 Indemnizado. Registra lo pagado al cliente y, si ya lo hay, lo recuperado del transportista.",
+        perdida:"El WR pasa a 18.3 Pérdida cerrada, sin pago al cliente.",recobro:"Suma lo recuperado del transportista a este caso cerrado.",
+        entregar:"El WR pasa a 20 Por Entrega y sigue como uno más.",devolver:"El WR vuelve a 3 Confirmado para poder meterlo en una guía nueva.",
+        otraguia:`El WR pertenece a la guía ${k.gCorrecta?.id||""}: pasa a 17 Almacén en esa guía.`}[accion];
+      const ok=()=>{
+        if(notaObl&&!alForm.nota.trim()){window.alert("Escribe una nota.");return;}
+        if(pideCli&&!(parseFloat(alForm.montoCliente)>0)){window.alert("Indica el monto pagado al cliente.");return;}
+        if(accion==="recobro"&&!(parseFloat(alForm.montoTransportista)>0)){window.alert("Indica el monto recuperado.");return;}
+        if(alertaResolver(w,accion,{...alForm,guia:accion==="otraguia"?k.gCorrecta?.id:""}))setAlModal(null);
+      };
+      return(
+        <div className="ov">
+          <div className="modal" style={{maxWidth:480}}>
+            <div className="mhd"><div className="mt">{titulo} — {w.id}</div><button className="mcl" onClick={()=>setAlModal(null)}>✕</button></div>
+            <div style={{padding:"14px 16px",display:"flex",flexDirection:"column",gap:10}}>
+              <div style={{fontSize:13,color:"var(--t2)"}}>{k.cli?fullName(k.cli):(w.consignee||"—")} · {w.casillero||""} · {w.cajas||0} caja{w.cajas===1?"":"s"} · valor declarado ${(w.valor||0).toFixed(2)}</div>
+              <div style={{fontSize:13,background:"var(--bg4)",border:"1px solid var(--b1)",borderRadius:6,padding:"8px 10px"}}>{explica}</div>
+              {pideCli&&<div className="fg"><div className="fl">Pagado al cliente (USD) *</div><input className="fi" type="number" min="0" step="0.01" value={alForm.montoCliente} onChange={e=>setAlForm(p=>({...p,montoCliente:e.target.value}))}/></div>}
+              {pideTr&&<div className="fg"><div className="fl">Recuperado del transportista (USD){accion==="recobro"?" *":""}</div><input className="fi" type="number" min="0" step="0.01" value={alForm.montoTransportista} onChange={e=>setAlForm(p=>({...p,montoTransportista:e.target.value}))}/></div>}
+              {pideTr&&<div className="fg"><div className="fl">Transportista / N° de reclamo</div><input className="fi" value={alForm.referencia} onChange={e=>setAlForm(p=>({...p,referencia:e.target.value}))}/></div>}
+              <div className="fg"><div className="fl">Nota{notaObl?" *":""}</div><textarea className="fi" rows={3} value={alForm.nota} onChange={e=>setAlForm(p=>({...p,nota:e.target.value}))} placeholder={accion==="investigar"?"Seguro, causante, cláusula $100, otro…":""}/></div>
+            </div>
+            <div className="mft">
+              <button className="btn-s" onClick={()=>setAlModal(null)}>Cancelar</button>
+              <button className="btn-p" onClick={ok}>Confirmar</button>
+            </div>
+          </div>
+        </div>
+      );
+    })();
+    return(
+    <div className="page-scroll">
+      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,flexWrap:"wrap"}}>
+        <div style={{flex:1,minWidth:260}}>
+          <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:18,fontWeight:700,color:"var(--navy)"}}>🔔 Alertas — Faltantes y Sobrantes</div>
+          <div style={{fontSize:13,color:"var(--t3)",marginTop:2}}>Se detectan en Recepción; aquí se resuelven, aunque la guía ya esté cerrada.</div>
+        </div>
+        <div className="tabs" style={{marginBottom:0}}>
+          <div className={`tab ${alTab==="abiertas"?"on":""}`} onClick={()=>setAlTab("abiertas")}>Abiertas<span className="t-cnt">{abiertos.length}</span></div>
+          <div className={`tab ${alTab==="historial"?"on":""}`} onClick={()=>setAlTab("historial")}>Historial<span className="t-cnt">{cerrados.length}</span></div>
+        </div>
+      </div>
+
+      <div className="stats stats-5" style={{padding:0,marginBottom:10}}>
+        <Card ic="⚠️" v={abiertos.filter(k=>k.w.status?.code==="18").length} l="Faltantes" d="Sin investigar" c="#CC2233"/>
+        <Card ic="🔍" v={abiertos.filter(k=>k.w.status?.code==="18.1").length} l="En investigación" d="Faltantes en curso" c="#E65100"/>
+        <Card ic="➕" v={abiertos.filter(k=>k.tipo==="sobrante").length} l="Sobrantes" d="Por decidir" c="#7B1FA2"/>
+        <Card ic="⏳" v={abiertos.length?Math.max(...abiertos.map(k=>dias(k.inicio?.fecha))):0} l="Días del más antiguo" d="Caso abierto más viejo" c="#C05800"/>
+        <Card ic="✅" v={cerradosMes} l="Cerrados este mes" d={`${hoy.getFullYear()}: pagado ${money(pagadoAnio)} · recuperado ${money(recupAnio)}`} c="#1A8A4A"/>
+      </div>
+
+      <div className="card" style={{padding:0}}>
+        <div style={{display:"flex",gap:8,alignItems:"center",padding:"10px 14px",borderBottom:"1px solid var(--b1)",flexWrap:"wrap"}}>
+          <div style={{display:"flex",gap:3,background:"var(--bg4)",borderRadius:7,padding:3,border:"1px solid var(--b1)"}}>
+            {[["todos","Todos"],["faltantes","Faltantes"],["sobrantes","Sobrantes"]].map(([v,l])=>(
+              <button key={v} onClick={()=>setAlFiltro(v)} style={{padding:"4px 10px",borderRadius:5,border:"none",cursor:"pointer",fontSize:13,fontWeight:600,background:alFiltro===v?"var(--navy)":"transparent",color:alFiltro===v?"#fff":"var(--t2)"}}>{l}</button>
+            ))}
+          </div>
+          <input className="fi" placeholder="Buscar WR, cliente, casillero, tracking o guía…" value={alSearch} onChange={e=>setAlSearch(e.target.value)} style={{fontSize:14,padding:"6px 10px",width:300,marginLeft:"auto"}}/>
+          {alSearch&&<button className="btn-s" style={{fontSize:12,padding:"4px 8px"}} onClick={()=>setAlSearch("")}>✕</button>}
+        </div>
+        {lista.length===0?(
+          <div style={{textAlign:"center",padding:40,color:"var(--t3)"}}>{alTab==="abiertas"?(q?"Ningún caso abierto coincide.":"✅ No hay faltantes ni sobrantes abiertos."):"Aún no hay casos cerrados."}</div>
+        ):(
+          <div style={{overflowX:"auto"}}>
+          <table className="ct">
+            <thead><tr>
+              <th>Tipo</th><th>N° WR</th><th>Cliente</th><th>Guía</th><th>Estado</th>
+              <th>{alTab==="abiertas"?"Abierto":"Cerrado"}</th>
+              {alTab==="historial"&&<th style={{textAlign:"right"}}>Pagado cliente</th>}
+              {alTab==="historial"&&<th style={{textAlign:"right"}}>Recuperado</th>}
+              <th style={{minWidth:200}}>Última nota</th><th style={{minWidth:220}}>Acciones</th>
+            </tr></thead>
+            <tbody>
+              {lista.map(k=>{
+                const d=dias(k.inicio?.fecha);
+                return(
+                <tr key={k.w.id}>
+                  <td style={{whiteSpace:"nowrap",fontWeight:700,color:k.tipo==="faltante"?"#C62828":"#7B1FA2"}}>{k.tipo==="faltante"?"⚠️ Faltante":"➕ Sobrante"}</td>
+                  <td><span onClick={()=>setSelWR(k.w)} title="Abrir WR" style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",cursor:"pointer",textDecoration:"underline"}}>{k.w.id}</span></td>
+                  <td><div style={{fontWeight:600}}>{k.cli?fullName(k.cli):(k.w.consignee||"—")}</div><div style={{fontSize:11,color:"var(--t3)"}}>{k.w.casillero||""}</div></td>
+                  <td style={{whiteSpace:"nowrap"}}>{k.g?<span onClick={()=>setRdArchView(k.g)} title="Abrir guía" style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",cursor:"pointer",textDecoration:"underline"}}>{k.g.id}</span>:"—"}
+                    {k.gCorrecta&&<div style={{fontSize:11,color:"#2E7D32"}}>es de {k.gCorrecta.id}</div>}</td>
+                  <td><StBadge st={k.w.status}/></td>
+                  <td style={{whiteSpace:"nowrap",fontSize:12}}>
+                    {alTab==="abiertas"
+                      ? <span style={{fontWeight:700,color:d>14?"var(--red)":d>7?"#E65100":"var(--t2)"}}>{d===0?"hoy":`hace ${d} día${d===1?"":"s"}`}</span>
+                      : <>{fmtDate(k.cierre?.fecha)}<div style={{fontSize:11,color:"var(--t3)"}}>{userName(k.cierre?.user)}</div></>}
+                  </td>
+                  {alTab==="historial"&&<td style={{textAlign:"right",fontFamily:"'DM Mono',monospace"}}>{k.mC?money(k.mC):"—"}</td>}
+                  {alTab==="historial"&&<td style={{textAlign:"right",fontFamily:"'DM Mono',monospace",color:"var(--green)"}}>{k.mT?money(k.mT):"—"}</td>}
+                  <td style={{fontSize:12,color:"var(--t2)",maxWidth:280,whiteSpace:"normal"}}>{k.ultNota||"—"}</td>
+                  <td>{acciones(k)}</td>
+                </tr>);
+              })}
+            </tbody>
+          </table>
+          </div>
+        )}
+      </div>
+      {modal}
+    </div>
     );
   };
 
@@ -9514,7 +9729,7 @@ export default function ENEXSystem(){
       {id:"entregasydespachos",ic:"📝",l:"Entregas y Despachos"},
       {id:"facturacion",ic:"🧾",l:"Facturación",onClick:()=>{setTab("contabilidad");setContabTab("facturas");},activeWhen:()=>tab==="contabilidad"&&contabTab==="facturas"},
       {id:"contabilidad",ic:"💰",l:"Contabilidad"},
-      {id:"alerts",ic:"🔔",l:"Alertas"},
+      {id:"alerts",ic:"🔔",l:"Alertas",badge:(()=>{const n=wrList.filter(w=>["18","18.1","19"].includes(w.status?.code||"")).length;return n>0?String(n):null;})(),red:true},
     ]},
     {label:"Gestión",items:[
       {id:"clients",ic:"👥",l:"Clientes & Usuarios"},
@@ -9557,6 +9772,7 @@ export default function ENEXSystem(){
       case "reempaque":    return renderReempaque();
       case "cargorelease": return renderCargoRelease();
       case "entregasydespachos": return renderDeliveryNotes();
+      case "alerts":       return renderAlertas();
       // case "entregas" — Notas de Entrega también accesible desde Impresión (etqMode="entregas")
       default:             return <div className="page-scroll"><div className="card" style={{textAlign:"center",padding:60,color:"var(--t3)"}}>{PAGE_TITLES[tab]} — Módulo próximamente</div></div>;
     }
