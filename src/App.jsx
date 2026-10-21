@@ -4261,8 +4261,7 @@ export default function ENEXSystem(){
     <div><b>Tipo de envío:</b> ${escapeHtml(c.tipoEnvio||"—")}</div>
     <div><b>Fecha creación:</b> ${fmtD(c.fecha)}</div>
     <div><b>Fecha salida:</b> ${fmtD(c.fechaSalida)}</div>
-    <div><b>Fecha llegada:</b> ${fmtD(c.fechaLlegada)}</div>
-    <div><b>Recibida en almacén:</b> ${fmtD(c.fechaRecibidaAlmacen)}</div>
+    <div><b>Fecha llegada:</b> ${fmtD(c.fechaRecibidaAlmacen)}</div>
     <div><b>N° vuelo / barco:</b> ${escapeHtml(c.numVuelo||"—")}</div>
     <div><b>Estado:</b> ${escapeHtml(c.status||"Recibida")}</div>
     <div><b>AWB:</b> ${escapeHtml(c.awb||"—")}</div>
@@ -8800,8 +8799,7 @@ export default function ENEXSystem(){
                       <div><span style={{color:"var(--t3)",fontWeight:600}}>Estado:</span> {c.archivada?<strong style={{color:"var(--green)"}}>🗄️ Cerrada</strong>:<StBadge st={getStatus(guiaCode(c))||{cls:"s3",label:c.status||"En preparación"}}/>}</div>
                       <div><span style={{color:"var(--t3)",fontWeight:600}}>Fecha creación:</span> {fmtDate(c.fecha)}</div>
                       <div><span style={{color:"var(--t3)",fontWeight:600}}>Fecha salida:</span> {c.fechaSalida?fmtDate(c.fechaSalida):"—"}</div>
-                      <div><span style={{color:"var(--t3)",fontWeight:600}}>Fecha llegada:</span> {c.fechaLlegada?fmtDate(c.fechaLlegada):"—"}</div>
-                      {c.fechaRecibidaAlmacen&&<div style={{gridColumn:"1/-1"}}><span style={{color:"var(--t3)",fontWeight:600}}>Recibida en almacén:</span> <strong style={{color:"var(--navy)"}}>{fmtDate(c.fechaRecibidaAlmacen)} {c.fechaRecibidaAlmacen?fmtTime(c.fechaRecibidaAlmacen):""}</strong></div>}
+                      <div><span style={{color:"var(--t3)",fontWeight:600}}>Fecha llegada:</span> {c.fechaRecibidaAlmacen?`${fmtDate(c.fechaRecibidaAlmacen)} ${fmtTime(c.fechaRecibidaAlmacen)}`:"—"}</div>
                       <div><span style={{color:"var(--t3)",fontWeight:600}}>N° vuelo / barco:</span> {c.numVuelo||"—"}</div>
                       <div><span style={{color:"var(--t3)",fontWeight:600}}>AWB:</span> <span style={{fontFamily:"'DM Mono',monospace"}}>{c.awb||"—"}</span></div>
                       <div><span style={{color:"var(--t3)",fontWeight:600}}>BL:</span> <span style={{fontFamily:"'DM Mono',monospace"}}>{c.bl||"—"}</span></div>
