@@ -1179,7 +1179,7 @@ const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[
           if(!g)return <span style={{color:"var(--t4)",fontSize:12}}>—</span>;
           return(
             <span onClick={onGuiaClick?()=>onGuiaClick(g):undefined} title={onGuiaClick?`Abrir guía ${g.id}`:`Guía ${g.id}`}
-              style={{fontFamily:"'DM Mono',monospace",fontWeight:700,fontSize:12,color:"var(--navy)",background:"#EEF3FF",border:"1px solid #B8C8F0",borderRadius:4,padding:"2px 6px",cursor:onGuiaClick?"pointer":"default"}}>
+              style={{display:"inline-block",fontFamily:"'DM Mono',monospace",fontWeight:700,fontSize:14,letterSpacing:.5,color:"var(--navy)",background:"#EEF3FF",border:"2px solid #B8C8F0",borderRadius:5,padding:"3px 9px",cursor:onGuiaClick?"pointer":"default"}}>
               {g.id}
             </span>
           );
