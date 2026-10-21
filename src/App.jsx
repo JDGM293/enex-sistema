@@ -4590,13 +4590,11 @@ export default function ENEXSystem(){
                   // WR egresables de ESTE cliente: solo estados 1, 2 o 3 (Recibido / Origen / Confirmado).
                   // 2.3 (Reempacado), 4+ (Consolidado en adelante) y 25 (Egresado) quedan fijos.
                   const elegiblesCli=wrTodos.filter(w=>crElegible(w));
-                  const disabled=elegiblesCli.length===0;
                   return (
-                    <button className="btn-s" disabled={disabled}
-                      style={{fontSize:13,padding:"6px 12px",background:"#FFF5EA",borderColor:"var(--orange)",color:"var(--orange)",fontWeight:700,opacity:disabled?.5:1,cursor:disabled?"not-allowed":"pointer"}}
-                      title={disabled?"Este cliente no tiene WR egresables (solo 1/2/3 — Recibido/Origen/Confirmado)":"Egreso individual de un WR de este cliente"}
+                    <button className="btn-s"
+                      style={{fontSize:13,padding:"6px 12px",background:"#FFF5EA",borderColor:"var(--orange)",color:"var(--orange)",fontWeight:700}}
                       onClick={()=>{
-                        if(elegiblesCli.length===0)return;
+                        if(elegiblesCli.length===0){window.alert(`${fullName(ecCliente)||"Este cliente"} no tiene WR para egresar.`);return;}
                         if(elegiblesCli.length===1){crOpenIndivPorWR(elegiblesCli[0]);return;}
                         // Más de uno: pedir cuál egresar
                         const opciones=elegiblesCli.map((w,i)=>`${i+1}. ${w.id} — ${w.status?.label||"?"}${w.tipoEnvio?` · ${w.tipoEnvio}`:""}`).join("\n");
