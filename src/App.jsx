@@ -3410,7 +3410,7 @@ export default function ENEXSystem(){
         <div className="mhd">
           <div className="mt">📋 Warehouse Receipt</div>
           <div style={{display:"flex",gap:6}}>
-            {hasPerm("editar_wr")&&wrEsModificable(selWR)&&<button className="btn-s" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>{
+            {hasPerm("editar_wr")&&<button className="btn-s" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>{
               setEditWR(selWR);
               // Reconstruir cajas desde dims (almacenadas en cm y kg) → convertir a pulg/lb para el form
               const _rawCajas=selWR.dims&&selWR.dims.length>0
@@ -4850,6 +4850,7 @@ export default function ENEXSystem(){
 
     const existing=editConsolId?consolList.find(c=>c.id===editConsolId):null;
     const n={
+      ...(existing||{}),
       id:existing?existing.id:buildConsolNum(offCode(oficinas.find(o=>(o.ciudad||"").toUpperCase().startsWith(OFFICE_CONFIG.origCity.toUpperCase()))||oficinas[0]),offCode(oficinas.find(o=>(o.ciudad||"").toUpperCase().startsWith(OFFICE_CONFIG.destCity.toUpperCase()))||oficinas[oficinas.length-1]||oficinas[0]),(()=>{if(consolList.length===0)return 1;const nums=consolList.map(c=>{const m=String(c.id||"").match(/(\d+)(?=[^0-9]*$)/);return m?parseInt(m[1]):0;});return Math.max(...nums)+1;})(),consolNumTipo,consolSecInicio,cf.tipoEnvio||"Marítimo"),
       fecha:existing?existing.fecha:now,destino:cf.destino,tipoEnvio:cf.tipoEnvio,
       fechaSalida:cf.fechaSalida,fechaLlegada:existing?.fechaLlegada||"",numVuelo:cf.numVuelo,awb:cf.awb,bl:cf.bl,
@@ -8752,7 +8753,7 @@ export default function ENEXSystem(){
                   {c.archivada&&hasPerm("imp_guia")&&(
                     <button className="btn-s" onClick={()=>printGuiaArchivada(c)}>🖨 Imprimir guía</button>
                   )}
-                  {!c.archivada&&hasPerm("editar_guia")&&(
+                  {hasPerm("editar_guia")&&(
                     <button className="btn-p" onClick={()=>{setRdArchView(null);setLmTab("master");setTab("loadingmaster");guiaEditar(c);}}>✏️ Editar</button>
                   )}
                 </div>
