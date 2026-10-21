@@ -304,10 +304,10 @@ input.fi:not([type="email"]):not([type="password"]):not([type="number"]){text-tr
 /* ── WR DETAIL ────────────────────────────────────────────────────────────── */
 .wr-doc{background:var(--bg3);border:1px solid var(--b1);border-radius:12px;padding:20px}
 .wr-doc-hd{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;padding-bottom:8px;border-bottom:2px solid var(--navy)}
-.wr-co{font-family:Arial,Helvetica,sans-serif;font-size:20px;font-weight:800;color:var(--navy);letter-spacing:2px}
-.wr-co-info{font-size:11px;color:var(--t2);line-height:1.6;margin-top:2px}
-.wr-num-d{font-family:'DM Mono',monospace;font-size:15px;font-weight:700;color:var(--navy);letter-spacing:1px;text-align:right}
-.wr-num-meta{font-size:11px;color:var(--t2);line-height:1.5;margin-top:2px;text-align:right}
+.wr-co{font-family:Arial,Helvetica,sans-serif;font-size:26px;font-weight:800;color:var(--navy);letter-spacing:2px}
+.wr-co-info{font-size:14px;color:var(--t2);line-height:1.6;margin-top:3px}
+.wr-num-d{font-family:'DM Mono',monospace;font-size:24px;font-weight:800;color:var(--navy);letter-spacing:1px;text-align:right}
+.wr-num-meta{font-size:14px;color:var(--t2);line-height:1.6;margin-top:3px;text-align:right}
 .w2c{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
 .wb{background:var(--bg2);border:1px solid var(--b1);border-radius:8px;padding:12px}
 .wb-t{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--navy);font-weight:700;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--b2)}
@@ -3704,7 +3704,7 @@ export default function ENEXSystem(){
               </div>
             </div>
             <div style={{textAlign:"right"}}>
-              <div style={{fontSize:10,letterSpacing:1.5,textTransform:"uppercase",color:"var(--t2)",marginBottom:1}}>Warehouse Receipt</div>
+              <div style={{fontSize:13,letterSpacing:1.5,textTransform:"uppercase",color:"var(--t2)",marginBottom:2}}>Warehouse Receipt</div>
               <div style={{display:"flex",alignItems:"flex-end",justifyContent:"flex-end",marginBottom:2}}><WRBarcode value={selWR.id} height={24} width={1.4}/></div>
               <div className="wr-num-d">{selWR.id}</div>
               <div className="wr-num-meta">
@@ -3758,7 +3758,7 @@ export default function ENEXSystem(){
             {selWR.dims&&selWR.dims.length>0&&(
               <>
                 <div style={{display:"grid",gridTemplateColumns:"30px 1.4fr 1fr 1fr 1fr 1fr 1fr 1fr 2fr 1fr",gap:6,marginBottom:4,padding:"4px 0",borderBottom:"2px solid var(--navy)"}}>
-                  {["#","Dims (in)","Peso lb","P.Vol lb","Ft³","M³","Peso kg","P.Vol kg","Tracking","Carrier"].map(h=>(
+                  {["#","Dims (in)","Lb.","Lb. Vol","Ft³","M³","Kg.","Kg. Vol","Tracking","Carrier"].map(h=>(
                     <div key={h} style={{fontSize:16,color:"var(--navy)",fontWeight:700,textTransform:"uppercase",letterSpacing:.5}}>{h}</div>
                   ))}
                 </div>
@@ -7831,31 +7831,43 @@ export default function ENEXSystem(){
       return u?fullName(u):id;
     };
     if(eventos.length===0)return <div style={{fontSize:14,color:"var(--t3)"}}>—</div>;
+    const fila=(h,actual,k)=>{
+      const st=getStatus(String(h.code))||{label:h.label||h.code,cls:"s1"};
+      return (
+        <tr key={k} style={{borderBottom:"1px solid var(--b2)",background:actual?"var(--bg4)":"transparent"}}>
+          <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",fontWeight:600,whiteSpace:"nowrap"}}>{h.fecha?fmtDate(h.fecha):"—"}</td>
+          <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",color:"var(--t2)",whiteSpace:"nowrap"}}>{h.fecha?fmtTime(h.fecha):"—"}</td>
+          <td style={{padding:"7px 8px",whiteSpace:"nowrap"}}><StBadge st={{...st,label:h.label||st.label}}/></td>
+          <td style={{padding:"7px 8px",color:"var(--t2)",whiteSpace:"nowrap"}}>{nombreUsuario(h.user)||"—"}</td>
+          <td style={{padding:"7px 8px",color:"var(--t2)"}}>{h.nota||""}</td>
+        </tr>
+      );
+    };
+    const cabecera=(
+      <thead>
+        <tr style={{borderBottom:"2px solid var(--navy)"}}>
+          {["Fecha","Hora","Estado","Usuario","Nota"].map(h=>(
+            <th key={h} style={{textAlign:"left",padding:"6px 8px",fontSize:12,fontWeight:700,color:"var(--navy)",textTransform:"uppercase",letterSpacing:.5,whiteSpace:"nowrap"}}>{h}</th>
+          ))}
+        </tr>
+      </thead>
+    );
+    const anteriores=eventos.slice(0,-3);
+    const recientes=eventos.slice(-3);
     return (
       <div style={{overflowX:"auto"}}>
+        {anteriores.length>0&&(
+          <details style={{marginBottom:6}}>
+            <summary style={{cursor:"pointer",fontSize:13,fontWeight:600,color:"var(--navy)",padding:"4px 0"}}>Ver {anteriores.length} {anteriores.length===1?"cambio anterior":"cambios anteriores"}</summary>
+            <table style={{width:"100%",borderCollapse:"collapse",fontSize:14,marginTop:4}}>
+              {cabecera}
+              <tbody>{anteriores.map((h,i)=>fila(h,false,"a"+i))}</tbody>
+            </table>
+          </details>
+        )}
         <table style={{width:"100%",borderCollapse:"collapse",fontSize:14}}>
-          <thead>
-            <tr style={{borderBottom:"2px solid var(--navy)"}}>
-              {["Fecha","Hora","Estado","Usuario","Nota"].map(h=>(
-                <th key={h} style={{textAlign:"left",padding:"6px 8px",fontSize:12,fontWeight:700,color:"var(--navy)",textTransform:"uppercase",letterSpacing:.5,whiteSpace:"nowrap"}}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {eventos.map((h,i)=>{
-              const st=getStatus(String(h.code))||{label:h.label||h.code,cls:"s1"};
-              const actual=i===eventos.length-1;
-              return (
-                <tr key={i} style={{borderBottom:"1px solid var(--b2)",background:actual?"var(--bg4)":"transparent"}}>
-                  <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",fontWeight:600,whiteSpace:"nowrap"}}>{h.fecha?fmtDate(h.fecha):"—"}</td>
-                  <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",color:"var(--t2)",whiteSpace:"nowrap"}}>{h.fecha?fmtTime(h.fecha):"—"}</td>
-                  <td style={{padding:"7px 8px",whiteSpace:"nowrap"}}><StBadge st={{...st,label:h.label||st.label}}/></td>
-                  <td style={{padding:"7px 8px",color:"var(--t2)",whiteSpace:"nowrap"}}>{nombreUsuario(h.user)||"—"}</td>
-                  <td style={{padding:"7px 8px",color:"var(--t2)"}}>{h.nota||""}</td>
-                </tr>
-              );
-            })}
-          </tbody>
+          {cabecera}
+          <tbody>{recientes.map((h,i)=>fila(h,i===recientes.length-1,"r"+i))}</tbody>
         </table>
       </div>
     );
