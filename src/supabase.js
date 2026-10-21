@@ -498,7 +498,10 @@ export const dbInsertScan = async (entry) => {
 }
 
 export const dbSetScanRegistered = async (tracking) => {
-  const { error } = await supabase.from('scan_log').update({ registered: true }).eq('tracking', tracking)
+  const trk = String(tracking || '').trim()
+  if (!trk) return
+  // ilike sin comodines = comparación exacta sin distinguir mayúsculas/minúsculas
+  const { error } = await supabase.from('scan_log').update({ registered: true }).ilike('tracking', trk.replace(/[\\%_]/g, '\\$&'))
   if (error) console.error('setScanRegistered:', error)
 }
 

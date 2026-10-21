@@ -849,6 +849,8 @@ const toIn=v=>parseFloat((v/2.54).toFixed(1));
 // Limpia el prefijo "Reempaque de: WR-X, WR-Y" de un texto (sólo va en Notas, nunca en Descripción)
 const cleanReempaqueDesc=t=>String(t||"").replace(/^Reempaque de:\s*[^|]*(?:\s*\|\s*)?/i,"").trim();
 const toUp=v=>typeof v==="string"?v.toUpperCase():v;
+// Normaliza un tracking: sin espacios a los lados y en mayúsculas (para guardar y comparar)
+const normTrk=v=>String(v||"").trim().toUpperCase();
 const CU=CLIENTS_INIT.find(c=>c.rol==="A")||CLIENTS_INIT[0]||{id:"admin",rol:"A",primerNombre:"Admin",primerApellido:"ENEX",email:"admin@enex.com"};
 
 const StBadge=({st})=>{if(!st||!st.cls)return <span className="st s1"><span className="st-dot"/>—</span>;return <span className={`st ${st.cls}`}><span className="st-dot"/>{st.label}</span>;};
@@ -2223,10 +2225,11 @@ export default function ENEXSystem(){
 
   // Scan logic: register tracking in puerta
   const doScan=()=>{
-    if(!scanV.trim())return;
-    const already=scanLog.find(s=>s.tracking===scanV.trim());
+    const trk=normTrk(scanV);
+    if(!trk)return;
+    const already=scanLog.find(s=>normTrk(s.tracking)===trk);
     if(!already){
-      const entry={id:crypto.randomUUID(),tracking:scanV.trim(),carrier:scanCarrier||"—",ts:new Date(),registered:false};
+      const entry={id:crypto.randomUUID(),tracking:trk,carrier:scanCarrier||"—",ts:new Date(),registered:false};
       setScanLog(p=>[entry,...p]);
       dbInsertScan(entry);
     }
@@ -2234,8 +2237,10 @@ export default function ENEXSystem(){
   };
   // When creating WR, check if tracking matches scan log
   const checkAndRemoveScan=(tracking)=>{
-    setScanLog(p=>p.map(s=>s.tracking===tracking?{...s,registered:true}:s));
-    dbSetScanRegistered(tracking);
+    const trk=normTrk(tracking);
+    if(!trk)return;
+    setScanLog(p=>p.map(s=>normTrk(s.tracking)===trk?{...s,registered:true}:s));
+    dbSetScanRegistered(trk);
   };
 
   // WR FORM state
@@ -2438,7 +2443,7 @@ export default function ENEXSystem(){
           l:c.lCm,a:c.aCm,h:c.hCm,pk:c.pkKg,pkLb:c.pkLb,
           volKg:c.volKg,volLb:c.volLb,ft3:c.ft3,m3:c.m3,
           carrier:wrf.cajas[i].carrier,
-          tracking:wrf.cajas[i].tracking,
+          tracking:normTrk(wrf.cajas[i].tracking),
           factura:wrf.cajas[i].numFactura,
           descripcion:cleanReempaqueDesc(wrf.cajas[i].descripcion),
         });
@@ -2475,7 +2480,7 @@ export default function ENEXSystem(){
         ...editWR,
         cajas:totalCajasCount,
         consignee:wrf.consignee,casillero:wrf.casillero,clienteId:wrf.clienteId,
-        carrier:wrf.cajas[0]?.carrier||"",tracking:wrf.cajas[0]?.tracking||"",
+        carrier:wrf.cajas[0]?.carrier||"",tracking:normTrk(wrf.cajas[0]?.tracking),
         descripcion:cleanReempaqueDesc(wrf.cajas[0]?.descripcion||""),factura:wrf.cajas[0]?.numFactura||"",
         valor:wrf.cajas.reduce((s,c)=>s+parseFloat(c.montoFactura||0),0),
         dims,
@@ -2484,7 +2489,7 @@ export default function ENEXSystem(){
         notas:wrf.notas,tipoEnvio:wrf.tipoEnvio,tipoPago:wrf.tipoPago,
         shipper:wrf.remitente,remitenteDir:wrf.remitenteDir||"",cargos:wrf.cargos,
       };
-      wrf.cajas.forEach(c=>{if(c.tracking)checkAndRemoveScan(c.tracking);});
+      wrf.cajas.forEach(c=>[c.tracking,c.tracking2,c.tracking3].forEach(t=>{if(t)checkAndRemoveScan(t);}));
       // Subir fotos nuevas al bucket (antes de marcar foto=true)
       const uploadedCount=await uploadFotosForWR(editWR.id, wrf.cajas, currentUser?.id||'');
       if(uploadedCount>0) updated.foto=true;
@@ -2508,7 +2513,7 @@ export default function ENEXSystem(){
         branch:OFFICE_CONFIG.branch,
         fecha:now,
         consignee:wrf.consignee,casillero:_casillero,clienteId:_clienteId,
-        carrier:esReempaque?"REEMPAQUE":(wrf.cajas[0]?.carrier||""),tracking:wrf.cajas[0]?.tracking||"",
+        carrier:esReempaque?"REEMPAQUE":(wrf.cajas[0]?.carrier||""),tracking:normTrk(wrf.cajas[0]?.tracking),
         descripcion:cleanReempaqueDesc(wrf.cajas[0]?.descripcion||""),
         factura:wrf.cajas[0]?.numFactura||"",
         valor:wrf.cajas.reduce((s,c)=>s+parseFloat(c.montoFactura||0),0),
@@ -2525,7 +2530,7 @@ export default function ENEXSystem(){
         cargos:wrf.cargos,
         ...(esReempaque?{reempaqueDe:[...reempaqueIds],historial:[{code:"1",label:"Recibido",fecha:now,user:currentUser.id,nota:`Reempaque de: ${reempaqueIds.join(", ")}`}]}:{}),
       };
-      wrf.cajas.forEach(c=>{if(c.tracking)checkAndRemoveScan(c.tracking);});
+      wrf.cajas.forEach(c=>[c.tracking,c.tracking2,c.tracking3].forEach(t=>{if(t)checkAndRemoveScan(t);}));
       // Si es reempaque, marcar padres como REEMPACADO (2.3) y guardar referencia hacia este WR nuevo
       let padresUpd=[];
       if(esReempaque){
@@ -3264,7 +3269,7 @@ export default function ENEXSystem(){
                           <div>
                             <div className="fl" style={{marginBottom:2,fontSize:10}}>Tracking {ti+1}</div>
                             <div style={{display:"flex",gap:4}}>
-                              <input className="fi" style={{padding:"4px 6px",fontFamily:"'DM Mono',monospace",fontSize:12,flex:1}} value={caja[tfield]||""} onChange={e=>swCaja(idx,tfield,e.target.value)} placeholder="Escanear…"/>
+                              <input className="fi" style={{padding:"4px 6px",fontFamily:"'DM Mono',monospace",fontSize:12,flex:1}} value={caja[tfield]||""} onChange={e=>swCaja(idx,tfield,e.target.value.toUpperCase())} placeholder="Escanear…"/>
                               {ti===0&&<button type="button" className="scan-btn" style={{padding:"4px 8px",fontSize:13}} title="Escanear código de barras (requiere lector USB)">📡</button>}
                             </div>
                           </div>
@@ -3277,7 +3282,7 @@ export default function ENEXSystem(){
                 {/* Proveedor + Factura + Monto */}
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:10}}>
                   <div className="fg"><div className="fl">Proveedor</div><input className="fi" value={caja.proveedor} onChange={e=>swCaja(idx,"proveedor",e.target.value.toUpperCase())} style={{textTransform:"uppercase",fontWeight:600}}/></div>
-                  <div className="fg"><div className="fl">N° Factura</div><input className="fi" value={caja.numFactura} onChange={e=>swCaja(idx,"numFactura",e.target.value)} placeholder="INV-00000"/></div>
+                  <div className="fg"><div className="fl">N° Factura</div><input className="fi" value={caja.numFactura} onChange={e=>swCaja(idx,"numFactura",e.target.value.toUpperCase())} placeholder="INV-00000"/></div>
                   <div className="fg"><div className="fl">Monto ($)</div><input className="fi" type="number" value={caja.montoFactura} onChange={e=>swCaja(idx,"montoFactura",e.target.value)}/></div>
                 </div>
 
@@ -3289,7 +3294,7 @@ export default function ENEXSystem(){
                   </div>
                   <div className="fg">
                     <div className="fl">Embalaje</div>
-                    <input className="fi" value={caja.tipoEmbalaje} onChange={e=>swCaja(idx,"tipoEmbalaje",e.target.value)} placeholder="Ej: Caja, Paleta…" style={{fontSize:13}}/>
+                    <input className="fi" value={caja.tipoEmbalaje} onChange={e=>swCaja(idx,"tipoEmbalaje",e.target.value.toUpperCase())} placeholder="Ej: Caja, Paleta…" style={{fontSize:13}}/>
                   </div>
                   <div className="fg"><div className="fl">Largo</div><input className="fi" type="number" value={caja.largo} onChange={e=>swCaja(idx,"largo",e.target.value)}/></div>
                   <div className="fg"><div className="fl">Ancho</div><input className="fi" type="number" value={caja.ancho} onChange={e=>swCaja(idx,"ancho",e.target.value)}/></div>
@@ -3303,7 +3308,7 @@ export default function ENEXSystem(){
                 {/* Descripción */}
                 <div className="fg">
                   <div className="fl">Descripción de la Mercancía</div>
-                  <textarea className="fi" value={caja.descripcion} onChange={e=>swCaja(idx,"descripcion",e.target.value)} placeholder="Descripción detallada de la mercancía: tipo de producto, materiales, uso, etc." rows={3} style={{resize:"vertical",minHeight:64,fontFamily:"inherit",fontSize:14,lineHeight:1.5}}/>
+                  <textarea className="fi" value={caja.descripcion} onChange={e=>swCaja(idx,"descripcion",e.target.value.toUpperCase())} placeholder="Descripción detallada de la mercancía: tipo de producto, materiales, uso, etc." rows={3} style={{resize:"vertical",minHeight:64,fontFamily:"inherit",fontSize:14,lineHeight:1.5}}/>
                 </div>
 
                 {/* FOTOS DEL PAQUETE (por caja) */}
