@@ -9001,12 +9001,6 @@ export default function ENEXSystem(){
           )}
         </div>
 
-        {/* PANEL DE AYUDA — qué se hace en este módulo */}
-        {vista==="pendientes"&&(
-        <div style={{background:"#EEF7F0",border:"1px solid #B8DCC0",borderRadius:8,padding:"8px 14px",marginBottom:10,fontSize:12,color:"#1A6040",lineHeight:1.5}}>
-          <strong style={{color:"#1A8A4A"}}>📍 Este módulo maneja:</strong> Recepción de guía en Almacén Destino (estados 14→17), <strong style={{color:"#C62828"}}>⚠️ Faltante (18) e Investigación (18.1)</strong> y <strong style={{color:"#7B1FA2"}}>➕ Sobrante (19)</strong>. Para Entregado y Egresado usá los módulos respectivos.
-        </div>
-        )}
 
         {vista==="pendientes"&&<>
           {/* SCAN / MANUAL */}
@@ -9611,10 +9605,6 @@ export default function ENEXSystem(){
           </div>
         </div>
 
-        {/* PANEL DE AYUDA — qué se hace en este módulo */}
-        <div style={{background:"#FFF5EA",border:"1px solid #F0B880",borderRadius:8,padding:"8px 14px",marginBottom:10,fontSize:12,color:"#8B4000",lineHeight:1.5}}>
-          <strong style={{color:"#C05800"}}>📍 Este módulo maneja:</strong> <strong>🚀 Egresado (25)</strong> — egreso de WR desde Origen antes de consolidación. También se puede egresar individualmente desde Estado de Cuenta. Para Faltante/Sobrante usá Recepción en Almacén; para Entregado, Notas de Entrega.
-        </div>
 
         {/* CANDIDATOS — multi-selección estilo Reempaque */}
         <div className="card" style={{marginBottom:14}}>
@@ -9760,10 +9750,6 @@ export default function ENEXSystem(){
           )}
         </div>
 
-        {/* PANEL DE AYUDA — qué se hace en este módulo */}
-        <div style={{background:"#E8F0FE",border:"1px solid #90B8F0",borderRadius:8,padding:"8px 14px",marginBottom:10,fontSize:12,color:"#1A6090",lineHeight:1.5}}>
-          <strong style={{color:"#1865C0"}}>📍 Cómo funciona:</strong> Ambos flujos se hacen <b>por guía</b>. <b>Entrega</b>: a un cliente directo, uno o varios de sus WR. <b>Despacho</b>: a un Agente / Oficina / Autónomo agrupando todos los WR de los clientes bajo su dominio. La nota muestra el peso facturable según el modo (aéreo: max real vs volumétreo · marítimo: ft³/m³).
-        </div>
 
         <div className="card" style={{marginBottom:10,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
           <div style={{display:"flex",gap:4,background:"var(--bg4)",borderRadius:7,padding:"3px",border:"1px solid var(--b1)"}}>
@@ -10081,9 +10067,6 @@ export default function ENEXSystem(){
                 <button className="mcl" onClick={()=>setOverrideModal(null)}>✕</button>
               </div>
               <div style={{padding:"14px 18px"}}>
-                <div style={{background:"#FFF8E1",border:"1px solid #FFC107",borderRadius:8,padding:"10px 14px",marginBottom:14,fontSize:13,color:"#7A5C00",lineHeight:1.5}}>
-                  ⚠️ <strong>Override administrativo</strong> — usalo solo para corregir errores que no se pueden arreglar desde el módulo correcto. Queda asentado en el historial del WR con tu usuario y motivo.
-                </div>
                 <div style={{marginBottom:14}}>
                   <div style={{fontSize:13,color:"var(--t3)",fontWeight:600,marginBottom:4}}>Estado actual</div>
                   <div style={{padding:"8px 12px",background:"var(--bg4)",border:"1px solid var(--b1)",borderRadius:6,display:"flex",alignItems:"center",gap:8}}>
