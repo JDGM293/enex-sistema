@@ -498,6 +498,14 @@ const ALL_PERMS=[
   "configuracion","gestionar_roles","registro_actividad","envio_masivo",
   "ver_bd_clientes","ver_bd_usuarios","paquetes_sin_reclamo",
   "ver_fotos","subir_foto","borrar_foto","todas_sucursales",
+  // Completan Ver / Crear / Editar / Borrar en todos los módulos
+  "editar_confirmacion","ver_alertas","crear_alerta","editar_alerta","borrar_alerta",
+  "editar_pago","editar_pickup","borrar_pickup","editar_foto",
+  "editar_prealerta","borrar_prealerta",
+  "ver_documentos","crear_documento","editar_documento","borrar_documento",
+  "crear_reporte","editar_reporte","borrar_reporte",
+  // Permiso especial: salta los bloqueos del proceso por estado
+  "saltar_bloqueos",
 ];
 
 const PERM_LBL={
@@ -533,7 +541,44 @@ const PERM_LBL={
   configuracion:"Configuración Sistema",gestionar_roles:"Gestionar Roles",registro_actividad:"Registro Actividad",envio_masivo:"Envío Masivo Email",
   ver_bd_clientes:"Ver BD Clientes",ver_bd_usuarios:"Ver BD Usuarios",paquetes_sin_reclamo:"Paquetes Sin Reclamo",
   ver_fotos:"Ver Fotos",subir_foto:"Subir Foto",borrar_foto:"Borrar Foto",todas_sucursales:"Todas las Sucursales",
+  editar_confirmacion:"Editar Confirmación",ver_alertas:"Ver Alertas",crear_alerta:"Crear Alerta",editar_alerta:"Editar Alerta",borrar_alerta:"Borrar Alerta",
+  editar_pago:"Editar Pago",editar_pickup:"Editar Pick-up",borrar_pickup:"Borrar Pick-up",editar_foto:"Editar Foto",
+  editar_prealerta:"Editar Pre-alerta",borrar_prealerta:"Borrar Pre-alerta",
+  ver_documentos:"Ver Documentos",crear_documento:"Crear Documento",editar_documento:"Editar Documento",borrar_documento:"Borrar Documento",
+  crear_reporte:"Crear Reporte",editar_reporte:"Editar Reporte",borrar_reporte:"Borrar Reporte",
+  saltar_bloqueos:"Saltar bloqueos de estado",
 };
+
+// Tabla de Roles & Permisos: cada módulo con sus 4 acciones
+const PERM_MODULES=[
+  {m:"Usuarios",ic:"👤",ver:"ver_usuarios",crear:"crear_usuario",editar:"editar_usuario",borrar:"borrar_usuario"},
+  {m:"Clientes",ic:"👥",ver:"ver_bd_clientes",crear:"crear_cliente",editar:"editar_cliente",borrar:"borrar_cliente"},
+  {m:"Agentes",ic:"🤝",ver:"ver_agente",crear:"crear_agente",editar:"editar_agente",borrar:"borrar_agente"},
+  {m:"Autónomos",ic:"🧑‍💻",ver:"ver_autonomo",crear:"crear_autonomo",editar:"editar_autonomo",borrar:"borrar_autonomo"},
+  {m:"Oficinas",ic:"🏢",ver:"ver_oficina",crear:"crear_oficina",editar:"editar_oficina",borrar:"borrar_oficina"},
+  {m:"Recepción en Puerta",ic:"📡",ver:"ver_rp",crear:"hacer_rp",editar:"editar_rp",borrar:"borrar_rp"},
+  {m:"WR (Warehouse Receipt)",ic:"📦",ver:"ver_wr",crear:"crear_wr",editar:"editar_wr",borrar:"borrar_wr"},
+  {m:"Booking",ic:"📑",ver:"ver_booking",crear:"crear_booking",editar:"editar_booking",borrar:"borrar_booking"},
+  {m:"Reempaque",ic:"🔁",ver:"ver_reempaque",crear:"crear_reempaque",editar:"editar_reempaque",borrar:"borrar_reempaque"},
+  {m:"Guías / Consolidación",ic:"🚢",ver:"ver_guia",crear:"crear_guia",editar:"editar_guia",borrar:"borrar_guia"},
+  {m:"Confirmación",ic:"✅",ver:"ver_confirmacion",crear:"confirmar",editar:"editar_confirmacion",borrar:"desconfirmar"},
+  {m:"Cargo Release (Egreso)",ic:"🚀",ver:"ver_egreso",crear:"hacer_egreso",editar:"editar_egreso",borrar:"borrar_egreso"},
+  {m:"Recepción en Almacén",ic:"📥",ver:"ver_recepcion_dest",crear:"hacer_recepcion_dest",editar:"editar_recepcion_dest",borrar:"borrar_recepcion_dest"},
+  {m:"Entregas",ic:"📝",ver:"ver_entrega",crear:"entregar",editar:"editar_entrega",borrar:"borrar_entrega"},
+  {m:"Alertas",ic:"🔔",ver:"ver_alertas",crear:"crear_alerta",editar:"editar_alerta",borrar:"borrar_alerta"},
+  {m:"Facturas",ic:"🧾",ver:"ver_factura",crear:"crear_factura",editar:"editar_factura",borrar:"borrar_factura"},
+  {m:"Pagos y Cobros",ic:"💰",ver:"ver_cuentas_cobrar",crear:"registrar_pago",editar:"editar_pago",borrar:"anular_pago"},
+  {m:"Tarifas",ic:"💲",ver:"ver_tarifas",crear:"crear_tarifa",editar:"editar_tarifa",borrar:"borrar_tarifa"},
+  {m:"Servicios",ic:"🛠️",ver:"ver_servicios",crear:"crear_servicio",editar:"editar_servicio",borrar:"borrar_servicio"},
+  {m:"Adicionales",ic:"➕",ver:"ver_adicionales",crear:"crear_adicional",editar:"editar_adicional",borrar:"borrar_adicional"},
+  {m:"Pick-up",ic:"🚐",ver:"ver_pickup",crear:"solicitar_pickup",editar:"editar_pickup",borrar:"borrar_pickup"},
+  {m:"Pre-alertas",ic:"📨",ver:"ver_prealerta",crear:"pre_tracking",editar:"editar_prealerta",borrar:"borrar_prealerta"},
+  {m:"Fotos",ic:"📷",ver:"ver_fotos",crear:"subir_foto",editar:"editar_foto",borrar:"borrar_foto"},
+  {m:"Documentos",ic:"📋",ver:"ver_documentos",crear:"crear_documento",editar:"editar_documento",borrar:"borrar_documento"},
+  {m:"Reportes",ic:"📈",ver:"ver_reportes",crear:"crear_reporte",editar:"editar_reporte",borrar:"borrar_reporte"},
+];
+const PERM_ACTIONS=[{k:"ver",l:"Ver"},{k:"crear",l:"Crear"},{k:"editar",l:"Editar"},{k:"borrar",l:"Borrar"}];
+const PERMS_EN_TABLA=new Set(PERM_MODULES.flatMap(m=>PERM_ACTIONS.map(a=>m[a.k])));
 
 // Permisos por grupo para mostrar en UI
 const PERM_GROUPS=[
@@ -547,7 +592,7 @@ const PERM_GROUPS=[
   {label:"Servicios & Tarifas",perms:["ver_servicios","crear_servicio","editar_servicio","borrar_servicio","sel_servicio","ver_adicionales","crear_adicional","editar_adicional","borrar_adicional","sel_adicional","calculadora","ver_tarifas","crear_tarifa","editar_tarifa","borrar_tarifa"]},
   {label:"Chat & Pick-up",perms:["chat_admin","chat_gerencia","chat_auxiliar","chat_operaciones","chat_agente","chat_cliente","ver_pickup","solicitar_pickup"]},
   {label:"Contabilidad",perms:["facturar","ver_factura","registrar_cobro","ver_cuentas_cobrar","imp_factura","crear_factura","editar_factura","anular_factura","borrar_factura","registrar_pago","cobrar","anular_pago","nota_credito"]},
-  {label:"Administración",perms:["configuracion","gestionar_roles","registro_actividad","envio_masivo","ver_bd_clientes","ver_bd_usuarios","paquetes_sin_reclamo","ver_fotos","subir_foto","borrar_foto","todas_sucursales","override_estado"]},
+  {label:"Administración",perms:["configuracion","gestionar_roles","registro_actividad","envio_masivo","ver_bd_clientes","ver_bd_usuarios","paquetes_sin_reclamo","ver_fotos","subir_foto","borrar_foto","todas_sucursales","override_estado","saltar_bloqueos"]},
 ];
 
 // ─── ROLE DEFINITIONS ────────────────────────────────────────────────────────
@@ -558,7 +603,7 @@ const ROLE_DEFS={
 
   B:{code:"B",name:"Gerente",color:"rB",icon:"🏛️",
     desc:"Gestión general. Todo menos borrar registros y registro de actividad.",
-    perms:ALL_PERMS.filter(p=>!["borrar_usuario","borrar_cliente","borrar_agente","borrar_autonomo","borrar_oficina","borrar_wr","borrar_rp","borrar_booking","borrar_reempaque","borrar_guia","borrar_egreso","borrar_recepcion_dest","borrar_entrega","registro_actividad","configuracion","gestionar_roles"].includes(p))},
+    perms:ALL_PERMS.filter(p=>!["borrar_usuario","borrar_cliente","borrar_agente","borrar_autonomo","borrar_oficina","borrar_wr","borrar_rp","borrar_booking","borrar_reempaque","borrar_guia","borrar_egreso","borrar_recepcion_dest","borrar_entrega","borrar_alerta","borrar_pickup","borrar_prealerta","borrar_documento","borrar_reporte","registro_actividad","configuracion","gestionar_roles","saltar_bloqueos"].includes(p))},
 
   C:{code:"C",name:"Auxiliar",color:"rC",icon:"🗂️",
     desc:"Apoyo operativo. Crear y editar WR, reportes, confirmaciones.",
@@ -607,7 +652,14 @@ const ROLE_DEFS={
     desc:"Cliente externo. Solo ve sus propios envíos, estado de cuenta, tracking y factura.",
     perms:["ver_wr","ver_tracking","rastrear","ver_prealerta","pre_tracking","pre_factura","ver_estado_cuenta","ver_estado_cliente","ver_factura","imp_factura","ver_pickup","solicitar_pickup","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_fotos","subir_foto","chat_agente"]},
 };
+// Los menús nuevos (Alertas, Documentos) se mantienen visibles para quien ya los usaba
+["C","D","D1","D2"].forEach(r=>ROLE_DEFS[r].perms.push("ver_alertas","ver_documentos"));
+ROLE_DEFS.G.perms.push("ver_documentos");
+// Quien ya podía crear/editar clientes sigue viendo el menú Clientes
+["E","E1","F","G1"].forEach(r=>ROLE_DEFS[r].perms.push("ver_bd_clientes"));
 const ALL_ROLES=Object.values(ROLE_DEFS);
+// Permisos por defecto de cada rol (los del código). Lo guardado en Configuración los reemplaza.
+const DEFAULT_ROLE_PERMS=Object.fromEntries(ALL_ROLES.map(r=>[r.code,[...r.perms]]));
 const RoleBadge=({code})=>{const r=ROLE_DEFS[code];if(!r)return null;return <span className={`rb ${r.color}`}>{r.icon} {r.code}·{r.name}</span>;};
 const RoleChip=({code})=>{const r=ROLE_DEFS[code];if(!r)return null;return <span className={`rb ${r.color}`}>{r.code}</span>;};
 
@@ -1013,7 +1065,7 @@ const TxtCell=({value,titulo,tdStyle={},txtClass,txtStyle={},mono=false,color="v
 
 // ─── WR ROW ────────────────────────────────────────────────────────────────────
 const CT_LABEL_WR={agente:"🤝 Agente",vendedor_agente:"💼 Vend. Agente",autonomo:"🧑‍💻 Autónomo",oficina:"🏢 Oficina",vendedor_oficina:"🛒 Vend. Oficina",matriz:"🏛️ Matriz"};
-const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[],oficinas=[],empresaNombre="Casa Matriz",sendTypes=[],onAssignTipo,onFotoClick,onTimelineClick,consolList=[],onGuiaClick})=>{
+const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[],oficinas=[],empresaNombre="Casa Matriz",sendTypes=[],onAssignTipo,onFotoClick,onTimelineClick,consolList=[],onGuiaClick,canBypass=false})=>{
   const isIn=unitL==="in";
   const isLb=unitW==="lb";
   // Popup de cajas: se renderiza en un portal con position:fixed porque el
@@ -1142,7 +1194,7 @@ const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[
            al tipoEnvio de la guía (display read-only, marcado con un asterisco discreto). */}
       <td onClick={e=>e.stopPropagation()} style={{minWidth:88,padding:"4px 6px"}}>
         {(()=>{
-          const _wrLocked=!["1","2","3"].includes(w.status?.code||"");
+          const _wrLocked=!canBypass&&!["1","2","3"].includes(w.status?.code||"");
           // Fallback: si w.tipoEnvio está vacío, intentar inferirlo de la guía consolidada
           const guiaFallback=(!w.tipoEnvio)?(consolList.find(c=>{
             if(Array.isArray(c.wrIds)&&c.wrIds.includes(w.id))return true;
@@ -1238,7 +1290,7 @@ const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[
 
 // ─── WR TABLE COMPONENT ────────────────────────────────────────────────────────
 const PAGE_SIZE=50;
-const WRTable=({rows,selId,onSelect,unitL,unitW,onSort,sortCol,sortDir,dimOpen,onDimToggle,page,onPage,clients=[],agentes=[],oficinas=[],empresaNombre="Casa Matriz",sendTypes=[],onAssignTipo,onFotoClick,onTimelineClick,consolList=[],onGuiaClick})=>{
+const WRTable=({rows,selId,onSelect,unitL,unitW,onSort,sortCol,sortDir,dimOpen,onDimToggle,page,onPage,clients=[],agentes=[],oficinas=[],empresaNombre="Casa Matriz",sendTypes=[],onAssignTipo,onFotoClick,onTimelineClick,consolList=[],onGuiaClick,canBypass=false})=>{
   const totalPages=Math.max(1,Math.ceil(rows.length/PAGE_SIZE));
   const pageRows=rows.slice((page-1)*PAGE_SIZE,page*PAGE_SIZE);
   const SortTh=({col,children,align})=>(
@@ -1282,7 +1334,7 @@ const WRTable=({rows,selId,onSelect,unitL,unitW,onSort,sortCol,sortDir,dimOpen,o
               <WRRow key={w.id} w={w} sel={selId===w.id} onClick={()=>onSelect(w)}
                 unitL={unitL} unitW={unitW} clients={clients} agentes={agentes} oficinas={oficinas} empresaNombre={empresaNombre}
                 sendTypes={sendTypes} onAssignTipo={onAssignTipo} onFotoClick={onFotoClick} onTimelineClick={onTimelineClick}
-                consolList={consolList} onGuiaClick={onGuiaClick}
+                consolList={consolList} onGuiaClick={onGuiaClick} canBypass={canBypass}
                 dimOpen={dimOpen===w.id} onDimToggle={()=>onDimToggle(w.id)}/>
             ))}
           </tbody>
@@ -1886,6 +1938,17 @@ export default function ENEXSystem(){
   const [etqSearch,setEtqSearch]=useState("");
   const [etqTipo,setEtqTipo]=useState("wr"); // "wr" | "guia"
   const [selRole,setSelRole]=useState(null);
+  // Permisos por rol editables desde Roles & Permisos (guardados en configuracion.role_perms)
+  const [rolePerms,setRolePerms]=useState(DEFAULT_ROLE_PERMS);
+  const [roleDraft,setRoleDraft]=useState({}); // cambios sin guardar {rol:[perms]}
+  const [roleSaving,setRoleSaving]=useState(false);
+  useEffect(()=>{
+    dbGetConfig('role_perms').then(v=>{
+      if(v&&typeof v==="object"&&!Array.isArray(v)){
+        setRolePerms({...DEFAULT_ROLE_PERMS,...Object.fromEntries(Object.entries(v).filter(([k,arr])=>DEFAULT_ROLE_PERMS[k]&&Array.isArray(arr)))});
+      }
+    }).catch(e=>console.error("role_perms:",e));
+  },[]);
   const [ecSearch,setEcSearch]=useState("");
   const [ecCliente,setEcCliente]=useState(null);
   const [ecResults,setEcResults]=useState([]);
@@ -2165,7 +2228,8 @@ export default function ENEXSystem(){
     dbLogActividad(currentUser.id||"U-001",currentUser.rol,action,detail);
   };
 
-  const hasPerm=p=>ROLE_DEFS[currentUser.rol]?.perms.includes(p);
+  // El Administrador (A) siempre tiene todo, para que nadie quede fuera del sistema.
+  const hasPerm=p=>currentUser.rol==="A"||(rolePerms[currentUser.rol]||[]).includes(p);
   const canEdit=hasPerm("crear_wr")||hasPerm("editar_wr");
   const canAdmin=currentUser.rol==="A";
   const canStatus=hasPerm("status_origen")||hasPerm("status_destino")||["A","B","C"].includes(currentUser.rol);
@@ -2563,12 +2627,13 @@ export default function ENEXSystem(){
   const assignTipoEnvio=(w,tipo)=>{
     if(!w)return;
     // Bloque F — WR reempacado (2.3) queda fijo: no se puede asignar tipo ni confirmar
-    if(w.status?.code==="2.3"){
+    const _saltar=hasPerm("saltar_bloqueos");
+    if(!_saltar&&w.status?.code==="2.3"){
       window.alert(`El WR ${w.id} fue reempacado en ${w.reempacadoEn||"otro WR"} y queda fijo en estado Reempacado. No se puede confirmar ni cambiar su tipo de envío.`);
       return;
     }
     // WR egresado (25) tampoco se confirma ni cambia tipo
-    if(w.status?.code==="25"){
+    if(!_saltar&&w.status?.code==="25"){
       window.alert(`El WR ${w.id} ya fue Egresado. No se puede confirmar ni cambiar su tipo de envío.`);
       return;
     }
@@ -2729,6 +2794,7 @@ export default function ENEXSystem(){
             onTimelineClick={w=>setTimelineWR(w)}
             consolList={consolList}
             onGuiaClick={g=>setRdArchView(g)}
+            canBypass={hasPerm("saltar_bloqueos")}
             page={page} onPage={setPage}/>
         </div>
 
@@ -3010,95 +3076,166 @@ export default function ENEXSystem(){
 
   // ── ROLES ──────────────────────────────────────────────────────────────────
 
-  const renderRoles=()=>(
+  const renderRoles=()=>{
+    const puedeEditar=hasPerm("gestionar_roles");
+    const r=selRole?ROLE_DEFS[selRole]:null;
+    const esAdmin=selRole==="A";
+    const permsDe=code=>code==="A"?ALL_PERMS:(roleDraft[code]??rolePerms[code]??[]);
+    const activos=new Set(selRole?permsDe(selRole):[]);
+    const editable=puedeEditar&&!!selRole&&!esAdmin;
+    const hayCambios=Object.keys(roleDraft).length>0;
+    const toggle=(perms,on)=>{
+      if(!editable)return;
+      setRoleDraft(d=>{
+        const base=new Set(d[selRole]??rolePerms[selRole]??[]);
+        perms.forEach(p=>{if(on)base.add(p);else base.delete(p);});
+        return {...d,[selRole]:ALL_PERMS.filter(p=>base.has(p))};
+      });
+    };
+    const guardar=async()=>{
+      setRoleSaving(true);
+      const nuevo={...rolePerms,...roleDraft};
+      const ok=await dbSetConfig('role_perms',nuevo);
+      setRoleSaving(false);
+      if(ok===false){window.alert("No se pudieron guardar los permisos. Inténtalo de nuevo.");return;}
+      setRolePerms(nuevo);
+      logAction("Editó permisos de roles",Object.keys(roleDraft).map(c=>ROLE_DEFS[c]?.name||c).join(", "));
+      setRoleDraft({});
+    };
+    const restaurar=()=>{
+      if(!r||!window.confirm(`¿Restaurar los permisos predeterminados del rol ${r.name}?\nLos cambios se aplican al pulsar "Guardar cambios".`))return;
+      setRoleDraft(d=>({...d,[selRole]:[...DEFAULT_ROLE_PERMS[selRole]]}));
+    };
+    const chk=(on,onChange,title)=>(
+      <input type="checkbox" checked={on} disabled={!editable} onChange={e=>onChange(e.target.checked)} title={title}
+        style={{width:18,height:18,accentColor:"#1A2B4A",cursor:editable?"pointer":"default"}}/>
+    );
+    const otrosGrupos=[
+      ...PERM_GROUPS.map(g=>({label:g.label,perms:g.perms.filter(p=>ALL_PERMS.includes(p)&&!PERMS_EN_TABLA.has(p))})),
+      {label:"Otros",perms:ALL_PERMS.filter(p=>!PERMS_EN_TABLA.has(p)&&!PERM_GROUPS.some(g=>g.perms.includes(p)))},
+    ].filter(g=>g.perms.length>0);
+    const th={padding:"8px 10px",fontSize:12,fontWeight:700,letterSpacing:.8,textTransform:"uppercase",color:"rgba(255,255,255,.9)",background:"var(--navy)",textAlign:"center",whiteSpace:"nowrap"};
+    return (
     <div className="page-scroll">
       <div className="alt info" style={{marginBottom:14}}>
         <span className="alt-ic2">🔐</span>
-        <div><div className="alt-t2">Jerarquía de Roles ENEX — 14 niveles (A→I)</div><div className="alt-b2">Haz clic en un rol para ver sus permisos detallados por categoría.</div></div>
+        <div><div className="alt-t2">Roles & Permisos</div><div className="alt-b2">Elige un rol y marca qué puede Ver, Crear, Editar y Borrar en cada módulo. Los cambios se aplican al pulsar "Guardar cambios".</div></div>
       </div>
 
-      <div style={{display:"grid",gridTemplateColumns:"280px 1fr",gap:14}}>
+      <div style={{display:"grid",gridTemplateColumns:"260px minmax(0,1fr)",gap:14}}>
         {/* LISTA DE ROLES */}
         <div style={{display:"flex",flexDirection:"column",gap:6}}>
-          {ALL_ROLES.map(r=>(
-            <div key={r.code} onClick={()=>setSelRole(r.code===selRole?null:r.code)}
-              style={{background:"var(--bg2)",border:`2px solid ${selRole===r.code?"var(--navy)":"var(--b1)"}`,borderRadius:10,padding:"12px 14px",cursor:"pointer",transition:"all .1s"}}
-              onMouseEnter={e=>{if(selRole!==r.code)e.currentTarget.style.borderColor="var(--t3)"}}
-              onMouseLeave={e=>{if(selRole!==r.code)e.currentTarget.style.borderColor="var(--b1)"}}>
+          {ALL_ROLES.map(ro=>(
+            <div key={ro.code} onClick={()=>setSelRole(ro.code===selRole?null:ro.code)}
+              style={{background:"var(--bg2)",border:`2px solid ${selRole===ro.code?"var(--navy)":"var(--b1)"}`,borderRadius:10,padding:"10px 12px",cursor:"pointer"}}>
               <div style={{display:"flex",alignItems:"center",gap:10}}>
-                <span style={{fontSize:22}}>{r.icon}</span>
-                <div style={{flex:1}}>
+                <span style={{fontSize:20}}>{ro.icon}</span>
+                <div style={{flex:1,minWidth:0}}>
                   <div style={{display:"flex",alignItems:"center",gap:6}}>
-                    <span className={`rb ${r.color}`} style={{fontSize:13}}>{r.code}</span>
-                    <span style={{fontWeight:700,fontSize:15,color:"var(--t1)"}}>{r.name}</span>
-                    {r.subs&&<span style={{fontSize:12,color:"var(--t3)"}}>+{r.subs.length} sub</span>}
+                    <span className={`rb ${ro.color}`} style={{fontSize:12}}>{ro.code}</span>
+                    <span style={{fontWeight:700,fontSize:14,color:"var(--t1)"}}>{ro.name}</span>
                   </div>
-                  <div style={{fontSize:13,color:"var(--t3)",marginTop:2}}>{r.perms?.length||0} permisos</div>
+                  <div style={{fontSize:12,color:"var(--t3)",marginTop:2}}>
+                    {permsDe(ro.code).length} / {ALL_PERMS.length} permisos
+                    {roleDraft[ro.code]&&<span style={{color:"var(--orange)",fontWeight:700}}> · sin guardar</span>}
+                  </div>
                 </div>
-                <span style={{fontSize:14,color:"var(--t3)"}}>{selRole===r.code?"▲":"▼"}</span>
               </div>
-              {selRole===r.code&&<div style={{fontSize:13,color:"var(--t2)",marginTop:8,paddingTop:8,borderTop:"1px solid var(--b2)",lineHeight:1.6}}>{r.desc}</div>}
-              {r.subs&&selRole===r.code&&(
-                <div style={{display:"flex",gap:4,marginTop:6,flexWrap:"wrap"}}>
-                  {r.subs.map(s=><div key={s} style={{display:"flex",alignItems:"center",gap:4,background:"var(--bg4)",borderRadius:5,padding:"3px 8px",fontSize:13}}><RoleChip code={s}/><span style={{color:"var(--t2)"}}>{ROLE_DEFS[s]?.name}</span></div>)}
-                </div>
-              )}
             </div>
           ))}
         </div>
 
-        {/* DETALLE DE PERMISOS */}
-        {selRole?(
-          <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:12,overflow:"hidden"}}>
-            <div style={{padding:"14px 16px",background:"var(--navy)",display:"flex",alignItems:"center",gap:12}}>
-              <span style={{fontSize:26}}>{ROLE_DEFS[selRole]?.icon}</span>
-              <div>
-                <div style={{color:"#fff",fontFamily:"Arial,Helvetica,sans-serif",fontSize:20,fontWeight:700}}>{ROLE_DEFS[selRole]?.code} — {ROLE_DEFS[selRole]?.name}</div>
-                <div style={{color:"rgba(255,255,255,.6)",fontSize:14,marginTop:2}}>{ROLE_DEFS[selRole]?.desc}</div>
+        {/* DETALLE */}
+        {r?(
+          <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:12,overflow:"hidden",minWidth:0}}>
+            <div style={{padding:"12px 16px",background:"var(--navy)",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+              <span style={{fontSize:24}}>{r.icon}</span>
+              <div style={{minWidth:0}}>
+                <div style={{color:"#fff",fontSize:18,fontWeight:700}}>{r.code} — {r.name}</div>
+                <div style={{color:"rgba(255,255,255,.6)",fontSize:13,marginTop:2}}>{r.desc}</div>
               </div>
-              <div style={{marginLeft:"auto",background:"rgba(229,174,58,.2)",border:"1px solid rgba(229,174,58,.4)",borderRadius:6,padding:"4px 12px",color:"#E5AE3A",fontFamily:"Arial,Helvetica,sans-serif",fontSize:16,fontWeight:700}}>
-                {ROLE_DEFS[selRole]?.perms.length} / {ALL_PERMS.length} permisos
+              <div style={{marginLeft:"auto",display:"flex",gap:6,flexWrap:"wrap"}}>
+                {editable&&<button className="btn-s" style={{fontSize:12,padding:"5px 10px",background:"#fff"}} onClick={restaurar}>↺ Predeterminados</button>}
+                {hayCambios&&<button className="btn-s" style={{fontSize:12,padding:"5px 10px",background:"#fff"}} onClick={()=>setRoleDraft({})}>Descartar</button>}
+                {puedeEditar&&<button className="btn-p" style={{fontSize:12,padding:"5px 12px"}} disabled={!hayCambios||roleSaving} onClick={guardar}>{roleSaving?"Guardando…":"💾 Guardar cambios"}</button>}
               </div>
             </div>
-            <div style={{padding:"14px 16px",maxHeight:"65vh",overflowY:"auto"}}>
-              {PERM_GROUPS.map(g=>{
-                const gPerms=g.perms.filter(p=>ALL_PERMS.includes(p));
-                const hasAny=gPerms.some(p=>ROLE_DEFS[selRole]?.perms?.includes(p));
-                return (
-                  <div key={g.label} style={{marginBottom:16}}>
-                    <div style={{fontSize:12,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",color:hasAny?"var(--navy)":"var(--t4)",marginBottom:8,paddingBottom:4,borderBottom:`2px solid ${hasAny?"var(--navy)":"var(--b2)"}`}}>
-                      {g.label}
-                    </div>
-                    <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
-                      {gPerms.map(p=>{
-                        const has=ROLE_DEFS[selRole]?.perms?.includes(p);
-                        return (
-                          <span key={p} style={{
-                            display:"inline-flex",alignItems:"center",gap:4,
-                            padding:"3px 9px",borderRadius:5,fontSize:13,fontWeight:600,
-                            background:has?"#E8F8EE":"var(--bg4)",
-                            color:has?"var(--green)":"var(--t3)",
-                            border:`1px solid ${has?"#80D0A0":"var(--b2)"}`,
-                          }}>
-                            {has?"✓":"✗"} {PERM_LBL[p]||p}
-                          </span>
-                        );
+            {esAdmin&&<div style={{padding:"8px 16px",background:"#FFF8E6",color:"#7A5A00",fontSize:13,borderBottom:"1px solid var(--b1)"}}>👑 El Administrador siempre tiene todos los permisos, para que nadie quede fuera del sistema.</div>}
+            {!puedeEditar&&<div style={{padding:"8px 16px",background:"var(--bg4)",color:"var(--t2)",fontSize:13,borderBottom:"1px solid var(--b1)"}}>Solo lectura: tu rol no tiene el permiso "Gestionar Roles".</div>}
+
+            <div style={{padding:"14px 16px",maxHeight:"68vh",overflowY:"auto"}}>
+              {/* TABLA MÓDULO × ACCIÓN */}
+              <div style={{overflowX:"auto",border:"1px solid var(--b1)",borderRadius:8}}>
+                <table style={{width:"100%",borderCollapse:"collapse",fontSize:14}}>
+                  <thead>
+                    <tr>
+                      <th style={{...th,textAlign:"left"}}>Módulo</th>
+                      {PERM_ACTIONS.map(a=>{
+                        const col=PERM_MODULES.map(m=>m[a.k]);
+                        const todos=col.every(p=>activos.has(p));
+                        return <th key={a.k} style={th}>
+                          <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
+                            {a.l}
+                            {chk(todos,on=>toggle(col,on),`${a.l} en todos los módulos`)}
+                          </div>
+                        </th>;
                       })}
-                    </div>
+                      <th style={th}>Todo</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {PERM_MODULES.map((m,i)=>{
+                      const fila=PERM_ACTIONS.map(a=>m[a.k]);
+                      return (
+                        <tr key={m.m} style={{background:i%2?"var(--bg3)":"var(--bg2)",borderTop:"1px solid var(--b2)"}}>
+                          <td style={{padding:"7px 10px",fontWeight:600,color:"var(--t1)",whiteSpace:"nowrap"}}><span style={{marginRight:6}}>{m.ic}</span>{m.m}</td>
+                          {PERM_ACTIONS.map(a=>(
+                            <td key={a.k} style={{textAlign:"center",padding:"6px"}}>
+                              {chk(activos.has(m[a.k]),on=>toggle([m[a.k]],on),PERM_LBL[m[a.k]]||m[a.k])}
+                            </td>
+                          ))}
+                          <td style={{textAlign:"center",padding:"6px",borderLeft:"1px solid var(--b2)"}}>
+                            {chk(fila.every(p=>activos.has(p)),on=>toggle(fila,on),`Todo en ${m.m}`)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* OTROS PERMISOS */}
+              <div style={{fontSize:13,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:"var(--navy)",margin:"18px 0 8px"}}>Otros permisos</div>
+              {otrosGrupos.map(g=>(
+                <div key={g.label} style={{marginBottom:12}}>
+                  <div style={{fontSize:12,fontWeight:700,color:"var(--t3)",textTransform:"uppercase",letterSpacing:.8,marginBottom:6}}>{g.label}</div>
+                  <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                    {g.perms.map(p=>{
+                      const on=activos.has(p);
+                      return (
+                        <label key={p} style={{display:"inline-flex",alignItems:"center",gap:6,padding:"4px 10px",borderRadius:6,fontSize:13,fontWeight:600,cursor:editable?"pointer":"default",
+                          background:on?"#E8F8EE":"var(--bg4)",color:on?"var(--green)":"var(--t3)",border:`1px solid ${on?"#80D0A0":"var(--b2)"}`}}>
+                          {chk(on,v=>toggle([p],v))}
+                          {PERM_LBL[p]||p}
+                          {p==="saltar_bloqueos"&&<span title="Permite cambiar el tipo de envío después de Consolidado, reempacar después de Confirmado y facturar WR reempacados o egresados." style={{cursor:"help"}}>ⓘ</span>}
+                        </label>
+                      );
+                    })}
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
           </div>
         ):(
           <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:8,color:"var(--t3)",padding:60}}>
             <span style={{fontSize:42}}>🔐</span>
-            <div style={{fontSize:16,fontWeight:600}}>Selecciona un rol para ver sus permisos</div>
+            <div style={{fontSize:16,fontWeight:600}}>Selecciona un rol para ver y editar sus permisos</div>
           </div>
         )}
       </div>
     </div>
-  );
+    );
+  };
 
   // ── CLIENT FORM MODAL ──────────────────────────────────────────────────────
   // ── NEW WR MODAL ────────────────────────────────────────────────────────────
@@ -7416,15 +7553,16 @@ export default function ENEXSystem(){
   // Bloque F — Solo se puede reempacar WR cuyo status sea ≤ Confirmado (1, 2 o 3).
   // Cualquier estado superior (4+) o el propio 2.3 (ya reempacado) queda bloqueado.
   const REEMPAQUE_ALLOWED_CODES=["1","2","3"];
-  const puedeReempacarse=(w)=>REEMPAQUE_ALLOWED_CODES.includes(w?.status?.code||"1");
+  const puedeReempacarse=(w)=>hasPerm("saltar_bloqueos")||REEMPAQUE_ALLOWED_CODES.includes(w?.status?.code||"1");
   // Reglas de bloqueo del WR — Reempacado (2.3), Egresado (25) y todo lo que esté
   // en Consolidado (4) o posterior queda FIJO: no se edita, no se confirma tipo,
   // no se reempaqueta y no se egresa. Solo es modificable cuando el código es 1, 2 o 3.
-  const wrEsModificable=(w)=>["1","2","3"].includes(w?.status?.code||"");
+  // Con el permiso "saltar_bloqueos" estas reglas no aplican.
+  const wrEsModificable=(w)=>hasPerm("saltar_bloqueos")||["1","2","3"].includes(w?.status?.code||"");
   // Un WR no puede facturarse si está Reempacado (2.3 — es fantasma, la mercancía
   // está en el WR hijo) ni si ya fue Egresado (25 — debió facturarse antes del despacho).
   // El resto de los estados sí pueden facturarse (PREPAID en origen, COD tras recepción).
-  const wrPuedeFacturarse=(w)=>!["2.3","25"].includes(w?.status?.code||"");
+  const wrPuedeFacturarse=(w)=>hasPerm("saltar_bloqueos")||!["2.3","25"].includes(w?.status?.code||"");
   // Un WR puede consolidarse SOLO si está en estado 3 Confirmado. Reempacado (2.3) y
   // Egresado (25) salieron del flujo; estados pre-Confirmado no están listos.
   const wrPuedeConsolidarse=(w)=>w?.status?.code==="3";
@@ -9757,10 +9895,30 @@ export default function ENEXSystem(){
       {id:"actividad",ic:"📋",l:"Actividad",onClick:()=>goSettingsTab("actividad"),activeWhen:()=>tab==="settings"&&cfgTab==="actividad"},
     ]},
   ];
+  // Cada menú se muestra solo si el rol tiene al menos uno de estos permisos
+  // (se asignan en Roles & Permisos). Los que no aparecen aquí se ven siempre.
+  const NAV_PERMS={
+    dashboard:["ver_wr"],estadocuenta:["ver_estado_cuenta","ver_estado_cliente","ver_estado_agente","ver_estado_oficina"],
+    scan:["ver_rp"],loadingmaster:["ver_guia","ver_recepcion_dest"],alerts:["ver_alertas"],
+    reempaque:["ver_reempaque"],cargorelease:["ver_egreso"],
+    entregasydespachos:["ver_entrega"],facturacion:["ver_factura"],contabilidad:["ver_cuentas_cobrar","ver_factura"],
+    clients:["ver_bd_clientes","ver_usuarios"],agentes:["ver_agente"],oficinas:["ver_oficina"],
+    etiquetas:ALL_PERMS.filter(p=>p.startsWith("imp_")),tracking:["ver_tracking"],pickup:["ver_pickup"],
+    calculadora:["calculadora"],chat:ALL_PERMS.filter(p=>p.startsWith("chat_")),docs:["ver_documentos"],reports:["ver_reportes"],
+    roles:["gestionar_roles"],actividad:["registro_actividad"],
+  };
+  const navVisible=n=>!NAV_PERMS[n.id]||NAV_PERMS[n.id].some(p=>hasPerm(p));
 
   const PAGE_TITLES={dashboard:"Dashboard General",loadingmaster:"Loading Master",scan:"Recepción en Puerta",etiquetas:"Imprimir Etiquetas",clients:"Clientes & Usuarios",estadocuenta:"Estado de Cuenta",roles:"Roles & Permisos",consolidation:"Consolidación",tracking:"Tracking",pickup:"Pick-up",contabilidad:"Contabilidad",calculadora:"Calculadora de Envío",chat:"Chat Interno",docs:"Documentos",reports:"Reportes",alerts:"Alertas",settings:"Configuración",reempaque:"Reempaque",recepciondest:"Recepción en Almacén",cargorelease:"Cargo Release (Egreso)",entregas:"Notas de Entrega",entregasydespachos:"Entregas y Despachos",facturacion:"Facturación"};
 
   const renderPage=()=>{
+    if(!navVisible({id:tab}))return (
+      <div style={{padding:60,textAlign:"center",color:"var(--t3)"}}>
+        <div style={{fontSize:42}}>🔒</div>
+        <div style={{fontSize:16,fontWeight:600,marginTop:8}}>Tu rol no tiene permiso para ver esta sección.</div>
+        <div style={{fontSize:13,marginTop:4}}>Un administrador puede activarlo en Roles & Permisos.</div>
+      </div>
+    );
     switch(tab){
       case "dashboard":    try{return <div className="cnt">{renderDash()}</div>;}catch(e){return <div style={{padding:20,color:"red"}}><b>Dashboard error:</b><pre>{String(e)}</pre></div>;}
       case "scan":         return renderScan();
@@ -9793,7 +9951,7 @@ export default function ENEXSystem(){
           <div><div className="sb-name">E<span>N</span>E<span>X</span></div><div className="sb-sub">Int&apos;l Courier</div></div>
         </div>
         <nav className="sb-nav">
-          {navGroups.map(g=>(
+          {navGroups.map(g=>({...g,items:g.items.filter(navVisible)})).filter(g=>g.items.length>0).map(g=>(
             <div key={g.label}>
               <div className="sb-lbl">{g.label}</div>
               {g.items.map(n=>{

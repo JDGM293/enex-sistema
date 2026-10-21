@@ -476,6 +476,7 @@ export const dbSetConfig = async (clave, valor) => {
   await supabase.from('configuracion').delete().eq('clave', clave)
   const { error } = await supabase.from('configuracion').insert({ clave, valor })
   if (error) console.error('setConfig:', clave, error)
+  return !error
 }
 
 // ── SCAN LOG (Recepción en Puerta) ────────────────────────────
