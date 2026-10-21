@@ -2809,7 +2809,6 @@ export default function ENEXSystem(){
             onTimelineClick={w=>setTimelineWR(w)}
             consolList={consolList}
             onGuiaClick={g=>setRdArchView(g)}
-            canBypass={hasPerm("saltar_bloqueos")}
             page={page} onPage={setPage}/>
         </div>
 
