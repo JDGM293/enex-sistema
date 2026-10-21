@@ -679,8 +679,8 @@ const OFFICE_CONFIG = {
 // offCode: convierte un registro de oficina a código → "01MIA", "01VLN", etc.
 const offCode=(o)=>o?`${String(o.codigo).padStart(2,"0")}${(o.ciudad||"").slice(0,3).toUpperCase()}`:"00???";
 // Prefijo de casillero — cambiar aquí para cada empresa
-const CASILLERO_PREFIX="C-";
-const CASILLERO_DIGITS=3; // C-001, C-002 … (ajustar si se quiere más dígitos)
+const CASILLERO_PREFIX=""; // solo número: 001, 002 …
+const CASILLERO_DIGITS=3;
 
 // Parsea un nombre completo en sus partes (hasta 4 bloques)
 const parseNombreCompleto=(nombre="")=>{
@@ -907,6 +907,31 @@ const cleanReempaqueDesc=t=>String(t||"").replace(/^Reempaque de:\s*[^|]*(?:\s*\
 const toUp=v=>typeof v==="string"?v.toUpperCase():v;
 // Normaliza un tracking: sin espacios a los lados y en mayúsculas (para guardar y comparar)
 const normTrk=v=>String(v||"").trim().toUpperCase();
+// Todos los trackings de un WR (principal + los de cada caja), para búsquedas
+const trkAll=w=>[w?.tracking,...(Array.isArray(w?.dims)?w.dims.map(d=>d?.tracking):[])].filter(Boolean).join(" ");
+// Busca por coincidencia exacta y, si no hay, por los últimos dígitos o parte del texto.
+// Devuelve: {item} si hay uno solo, {varios:[...]} si hay varios, {} si ninguno.
+const buscarParcial=(v,items,campos)=>{
+  const q=normTrk(v); if(!q)return {};
+  const vals=it=>campos(it).flatMap(x=>String(x||"").toUpperCase().split(/\s+/)).filter(Boolean);
+  const exactos=items.filter(it=>vals(it).some(x=>x===q));
+  if(exactos.length===1)return {item:exactos[0]};
+  if(exactos.length>1)return {varios:exactos};
+  const finales=items.filter(it=>vals(it).some(x=>x.endsWith(q)));
+  if(finales.length===1)return {item:finales[0]};
+  if(finales.length>1)return {varios:finales};
+  const parciales=items.filter(it=>vals(it).some(x=>x.includes(q)));
+  if(parciales.length===1)return {item:parciales[0]};
+  if(parciales.length>1)return {varios:parciales};
+  return {};
+};
+// Si hay varias coincidencias, pide elegir una
+const elegirDeVarios=(varios,etiqueta)=>{
+  const lista=varios.slice(0,15).map((it,i)=>`${i+1}. ${etiqueta(it)}`).join("\n");
+  const sel=window.prompt(`Hay ${varios.length} coincidencias. Escribe el número:\n\n${lista}${varios.length>15?"\n…":""}`,"1");
+  const i=parseInt(sel,10)-1;
+  return (!isNaN(i)&&i>=0&&i<Math.min(varios.length,15))?varios[i]:null;
+};
 const CU=CLIENTS_INIT.find(c=>c.rol==="A")||CLIENTS_INIT[0]||{id:"admin",rol:"A",primerNombre:"Admin",primerApellido:"ENEX",email:"admin@enex.com"};
 
 const StBadge=({st})=>{if(!st||!st.cls)return <span className="st s1"><span className="st-dot"/>—</span>;return <span className={`st ${st.cls}`}><span className="st-dot"/>{st.label}</span>;};
@@ -2263,12 +2288,12 @@ export default function ENEXSystem(){
       case "N° WR":        match=w.id.toLowerCase().includes(q);break;
       case "Consignatario":match=(w.consignee||"").toLowerCase().includes(q);break;
       case "Casillero":    match=(w.casillero||"").toLowerCase().includes(q);break;
-      case "Tracking":     match=(w.tracking||"").toLowerCase().includes(q);break;
+      case "Tracking":     match=trkAll(w).toLowerCase().includes(q);break;
       case "Factura":      match=(w.factura||"").toLowerCase().includes(q);break;
       case "Carrier":      match=(w.carrier||"").toLowerCase().includes(q);break;
       case "Descripción":  match=(w.descripcion||"").toLowerCase().includes(q);break;
       case "Estado":       match=(w.status.label||"").toLowerCase().includes(q);break;
-      default:             match=w.id.toLowerCase().includes(q)||(w.consignee||"").toLowerCase().includes(q);
+      default:             match=[w.id,w.consignee,w.casillero,trkAll(w)].some(v=>String(v||"").toLowerCase().includes(q));
     }
     return ms&&match;
   }).sort((a,b)=>{
@@ -2480,8 +2505,8 @@ export default function ENEXSystem(){
   // Genera el próximo número de casillero basado en los existentes
   const nextCasillero=()=>{
     const nums=clients
-      .filter(c=>c.casillero&&c.casillero.startsWith(CASILLERO_PREFIX))
-      .map(c=>parseInt(c.casillero.slice(CASILLERO_PREFIX.length))||0);
+      .filter(c=>c.casillero&&/\d/.test(c.casillero))
+      .map(c=>parseInt(String(c.casillero).replace(/\D/g,""),10)||0);
     const max=nums.length>0?Math.max(...nums):0;
     return`${CASILLERO_PREFIX}${String(max+1).padStart(CASILLERO_DIGITS,"0")}`;
   };
@@ -4916,7 +4941,10 @@ export default function ENEXSystem(){
   const doContScan=(ci)=>{
     const val=contScanVal[ci]||"";
     if(!val.trim()){setContScanErr(p=>({...p,[ci]:"Escanea un WR"}));return;}
-    const err=addWRToContainer(ci,val.trim());
+    const r=buscarParcial(val,wrList,w=>[w.id,trkAll(w)]);
+    const wr=r.item||(r.varios?elegirDeVarios(r.varios,w=>`${w.id} — ${w.consignee||""} (${w.status?.label||""})`):null);
+    if(!wr){setContScanErr(p=>({...p,[ci]:r.varios?"Selección cancelada":`No se encontró WR con "${val.trim()}"`}));return;}
+    const err=addWRToContainer(ci,wr.id);
     if(err)setContScanErr(p=>({...p,[ci]:err}));
     else{setContScanVal(p=>({...p,[ci]:""}));setContScanErr(p=>({...p,[ci]:""}));}
   };
@@ -6234,7 +6262,7 @@ export default function ENEXSystem(){
   const renderTracking=()=>{
     const trkResults=trkSearch.length>1?wrList.filter(w=>
       w.id.toLowerCase().includes(trkSearch.toLowerCase())||
-      (w.tracking||"").toLowerCase().includes(trkSearch.toLowerCase())||
+      trkAll(w).toLowerCase().includes(trkSearch.toLowerCase())||
       (w.consignee||"").toLowerCase().includes(trkSearch.toLowerCase())||
       (w.casillero||"").toLowerCase().includes(trkSearch.toLowerCase())
     ).slice(0,30):[];
@@ -7929,7 +7957,7 @@ export default function ENEXSystem(){
     const candidatos=wrList.filter(w=>{
       if(!puedeReempacarse(w))return false;
       if(!q)return true;
-      return [w.id,w.consignee,w.casillero,w.tracking,w.descripcion].some(v=>String(v||"").toLowerCase().includes(q));
+      return [w.id,w.consignee,w.casillero,trkAll(w),w.descripcion].some(v=>String(v||"").toLowerCase().includes(q));
     });
     // Histórico filtrado por cliente y rango de fechas (oculto por defecto)
     const qCli=(rpqHistCliente||"").toLowerCase().trim();
@@ -8065,7 +8093,8 @@ export default function ENEXSystem(){
     if(!v)return;
     // 1) Buscar guía consolidada por ID (sólo si NO hay guía seleccionada para checklist)
     if(!rdSelGuia){
-      const guia=consolList.find(c=>String(c.id).toUpperCase()===v);
+      const rg=buscarParcial(v,consolList,c=>[c.id]);
+      const guia=rg.item||null;
       if(guia){
         if(guia.archivada){window.alert(`La guía ${guia.id} ya fue recibida y archivada.`);setRdScan("");return;}
         recibirGuiaCompleta(guia,`Recepción por escaneo de guía (${v})`);
@@ -8074,8 +8103,9 @@ export default function ENEXSystem(){
       }
     }
     // 2) Buscar WR por N° o tracking
-    const match=wrList.find(w=>String(w.id).toUpperCase()===v||String(w.tracking||"").toUpperCase()===v);
-    if(!match){window.alert(`No se encontró WR ni guía con "${v}".`);return;}
+    const rw=buscarParcial(v,wrList,w=>[w.id,trkAll(w)]);
+    const match=rw.item||(rw.varios?elegirDeVarios(rw.varios,w=>`${w.id} — ${w.consignee||""} (${w.status?.label||""})`):null);
+    if(!match){if(!rw.varios)window.alert(`No se encontró WR ni guía con "${v}".`);return;}
     // 2.a) Ya está en Almacén — avisar y no hacer nada
     if(match.status?.code==="17"){window.alert(`El WR ${match.id} ya está en Almacén.`);setRdScan("");return;}
     // 2.b) Checklist activo — verificar si el WR pertenece a la guía seleccionada
@@ -8930,7 +8960,7 @@ export default function ENEXSystem(){
     // WRs de la guía seleccionada
     const guiaWrIds=guiaSel?(guiaSel.containers||[]).flatMap(ct=>(ct.wr||[]).map(w=>w.id)):[];
     // Checklist completo de la guía (WRs en su estado actual, sean pre-destino, 17, 18, etc.)
-    const checklist=guiaSel?wrList.filter(w=>guiaWrIds.includes(w.id)&&(!q||[w.id,w.consignee,w.casillero,w.tracking].some(v=>String(v||"").toLowerCase().includes(q)))):[];
+    const checklist=guiaSel?wrList.filter(w=>guiaWrIds.includes(w.id)&&(!q||[w.id,w.consignee,w.casillero,trkAll(w)].some(v=>String(v||"").toLowerCase().includes(q)))):[];
     // Sobrantes detectados para esta guía (linkeados vía sobranteDeGuia)
     const sobrantesGuia=guiaSel?wrList.filter(w=>w.sobranteDeGuia===guiaSel.id&&w.status?.code==="19"):[];
     // Stats de la guía seleccionada
@@ -8950,7 +8980,7 @@ export default function ENEXSystem(){
       const puedoRecibir=esTransitoDest||["8","12"].includes(c);
       if(!puedoRecibir)return false;
       if(!q)return true;
-      return [w.id,w.consignee,w.casillero,w.tracking].some(v=>String(v||"").toLowerCase().includes(q));
+      return [w.id,w.consignee,w.casillero,trkAll(w)].some(v=>String(v||"").toLowerCase().includes(q));
     });
     const enAlmacen=wrList.filter(w=>w.status?.code==="17").slice(0,30);
     // Render de las acciones por WR en el checklist — depende del estado actual
@@ -9413,7 +9443,7 @@ export default function ENEXSystem(){
     const q=(alSearch||"").toLowerCase().trim();
     const lista=(alTab==="abiertas"?abiertos:cerrados)
       .filter(k=>alFiltro==="todos"||(alFiltro==="faltantes"?k.tipo==="faltante":k.tipo==="sobrante"))
-      .filter(k=>!q||[k.w.id,k.w.consignee,k.w.casillero,k.w.tracking,k.g?.id,k.cli&&fullName(k.cli)].some(v=>String(v||"").toLowerCase().includes(q)));
+      .filter(k=>!q||[k.w.id,k.w.consignee,k.w.casillero,trkAll(k.w),k.g?.id,k.cli&&fullName(k.cli)].some(v=>String(v||"").toLowerCase().includes(q)));
     if(alTab==="abiertas")lista.sort((a,b)=>new Date(a.inicio?.fecha||0)-new Date(b.inicio?.fecha||0)); // más antiguos primero
     const hoy=new Date();
     const cerradosMes=cerrados.filter(k=>{const f=k.cierre?.fecha&&new Date(k.cierre.fecha);return f&&f.getMonth()===hoy.getMonth()&&f.getFullYear()===hoy.getFullYear();}).length;
@@ -9565,7 +9595,7 @@ export default function ENEXSystem(){
     const candidatos=wrList.filter(w=>{
       if(!crElegible(w))return false;
       if(!q)return true;
-      return [w.id,w.consignee,w.casillero,w.tracking,w.descripcion].some(v=>String(v||"").toLowerCase().includes(q));
+      return [w.id,w.consignee,w.casillero,trkAll(w),w.descripcion].some(v=>String(v||"").toLowerCase().includes(q));
     });
     const toggleSel=(id)=>setCrSel(p=>p.includes(id)?p.filter(x=>x!==id):[...p,id]);
     const toggleAll=()=>{
@@ -10670,7 +10700,7 @@ export default function ENEXSystem(){
           if(f.wrIds.includes(w.id))return false;
           if(!qRef)return true;
           const qq=qRef.toLowerCase();
-          return [w.id,w.consignee,w.shipper,w.tracking,w.proNumber].some(v=>String(v||"").toLowerCase().includes(qq));
+          return [w.id,w.consignee,w.shipper,trkAll(w),w.proNumber].some(v=>String(v||"").toLowerCase().includes(qq));
         }).slice(0,30);
         const agentesCarga=agentes.filter(a=>a.tipo==="transporte"||a.tipoAgente==="transporte"||!a.tipoAgente);
         return(
