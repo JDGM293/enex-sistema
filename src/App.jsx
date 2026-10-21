@@ -304,16 +304,17 @@ input.fi:not([type="email"]):not([type="password"]):not([type="number"]){text-tr
 /* ── WR DETAIL ────────────────────────────────────────────────────────────── */
 .wr-doc{background:var(--bg3);border:1px solid var(--b1);border-radius:12px;padding:20px}
 .wr-doc-hd{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;padding-bottom:8px;border-bottom:2px solid var(--navy)}
-.wr-co{font-family:Arial,Helvetica,sans-serif;font-size:28px;font-weight:800;color:var(--navy);letter-spacing:3px}
-.wr-co-info{font-size:12px;color:var(--t2);line-height:1.9;margin-top:3px}
-.wr-num-d{font-family:'DM Mono',monospace;font-size:18px;font-weight:700;color:var(--navy);letter-spacing:2px;text-align:right}
-.wr-num-meta{font-size:12px;color:var(--t2);line-height:1.9;margin-top:3px;text-align:right}
+.wr-co{font-family:Arial,Helvetica,sans-serif;font-size:20px;font-weight:800;color:var(--navy);letter-spacing:2px}
+.wr-co-info{font-size:11px;color:var(--t2);line-height:1.6;margin-top:2px}
+.wr-num-d{font-family:'DM Mono',monospace;font-size:15px;font-weight:700;color:var(--navy);letter-spacing:1px;text-align:right}
+.wr-num-meta{font-size:11px;color:var(--t2);line-height:1.5;margin-top:2px;text-align:right}
 .w2c{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
 .wb{background:var(--bg2);border:1px solid var(--b1);border-radius:8px;padding:12px}
 .wb-t{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--navy);font-weight:700;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--b2)}
 .wf{margin-bottom:6px}
 .wfl{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
 .wfv{font-size:14px;color:var(--t1);font-weight:500;margin-top:2px}
+.wr-partes .wb-t{font-size:13px}.wr-partes .wfl{font-size:12px}.wr-partes .wfv{font-size:17px}
 .wr-legal{font-size:11px;color:var(--t3);line-height:1.7;border-top:1px solid var(--b1);padding-top:10px;margin-top:10px}
 .wr-sigs{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:12px}
 .wr-sig{border-top:2px solid var(--navy);padding-top:8px;font-size:11px;color:var(--t3);text-align:center}
@@ -840,6 +841,9 @@ const CONTAINER_TYPES_INIT=[
   {code:"LD7",name:"LD7 — Aéreo",     dim:"125×88×64 in", maxLb:7000},
   {code:"BLK",name:"BLK — Bulto",     dim:"Libre",        maxLb:9999},
 ];
+// Nota legal del WR. Se configura por país en Configuración › Notas Legales.
+// {EMPRESA} se reemplaza por el nombre de la empresa.
+const NOTA_LEGAL_DEFAULT="NOTA: SE ESTÁ ENTREGANDO ESTA CAJA COMPLETAMENTE SELLADA. Certifico que este envío no contiene dinero, narcóticos, armas o dispositivos explosivos no autorizados. {EMPRESA} no se hace responsable de los artículos no retirados en los treinta (30) días siguientes a su recepción. Nuestra responsabilidad en caso de siniestros durante el transporte aéreo o marítimo, extravío o robos será de $100 dólares por recibo de almacén, si el cliente no asegura la carga. Estoy de acuerdo con que este envío está sujeto a los controles de seguridad de la compañía y otras regulaciones gubernamentales. SHIPPER autoriza a {EMPRESA} a que inspeccione toda la carga ofrecida del comercio aéreo a partir de la fecha de esta notificación de acuerdo con su Programa de Seguridad Standard de Transporte Aéreo Indirecto (IACSSP) aprobado por la TSA. Al recibir este documento y girar instrucciones de envío, da fe de haber leído, entendido y estar totalmente de acuerdo con los términos y regulaciones.";
 const COUNTRIES_INIT=[
   {dial:"01",name:"USA 🇺🇸",cities:[{code:"MI",name:"Miami"},{code:"NY",name:"New York"},{code:"LA",name:"Los Angeles"},{code:"HO",name:"Houston"},{code:"OR",name:"Orlando"}]},
   {dial:"58",name:"Venezuela 🇻🇪",cities:[{code:"CCS",name:"Caracas"},{code:"VL",name:"Valencia"},{code:"MRB",name:"Maracaibo"},{code:"BCN",name:"Barcelona"},{code:"BAR",name:"Barquisimeto"}]},
@@ -2014,6 +2018,12 @@ export default function ENEXSystem(){
   const [actFilter,setActFilter]=useState("");
   const [cfgTab,setCfgTab]=useState("numeracion");
   const [cfgSelPais,setCfgSelPais]=useState(0);
+  // Notas legales por país: {_default:"...", "Venezuela 🇻🇪":"...", ...}
+  const [notasLegales,setNotasLegales]=useState({});
+  const [notaDraft,setNotaDraft]=useState(null); // {pais, texto} mientras se edita
+  useEffect(()=>{
+    dbGetConfig('notas_legales').then(v=>{if(v&&typeof v==="object"&&!Array.isArray(v))setNotasLegales(v);}).catch(e=>console.error("notas_legales:",e));
+  },[]);
   const [cfgNewCity,setCfgNewCity]=useState("");
   const [cfgNewPais,setCfgNewPais]=useState("");
   const [cfgNewCont,setCfgNewCont]=useState({code:"",name:"",dim:"",maxLb:""});
@@ -2231,6 +2241,11 @@ export default function ENEXSystem(){
   // El Administrador (A) siempre tiene todo, para que nadie quede fuera del sistema.
   const hasPerm=p=>currentUser.rol==="A"||(rolePerms[currentUser.rol]||[]).includes(p);
   const canEdit=hasPerm("crear_wr")||hasPerm("editar_wr");
+  // Nota legal según el país de origen del WR (o la predeterminada)
+  const notaLegalWR=w=>{
+    const t=(w&&notasLegales[w.origCountry])||notasLegales._default||NOTA_LEGAL_DEFAULT;
+    return String(t).split("{EMPRESA}").join(empresaNombre||"");
+  };
   const canAdmin=currentUser.rol==="A";
   const canStatus=hasPerm("status_origen")||hasPerm("status_destino")||["A","B","C"].includes(currentUser.rol);
 
@@ -2896,7 +2911,6 @@ export default function ENEXSystem(){
             <button className="scan-btn" onClick={doScan}>📡 Registrar</button>
           </div>
         </div>
-        <div style={{fontSize:12,color:"var(--t3)"}}>Presiona <strong>Enter</strong> o el botón. Al crear el WR el tracking pasa automáticamente al historial de la derecha.</div>
       </div>
 
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
@@ -3117,10 +3131,6 @@ export default function ENEXSystem(){
     const th={padding:"8px 10px",fontSize:12,fontWeight:700,letterSpacing:.8,textTransform:"uppercase",color:"rgba(255,255,255,.9)",background:"var(--navy)",textAlign:"center",whiteSpace:"nowrap"};
     return (
     <div className="page-scroll">
-      <div className="alt info" style={{marginBottom:14}}>
-        <span className="alt-ic2">🔐</span>
-        <div><div className="alt-t2">Roles & Permisos</div><div className="alt-b2">Elige un rol y marca qué puede Ver, Crear, Editar y Borrar en cada módulo. Los cambios se aplican al pulsar "Guardar cambios".</div></div>
-      </div>
 
       <div style={{display:"grid",gridTemplateColumns:"260px minmax(0,1fr)",gap:14}}>
         {/* LISTA DE ROLES */}
@@ -3160,7 +3170,6 @@ export default function ENEXSystem(){
                 {puedeEditar&&<button className="btn-p" style={{fontSize:12,padding:"5px 12px"}} disabled={!hayCambios||roleSaving} onClick={guardar}>{roleSaving?"Guardando…":"💾 Guardar cambios"}</button>}
               </div>
             </div>
-            {esAdmin&&<div style={{padding:"8px 16px",background:"#FFF8E6",color:"#7A5A00",fontSize:13,borderBottom:"1px solid var(--b1)"}}>👑 El Administrador siempre tiene todos los permisos, para que nadie quede fuera del sistema.</div>}
             {!puedeEditar&&<div style={{padding:"8px 16px",background:"var(--bg4)",color:"var(--t2)",fontSize:13,borderBottom:"1px solid var(--b1)"}}>Solo lectura: tu rol no tiene el permiso "Gestionar Roles".</div>}
 
             <div style={{padding:"14px 16px",maxHeight:"68vh",overflowY:"auto"}}>
@@ -3695,8 +3704,8 @@ export default function ENEXSystem(){
               </div>
             </div>
             <div style={{textAlign:"right"}}>
-              <div style={{fontSize:11,letterSpacing:2,textTransform:"uppercase",color:"var(--t2)",marginBottom:2}}>Warehouse Receipt</div>
-              <div style={{display:"flex",alignItems:"flex-end",justifyContent:"flex-end",marginBottom:4}}><WRBarcode value={selWR.id} height={36} width={2}/></div>
+              <div style={{fontSize:10,letterSpacing:1.5,textTransform:"uppercase",color:"var(--t2)",marginBottom:1}}>Warehouse Receipt</div>
+              <div style={{display:"flex",alignItems:"flex-end",justifyContent:"flex-end",marginBottom:2}}><WRBarcode value={selWR.id} height={24} width={1.4}/></div>
               <div className="wr-num-d">{selWR.id}</div>
               <div className="wr-num-meta">
                 📍 {selWR.origCity||"—"} → {selWR.destCity||"—"}<br/>
@@ -3706,18 +3715,18 @@ export default function ENEXSystem(){
               <div style={{marginTop:6}}><StBadge st={selWR.status}/></div>
             </div>
           </div>
-          <div className="w2c">
+          <div className="w2c wr-partes">
             <div className="wb">
               <div className="wb-t">📤 Remitente / Shipper</div>
-              <div className="wf"><div className="wfl">Nombre / Empresa</div><div className="wfv">{selWR.shipper||"—"}</div></div>
+              <div className="wf"><div className="wfl">Nombre / Empresa</div><div className="wfv" style={{fontWeight:800,fontSize:20}}>{selWR.shipper||"—"}</div></div>
               <div className="wf"><div className="wfl">Recibido en</div><div className="wfv" style={{fontWeight:600}}>{_oc?.nombre||selWR.branch||"Casa Matriz"}{_oc?.ciudad?` — ${_oc.ciudad}`:""}</div></div>
               <div className="wf"><div className="wfl">Procedencia</div><div className="wfv">{selWR.remitenteDir||""}</div></div>
             </div>
             <div className="wb">
               <div className="wb-t">📥 Consignatario / Consignee</div>
-              <div className="wf"><div className="wfl">Nombre</div><div className="wfv" style={{fontWeight:700,fontSize:15}}>{selWR.consignee||"—"}</div></div>
-              <div className="wf"><div className="wfl">Casillero</div><div className="wfv" style={{color:"var(--gold2)",fontWeight:700,fontSize:15}}>#{selWR.casillero||"—"}</div></div>
-              {_destAddr&&<div className="wf"><div className="wfl">Dirección</div><div className="wfv" style={{fontSize:13}}>{_destAddr}</div></div>}
+              <div className="wf"><div className="wfl">Nombre</div><div className="wfv" style={{fontWeight:800,fontSize:20}}>{selWR.consignee||"—"}</div></div>
+              <div className="wf"><div className="wfl">Casillero</div><div className="wfv" style={{color:"var(--gold2)",fontWeight:800,fontSize:20}}>#{selWR.casillero||"—"}</div></div>
+              {_destAddr&&<div className="wf"><div className="wfl">Dirección</div><div className="wfv">{_destAddr}</div></div>}
               <div className="wf"><div className="wfl">Ciudad Destino</div><div className="wfv" style={{fontWeight:600,color:"var(--navy)"}}>{selWR.destCity||"—"} · {selWR.destCountry||"—"}</div></div>
               {_cl?.tel1&&<div className="wf"><div className="wfl">Teléfono</div><div className="wfv">{_cl.tel1}</div></div>}
               {_cl?.email&&<div className="wf"><div className="wfl">Email</div><div className="wfv">{_cl.email}</div></div>}
@@ -3745,12 +3754,12 @@ export default function ENEXSystem(){
             </div>
           </div>
           <div className="wb" style={{marginBottom:12}}>
-            <div className="wb-t">📐 Dimensiones y Peso — {selWR.cajas} {selWR.cajas===1?"caja":"cajas"}</div>
+            <div className="wb-t" style={{fontSize:16}}>📐 Dimensiones y Peso — {selWR.cajas} {selWR.cajas===1?"caja":"cajas"}</div>
             {selWR.dims&&selWR.dims.length>0&&(
               <>
-                <div style={{display:"grid",gridTemplateColumns:"24px 1fr 1fr 1fr 1fr 1fr 1fr 1fr 2fr 1fr",gap:4,marginBottom:4,padding:"4px 0",borderBottom:"2px solid var(--navy)"}}>
+                <div style={{display:"grid",gridTemplateColumns:"30px 1.4fr 1fr 1fr 1fr 1fr 1fr 1fr 2fr 1fr",gap:6,marginBottom:4,padding:"4px 0",borderBottom:"2px solid var(--navy)"}}>
                   {["#","Dims (in)","Peso lb","P.Vol lb","Ft³","M³","Peso kg","P.Vol kg","Tracking","Carrier"].map(h=>(
-                    <div key={h} style={{fontSize:10,color:"var(--navy)",fontWeight:700,textTransform:"uppercase",letterSpacing:.7}}>{h}</div>
+                    <div key={h} style={{fontSize:16,color:"var(--navy)",fontWeight:700,textTransform:"uppercase",letterSpacing:.5}}>{h}</div>
                   ))}
                 </div>
                 {selWR.dims.map((d,i)=>{
@@ -3759,57 +3768,36 @@ export default function ENEXSystem(){
                   const car=d.carrier||selWR.carrier||"—";
                   return (
                     <div key={i} style={{borderBottom:"1px solid var(--b2)",paddingBottom:6,marginBottom:4}}>
-                      <div style={{display:"grid",gridTemplateColumns:"24px 1fr 1fr 1fr 1fr 1fr 1fr 1fr 2fr 1fr",gap:4,padding:"4px 0",alignItems:"center"}}>
-                        <div style={{fontWeight:700,color:"var(--navy)",fontSize:13}}>{i+1}</div>
-                        <div style={{fontFamily:"'DM Mono',monospace",fontSize:12}}>{toIn(d.l)}×{toIn(d.a)}×{toIn(d.h)}"</div>
-                        <div style={{fontFamily:"'DM Mono',monospace",fontSize:13,fontWeight:600}}>{toLb(d.pk)}</div>
-                        <div style={{fontFamily:"'DM Mono',monospace",fontSize:13,color:"var(--orange)",fontWeight:700}}>{dv.volLb}</div>
-                        <div style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--sky)"}}>{dv.ft3}</div>
-                        <div style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--teal)"}}>{dv.m3}</div>
-                        <div style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--t2)"}}>{d.pk?.toFixed?.(2)||"—"}</div>
-                        <div style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--orange)"}}>{dv.volKg}</div>
-                        <div style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--cyan)",fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{trk}</div>
-                        <div style={{fontWeight:700,fontSize:13,color:"var(--navy)"}}>{car}</div>
+                      <div style={{display:"grid",gridTemplateColumns:"30px 1.4fr 1fr 1fr 1fr 1fr 1fr 1fr 2fr 1fr",gap:6,padding:"4px 0",alignItems:"center"}}>
+                        <div style={{fontWeight:700,color:"var(--navy)",fontSize:16}}>{i+1}</div>
+                        <div style={{fontFamily:"'DM Mono',monospace",fontSize:16}}>{toIn(d.l)}×{toIn(d.a)}×{toIn(d.h)}"</div>
+                        <div style={{fontFamily:"'DM Mono',monospace",fontSize:16,fontWeight:600}}>{toLb(d.pk)}</div>
+                        <div style={{fontFamily:"'DM Mono',monospace",fontSize:16,color:"var(--orange)",fontWeight:700}}>{dv.volLb}</div>
+                        <div style={{fontFamily:"'DM Mono',monospace",fontSize:16,color:"var(--sky)"}}>{dv.ft3}</div>
+                        <div style={{fontFamily:"'DM Mono',monospace",fontSize:16,color:"var(--teal)"}}>{dv.m3}</div>
+                        <div style={{fontFamily:"'DM Mono',monospace",fontSize:16,color:"var(--t2)"}}>{d.pk?.toFixed?.(2)||"—"}</div>
+                        <div style={{fontFamily:"'DM Mono',monospace",fontSize:16,color:"var(--orange)"}}>{dv.volKg}</div>
+                        <div style={{fontFamily:"'DM Mono',monospace",fontSize:16,color:"var(--cyan)",fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{trk}</div>
+                        <div style={{fontWeight:700,fontSize:16,color:"var(--navy)"}}>{car}</div>
                       </div>
-                      {(()=>{const _dDesc=cleanReempaqueDesc(d.descripcion);return _dDesc&&<div style={{fontSize:12,color:"var(--t2)",paddingLeft:28,marginTop:2}}>📦 {_dDesc}</div>;})()}
-                      {d.factura&&<div style={{fontSize:12,color:"var(--t3)",paddingLeft:28}}>Factura: {d.factura}</div>}
+                      {(()=>{const _dDesc=cleanReempaqueDesc(d.descripcion);return _dDesc&&<div style={{fontSize:16,color:"var(--t2)",paddingLeft:28,marginTop:2}}>📦 {_dDesc}</div>;})()}
+                      {d.factura&&<div style={{fontSize:16,color:"var(--t3)",paddingLeft:28}}>Factura: {d.factura}</div>}
                     </div>
                   );
                 })}
                 {/* Totales */}
                 <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginTop:10}}>
                   {[["Peso Total",`${selWR.pesoLb}lb / ${selWR.pesoKg}kg`,"var(--t1)"],["P.Vol. Total",`${selWR.volLb||"—"}lb / ${selWR.volKg}kg`,"var(--orange)"],["Ft³",String(selWR.ft3),"var(--sky)"],["M³",String(selWR.m3),"var(--teal)"],["Descripción",cleanReempaqueDesc(selWR.descripcion)||"—","var(--t1)"],["Valor Declarado",`$${typeof selWR.valor==="number"?selWR.valor.toFixed(2):selWR.valor}`,"var(--green)"]].map(([l,v,c])=>(
-                    <div key={l} className="wf"><div className="wfl">{l}</div><div className="wfv" style={{color:c}}>{v}</div></div>
+                    <div key={l} className="wf"><div className="wfl" style={{fontSize:12}}>{l}</div><div className="wfv" style={{color:c,fontSize:18,fontWeight:700}}>{v}</div></div>
                   ))}
                 </div>
               </>
             )}
           </div>
-          {canStatus&&selWR.status?.code!=="2.3"&&(
-            <div style={{marginBottom:12}}>
-              <div className="sdiv">CAMBIOS DE ESTADO — ¿DÓNDE SE HACE CADA UNO?</div>
-              {/* Cada cambio de estado vive en un módulo dedicado. El WR Modal es
-                  read-only para estado, salvo el botón de override (Admin/Gerencia). */}
-              <div style={{background:"var(--bg4)",border:"1px solid var(--b1)",borderRadius:8,padding:"10px 14px",fontSize:12,color:"var(--t2)",lineHeight:1.55}}>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"6px 18px"}}>
-                  <div><span style={{fontWeight:700,color:"var(--navy)"}}>📍 Origen (1→3):</span> Recepción en Puerta + Nuevo WR + Confirmación (Dashboard / EC)</div>
-                  <div><span style={{fontWeight:700,color:"var(--navy)"}}>📦 Consolidación (4):</span> módulo Consolidación</div>
-                  <div><span style={{fontWeight:700,color:"var(--navy)"}}>🛫 Tránsito (5→13):</span> guía consolidada (cascada automática)</div>
-                  <div><span style={{fontWeight:700,color:"var(--navy)"}}>📥 Recepción Almacén (14→17):</span> módulo Recepción en Almacén</div>
-                  <div><span style={{fontWeight:700,color:"#C62828"}}>⚠️ Faltante / Investigación (18 / 18.1):</span> Recepción en Almacén → checklist → ❌ Faltante</div>
-                  <div><span style={{fontWeight:700,color:"#7B1FA2"}}>➕ Sobrante (19):</span> Recepción en Almacén → auto-detect al escanear + panel "Sobrantes"</div>
-                  <div><span style={{fontWeight:700,color:"#1565C0"}}>📝 Por Entrega / Entregado (20 / 21):</span> Notas de Entrega (Impresión → entregas)</div>
-                  <div><span style={{fontWeight:700,color:"var(--orange)"}}>💰 Por Cobrar / Cobrado (22 / 23):</span> Facturación (auto al emitir / pagar factura)</div>
-                  <div style={{gridColumn:"1/-1"}}><span style={{fontWeight:700,color:"#2E7D32"}}>🚀 Egresado (25):</span> Cargo Release (módulo grupal o botón individual desde Estado de Cuenta)</div>
-                </div>
-                {hasPerm("override_estado")&&(
-                  <div style={{marginTop:10,paddingTop:10,borderTop:"1px dashed var(--b1)",display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
-                    <span style={{fontSize:12,color:"var(--t3)",fontWeight:600}}>🛠 Override (corregir error sin reabrir el módulo):</span>
-                    <button className="btn-s" style={{fontSize:12,padding:"3px 10px",borderColor:"var(--orange)",color:"var(--orange)",fontWeight:700}}
-                      onClick={()=>setOverrideModal({wr:selWR,codigoDestino:selWR.status?.code||"",motivo:""})}>🛠 Forzar Estado</button>
-                  </div>
-                )}
-              </div>
+          {hasPerm("override_estado")&&(
+            <div className="no-print" style={{marginBottom:12,display:"flex",justifyContent:"flex-end"}}>
+              <button className="btn-s" style={{fontSize:13,padding:"5px 12px",borderColor:"var(--orange)",color:"var(--orange)",fontWeight:700}}
+                onClick={()=>setOverrideModal({wr:selWR,codigoDestino:selWR.status?.code||"",motivo:""})}>🛠 Forzar Estado</button>
             </div>
           )}
           {/* 📅 HISTORIA Y FECHAS — línea de tiempo de hitos del WR */}
@@ -3819,9 +3807,7 @@ export default function ENEXSystem(){
               {renderWRTimeline(selWR)}
             </div>
           </div>
-          <div className="wr-legal">
-            NOTA: SE ESTÁ ENTREGANDO ESTA CAJA COMPLETAMENTE SELLADA. Certifico que este envío no contiene dinero, narcóticos, armas o dispositivos explosivos no autorizados. <strong>{empresaNombre} International Courier</strong> no se hace responsable de los artículos no retirados en los treinta (30) días siguientes a su recepción. Nuestra responsabilidad en siniestros será de $100 por recibo si el cliente no asegura la carga. SHIPPER autoriza a {empresaNombre} a inspeccionar la carga de acuerdo con el Programa IACSSP aprobado por la TSA. Al recibir este documento, da fe de haber leído y estar de acuerdo con los términos y regulaciones.
-          </div>
+          <div className="wr-legal" style={{whiteSpace:"pre-line"}}>{notaLegalWR(selWR)}</div>
           {/* Bloque de entrega/firma eliminado — la entrega ahora se gestiona vía Notas de Entrega (Delivery Notes) */}
         </div>
         {/* ══ DOCUMENTO DE IMPRESIÓN — solo visible con window.print() ══ */}
@@ -3993,8 +3979,7 @@ export default function ENEXSystem(){
 
               {/* ── TEXTO LEGAL ── */}
               <div style={{fontSize:11,lineHeight:1.6,color:"#333",textAlign:"center",marginTop:8,borderTop:"1px solid #ccc",paddingTop:6}}>
-                <div style={{fontWeight:700,marginBottom:3,fontSize:12}}>NOTA: SE ESTA ENTREGANDO ESTA CAJA COMPLETAMENTE SELLADA.</div>
-                Certifico que este envío no contiene dinero, narcóticos, armas o dispositivos explosivos no autorizados. {empresaNombre} no se hace responsable de los artículos no retirados en los treinta (30) días siguientes a su recepción. Nuestra responsabilidad en caso de siniestros durante el transporte aéreo o marítimo, extravío o robos será de $100 dólares por recibo de almacén, si el cliente no asegura la carga. Estoy de acuerdo con que este envío está sujeto a los controles de seguridad de la compañía y otras regulaciones gubernamentales. SHIPPER autoriza a {empresaNombre} a que inspeccione toda la carga ofrecida del comercio aéreo a partir de la fecha de esta notificación de acuerdo con su Programa de Seguridad Standart de Transporte Aéreo Indirecto (IACSSP) aprobado por la TSA. Al recibir este documento y girar instrucciones de envío, da fe de haber leído, entendido y estar totalmente de acuerdo con los términos y regulaciones.
+                <div style={{whiteSpace:"pre-line"}}>{notaLegalWR(selWR)}</div>
               </div>
 
             </div>);
@@ -4863,7 +4848,6 @@ export default function ENEXSystem(){
                   <div className="mt">🔁 Reempaque — {fullName(cli)}</div>
                   <button className="mcl" onClick={()=>setRpqCliModal(null)}>✕</button>
                 </div>
-                <div style={{padding:"0 14px 10px",fontSize:13,color:"var(--t2)"}}>Selecciona los WR de este cliente que se agruparán. Se creará un nuevo WR y los seleccionados quedarán marcados como REEMPACADO.</div>
                 <div style={{maxHeight:"55vh",overflow:"auto",margin:"0 14px",border:"1px solid var(--b1)",borderRadius:8}}>
                   <table className="wt">
                     <thead><tr>
@@ -5139,7 +5123,6 @@ export default function ENEXSystem(){
       <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
         <div style={{flex:1}}>
           <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:18,fontWeight:700,color:"var(--navy)"}}>🗂️ Master de Guías</div>
-          <div style={{fontSize:13,color:"var(--t3)",marginTop:2}}>Todas las guías con su correlativo. Click en el N° de guía para verla, editarla, borrarla o sacar etiquetas. El estado se cambia en la pestaña Status.</div>
         </div>
         <button className="btn-p" onClick={()=>{setCf(emptyConsol());setEditConsolId(null);setContScanVal({});setContScanErr({});setShowNewConsol(true);}}>+ Nuevo Embarque</button>
       </div>
@@ -5565,6 +5548,7 @@ export default function ENEXSystem(){
       {k:"pagos",l:"Tipos de Pago",ic:"💳"},
       {k:"contenedores",l:"Tipos de Contenedor",ic:"📦"},
       {k:"paises",l:"Países y Ciudades",ic:"🌎"},
+      {k:"notas",l:"Notas Legales",ic:"📜"},
       {k:"agentes",l:"Agentes",ic:"🤝"},
       {k:"oficinas",l:"Oficinas",ic:"🏢"},
       {k:"tarifas",l:"Tarifas",ic:"💰"},
@@ -5710,7 +5694,6 @@ export default function ENEXSystem(){
         {cfgTab==="cargos"&&(
           <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,padding:"14px 16px",marginBottom:14}}>
             <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:15,fontWeight:700,color:"var(--navy)",marginBottom:8}}>💲 Cargos Adicionales</div>
-            <div style={{fontSize:13,color:"var(--t3)",marginBottom:10}}>Los cargos adicionales se gestionan junto con Servicios. Ambas listas se usan en la creación de WR.</div>
             <ListEditor title="" items={CHARGES_OPT}
               onAdd={v=>{const n=[...CHARGES_OPT,v];setChargesOpt(n);dbSetConfig('charges',n);}}
               onDelete={i=>{const n=CHARGES_OPT.filter((_,j)=>j!==i);setChargesOpt(n);dbSetConfig('charges',n);}}
@@ -5775,6 +5758,47 @@ export default function ENEXSystem(){
         )}
 
         {/* ── PAÍSES Y CIUDADES ── */}
+        {cfgTab==="notas"&&(()=>{
+          const opciones=[{k:"_default",l:"Predeterminada (todos los países)"},...COUNTRIES.map(c=>({k:c.name,l:c.name}))];
+          const sel=notaDraft?.pais||"_default";
+          const guardado=notasLegales[sel]||"";
+          const texto=notaDraft&&notaDraft.pais===sel&&notaDraft.texto!==undefined?notaDraft.texto:(guardado||(sel==="_default"?NOTA_LEGAL_DEFAULT:""));
+          const cambiado=texto!==(guardado||(sel==="_default"?NOTA_LEGAL_DEFAULT:""));
+          const guardar=async(valor)=>{
+            const n={...notasLegales};
+            if(valor&&valor.trim())n[sel]=valor.trim();else delete n[sel];
+            const ok=await dbSetConfig('notas_legales',n);
+            if(ok===false){window.alert("No se pudo guardar la nota. Inténtalo de nuevo.");return;}
+            setNotasLegales(n);setNotaDraft({pais:sel});
+            logAction("Editó nota legal",sel==="_default"?"Predeterminada":sel);
+          };
+          return (
+            <div style={{display:"grid",gridTemplateColumns:"260px minmax(0,1fr)",gap:14}}>
+              <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,overflow:"hidden"}}>
+                {opciones.map(o=>(
+                  <div key={o.k} onClick={()=>setNotaDraft({pais:o.k})}
+                    style={{padding:"10px 14px",cursor:"pointer",borderBottom:"1px solid var(--b2)",fontSize:14,fontWeight:sel===o.k?700:500,
+                      background:sel===o.k?"var(--navy)":"transparent",color:sel===o.k?"#fff":"var(--t1)",display:"flex",justifyContent:"space-between",gap:8}}>
+                    <span>{o.l}</span>
+                    {o.k!=="_default"&&notasLegales[o.k]&&<span style={{fontSize:12,opacity:.8}}>✓ propia</span>}
+                  </div>
+                ))}
+              </div>
+              <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,padding:"14px 16px"}}>
+                <div style={{fontSize:16,fontWeight:700,color:"var(--navy)",marginBottom:4}}>📜 {sel==="_default"?"Nota predeterminada":sel}</div>
+                <div style={{fontSize:13,color:"var(--t3)",marginBottom:10}}>{"{EMPRESA}"} = nombre de la empresa</div>
+                <textarea className="fi" rows={12} value={texto} onChange={e=>setNotaDraft({pais:sel,texto:e.target.value})}
+                  placeholder={notasLegales._default||NOTA_LEGAL_DEFAULT}
+                  style={{width:"100%",resize:"vertical",fontFamily:"inherit",fontSize:14,lineHeight:1.5,textTransform:"none"}}/>
+                <div style={{display:"flex",gap:8,marginTop:10,justifyContent:"flex-end",flexWrap:"wrap"}}>
+                  {sel!=="_default"&&guardado&&<button className="btn-s" onClick={()=>{if(window.confirm(`¿Quitar la nota propia de ${sel}? Usará la predeterminada.`))guardar("");}}>Usar la predeterminada</button>}
+                  {cambiado&&<button className="btn-s" onClick={()=>setNotaDraft({pais:sel})}>Descartar</button>}
+                  <button className="btn-p" disabled={!cambiado} onClick={()=>guardar(texto)}>💾 Guardar</button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
         {cfgTab==="paises"&&(
           <div style={{display:"grid",gridTemplateColumns:"300px 1fr",gap:14}}>
             {/* Lista de países */}
@@ -6207,7 +6231,6 @@ export default function ENEXSystem(){
         <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
           <div style={{flex:1}}>
             <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:20,fontWeight:700,color:"var(--navy)"}}>🔍 Tracking Internacional</div>
-            <div style={{fontSize:14,color:"var(--t3)",marginTop:2}}>Vista informativa para clientes — los estados se gestionan en sus módulos correspondientes.</div>
           </div>
           <span style={{fontSize:11,fontWeight:700,color:"var(--t3)",background:"#EEF2F7",padding:"4px 10px",borderRadius:10,border:"1px solid #DCE2EC"}}>👁️ Solo lectura</span>
         </div>
@@ -6467,7 +6490,6 @@ export default function ENEXSystem(){
       <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
         <div style={{flex:1}}>
           <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:20,fontWeight:700,color:"var(--navy)"}}>🚐 Solicitudes de Pick-up</div>
-          <div style={{fontSize:14,color:"var(--t3)",marginTop:2}}>Recogidas a domicilio programadas</div>
         </div>
         <button className="btn-p" onClick={()=>setShowNewPickup(true)}>+ Nueva Solicitud</button>
       </div>
@@ -7246,10 +7268,6 @@ export default function ENEXSystem(){
 
     return (
       <div className="page-scroll">
-        {/* PANEL DE AYUDA — qué se hace en este módulo */}
-        <div style={{background:"#FEF9E7",border:"1px solid #F0C040",borderRadius:8,padding:"8px 14px",marginBottom:14,fontSize:12,color:"#7A5C00",lineHeight:1.5}}>
-          <strong style={{color:"#8B6914"}}>📍 Este módulo maneja:</strong> Facturación, pagos, notas de crédito y <strong>💰 Por Cobrar (22) / Cobrado (23)</strong> — los WR pasan automáticamente a estos estados al emitir la factura y registrar el pago. Para entregar el WR físicamente usá <b>Notas de Entrega</b>.
-        </div>
 
         {/* Mini stats */}
         <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:16}}>
@@ -7430,7 +7448,6 @@ export default function ENEXSystem(){
         {/* ── GENERAR DE GUÍA ── */}
         {contabTab==="generar"&&(
           <div>
-            <div style={{fontSize:15,color:"var(--t2)",marginBottom:12}}>Selecciona una guía consolidada para generar borradores de factura por consignatario. Luego revisa cada borrador y emítelo.</div>
             {consolList.length===0?<div className="card" style={{textAlign:"center",padding:40,color:"var(--t3)"}}>No hay guías consolidadas. Primero crea un embarque en Consolidación.</div>:(
               <div className="card" style={{padding:0}}>
                 <table className="ct">
@@ -7800,95 +7817,46 @@ export default function ENEXSystem(){
   //   • Bloque ESPECIAL aparte (solo si el WR es Reempacado o Egresado) — visualmente
   //     separado con borde y título para no romper la lectura del flujo lineal.
   const renderWRTimeline=(w)=>{
-    const {lineal,especial}=getWRTimeline(w);
-    const hist=Array.isArray(w?.historial)?w.historial:[];
-    // Sub-render de un hito individual. Lo extraigo para reutilizarlo entre
-    // el bloque lineal y el bloque especial sin duplicar JSX.
-    const renderHito=(h,opts={})=>{
-      const {isLast=true,nextReached=false}=opts;
-      const dotColor=h.reached?h.color:"var(--b1)";
-      return (
-        <div key={h.key} style={{display:"flex",gap:12,alignItems:"flex-start"}}>
-          <div style={{display:"flex",flexDirection:"column",alignItems:"center",minWidth:24}}>
-            <div style={{width:24,height:24,borderRadius:"50%",background:dotColor,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,flexShrink:0,opacity:h.reached?1:.3}}>
-              {h.ic}
-            </div>
-            {!isLast&&<div style={{width:2,flex:1,minHeight:24,background:h.reached&&nextReached?h.color:"var(--b2)",marginTop:2,marginBottom:2,opacity:h.reached?.4:.2}}/>}
-          </div>
-          <div style={{flex:1,paddingBottom:isLast?0:14}}>
-            <div style={{display:"flex",alignItems:"baseline",gap:8,flexWrap:"wrap"}}>
-              <span style={{fontSize:14,fontWeight:700,color:h.reached?"var(--t1)":"var(--t4)"}}>{h.label}</span>
-              {h.terminal&&<span style={{fontSize:10,padding:"1px 6px",borderRadius:8,background:"#FFF8E1",border:"1px solid #FFC107",color:"#7A5C00",fontWeight:700,letterSpacing:.4,textTransform:"uppercase"}}>terminal</span>}
-              {h.reached&&h.fecha
-                ?<span style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:h.fechaAprox?"var(--t3)":"var(--t2)",fontWeight:600}}>
-                   {h.fechaAprox?"≈ ":""}{fmtDate(h.fecha)} {fmtTime(h.fecha)}
-                   {h.fechaAprox&&<span style={{fontSize:10,fontWeight:500,color:"var(--t4)",marginLeft:4,fontStyle:"italic",fontFamily:"Arial,sans-serif"}}>aprox.</span>}
-                 </span>
-                :h.reached
-                  ?<span style={{fontSize:11,color:"var(--t4)",fontStyle:"italic"}}>fecha no registrada</span>
-                  :<span style={{fontSize:11,color:"var(--t4)",fontStyle:"italic"}}>pendiente</span>}
-            </div>
-            {h.extra&&h.reached&&(
-              <div style={{fontSize:12,color:h.color,marginTop:3,fontWeight:600}}>{h.extra}</div>
-            )}
-            {h.reached&&(h.user||h.nota)&&(
-              <div style={{fontSize:11,color:"var(--t3)",marginTop:2}}>
-                {h.user&&<>por <b style={{color:"var(--t2)"}}>{h.user}</b>{h.nota?" · ":""}</>}
-                {h.nota&&<span style={{color:"var(--t2)"}}>{h.nota}</span>}
-              </div>
-            )}
-          </div>
-        </div>
-      );
+    // Historia completa: cada cambio de estado con su fecha y hora, en orden.
+    if(!w)return null;
+    const hist=(Array.isArray(w.historial)?w.historial:[]).filter(h=>h&&h.code);
+    const eventos=[...hist];
+    if(!hist.some(h=>String(h.code)==="1")&&w.fecha){
+      eventos.push({code:"1",label:"Recibido",fecha:w.fecha,user:w.usuario||"",nota:`WR creado · ${w.id}`});
+    }
+    eventos.sort((x,y)=>new Date(x.fecha||0)-new Date(y.fecha||0));
+    const nombreUsuario=id=>{
+      if(!id)return "";
+      const u=clients.find(c=>c.id===id);
+      return u?fullName(u):id;
     };
+    if(eventos.length===0)return <div style={{fontSize:14,color:"var(--t3)"}}>—</div>;
     return (
-      <div>
-        {/* Bloque LINEAL — solo los hitos efectivamente alcanzados.
-            Mantienen el orden cronológico definido en getWRTimeline. Los
-            pendientes (hitos no alcanzados todavía) se ocultan para no
-            ensuciar visualmente el timeline. */}
-        <div style={{display:"flex",flexDirection:"column",gap:0,position:"relative"}}>
-          {(()=>{
-            const visibles=lineal.filter(h=>h.reached);
-            return visibles.map((h,i)=>renderHito(h,{
-              isLast:i===visibles.length-1,
-              nextReached:true,
-            }));
-          })()}
-        </div>
-
-        {/* Bloque ESPECIAL — Reempacado / Egresado, aparte del flujo lineal */}
-        {especial&&(
-          <div style={{marginTop:18,paddingTop:12,borderTop:`2px dashed ${especial.color}`,position:"relative"}}>
-            <div style={{display:"inline-block",background:"var(--bg2)",padding:"2px 10px",borderRadius:10,fontSize:11,fontWeight:700,color:especial.color,letterSpacing:.5,textTransform:"uppercase",marginBottom:10,border:`1px solid ${especial.color}`}}>
-              {especial.seccionTitulo||"Evento especial"}
-            </div>
-            {renderHito(especial,{isLast:true,nextReached:false})}
-          </div>
-        )}
-
-        {/* Historial completo (incluye estados intermedios de tránsito, excepciones, etc.) */}
-        {hist.length>0&&(
-          <details style={{marginTop:14,borderTop:"1px dashed var(--b1)",paddingTop:10}}>
-            <summary style={{cursor:"pointer",fontSize:13,fontWeight:600,color:"var(--navy)"}}>Ver historial completo ({hist.length} entradas)</summary>
-            <div style={{marginTop:8,maxHeight:240,overflow:"auto",border:"1px solid var(--b1)",borderRadius:6}}>
-              <table className="ct" style={{fontSize:11.5}}>
-                <thead><tr><th style={{width:48}}>Code</th><th>Estado</th><th>Fecha</th><th>Usuario</th><th>Nota</th></tr></thead>
-                <tbody>
-                  {hist.slice().sort((a,b)=>new Date(b.fecha)-new Date(a.fecha)).map((h,i)=>(
-                    <tr key={i}>
-                      <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)"}}>{h.code}</span></td>
-                      <td style={{fontWeight:600}}>{h.label||"—"}</td>
-                      <td style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:"var(--t2)"}}>{fmtDate(h.fecha)} {fmtTime(h.fecha)}</td>
-                      <td style={{fontSize:11,color:"var(--t3)"}}>{h.user||"—"}</td>
-                      <td style={{fontSize:11,color:"var(--t2)"}}>{h.nota||"—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </details>
-        )}
+      <div style={{overflowX:"auto"}}>
+        <table style={{width:"100%",borderCollapse:"collapse",fontSize:14}}>
+          <thead>
+            <tr style={{borderBottom:"2px solid var(--navy)"}}>
+              {["Fecha","Hora","Estado","Usuario","Nota"].map(h=>(
+                <th key={h} style={{textAlign:"left",padding:"6px 8px",fontSize:12,fontWeight:700,color:"var(--navy)",textTransform:"uppercase",letterSpacing:.5,whiteSpace:"nowrap"}}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {eventos.map((h,i)=>{
+              const st=getStatus(String(h.code))||{label:h.label||h.code,cls:"s1"};
+              const actual=i===eventos.length-1;
+              return (
+                <tr key={i} style={{borderBottom:"1px solid var(--b2)",background:actual?"var(--bg4)":"transparent"}}>
+                  <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",fontWeight:600,whiteSpace:"nowrap"}}>{h.fecha?fmtDate(h.fecha):"—"}</td>
+                  <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",color:"var(--t2)",whiteSpace:"nowrap"}}>{h.fecha?fmtTime(h.fecha):"—"}</td>
+                  <td style={{padding:"7px 8px",whiteSpace:"nowrap"}}><StBadge st={{...st,label:h.label||st.label}}/></td>
+                  <td style={{padding:"7px 8px",color:"var(--t2)",whiteSpace:"nowrap"}}>{nombreUsuario(h.user)||"—"}</td>
+                  <td style={{padding:"7px 8px",color:"var(--t2)"}}>{h.nota||""}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
     );
   };
@@ -8704,7 +8672,6 @@ export default function ENEXSystem(){
       <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,flexWrap:"wrap"}}>
         <div style={{flex:1,minWidth:240}}>
           <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:18,fontWeight:700,color:"var(--navy)"}}>📶 Status de Guías</div>
-          <div style={{fontSize:13,color:"var(--t3)",marginTop:2}}>Aquí se manejan los estados de cada guía abierta, de Línea a Liberado 3. El cambio se aplica a todos sus WR. Con Liberado 3 la guía queda lista para recibir en Recepción.</div>
         </div>
         <div style={{position:"relative"}}>
           <input className="fi" placeholder="Buscar guía, destino, AWB/BL, vuelo…" value={lmSearch} onChange={e=>setLmSearch(e.target.value)}
@@ -9231,7 +9198,6 @@ export default function ENEXSystem(){
             <div className="card">
               <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8,flexWrap:"wrap"}}>
                 <div style={{fontSize:15,fontWeight:700,color:"var(--navy)"}}>📦 Últimos WR recibidos en Almacén</div>
-                <div style={{fontSize:12,color:"var(--t3)"}}>WRs que quedaron en 17 (probablemente porque la guía no cerró bien). Podés moverlos individualmente a Por Entrega.</div>
               </div>
               <div style={{maxHeight:"28vh",overflow:"auto",border:"1px solid var(--b1)",borderRadius:8}}>
                 <table className="wt">
@@ -9502,7 +9468,6 @@ export default function ENEXSystem(){
       <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,flexWrap:"wrap"}}>
         <div style={{flex:1,minWidth:260}}>
           <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:18,fontWeight:700,color:"var(--navy)"}}>🔔 Alertas — Faltantes y Sobrantes</div>
-          <div style={{fontSize:13,color:"var(--t3)",marginTop:2}}>Se detectan en Recepción; aquí se resuelven, aunque la guía ya esté cerrada.</div>
         </div>
         <div className="tabs" style={{marginBottom:0}}>
           <div className={`tab ${alTab==="abiertas"?"on":""}`} onClick={()=>setAlTab("abiertas")}>Abiertas<span className="t-cnt">{abiertos.length}</span></div>
@@ -9612,7 +9577,6 @@ export default function ENEXSystem(){
         <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
           <div style={{flex:1}}>
             <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:18,fontWeight:700,color:"var(--navy)"}}>🚀 Cargo Release (Egresos)</div>
-            <div style={{fontSize:13,color:"var(--t3)",marginTop:2}}>Liberación desde origen. Sólo se egresan WR hasta <b>Confirmado (3)</b>. Una vez consolidado (4 o más), el WR ya no se puede egresar desde aquí.</div>
           </div>
           <div style={{display:"flex",gap:6,fontSize:13}}>
             <span style={{background:"#E8F5E9",color:"#2E7D32",padding:"4px 10px",borderRadius:10,fontWeight:700,border:"1px solid #A5D6A7"}}>✓ {activos.length} activos</span>
@@ -9756,7 +9720,6 @@ export default function ENEXSystem(){
         <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,flexWrap:"wrap"}}>
           <div style={{flex:1,minWidth:240}}>
             <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:18,fontWeight:700,color:"var(--navy)"}}>📝 Entregas y Despachos</div>
-            <div style={{fontSize:13,color:"var(--t3)",marginTop:2}}>Entrega física al cliente directo o despacho grupal a Agente / Oficina / Autónomo. Los WR pasan a Entregado (21).</div>
           </div>
           <div style={{display:"flex",gap:6,fontSize:13}}>
             <span style={{background:"#E8F5E9",color:"#2E7D32",padding:"4px 10px",borderRadius:10,fontWeight:700,border:"1px solid #A5D6A7"}}>✓ {activas.length} activas</span>
@@ -10706,7 +10669,6 @@ export default function ENEXSystem(){
               <div className="mhd">
                 <div style={{flex:1}}>
                   <div className="mt">🚀 {editing?`Editar Egreso ${f.editId}`:"Nuevo Egreso (Cargo Release)"}</div>
-                  <div style={{fontSize:12,color:"var(--t3)",marginTop:2}}>Los WR seleccionados pasarán a <b>Egresado (25)</b> al guardar.</div>
                 </div>
                 <button className="mcl" onClick={()=>setCrModal(null)}>✕</button>
               </div>
