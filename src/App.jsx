@@ -2653,7 +2653,7 @@ export default function ENEXSystem(){
       return;
     }
     // Consolidado (4) o posterior — el tipo queda fijo
-    if(!wrEsModificable(w)){
+    if(!_saltar&&!wrEsModificable(w)){
       window.alert(`El WR ${w.id} ya está en estado ${w.status?.label||"?"}. Desde Consolidado en adelante no se puede cambiar el tipo de envío.`);
       return;
     }
@@ -3225,7 +3225,7 @@ export default function ENEXSystem(){
                           background:on?"#E8F8EE":"var(--bg4)",color:on?"var(--green)":"var(--t3)",border:`1px solid ${on?"#80D0A0":"var(--b2)"}`}}>
                           {chk(on,v=>toggle([p],v))}
                           {PERM_LBL[p]||p}
-                          {p==="saltar_bloqueos"&&<span title="Permite cambiar el tipo de envío después de Consolidado, reempacar después de Confirmado y facturar WR reempacados o egresados." style={{cursor:"help"}}>ⓘ</span>}
+                          {p==="saltar_bloqueos"&&<span title="Desde el detalle del WR: permite cambiar el tipo de envío después de Consolidado y facturar WR reempacados o egresados." style={{cursor:"help"}}>ⓘ</span>}
                         </label>
                       );
                     })}
@@ -3584,7 +3584,7 @@ export default function ENEXSystem(){
             {/* Facturar — visible si el rol tiene permiso, el WR no está bloqueado
                 (no Reempacado 2.3 ni Egresado 25) y no tiene factura activa.
                 Para PREPAID factura al remitente; para COD al receptor según clienteTipo. */}
-            {(hasPerm("crear_factura")||hasPerm("facturar"))&&wrPuedeFacturarse(selWR)&&!facturas.some(f=>f.status!=="anulada"&&Array.isArray(f.wrIds)&&f.wrIds.includes(selWR.id))&&(()=>{
+            {(hasPerm("crear_factura")||hasPerm("facturar"))&&(hasPerm("saltar_bloqueos")||wrPuedeFacturarse(selWR))&&!facturas.some(f=>f.status!=="anulada"&&Array.isArray(f.wrIds)&&f.wrIds.includes(selWR.id))&&(()=>{
               const esPrepaid=(selWR.tipoPago||"").toLowerCase().includes("prepa");
               return (
                 <button className="btn-s" style={{fontSize:12,padding:"4px 10px",background:"#FFF9E7",borderColor:"#F0C040",color:"#8B6914",fontWeight:700}}
@@ -3665,7 +3665,7 @@ export default function ENEXSystem(){
         )}
         {/* Barra de confirmación por tipo de envío — solo si el WR es modificable
             (estados 1, 2 o 3). Reempacado, Egresado y Consolidado+ quedan fijos. */}
-        {canEdit&&wrEsModificable(selWR)&&(
+        {canEdit&&(hasPerm("saltar_bloqueos")||wrEsModificable(selWR))&&(
           <div className="no-print" style={{display:"flex",alignItems:"center",gap:10,padding:"8px 14px",background:"var(--bg4)",borderBottom:"1px solid var(--b1)",flexWrap:"wrap"}}>
             <div style={{fontSize:12,fontWeight:700,color:"var(--t3)",textTransform:"uppercase",letterSpacing:.5}}>Tipo de Envío:</div>
             <select className="fs" style={{fontSize:13,padding:"4px 8px",minWidth:180}} value={selWR.tipoEnvio||""}
@@ -6982,7 +6982,7 @@ export default function ENEXSystem(){
     if(!hasPerm("crear_factura")&&!hasPerm("facturar")){window.alert("Tu rol no tiene permiso para crear facturas.");return;}
     // Si vienen wrIds, validar que ninguno esté Reempacado o Egresado
     if(Array.isArray(prefill.wrIds)&&prefill.wrIds.length>0){
-      const bloqueados=prefill.wrIds.map(id=>wrList.find(w=>w.id===id)).filter(w=>w&&!wrPuedeFacturarse(w));
+      const bloqueados=prefill.wrIds.map(id=>wrList.find(w=>w.id===id)).filter(w=>w&&!hasPerm("saltar_bloqueos")&&!wrPuedeFacturarse(w));
       if(bloqueados.length>0){
         window.alert(`No se puede facturar — los siguientes WR están bloqueados por estado:\n${bloqueados.map(w=>`• ${w.id} (${w.status?.label||"?"})`).join("\n")}\n\nReempacados y Egresados quedan fijos.`);
         return;
@@ -7584,16 +7584,17 @@ export default function ENEXSystem(){
   // Bloque F — Solo se puede reempacar WR cuyo status sea ≤ Confirmado (1, 2 o 3).
   // Cualquier estado superior (4+) o el propio 2.3 (ya reempacado) queda bloqueado.
   const REEMPAQUE_ALLOWED_CODES=["1","2","3"];
-  const puedeReempacarse=(w)=>hasPerm("saltar_bloqueos")||REEMPAQUE_ALLOWED_CODES.includes(w?.status?.code||"1");
+  const puedeReempacarse=(w)=>REEMPAQUE_ALLOWED_CODES.includes(w?.status?.code||"1");
   // Reglas de bloqueo del WR — Reempacado (2.3), Egresado (25) y todo lo que esté
   // en Consolidado (4) o posterior queda FIJO: no se edita, no se confirma tipo,
   // no se reempaqueta y no se egresa. Solo es modificable cuando el código es 1, 2 o 3.
-  // Con el permiso "saltar_bloqueos" estas reglas no aplican.
-  const wrEsModificable=(w)=>hasPerm("saltar_bloqueos")||["1","2","3"].includes(w?.status?.code||"");
+  // El permiso "saltar_bloqueos" solo se aplica en acciones sobre un WR concreto
+  // (detalle del WR), nunca en listas ni tablas.
+  const wrEsModificable=(w)=>["1","2","3"].includes(w?.status?.code||"");
   // Un WR no puede facturarse si está Reempacado (2.3 — es fantasma, la mercancía
   // está en el WR hijo) ni si ya fue Egresado (25 — debió facturarse antes del despacho).
   // El resto de los estados sí pueden facturarse (PREPAID en origen, COD tras recepción).
-  const wrPuedeFacturarse=(w)=>hasPerm("saltar_bloqueos")||!["2.3","25"].includes(w?.status?.code||"");
+  const wrPuedeFacturarse=(w)=>!["2.3","25"].includes(w?.status?.code||"");
   // Un WR puede consolidarse SOLO si está en estado 3 Confirmado. Reempacado (2.3) y
   // Egresado (25) salieron del flujo; estados pre-Confirmado no están listos.
   const wrPuedeConsolidarse=(w)=>w?.status?.code==="3";
