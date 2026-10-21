@@ -4261,7 +4261,8 @@ export default function ENEXSystem(){
     <div><b>Tipo de envío:</b> ${escapeHtml(c.tipoEnvio||"—")}</div>
     <div><b>Fecha creación:</b> ${fmtD(c.fecha)}</div>
     <div><b>Fecha salida:</b> ${fmtD(c.fechaSalida)}</div>
-    <div><b>Fecha llegada:</b> ${fmtD(c.fechaRecibidaAlmacen)}</div>
+    <div><b>Fecha llegada:</b> ${fmtD(fechaLlegadaGuia(c))}</div>
+    <div><b>Recibida en almacén:</b> ${fmtD(c.fechaRecibidaAlmacen)}</div>
     <div><b>N° vuelo / barco:</b> ${escapeHtml(c.numVuelo||"—")}</div>
     <div><b>Estado:</b> ${escapeHtml(c.status||"Recibida")}</div>
     <div><b>AWB:</b> ${escapeHtml(c.awb||"—")}</div>
@@ -4927,6 +4928,21 @@ export default function ENEXSystem(){
   // Actualiza el estado de una guía consolidada y lo cascada a todos sus WRs
   // Solo permite avanzar a estados con channels.includes("consolidacion").
   // Estados auto (17 Almacén, 20 Por Entrega, etc.) no se deben fijar desde aquí.
+  // Fecha de llegada de una guía = última vez que sus WR pasaron a Aduana Destino (14)
+  const fechaLlegadaGuia=c=>{
+    if(!c)return null;
+    const ids=new Set([...(Array.isArray(c.wrIds)?c.wrIds:[]),...(c.containers||[]).flatMap(ct=>(ct.wr||[]).map(r=>r.id))]);
+    let min=null;
+    wrList.forEach(w=>{
+      if(!ids.has(w.id))return;
+      (w.historial||[]).forEach(h=>{
+        if(String(h.code)!=="14"||!h.fecha)return;
+        const t=new Date(h.fecha);
+        if(!isNaN(t)&&(!min||t>min))min=t;
+      });
+    });
+    return min;
+  };
   const updateGuideStatus=(consolId,stCode)=>{
     const st=getStatus(stCode);
     if(!st)return;
@@ -8799,7 +8815,8 @@ export default function ENEXSystem(){
                       <div><span style={{color:"var(--t3)",fontWeight:600}}>Estado:</span> {c.archivada?<strong style={{color:"var(--green)"}}>🗄️ Cerrada</strong>:<StBadge st={getStatus(guiaCode(c))||{cls:"s3",label:c.status||"En preparación"}}/>}</div>
                       <div><span style={{color:"var(--t3)",fontWeight:600}}>Fecha creación:</span> {fmtDate(c.fecha)}</div>
                       <div><span style={{color:"var(--t3)",fontWeight:600}}>Fecha salida:</span> {c.fechaSalida?fmtDate(c.fechaSalida):"—"}</div>
-                      <div><span style={{color:"var(--t3)",fontWeight:600}}>Fecha llegada:</span> {c.fechaRecibidaAlmacen?`${fmtDate(c.fechaRecibidaAlmacen)} ${fmtTime(c.fechaRecibidaAlmacen)}`:"—"}</div>
+                      <div><span style={{color:"var(--t3)",fontWeight:600}}>Fecha llegada:</span> {(()=>{const f=fechaLlegadaGuia(c);return f?`${fmtDate(f)} ${fmtTime(f)}`:"—";})()}</div>
+                      {c.fechaRecibidaAlmacen&&<div><span style={{color:"var(--t3)",fontWeight:600}}>Recibida en almacén:</span> {fmtDate(c.fechaRecibidaAlmacen)} {fmtTime(c.fechaRecibidaAlmacen)}</div>}
                       <div><span style={{color:"var(--t3)",fontWeight:600}}>N° vuelo / barco:</span> {c.numVuelo||"—"}</div>
                       <div><span style={{color:"var(--t3)",fontWeight:600}}>AWB:</span> <span style={{fontFamily:"'DM Mono',monospace"}}>{c.awb||"—"}</span></div>
                       <div><span style={{color:"var(--t3)",fontWeight:600}}>BL:</span> <span style={{fontFamily:"'DM Mono',monospace"}}>{c.bl||"—"}</span></div>
