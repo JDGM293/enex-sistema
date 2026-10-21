@@ -2027,7 +2027,8 @@ export default function ENEXSystem(){
   const [crHistDesde,setCrHistDesde]=useState("");
   const [crHistHasta,setCrHistHasta]=useState("");
   // Cargo Release individual (desde Estado de Cuenta) — modal con 4 campos
-  const [crIndivModal,setCrIndivModal]=useState(null); // null | {wr, nombre, id, empresa, notas}
+  const [crIndivModal,setCrIndivModal]=useState(null); // null | {wrs:[...], nombre, id, empresa, notas}
+  const [crCliModal,setCrCliModal]=useState(null); // selector de WR del cliente para Cargo Release
   // Recibo de cargo release individual (para imprimir)
   const [crIndivRecibo,setCrIndivRecibo]=useState(null); // null | {cr, wr, cliente}
   const [crSearch,setCrSearch]=useState("");
@@ -4586,26 +4587,7 @@ export default function ENEXSystem(){
               <div style={{display:"flex",gap:8,flexShrink:0}}>
                 {hasPerm("crear_wr")&&<button className="btn-p" style={{fontSize:13,padding:"6px 12px"}} onClick={()=>openWRModalForClient(ecCliente)}>+ Nuevo WR</button>}
                 {hasPerm("crear_reempaque")&&<button className="btn-s" style={{fontSize:13,padding:"6px 12px"}} onClick={()=>setRpqCliModal({cliente:ecCliente,selectedIds:[]})}>🔁 Reempaque</button>}
-                {hasPerm("hacer_egreso")&&(()=>{
-                  // WR egresables de ESTE cliente: solo estados 1, 2 o 3 (Recibido / Origen / Confirmado).
-                  // 2.3 (Reempacado), 4+ (Consolidado en adelante) y 25 (Egresado) quedan fijos.
-                  const elegiblesCli=wrTodos.filter(w=>crElegible(w));
-                  return (
-                    <button className="btn-s"
-                      style={{fontSize:13,padding:"6px 12px",background:"#FFF5EA",borderColor:"var(--orange)",color:"var(--orange)",fontWeight:700}}
-                      onClick={()=>{
-                        if(elegiblesCli.length===0){window.alert(`${fullName(ecCliente)||"Este cliente"} no tiene WR para egresar.`);return;}
-                        if(elegiblesCli.length===1){crOpenIndivPorWR(elegiblesCli[0]);return;}
-                        // Más de uno: pedir cuál egresar
-                        const opciones=elegiblesCli.map((w,i)=>`${i+1}. ${w.id} — ${w.status?.label||"?"}${w.tipoEnvio?` · ${w.tipoEnvio}`:""}`).join("\n");
-                        const sel=window.prompt(`Este cliente tiene ${elegiblesCli.length} WR egresables.\nEscribe el número del WR a egresar:\n\n${opciones}`,"1");
-                        if(!sel)return;
-                        const idx=parseInt(sel,10)-1;
-                        if(isNaN(idx)||idx<0||idx>=elegiblesCli.length){window.alert("Número inválido.");return;}
-                        crOpenIndivPorWR(elegiblesCli[idx]);
-                      }}>🚀 Cargo Release</button>
-                  );
-                })()}
+                {hasPerm("hacer_egreso")&&<button className="btn-s" style={{fontSize:13,padding:"6px 12px"}} onClick={()=>setCrCliModal({cliente:ecCliente,selectedIds:[]})}>🚀 Cargo Release</button>}
               </div>
             </div>
 
@@ -4854,6 +4836,57 @@ export default function ENEXSystem(){
         )}
 
         {/* MODAL REEMPAQUE POR CLIENTE — solo WR del cliente seleccionado */}
+        {crCliModal&&(()=>{
+          const cli=crCliModal.cliente;
+          const cliWRs=wrList.filter(w=>{
+            if(!crElegible(w))return false;
+            return w.clienteId===cli.id||w.casillero===cli.casillero||(w.consignee||"").trim().toUpperCase()===(fullName(cli)||"").trim().toUpperCase();
+          });
+          const tog=(id)=>setCrCliModal(p=>({...p,selectedIds:p.selectedIds.includes(id)?p.selectedIds.filter(x=>x!==id):[...p.selectedIds,id]}));
+          const ids=crCliModal.selectedIds;
+          return (
+            <div className="ov" onClick={()=>setCrCliModal(null)}>
+              <div className="modal" style={{maxWidth:820}} onClick={e=>e.stopPropagation()}>
+                <div className="mhd">
+                  <div className="mt">🚀 Cargo Release — {fullName(cli)}</div>
+                  <button className="mcl" onClick={()=>setCrCliModal(null)}>✕</button>
+                </div>
+                <div style={{maxHeight:"55vh",overflow:"auto",margin:"0 14px",border:"1px solid var(--b1)",borderRadius:8}}>
+                  <table className="wt">
+                    <thead><tr>
+                      <th style={{width:40}}></th>
+                      <th>N° WR</th><th>Fecha</th><th>Tracking</th><th>Descripción</th><th>Estado</th><th style={{textAlign:"right"}}>Cajas</th>
+                    </tr></thead>
+                    <tbody>
+                      {cliWRs.length===0
+                        ?<tr><td colSpan={7} style={{textAlign:"center",padding:30,color:"var(--t3)"}}>Este cliente no tiene WR elegibles para egresar.</td></tr>
+                        :cliWRs.map(w=>(
+                          <tr key={w.id} className={ids.includes(w.id)?"sel":""} onClick={()=>tog(w.id)} style={{cursor:"pointer"}}>
+                            <td style={{textAlign:"center"}}><input type="checkbox" checked={ids.includes(w.id)} onChange={()=>tog(w.id)}/></td>
+                            <td><span className="c-wr">{w.id}</span></td>
+                            <td><span className="c-dt">{fmtDate(w.fecha)}</span></td>
+                            <td><span className="c-trk">{w.tracking||"—"}</span></td>
+                            <td style={{maxWidth:220,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{cleanReempaqueDesc(w.descripcion)||"—"}</td>
+                            <td><StBadge st={w.status}/></td>
+                            <td style={{textAlign:"right",fontWeight:700}}>{w.cajas||0}</td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="mft">
+                  <div style={{fontSize:13,color:"var(--t2)",marginRight:"auto"}}>Seleccionados: <strong>{ids.length}</strong></div>
+                  <button className="btn-s" onClick={()=>setCrCliModal(null)}>Cancelar</button>
+                  <button className="btn-p" disabled={ids.length===0} style={{opacity:ids.length===0?.5:1}} onClick={()=>{
+                    const sel=cliWRs.filter(w=>ids.includes(w.id));
+                    setCrCliModal(null);
+                    setCrIndivModal({wrs:sel,nombre:"",id:"",empresa:"",notas:""});
+                  }}>Continuar → Datos del receptor</button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
         {rpqCliModal&&(()=>{
           const cli=rpqCliModal.cliente;
           const cliWRs=wrList.filter(w=>{
@@ -8451,7 +8484,7 @@ export default function ENEXSystem(){
   const crOpenIndivPorWR=(w)=>{
     if(!hasPerm("hacer_egreso")){window.alert("Tu rol no tiene permiso para registrar egresos.");return;}
     if(!crElegible(w)){window.alert(`El WR ${w.id} está en estado ${w.status?.label||"?"}. Solo se puede egresar desde Origen (Recibido / Origen / Confirmado). Reempacados, Consolidados y Egresados quedan fijos.`);return;}
-    setCrIndivModal({wr:w,nombre:"",id:"",empresa:"",notas:""});
+    setCrIndivModal({wrs:[w],nombre:"",id:"",empresa:"",notas:""});
   };
   const crSubmitIndiv=()=>{
     const f=crIndivModal; if(!f)return;
@@ -8461,7 +8494,7 @@ export default function ENEXSystem(){
     const id=crBuildId();
     const cr={
       id,fecha:now,
-      wrIds:[f.wr.id],
+      wrIds:f.wrs.map(w=>w.id),
       agenteCarga:f.nombre.trim(),      // campo "Nombre"   → agenteCarga
       contacto:f.empresa.trim(),         // campo "Empresa"  → contacto
       documento:f.id.trim(),             // campo "ID"       → documento
@@ -8474,19 +8507,23 @@ export default function ENEXSystem(){
     setCargoReleases(p=>[cr,...p]);
     // Promover WR → 25 Egresado
     const st25=getStatus("25");
+    const idsEgreso=f.wrs.map(w=>w.id);
     let wrActualizado=null;
     setWrList(p=>p.map(w=>{
-      if(w.id!==f.wr.id)return w;
+      if(!idsEgreso.includes(w.id))return w;
       wrActualizado={...w,status:st25,historial:[...(w.historial||[]),{code:"25",label:"Egresado",fecha:now,user:currentUser.id,nota:`Egreso ${id} → ${cr.agenteCarga}${cr.contacto?` (${cr.contacto})`:""}`}]};
       dbUpsertWR(wrActualizado);
       return wrActualizado;
     }));
     dbUpsertCargoRelease(cr);
-    logAction("Creó egreso individual",`${id} · ${f.wr.id} → ${cr.agenteCarga}`);
+    logAction("Creó egreso individual",`${id} · ${idsEgreso.join(", ")} → ${cr.agenteCarga}`);
     // Cerrar modal + abrir recibo imprimible
     setCrIndivModal(null);
-    const cli=clients.find(c=>c.id===f.wr.clienteId||c.casillero===f.wr.casillero);
-    setCrIndivRecibo({cr,wr:wrActualizado||f.wr,cliente:cli||null});
+    if(f.wrs.length===1){
+      const w0=f.wrs[0];
+      const cli=clients.find(c=>c.id===w0.clienteId||c.casillero===w0.casillero);
+      setCrIndivRecibo({cr,wr:wrActualizado||w0,cliente:cli||null});
+    }else setCrPrint(cr);
   };
 
   // ── Delivery Notes (Notas de Entrega) ───────────────────────────────────────
@@ -10145,11 +10182,8 @@ export default function ENEXSystem(){
           <div className="ov" onClick={()=>setCrIndivModal(null)}>
             <div className="modal" style={{maxWidth:520}} onClick={e=>e.stopPropagation()}>
               <div className="mhd">
-                <div className="mt">🚀 Cargo Release — WR {f.wr.id}</div>
+                <div className="mt">🚀 Cargo Release — {f.wrs.length===1?`WR ${f.wrs[0].id}`:`${f.wrs.length} WR`}</div>
                 <button className="mcl" onClick={()=>setCrIndivModal(null)}>✕</button>
-              </div>
-              <div style={{padding:"4px 16px 8px",fontSize:13,color:"var(--t2)"}}>
-                Registrá los datos del receptor. Al confirmar, el WR pasará a <b>Egresado (25)</b> y se generará un recibo imprimible.
               </div>
               <div style={{padding:"8px 16px 0",display:"grid",gap:10}}>
                 <div className="fg">
