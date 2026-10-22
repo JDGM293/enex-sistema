@@ -927,6 +927,33 @@ const buscarParcial=(v,items,campos)=>{
   if(parciales.length>1)return {varios:parciales};
   return {};
 };
+// Buscador: WR y tracking coinciden por el final (últimos dígitos), el casillero por su
+// número exacto y los nombres por palabras. Así "4321" no trae WR que solo lo contienen en medio.
+const sinAcentos=v=>String(v||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().trim();
+const crearBuscador=texto=>{
+  const Q=sinAcentos(texto).replace(/\s+/g," ");
+  if(!Q)return null;
+  const compacto=Q.replace(/[\s-]/g,"");
+  const soloNum=/^\d+$/.test(compacto);
+  const tieneLetra=/[A-Z]/.test(Q);
+  const palabras=Q.split(" ").filter(Boolean);
+  return {
+    codigo:v=>{ // WR, tracking, guía
+      if(!soloNum&&compacto.length<3)return false;
+      if(soloNum&&compacto.length<3)return false;
+      return String(v||"").split(/\s+/).some(x=>{const X=sinAcentos(x).replace(/[\s-]/g,"");return !!X&&(X===compacto||X.endsWith(compacto));});
+    },
+    casillero:v=>{
+      const a=compacto.replace(/^C/,"").replace(/\D/g,""), b=String(v||"").replace(/\D/g,"");
+      return /^C?\d+$/.test(compacto)&&!!a&&!!b&&parseInt(a,10)===parseInt(b,10);
+    },
+    nombre:v=>{
+      if(!tieneLetra)return false;
+      const pal=sinAcentos(v).split(/\s+/);
+      return palabras.every(p=>pal.some(x=>x.startsWith(p)));
+    },
+  };
+};
 // Si hay varias coincidencias, pide elegir una
 const elegirDeVarios=(varios,etiqueta)=>{
   const lista=varios.slice(0,15).map((it,i)=>`${i+1}. ${etiqueta(it)}`).join("\n");
@@ -9907,8 +9934,8 @@ export default function ENEXSystem(){
         .map(g=>({g,ws:dnWrsDeGuia(g)}))
         .filter(x=>x.ws.some(w=>["20","20.1","20.2"].includes(w.status?.code||"")))
         .sort((a,b)=>new Date(b.g.fecha||0)-new Date(a.g.fecha||0));
-      const q=normTrk(dnBuscar);
-      const lista=q?guias.filter(x=>String(x.g.id).toUpperCase().includes(q)||x.ws.some(w=>[w.id,w.casillero,w.consignee,trkAll(w)].some(v=>String(v||"").toUpperCase().includes(q)))):guias;
+      const bq=crearBuscador(dnBuscar);
+      const lista=bq?guias.filter(x=>bq.codigo(x.g.id)||x.ws.some(w=>bq.codigo(w.id)||bq.codigo(trkAll(w))||bq.casillero(cliDeWR(w)?.casillero||w.casillero)||bq.nombre(cliDeWR(w)?fullName(cliDeWR(w)):w.consignee))):guias;
       return (
         <div>
           <input className="fi" placeholder="Buscar guía, WR, tracking, casillero o cliente…" value={dnBuscar} onChange={e=>setDnBuscar(e.target.value)}
@@ -9960,8 +9987,10 @@ export default function ENEXSystem(){
       if(!b.clientes.has(ck))b.clientes.set(ck,{key:ck,cli,nombre:cli?fullName(cli):(w.consignee||"—"),casillero:cli?.casillero||w.casillero||"",wrs:[]});
       b.clientes.get(ck).wrs.push(w);
     });
-    const q=dnBuscar.trim().toUpperCase();
-    const clienteCoincide=cl=>!q||[cl.nombre,cl.casillero].some(v=>String(v||"").toUpperCase().includes(q))||cl.wrs.some(w=>[w.id,trkAll(w)].some(v=>String(v||"").toUpperCase().includes(q)));
+    const bq=crearBuscador(dnBuscar);
+    const q=!!bq;
+    const wrCoincide=w=>!!bq&&(bq.codigo(w.id)||bq.codigo(trkAll(w)));
+    const clienteCoincide=cl=>!bq||bq.nombre(cl.nombre)||bq.casillero(cl.casillero)||cl.wrs.some(wrCoincide);
     const lista=[...bloques.values()]
       .map(b=>({...b,clientesArr:[...b.clientes.values()].sort((x,y)=>x.nombre.localeCompare(y.nombre))}))
       .map(b=>({...b,visibles:b.clientesArr.filter(clienteCoincide)}))
@@ -9970,7 +9999,7 @@ export default function ENEXSystem(){
     const chip=w=>{
       const nota=dnNotasDeWR(w.id)[0];
       return (
-        <span key={w.id} style={{display:"inline-flex",alignItems:"center",gap:6,padding:"3px 8px",borderRadius:6,border:"1px solid var(--b1)",background:"var(--bg2)",fontSize:13}}>
+        <span key={w.id} style={{display:"inline-flex",alignItems:"center",gap:6,padding:"3px 8px",borderRadius:6,border:wrCoincide(w)?"2px solid var(--orange)":"1px solid var(--b1)",background:wrCoincide(w)?"#FFF3E0":"var(--bg2)",fontSize:13}}>
           <span onClick={()=>setSelWR(w)} title="Abrir WR" style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",cursor:"pointer"}}>{w.id}</span>
           <StBadge st={w.status}/>
           {nota&&<span onClick={()=>setDnPrint(nota)} title={`Imprimir nota ${nota.id}`} style={{cursor:"pointer"}}>🖨️</span>}
@@ -10008,7 +10037,7 @@ export default function ENEXSystem(){
             <span><b style={{color:"var(--green)"}}>{c.ent}</b> / {c.total} entregados</span>
           </span>
         </div>
-        <input className="fi" autoFocus placeholder="Escanear o escribir WR, tracking, casillero o cliente (basta con los últimos dígitos)…" value={dnBuscar} onChange={e=>setDnBuscar(e.target.value)}
+        <input className="fi" autoFocus placeholder="WR o tracking (últimos dígitos), casillero o nombre…" value={dnBuscar} onChange={e=>setDnBuscar(e.target.value)}
           style={{fontSize:15,padding:"9px 12px",marginBottom:12,width:"100%"}}/>
         {lista.length===0&&<div className="card" style={{textAlign:"center",padding:40,color:"var(--t3)"}}>Sin coincidencias.</div>}
         {lista.map(b=>{
