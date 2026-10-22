@@ -8702,10 +8702,12 @@ export default function ENEXSystem(){
     return facturas.filter(f=>["emitida","pagada_parcial"].includes(f.status)&&Array.isArray(f.wrIds)&&f.wrIds.some(id=>ids.has(id)));
   };
   const dnDatosEntidad=dom=>{
-    if(dom.tipo==="agente"){const a=agentes.find(x=>x.id===dom.id);return {tel:a?.tel||"",dir:[a?.dir,a?.ciudad].filter(Boolean).join(", ")};}
-    if(dom.tipo==="oficina"){const o=oficinas.find(x=>x.id===dom.id);return {tel:o?.tel||"",dir:[o?.dir,o?.ciudad].filter(Boolean).join(", ")};}
-    if(dom.tipo==="autonomo"){const a=clients.find(x=>x.id===dom.id);return {tel:a?.tel1||"",dir:[a?.dir,a?.municipio,a?.estado].filter(Boolean).join(", ")};}
-    return {tel:"",dir:""};
+    // Persona de contacto: la de la ficha; si no hay, el usuario enlazado a ese agente/oficina
+    const usuarioDe=(campo,tipos)=>clients.find(c=>c.tipo==="usuario"&&c[campo]===dom.id&&tipos.includes(c.clienteTipo));
+    if(dom.tipo==="agente"){const a=agentes.find(x=>x.id===dom.id);const u=usuarioDe("agenteId",["agente"]);return {contacto:(a?.contacto||"").trim()||(u?fullName(u):""),doc:a?.contacto?"":(u?.cedula||""),tel:a?.tel||u?.tel1||"",dir:[a?.dir,a?.ciudad].filter(Boolean).join(", ")};}
+    if(dom.tipo==="oficina"){const o=oficinas.find(x=>x.id===dom.id);const u=usuarioDe("oficinaId",["oficina"]);return {contacto:(o?.contacto||"").trim()||(u?fullName(u):""),doc:o?.contacto?"":(u?.cedula||""),tel:o?.tel||u?.tel1||"",dir:[o?.dir,o?.ciudad].filter(Boolean).join(", ")};}
+    if(dom.tipo==="autonomo"){const a=clients.find(x=>x.id===dom.id);return {contacto:a?fullName(a):"",doc:a?.cedula||"",tel:a?.tel1||"",dir:[a?.dir,a?.municipio,a?.estado].filter(Boolean).join(", ")};}
+    return {contacto:"",doc:"",tel:"",dir:""};
   };
   // Abre la ventana de confirmar. tipo: "entrega" (a un cliente) | "despacho" (a agente/oficina/autónomo)
   const dnAbrirConfirmar=(tipo,guia,entidad,wrs,cli=null)=>{
@@ -8719,7 +8721,7 @@ export default function ENEXSystem(){
     }else{
       const d=dnDatosEntidad(entidad);
       setDnQuick({tipo,guiaId:guia.id,entidad,wrs,wrIds:wrs.map(w=>w.id),clienteId:"",
-        consignatario:entidad.nombre,recibe:"encargado",receptorNombre:"",receptorDocumento:"",receptorTelefono:d.tel,relacion:"",
+        consignatario:entidad.nombre,recibe:"encargado",receptorNombre:(d.contacto||"").toUpperCase(),receptorDocumento:d.doc,receptorTelefono:d.tel,relacion:entidad.tipo==="autonomo"?"Autónomo":(d.contacto?"Contacto":""),
         metodoEntrega:"despacho",direccionEntrega:d.dir,notas:""});
     }
   };
