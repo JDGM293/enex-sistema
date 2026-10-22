@@ -1560,7 +1560,7 @@ const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomo
           <div className="fg"><div className="fl">Segundo Apellido</div><input className="fi" value={f.segundoApellido} onChange={e=>ff("segundoApellido",e.target.value)} placeholder="Segundo apellido"/></div>
         </div>
         <div className="fgrid g3" style={{marginBottom:10}}>
-          <div className="fg"><div className="fl">Nº Identificación *</div><input className="fi" value={f.cedula} onChange={e=>ff("cedula",e.target.value)} placeholder="V-00000000"/></div>
+          <div className="fg"><div className="fl">ID Identificación *</div><input className="fi" value={f.cedula} onChange={e=>ff("cedula",e.target.value)} placeholder="V-00000000"/></div>
           {f.tipo==="cliente"
             ?<div className="fg"><div className="fl">Casillero (auto)</div><input className="fi" value={f.casillero} onChange={e=>ff("casillero",e.target.value)} placeholder="Se genera automático" style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)"}}/></div>
             :<div className="fg"><div className="fl">Rol del Sistema</div><select className="fs" value={f.rol} onChange={e=>ff("rol",e.target.value)}>{ALL_ROLES.filter(r=>!["H","I"].includes(r.code)).map(r=><option key={r.code} value={r.code}>{r.code} — {r.name}</option>)}</select></div>}
@@ -3095,7 +3095,7 @@ export default function ENEXSystem(){
         <div className="ct-wrap">
           <table className="ct">
             <thead><tr>
-              <th>ID</th><th>Tipo</th><th>Nombre Completo</th><th>Cédula</th>
+              <th>ID</th><th>Tipo</th><th>Nombre Completo</th><th>ID Identificación</th>
               <th>Casillero</th><th>Dirección</th><th>Municipio</th><th>Estado</th>
               <th>País</th><th>CP</th><th>Teléfono 1</th><th>Teléfono 2</th><th>Email</th><th>Rol</th>
               <th>Designación</th><th>Pertenece a</th>
@@ -8524,7 +8524,7 @@ export default function ENEXSystem(){
   const crSubmitIndiv=()=>{
     const f=crIndivModal; if(!f)return;
     if(!f.nombre.trim()){window.alert("El nombre del receptor es obligatorio.");return;}
-    if(!f.id.trim()){window.alert("La cédula / ID del receptor es obligatoria.");return;}
+    if(!f.id.trim()){window.alert("El ID de identificación del receptor es obligatorio.");return;}
     const now=new Date();
     const id=crBuildId();
     const cr={
@@ -8737,7 +8737,7 @@ export default function ENEXSystem(){
     const f=dnQuick; if(!f)return;
     if(f.wrIds.length===0){window.alert("Marca al menos 1 WR.");return;}
     if(!f.receptorNombre.trim()){window.alert(f.tipo==="despacho"?"Falta el nombre de quien recibe.":"Falta el nombre de quien firma.");return;}
-    if(f.recibe==="encargado"&&!f.receptorDocumento.trim()){window.alert("Falta la cédula de quien recibe.");return;}
+    if(f.recibe==="encargado"&&!f.receptorDocumento.trim()){window.alert("Falta el ID de identificación de quien recibe.");return;}
     if(f.metodoEntrega==="domicilio"&&!f.direccionEntrega.trim()){window.alert("Falta la dirección de entrega.");return;}
     const pend=dnFacturasPendientes(f.wrs.filter(w=>f.wrIds.includes(w.id)));
     if(pend.length>0&&!window.confirm(`⚠️ Hay ${pend.length} factura(s) con pago pendiente:\n${pend.map(x=>`• ${x.id} — ${fmtMoney(x.total-(x.pagado||0),x.moneda)}`).join("\n")}\n\n¿Entregar de todos modos?`))return;
@@ -10490,8 +10490,8 @@ export default function ENEXSystem(){
                   <input className="fi" value={f.nombre} onChange={e=>setCrIndivModal(p=>({...p,nombre:e.target.value.toUpperCase()}))} placeholder="Ej: JUAN PÉREZ" style={{textTransform:"uppercase",fontWeight:600}} autoFocus/>
                 </div>
                 <div className="fg">
-                  <div className="fl">ID / Cédula *</div>
-                  <input className="fi" value={f.id} onChange={e=>setCrIndivModal(p=>({...p,id:e.target.value}))} placeholder="V-12345678 · 1234567890"/>
+                  <div className="fl">ID Identificación *</div>
+                  <input className="fi" value={f.id} onChange={e=>setCrIndivModal(p=>({...p,id:e.target.value}))} placeholder="Nº de identificación"/>
                 </div>
                 <div className="fg">
                   <div className="fl">Empresa</div>
@@ -10548,7 +10548,7 @@ export default function ENEXSystem(){
                   <div style={{fontWeight:700,fontSize:12,textTransform:"uppercase",letterSpacing:1,marginBottom:6,borderBottom:"1px solid #999",paddingBottom:3}}>Receptor / Retira</div>
                   <div style={{display:"grid",gridTemplateColumns:"auto 1fr",gap:"4px 12px",fontSize:13}}>
                     <div style={{fontWeight:700}}>Nombre:</div><div style={{fontWeight:600}}>{_cr.agenteCarga||"—"}</div>
-                    <div style={{fontWeight:700}}>ID / Cédula:</div><div style={{fontFamily:"'DM Mono',monospace"}}>{_cr.documento||"—"}</div>
+                    <div style={{fontWeight:700}}>ID Identificación:</div><div style={{fontFamily:"'DM Mono',monospace"}}>{_cr.documento||"—"}</div>
                     <div style={{fontWeight:700}}>Empresa:</div><div>{_cr.contacto||"—"}</div>
                     {_cr.notas&&(<><div style={{fontWeight:700}}>Notas:</div><div style={{fontStyle:"italic",color:"#444"}}>{_cr.notas}</div></>)}
                   </div>
@@ -11052,8 +11052,8 @@ export default function ENEXSystem(){
                   <div><div style={{fontSize:12,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Contacto (persona)</div>
                     <input className="fi" value={f.contacto} onChange={e=>setCrModal(p=>({...p,contacto:e.target.value}))} placeholder="Ej: Luis Pérez · 0414-1234567"/>
                   </div>
-                  <div><div style={{fontSize:12,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Documento/Cédula</div>
-                    <input className="fi" value={f.documento} onChange={e=>setCrModal(p=>({...p,documento:e.target.value}))} placeholder="V-12345678"/>
+                  <div><div style={{fontSize:12,fontWeight:700,color:"var(--t2)",marginBottom:4}}>ID Identificación</div>
+                    <input className="fi" value={f.documento} onChange={e=>setCrModal(p=>({...p,documento:e.target.value}))} placeholder="Nº de identificación"/>
                   </div>
                   <div><div style={{fontSize:12,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Vehículo (placa/modelo)</div>
                     <input className="fi" value={f.vehiculo} onChange={e=>setCrModal(p=>({...p,vehiculo:e.target.value}))} placeholder="AB1234 · Ford 350"/>
@@ -11149,7 +11149,7 @@ export default function ENEXSystem(){
                     <tbody>
                       <tr><td style={{fontWeight:700,width:120,paddingBottom:3}}>Agente de carga:</td><td style={{paddingBottom:3}}>{cr.agenteCarga||"—"}</td></tr>
                       <tr><td style={{fontWeight:700,paddingBottom:3}}>Contacto:</td><td style={{paddingBottom:3}}>{cr.contacto||"—"}</td></tr>
-                      <tr><td style={{fontWeight:700,paddingBottom:3}}>Documento:</td><td style={{paddingBottom:3}}>{cr.documento||"—"}</td></tr>
+                      <tr><td style={{fontWeight:700,paddingBottom:3}}>ID Identificación:</td><td style={{paddingBottom:3}}>{cr.documento||"—"}</td></tr>
                       <tr><td style={{fontWeight:700,paddingBottom:3}}>Vehículo:</td><td style={{paddingBottom:3}}>{cr.vehiculo||"—"}</td></tr>
                       {cr.notas&&<tr><td style={{fontWeight:700,paddingBottom:3,verticalAlign:"top"}}>Notas:</td><td style={{paddingBottom:3,whiteSpace:"pre-wrap"}}>{cr.notas}</td></tr>}
                       {cr.anulado&&cr.motivoAnulacion&&<tr><td style={{fontWeight:700,color:"#C62828"}}>Motivo anulación:</td><td style={{color:"#C62828"}}>{cr.motivoAnulacion}</td></tr>}
@@ -11275,7 +11275,7 @@ export default function ENEXSystem(){
                 )}
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
                   {campo(esDesp?`Recibe por ${f.entidad.nombre} *`:(f.recibe==="encargado"?"Nombre del encargado *":"Nombre de quien firma *"),"receptorNombre","Nombre y apellido",{textTransform:"uppercase",fontWeight:600})}
-                  {campo(f.recibe==="encargado"?"Cédula *":"Cédula","receptorDocumento","V-12345678")}
+                  {campo(f.recibe==="encargado"?"ID Identificación *":"ID Identificación","receptorDocumento","Nº de identificación")}
                   {campo("Teléfono","receptorTelefono","0414-1234567")}
                   {f.recibe==="encargado"&&!esDesp
                     ?campo("Relación con el consignatario","relacion","Familiar, empleado, chófer…")
@@ -11539,8 +11539,8 @@ export default function ENEXSystem(){
                       <div><div style={{fontSize:11,fontWeight:600,color:"var(--t2)",marginBottom:2}}>Persona que firma *</div>
                         <input className="fi" value={f.receptorNombre} onChange={e=>setDnModal(p=>({...p,receptorNombre:e.target.value}))} placeholder="Nombre y apellido"/>
                       </div>
-                      <div><div style={{fontSize:11,fontWeight:600,color:"var(--t2)",marginBottom:2}}>Documento / Cédula</div>
-                        <input className="fi" value={f.receptorDocumento} onChange={e=>setDnModal(p=>({...p,receptorDocumento:e.target.value}))} placeholder="V-12345678"/>
+                      <div><div style={{fontSize:11,fontWeight:600,color:"var(--t2)",marginBottom:2}}>ID Identificación</div>
+                        <input className="fi" value={f.receptorDocumento} onChange={e=>setDnModal(p=>({...p,receptorDocumento:e.target.value}))} placeholder="Nº de identificación"/>
                       </div>
                       <div><div style={{fontSize:11,fontWeight:600,color:"var(--t2)",marginBottom:2}}>Teléfono</div>
                         <input className="fi" value={f.receptorTelefono} onChange={e=>setDnModal(p=>({...p,receptorTelefono:e.target.value}))} placeholder="0414-1234567"/>
@@ -11642,7 +11642,7 @@ export default function ENEXSystem(){
                     <tbody>
                       <tr><td style={{fontWeight:700,width:140,paddingBottom:3}}>{esDespacho?"Receptor (entidad):":"Consignatario:"}</td><td style={{paddingBottom:3}}>{dn.consignatario||dn.receptorEntidad?.nombre||"—"}</td></tr>
                       <tr><td style={{fontWeight:700,paddingBottom:3}}>{esDespacho||dn.receptorEntidad?.recibe==="encargado"?"Recibe:":"Persona que firma:"}</td><td style={{paddingBottom:3}}>{dn.receptorNombre||"—"}{dn.receptorEntidad?.recibe==="encargado"&&!esDespacho?" (encargado)":""}{dn.receptorEntidad?.relacion?` · ${dn.receptorEntidad.relacion}`:""}</td></tr>
-                      <tr><td style={{fontWeight:700,paddingBottom:3}}>Documento:</td><td style={{paddingBottom:3}}>{dn.receptorDocumento||"—"}</td></tr>
+                      <tr><td style={{fontWeight:700,paddingBottom:3}}>ID Identificación:</td><td style={{paddingBottom:3}}>{dn.receptorDocumento||"—"}</td></tr>
                       <tr><td style={{fontWeight:700,paddingBottom:3}}>Teléfono:</td><td style={{paddingBottom:3}}>{dn.receptorTelefono||"—"}</td></tr>
                       <tr><td style={{fontWeight:700,paddingBottom:3}}>Método:</td><td style={{paddingBottom:3}}>{metodoLabel[dn.metodoEntrega]||"—"}</td></tr>
                       {dn.direccionEntrega&&<tr><td style={{fontWeight:700,paddingBottom:3,verticalAlign:"top"}}>Dirección:</td><td style={{paddingBottom:3}}>{dn.direccionEntrega}</td></tr>}
@@ -11872,7 +11872,7 @@ export default function ENEXSystem(){
                     <input className="fi" value={f.receptorNombre} onChange={e=>setFacModal(p=>({...p,receptorNombre:e.target.value}))}/>
                   </div>
                   <div>
-                    <label className="fl">Documento / RIF</label>
+                    <label className="fl">ID Identificación</label>
                     <input className="fi" value={f.receptorDoc} onChange={e=>setFacModal(p=>({...p,receptorDoc:e.target.value}))}/>
                   </div>
                   <div>
@@ -12086,7 +12086,7 @@ export default function ENEXSystem(){
                     <div style={{fontSize:12,fontWeight:700,color:"#555",marginBottom:4}}>RECEPTOR ({(REC_TYPES.find(r=>r.k===f.receptorTipo)||{l:f.receptorTipo}).l})</div>
                     <div style={{fontSize:15,fontWeight:700}}>{f.receptorNombre||"—"}</div>
                     <div style={{fontSize:12,display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginTop:4}}>
-                      {f.receptorDoc&&<div><b>Documento:</b> {f.receptorDoc}</div>}
+                      {f.receptorDoc&&<div><b>ID Identificación:</b> {f.receptorDoc}</div>}
                       {f.receptorCasillero&&<div><b>Casillero:</b> {f.receptorCasillero}</div>}
                       {f.receptorTel&&<div><b>Teléfono:</b> {f.receptorTel}</div>}
                       {f.receptorEmail&&<div><b>Email:</b> {f.receptorEmail}</div>}
