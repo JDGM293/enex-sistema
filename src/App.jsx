@@ -8559,6 +8559,7 @@ export default function ENEXSystem(){
   //   agente / vendedor_agente   → { tipo:"agente",   id: agenteId,   nombre }
   //   oficina / vendedor_oficina → { tipo:"oficina",  id: oficinaId,  nombre }
   //   autonomo                   → { tipo:"autonomo", id: autonomoId, nombre }
+  const cliDeWR=w=>w?(clients.find(c=>w.clienteId&&c.id===w.clienteId)||clients.find(c=>w.casillero&&c.casillero===w.casillero)||null):null;
   const dnDominioDeCliente=(c)=>{
     if(!c)return null;
     const ct=c.clienteTipo||"matriz";
@@ -8653,9 +8654,11 @@ export default function ENEXSystem(){
   };
   const dnSubmit=()=>{
     const f=dnModal; if(!f)return;
-    if(!f.consignatario.trim()){window.alert("El consignatario es obligatorio.");return;}
-    if(!f.receptorNombre.trim()){window.alert("El nombre del receptor es obligatorio.");return;}
-    if(!f.wrIds||f.wrIds.length===0){window.alert("Agrega al menos 1 WR a la nota de entrega.");return;}
+    if(!f.guiaId){window.alert("Selecciona la guía.");return;}
+    if(!f.receptorEntidad){window.alert(f.tipo==="despacho"?"Selecciona el agente, oficina o autónomo.":"Selecciona el cliente.");return;}
+    if(!f.wrIds||f.wrIds.length===0){window.alert("Marca al menos 1 WR.");return;}
+    if(!f.consignatario.trim()){window.alert("Falta el consignatario.");return;}
+    if(!f.receptorNombre.trim()){window.alert("Falta la persona que firma.");return;}
     const editing=!!f.editId;
     const id=editing?f.editId:dnBuildId();
     const now=new Date();
@@ -10929,7 +10932,7 @@ export default function ENEXSystem(){
         // Para Despacho: agrupar WRs por dominio (agente/oficina/autónomo del cliente)
         const wrsDelReceptor=wrsBase.filter(w=>{
           if(!f.receptorEntidad)return false;
-          const cli=clients.find(c=>c.id===w.clienteId);
+          const cli=cliDeWR(w);
           if(esDespacho){
             const dom=dnDominioDeCliente(cli);
             return dom&&dom.tipo===f.receptorEntidad.tipo&&dom.id===f.receptorEntidad.id;
@@ -10943,7 +10946,7 @@ export default function ENEXSystem(){
           if(esDespacho){
             const acc=new Map();
             wrsGuia.forEach(w=>{
-              const cli=clients.find(c=>c.id===w.clienteId);
+              const cli=cliDeWR(w);
               const dom=dnDominioDeCliente(cli);
               if(!dom)return;
               const k=`${dom.tipo}:${dom.id}`;
@@ -10954,7 +10957,7 @@ export default function ENEXSystem(){
           }else{
             const acc=new Map();
             wrsGuia.forEach(w=>{
-              const cli=clients.find(c=>c.id===w.clienteId);
+              const cli=cliDeWR(w);
               if(!cli)return;
               if(!acc.has(cli.id)){
                 acc.set(cli.id,{
@@ -10991,7 +10994,7 @@ export default function ENEXSystem(){
           }
           // Auto-seleccionar todos los WRs del receptor por defecto
           const wrIdsAuto=wrsBase.filter(w=>{
-            const cli=clients.find(c=>c.id===w.clienteId);
+            const cli=cliDeWR(w);
             if(esDespacho){
               const dom=dnDominioDeCliente(cli);
               return dom&&dom.tipo===rec.tipo&&dom.id===rec.id;
@@ -11005,6 +11008,7 @@ export default function ENEXSystem(){
             consignatario:pref.consignatario||p.consignatario,
             direccionEntrega:pref.direccionEntrega||p.direccionEntrega,
             receptorTelefono:pref.receptorTelefono||p.receptorTelefono,
+            receptorNombre:p.receptorNombre||(rec.tipo==="cliente"?pref.consignatario:""),
             wrIds:wrIdsAuto,
           }));
         };
@@ -11106,7 +11110,7 @@ export default function ENEXSystem(){
                         <tbody>
                           {wrsDelReceptor.map(w=>{
                             const fact=wrPesoFacturable(w,isAereo);
-                            const cli=clients.find(c=>c.id===w.clienteId);
+                            const cli=cliDeWR(w);
                             const check=f.wrIds.includes(w.id);
                             return (
                               <tr key={w.id} style={{borderTop:"1px solid #EEF",cursor:"pointer",background:check?"#FFF9E6":""}} onClick={()=>toggleWR(w.id)}>
@@ -11183,7 +11187,6 @@ export default function ENEXSystem(){
                 <div style={{display:"flex",gap:8}}>
                   <button className="btn-s" onClick={()=>setDnModal(null)}>Cancelar</button>
                   <button className="btn-p" style={{background:colorTipo,borderColor:colorTipo}}
-                    disabled={!f.guiaId||!f.receptorEntidad||f.wrIds.length===0||!f.consignatario.trim()||!f.receptorNombre.trim()}
                     onClick={dnSubmit}>
                     {editing?"💾 Guardar cambios":(esDespacho?"🚚 Crear Despacho":"📦 Crear Entrega")}
                   </button>
@@ -11212,7 +11215,7 @@ export default function ENEXSystem(){
         const grupos=esDespacho?(()=>{
           const m=new Map();
           wrs.forEach(w=>{
-            const cli=clients.find(c=>c.id===w.clienteId);
+            const cli=cliDeWR(w);
             const k=cli?.id||"sin_cliente";
             if(!m.has(k))m.set(k,{cliente:cli,nombre:cli?[cli.primerNombre,cli.primerApellido].filter(Boolean).join(" "):(w.consignee||"—"),casillero:cli?.casillero||"",wrs:[]});
             m.get(k).wrs.push(w);
@@ -11295,7 +11298,7 @@ export default function ENEXSystem(){
                         const rows=[];
                         const renderRow=(w,i)=>{
                           const desc=cleanReempaqueDesc(w.descripcion)||"—";
-                          const cli=clients.find(c=>c.id===w.clienteId);
+                          const cli=cliDeWR(w);
                           const cliLabel=cli?`${[cli.primerNombre,cli.primerApellido].filter(Boolean).join(" ")}${cli.casillero?` · ${cli.casillero}`:""}`:w.consignee||"—";
                           const fact=wrPesoFacturable(w,isAereo);
                           return(
