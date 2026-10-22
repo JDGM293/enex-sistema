@@ -11023,11 +11023,6 @@ export default function ENEXSystem(){
               <div className="mhd" style={{borderTop:`4px solid ${colorTipo}`}}>
                 <div style={{flex:1}}>
                   <div className="mt">{esDespacho?"🚚":"📦"} {editing?`Editar Nota ${f.editId}`:(esDespacho?"Nuevo Despacho":"Nueva Entrega")}</div>
-                  <div style={{fontSize:12,color:"var(--t3)",marginTop:2}}>
-                    {esDespacho
-                      ?<>Despacho grupal a <b>Agente / Oficina / Autónomo</b>. Los WR seleccionados pasarán a <b>Entregado (21)</b>.</>
-                      :<>Entrega directa al <b>cliente</b>. Los WR seleccionados pasarán a <b>Entregado (21)</b>.</>}
-                  </div>
                 </div>
                 <button className="mcl" onClick={()=>setDnModal(null)}>✕</button>
               </div>
@@ -11044,7 +11039,7 @@ export default function ENEXSystem(){
                   {guiaSel&&(
                     <div style={{fontSize:11,color:"var(--t3)",marginTop:6,display:"flex",gap:14,flexWrap:"wrap"}}>
                       <span>📦 <b>Destino:</b> {guiaSel.destino||"—"}</span>
-                      <span>{isAereo?"✈️":"🚢"} <b>Modo:</b> {guiaSel.tipoEnvio||"—"} {isAereo&&<span style={{color:"#1A6090",fontWeight:700}}>(cobra max(peso, peso vol.) lb)</span>}{!isAereo&&<span style={{color:"#1A6090",fontWeight:700}}>(cobra ft³/m³)</span>}</span>
+                      <span>{isAereo?"✈️":"🚢"} <b>Modo:</b> {guiaSel.tipoEnvio||"—"}</span>
                       <span>📋 <b>Total WR x entregar:</b> {wrsGuia.length}</span>
                     </div>
                   )}
@@ -11183,7 +11178,7 @@ export default function ENEXSystem(){
               </div>
               <div className="mft" style={{display:"flex",justifyContent:"space-between",gap:8,alignItems:"center"}}>
                 <div style={{fontSize:12,color:"var(--t3)"}}>
-                  {!f.guiaId?"Paso 1: elegí la guía":(!f.receptorEntidad?"Paso 2: elegí el receptor":(f.wrIds.length===0?"Paso 3: marcá al menos 1 WR":"Paso 4: completá datos del receptor"))}
+                  
                 </div>
                 <div style={{display:"flex",gap:8}}>
                   <button className="btn-s" onClick={()=>setDnModal(null)}>Cancelar</button>
