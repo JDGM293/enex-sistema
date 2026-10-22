@@ -758,6 +758,8 @@ const WR_STATUSES=[
   {code:"18.1",label:"Investigación",   cls:"s4", phase:"excep",    auto:false, manual:true,  channels:["dashboard","recepcion"], exc:true},
   {code:"19",  label:"Sobrante",        cls:"s5", phase:"excep",    auto:true,  manual:false, channels:["dashboard","recepcion"], exc:true},
   {code:"20",  label:"Por Entrega",     cls:"s3", phase:"entrega",  auto:true,  manual:false, channels:["dashboard","cliente"]},
+  {code:"20.1",label:"Despachado a Sucursal", cls:"s2", phase:"entrega", auto:true, manual:false, channels:["dashboard","cliente"]},
+  {code:"20.2",label:"En Sucursal",     cls:"s6", phase:"entrega",  auto:true,  manual:false, channels:["dashboard","cliente"]},
   {code:"21",  label:"Entregado",       cls:"s3", phase:"entrega",  auto:true,  manual:false, channels:["dashboard","recepcion"]},
   {code:"22",  label:"Por Cobrar",      cls:"s5", phase:"entrega",  auto:true,  manual:false, channels:["dashboard"]},
   {code:"23",  label:"Cobrado",         cls:"s3", phase:"entrega",  auto:true,  manual:false, channels:["dashboard"]},
@@ -2039,6 +2041,12 @@ export default function ENEXSystem(){
   const [dnSearch,setDnSearch]=useState("");
   const [dnTipoFiltro,setDnTipoFiltro]=useState("todos"); // "todos" | "entrega" | "despacho"
   const [dnPrint,setDnPrint]=useState(null); // nota a imprimir
+  // Entregas por guía
+  const [dnVista,setDnVista]=useState("guias"); // "guias" | "historial"
+  const [dnGuiaSel,setDnGuiaSel]=useState(null); // id de guía abierta
+  const [dnBuscar,setDnBuscar]=useState("");
+  const [dnAbiertos,setDnAbiertos]=useState({}); // bloques desplegados {key:true}
+  const [dnQuick,setDnQuick]=useState(null); // ventana de confirmar entrega/despacho
   const [labelTipo,setLabelTipo]=useState("WR");
   const [openDays,setOpenDays]=useState({});
   const [actFilter,setActFilter]=useState("");
@@ -3606,7 +3614,7 @@ export default function ENEXSystem(){
             }}>✏️ Editar</button>}
             {hasPerm("borrar_wr")&&<button className="btn-s" style={{fontSize:12,padding:"4px 10px",color:"var(--red)",borderColor:"var(--red)"}} onClick={()=>{if(window.confirm(`¿Borrar WR ${selWR.id}? Esta acción no se puede deshacer.`)){setWrList(p=>p.filter(x=>x.id!==selWR.id));dbDeleteWR(selWR.id);logAction("Borró WR",selWR.id);setSelWR(null);}}}>🗑 Borrar</button>}
             {crElegible(selWR)&&hasPerm("hacer_egreso")&&<button className="btn-s" style={{fontSize:12,padding:"4px 10px",background:"#E8F5E9",borderColor:"#81C784",color:"#2E7D32",fontWeight:700}} onClick={()=>{crOpenNew([selWR.id]);setSelWR(null);}} title="Registrar egreso individual de este WR">🚀 Egresar</button>}
-            {dnElegible(selWR)&&hasPerm("entregar")&&<button className="btn-s" style={{fontSize:12,padding:"4px 10px",background:"#E3F2FD",borderColor:"#64B5F6",color:"#1565C0",fontWeight:700}} onClick={()=>{dnOpenNew([selWR.id]);setSelWR(null);}} title="Registrar entrega al cliente">📝 Entregar</button>}
+            {dnElegible(selWR)&&hasPerm("entregar")&&<button className="btn-s" style={{fontSize:12,padding:"4px 10px",background:"#E3F2FD",borderColor:"#64B5F6",color:"#1565C0",fontWeight:700}} onClick={()=>{const w=selWR;setSelWR(null);dnEntregarDesdeWR(w);}}>📝 Entregar</button>}
             {/* Facturar — visible si el rol tiene permiso, el WR no está bloqueado
                 (no Reempacado 2.3 ni Egresado 25) y no tiene factura activa.
                 Para PREPAID factura al remitente; para COD al receptor según clienteTipo. */}
@@ -4143,11 +4151,11 @@ export default function ENEXSystem(){
       return revertido?null:hist[lastConfIdx];
     };
     const POST={
-      recibido:     ["3","4","5","6","6.2","7","8","9","10","11","12","13","14","15","16","17","18","18.1","18.2","18.3","19","20","21","22","23","25","2.3"],
-      confirmado:   ["4","5","6","6.2","7","8","9","10","11","12","13","14","15","16","17","18","18.1","18.2","18.3","19","20","21","22","23"],
-      consolidado: ["5","6","6.2","7","8","9","10","11","12","13","14","15","16","17","18","18.1","18.2","18.3","19","20","21","22","23"],
-      enviado:      ["6","6.2","7","8","9","10","11","12","13","14","15","16","17","18","18.1","18.2","18.3","19","20","21","22","23"],
-      almacen_dest: ["18","18.1","18.2","18.3","19","20","21","22","23"],
+      recibido:     ["3","4","5","6","6.2","7","8","9","10","11","12","13","14","15","16","17","18","18.1","18.2","18.3","19","20","20.1","20.2","21","22","23","25","2.3"],
+      confirmado:   ["4","5","6","6.2","7","8","9","10","11","12","13","14","15","16","17","18","18.1","18.2","18.3","19","20","20.1","20.2","21","22","23"],
+      consolidado: ["5","6","6.2","7","8","9","10","11","12","13","14","15","16","17","18","18.1","18.2","18.3","19","20","20.1","20.2","21","22","23"],
+      enviado:      ["6","6.2","7","8","9","10","11","12","13","14","15","16","17","18","18.1","18.2","18.3","19","20","20.1","20.2","21","22","23"],
+      almacen_dest: ["18","18.1","18.2","18.3","19","20","20.1","20.2","21","22","23"],
       entregado:    ["22","23"],
       cobrado:      [],
     };
@@ -7699,7 +7707,7 @@ export default function ENEXSystem(){
     // ─────────────────────────────────────────────────────────────────────
     // Lista alineada con WR_STATUSES actual: sin "9.1", "10.1", "10.2",
     // "12C", "12P" (códigos retirados del modelo).
-    const STATES_REQUIRE_CONFIRM=["4","5","6","6.2","7","8","9","10","11","12","13","14","15","16","17","18","18.1","18.2","18.3","19","20","21","22","23"];
+    const STATES_REQUIRE_CONFIRM=["4","5","6","6.2","7","8","9","10","11","12","13","14","15","16","17","18","18.1","18.2","18.3","19","20","20.1","20.2","21","22","23"];
 
     // Helper: construye un hito "alcanzado por estado actual o evento
     // posterior". La fecha solo se usa cuando proviene del evento literal
@@ -7787,7 +7795,7 @@ export default function ENEXSystem(){
     //      Fuente externa autoritativa: fecha de creación de la guía
     //      consolidada (cuando el WR está incluido en una y no hay
     //      evento "4" registrado).
-    const POST_CONSOLIDADO=["5","6","6.2","7","8","9","10","11","12","13","14","15","16","17","18","18.1","18.2","18.3","19","20","21","22","23"];
+    const POST_CONSOLIDADO=["5","6","6.2","7","8","9","10","11","12","13","14","15","16","17","18","18.1","18.2","18.3","19","20","20.1","20.2","21","22","23"];
     const hCons=buildHito("4",POST_CONSOLIDADO,guiaConsol?.fecha||null,guiaConsol?`(según fecha de guía ${guiaConsol.id})`:"");
     lineal.push({
       key:"consolidado", label:"Consolidado", ic:"🗂️", color:"var(--cyan)",
@@ -7801,7 +7809,7 @@ export default function ENEXSystem(){
     // 3.b) Recibido en Almacén (17) — posteriores: 18, 18.1, 19, 20, 21, 22, 23.
     //      Sin fuente externa autoritativa: si no hay evento "17", la
     //      fecha queda no registrada (no inferimos del evento posterior).
-    const POST_ALMACEN=["18","18.1","18.2","18.3","19","20","21","22","23"];
+    const POST_ALMACEN=["18","18.1","18.2","18.3","19","20","20.1","20.2","21","22","23"];
     const hRec=buildHito("17",POST_ALMACEN);
     lineal.push({
       key:"recibido", label:"Recibido en Almacén", ic:"📥", color:"var(--purple)",
@@ -7812,7 +7820,7 @@ export default function ENEXSystem(){
     });
 
     // 3.c) Por Entrega (20) — posteriores: 21, 22, 23. Sin fuente externa.
-    const POST_PORENTREGA=["21","22","23"];
+    const POST_PORENTREGA=["20.1","20.2","21","22","23"];
     const hPE=buildHito("20",POST_PORENTREGA);
     lineal.push({
       key:"porentrega", label:"Por Entrega", ic:"🚚", color:"var(--sky)",
@@ -8283,7 +8291,7 @@ export default function ENEXSystem(){
     setWrList(p=>p.map(w=>{
       if(!allWrIds.includes(w.id))return w;
       // No retroceder WRs ya recibidos/excep/entrega
-      if(["17","18","18.1","18.2","18.3","19","20","21","22","23","25"].includes(w.status?.code||""))return w;
+      if(["17","18","18.1","18.2","18.3","19","20","20.1","20.2","21","22","23","25"].includes(w.status?.code||""))return w;
       const upd={...w,status:st,historial:[...(w.historial||[]),{code:st.code,label:st.label,fecha:new Date(),user:currentUser.id,nota:`Recepción → ${st.label} (guía ${consolId})`}]};
       dbUpsertWR(upd);
       return upd;
@@ -8302,7 +8310,7 @@ export default function ENEXSystem(){
     const pendientes=wrs.filter(w=>{
       const c=w.status?.code||"";
       // WR todavía sin resolución: no está recibido (17), ni es excepción (18/18.1/19)
-      return !["17","18","18.1","18.2","18.3","19","20","21","22","23","25"].includes(c);
+      return !["17","18","18.1","18.2","18.3","19","20","20.1","20.2","21","22","23","25"].includes(c);
     });
     if(pendientes.length>0){
       window.alert(
@@ -8366,7 +8374,7 @@ export default function ENEXSystem(){
     setWrList(p=>p.map(w=>{
       if(!allWrIds.includes(w.id))return w;
       // respetar WRs ya procesados (Almacén, Faltante, Investigación, Sobrante, Por Entrega, etc.)
-      if(["17","18","18.1","18.2","18.3","19","20","21","22","23","25"].includes(w.status?.code||""))return w;
+      if(["17","18","18.1","18.2","18.3","19","20","20.1","20.2","21","22","23","25"].includes(w.status?.code||""))return w;
       cambiados++;
       const upd={...w,status:st,historial:[...(w.historial||[]),{code:"17",label:"Almacén",fecha:new Date(),user:currentUser.id,nota:`${nota} — guía ${guia.id}`}]};
       dbUpsertWR(upd);
@@ -8533,7 +8541,7 @@ export default function ENEXSystem(){
   // Sólo los WR en estado 20 Por Entrega son elegibles para Nota de Entrega.
   // Reempacados (2.3) son fantasmas; Egresados (25) ya salieron del sistema por
   // Cargo Release y no se entregan otra vez.
-  const dnElegible=(w)=>w?.status?.code==="20";
+  const dnElegible=(w)=>["20","20.2"].includes(w?.status?.code||"");
 
   // ── Helpers de Entregas y Despachos ────────────────────────────────────────
   // Una guía es "aérea" si su tipoEnvio empieza con "Aer" (Aéreo, Aereo, AER).
@@ -8652,6 +8660,100 @@ export default function ENEXSystem(){
       editId:dn.id,
     });
   };
+  // ── ENTREGAS POR GUÍA ─────────────────────────────────────────────
+  // WR de una guía (contenedores + wrIds), sin reempacados
+  const dnWrsDeGuia=g=>{
+    if(!g)return [];
+    const ids=new Set([...(Array.isArray(g.wrIds)?g.wrIds:[]),...(g.containers||[]).flatMap(ct=>(ct.wr||[]).map(r=>r.id))]);
+    return wrList.filter(w=>ids.has(w.id)&&w.status?.code!=="2.3");
+  };
+  const dnGuiaDeWR=w=>consolList.find(c=>(Array.isArray(c.wrIds)&&c.wrIds.includes(w.id))||(c.containers||[]).some(ct=>(ct.wr||[]).some(r=>r.id===w.id)))||null;
+  const dnDomDeWR=w=>dnDominioDeCliente(cliDeWR(w))||{tipo:"matriz",id:"matriz",nombre:empresaNombre||"Matriz"};
+  const dnNotasDeWR=id=>deliveryNotes.filter(n=>!n.anulado&&(n.wrIds||[]).includes(id)).sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
+  const dnFacturasPendientes=ws=>{
+    const ids=new Set(ws.map(w=>w.id));
+    return facturas.filter(f=>["emitida","pagada_parcial"].includes(f.status)&&Array.isArray(f.wrIds)&&f.wrIds.some(id=>ids.has(id)));
+  };
+  const dnDatosEntidad=dom=>{
+    if(dom.tipo==="agente"){const a=agentes.find(x=>x.id===dom.id);return {tel:a?.tel||"",dir:[a?.dir,a?.ciudad].filter(Boolean).join(", ")};}
+    if(dom.tipo==="oficina"){const o=oficinas.find(x=>x.id===dom.id);return {tel:o?.tel||"",dir:[o?.dir,o?.ciudad].filter(Boolean).join(", ")};}
+    if(dom.tipo==="autonomo"){const a=clients.find(x=>x.id===dom.id);return {tel:a?.tel1||"",dir:[a?.dir,a?.municipio,a?.estado].filter(Boolean).join(", ")};}
+    return {tel:"",dir:""};
+  };
+  // Abre la ventana de confirmar. tipo: "entrega" (a un cliente) | "despacho" (a agente/oficina/autónomo)
+  const dnAbrirConfirmar=(tipo,guia,entidad,wrs,cli=null)=>{
+    if(!hasPerm("entregar")){window.alert("Tu rol no tiene permiso para registrar entregas.");return;}
+    if(!wrs.length)return;
+    if(tipo==="entrega"){
+      const nombre=cli?fullName(cli):(wrs[0].consignee||"");
+      setDnQuick({tipo,guiaId:guia.id,entidad,wrs,wrIds:wrs.map(w=>w.id),clienteId:cli?.id||"",
+        consignatario:nombre,recibe:"consignatario",receptorNombre:nombre,receptorDocumento:cli?.cedula||"",receptorTelefono:cli?.tel1||"",relacion:"",
+        metodoEntrega:"retiro_oficina",direccionEntrega:cli?[cli.dir,cli.municipio,cli.estado].filter(Boolean).join(", "):"",notas:""});
+    }else{
+      const d=dnDatosEntidad(entidad);
+      setDnQuick({tipo,guiaId:guia.id,entidad,wrs,wrIds:wrs.map(w=>w.id),clienteId:"",
+        consignatario:entidad.nombre,recibe:"encargado",receptorNombre:"",receptorDocumento:"",receptorTelefono:d.tel,relacion:"",
+        metodoEntrega:"despacho",direccionEntrega:d.dir,notas:""});
+    }
+  };
+  // Desde el detalle del WR: abre la entrega de ese cliente en su guía
+  const dnEntregarDesdeWR=w=>{
+    const g=dnGuiaDeWR(w);
+    if(!g){window.alert(`El WR ${w.id} no pertenece a ninguna guía.`);return;}
+    const cli=cliDeWR(w);
+    const wrs=dnWrsDeGuia(g).filter(x=>dnElegible(x)&&(cli?cliDeWR(x)?.id===cli.id:x.casillero===w.casillero));
+    dnAbrirConfirmar("entrega",g,cli?{tipo:"cliente",id:cli.id,nombre:fullName(cli)}:{tipo:"cliente",id:"",nombre:w.consignee||""},wrs.length?wrs:[w],cli);
+  };
+  const dnQuickSubmit=()=>{
+    const f=dnQuick; if(!f)return;
+    if(f.wrIds.length===0){window.alert("Marca al menos 1 WR.");return;}
+    if(!f.receptorNombre.trim()){window.alert(f.tipo==="despacho"?"Falta el nombre de quien recibe.":"Falta el nombre de quien firma.");return;}
+    if(f.recibe==="encargado"&&!f.receptorDocumento.trim()){window.alert("Falta la cédula de quien recibe.");return;}
+    if(f.metodoEntrega==="domicilio"&&!f.direccionEntrega.trim()){window.alert("Falta la dirección de entrega.");return;}
+    const pend=dnFacturasPendientes(f.wrs.filter(w=>f.wrIds.includes(w.id)));
+    if(pend.length>0&&!window.confirm(`⚠️ Hay ${pend.length} factura(s) con pago pendiente:\n${pend.map(x=>`• ${x.id} — ${fmtMoney(x.total-(x.pagado||0),x.moneda)}`).join("\n")}\n\n¿Entregar de todos modos?`))return;
+    const now=new Date();
+    const id=dnBuildId();
+    const aSucursal=f.tipo==="despacho"&&f.entidad.tipo==="oficina";
+    const dn={
+      id,fecha:now,tipo:f.tipo,guiaId:f.guiaId,
+      receptorEntidad:{...f.entidad,recibe:f.recibe,relacion:f.recibe==="encargado"?f.relacion.trim():""},
+      wrIds:[...f.wrIds],clienteId:f.clienteId||"",
+      consignatario:f.consignatario.trim(),
+      receptorNombre:f.receptorNombre.trim(),receptorDocumento:f.receptorDocumento.trim(),receptorTelefono:f.receptorTelefono.trim(),
+      direccionEntrega:f.direccionEntrega.trim(),metodoEntrega:f.metodoEntrega,transportista:"",notas:f.notas.trim(),
+      usuario:currentUser.id||currentUser.email||"",firmaDataUrl:"",anulado:false,motivoAnulacion:"",
+    };
+    const st=getStatus(aSucursal?"20.1":"21");
+    const notaHist=aSucursal
+      ?`Despacho ${id} → ${f.entidad.nombre} · recibe ${dn.receptorNombre}`
+      :`${f.tipo==="despacho"?"Despacho":"Entrega"} ${id} → ${dn.receptorNombre}${f.recibe==="encargado"?` (encargado${dn.receptorEntidad.relacion?`, ${dn.receptorEntidad.relacion}`:""})`:""}${f.tipo==="despacho"?` por ${f.entidad.nombre}`:""}`;
+    setDeliveryNotes(p=>[dn,...p]);
+    setWrList(p=>p.map(w=>{
+      if(!dn.wrIds.includes(w.id))return w;
+      const upd={...w,status:st,historial:[...(w.historial||[]),{code:st.code,label:st.label,fecha:now,user:currentUser.id,nota:notaHist}]};
+      dbUpsertWR(upd);
+      return upd;
+    }));
+    dbUpsertDeliveryNote(dn);
+    logAction(f.tipo==="despacho"?"Creó despacho":"Creó entrega",`${id} · ${dn.wrIds.length} WR → ${f.tipo==="despacho"?f.entidad.nombre:dn.consignatario}`);
+    setDnQuick(null);
+    setDnPrint(dn);
+  };
+  // La oficina confirma que recibió la carga despachada (20.1 → 20.2)
+  const dnRecibirSucursal=(dom,wrs)=>{
+    if(!hasPerm("entregar")){window.alert("Tu rol no tiene permiso.");return;}
+    if(!wrs.length)return;
+    if(!window.confirm(`¿Confirmar que ${dom.nombre} recibió ${wrs.length} WR?`))return;
+    const st=getStatus("20.2"); const now=new Date(); const ids=wrs.map(w=>w.id);
+    setWrList(p=>p.map(w=>{
+      if(!ids.includes(w.id))return w;
+      const upd={...w,status:st,historial:[...(w.historial||[]),{code:"20.2",label:st.label,fecha:now,user:currentUser.id,nota:`Recibido en sucursal ${dom.nombre}`}]};
+      dbUpsertWR(upd);
+      return upd;
+    }));
+    logAction("Recibido en sucursal",`${dom.nombre} · ${ids.length} WR`);
+  };
   const dnSubmit=()=>{
     const f=dnModal; if(!f)return;
     if(!f.guiaId){window.alert("Selecciona la guía.");return;}
@@ -8710,16 +8812,21 @@ export default function ENEXSystem(){
     const upd={...dn,anulado:true,motivoAnulacion:motivo};
     setDeliveryNotes(p=>p.map(n=>n.id===dn.id?upd:n));
     dbUpsertDeliveryNote(upd);
-    // Revertir WRs a 20 Por Entrega
-    const st20=getStatus("20");
+    // Revertir los WR al estado que tenían antes de esta nota
+    const esDespSucursal=dn.tipo==="despacho"&&dn.receptorEntidad?.tipo==="oficina";
+    const revertibles=esDespSucursal?["20.1","20.2"]:["21"];
     setWrList(p=>p.map(w=>{
       if(!dn.wrIds.includes(w.id))return w;
-      if(w.status?.code!=="21")return w; // si ya avanzó (22/23…), no revertir
-      const u={...w,status:st20,historial:[...(w.historial||[]),{code:"20",label:"Por Entrega",fecha:new Date(),user:currentUser.id,nota:`Entrega ${dn.id} anulada: ${motivo}`}]};
+      if(!revertibles.includes(w.status?.code||""))return w; // si ya avanzó (22/23…), no revertir
+      const h=w.historial||[];
+      const idx=h.map(x=>String(x.nota||"")).map((t,i)=>t.includes(dn.id)?i:-1).filter(i=>i>=0).shift();
+      const prevCode=idx>0?String(h[idx-1].code):"20";
+      const stPrev=getStatus(["20","20.2"].includes(prevCode)?prevCode:"20");
+      const u={...w,status:stPrev,historial:[...h,{code:stPrev.code,label:stPrev.label,fecha:new Date(),user:currentUser.id,nota:`${dn.tipo==="despacho"?"Despacho":"Entrega"} ${dn.id} anulado: ${motivo}`}]};
       dbUpsertWR(u);
       return u;
     }));
-    logAction("Anuló entrega",`${dn.id} — ${motivo}`);
+    logAction(dn.tipo==="despacho"?"Anuló despacho":"Anuló entrega",`${dn.id} — ${motivo}`);
   };
   const dnDelete=(dn)=>{
     if(!hasPerm("borrar_entrega")){window.alert("Tu rol no tiene permiso para borrar entregas.");return;}
@@ -9005,8 +9112,8 @@ export default function ENEXSystem(){
     const chkCode=(w)=>w.status?.code||"";
     const nRecibidos=checklist.filter(w=>chkCode(w)==="17").length;
     const nFaltantes=checklist.filter(w=>["18","18.1","18.2","18.3"].includes(chkCode(w))).length;
-    const nPorEntrega=checklist.filter(w=>["20","21","22","23","25"].includes(chkCode(w))).length;
-    const nPendientes=checklist.filter(w=>{const c=chkCode(w);return c&&!["17","18","18.1","18.2","18.3","19","20","21","22","23","25"].includes(c);}).length;
+    const nPorEntrega=checklist.filter(w=>["20","20.1","20.2","21","22","23","25"].includes(chkCode(w))).length;
+    const nPendientes=checklist.filter(w=>{const c=chkCode(w);return c&&!["17","18","18.1","18.2","18.3","19","20","20.1","20.2","21","22","23","25"].includes(c);}).length;
     // Candidatos globales (cuando NO hay guía seleccionada): WRs en tránsito destino o liberados
     const candidatos=wrList.filter(w=>{
       const c=w.status?.code||"";
@@ -9026,7 +9133,7 @@ export default function ENEXSystem(){
       const c=chkCode(w);
       if(!hasPerm("hacer_recepcion_dest"))return<span style={{fontSize:12,color:"var(--t4)"}}>—</span>;
       // Pre-destino (14/15/16/13/etc) o estados de tránsito
-      if(!["17","18","18.1","18.2","18.3","19","20","21","22","23","25"].includes(c)){
+      if(!["17","18","18.1","18.2","18.3","19","20","20.1","20.2","21","22","23","25"].includes(c)){
         if(guiaSel&&!puedeRecibir)return<span style={{fontSize:11,fontWeight:600,color:"#8A6100"}}>⏳ Esperando Liberado 3</span>;
         return(<div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
           <button className="btn-s" style={{fontSize:11,padding:"3px 7px",background:"#E8F5E9",borderColor:"#81C784",color:"#2E7D32"}}
@@ -9119,7 +9226,7 @@ export default function ENEXSystem(){
                   {guiasRecep.map(c=>{
                     const ids=(c.containers||[]).flatMap(ct=>(ct.wr||[]).map(w=>w.id));
                     const ws=wrList.filter(w=>ids.includes(w.id));
-                    const rec=ws.filter(w=>["17","20","21","22","23","25"].includes(w.status?.code||"")).length;
+                    const rec=ws.filter(w=>["17","20","20.1","20.2","21","22","23","25"].includes(w.status?.code||"")).length;
                     const sel=rdSelGuia===c.id;
                     const sb=sel?{background:"#E8F0FE"}:{};
                     return(
@@ -9186,7 +9293,7 @@ export default function ENEXSystem(){
                       ?<tr><td colSpan={7} style={{textAlign:"center",padding:40,color:"var(--t3)"}}>No hay WR que coincidan con la búsqueda.</td></tr>
                       :checklist.map((w,i)=>{
                         const c=chkCode(w);
-                        const rowBg=c==="17"?"#F1F8E9":["18","18.1","18.2","18.3"].includes(c)?"#FFF5F5":c==="19"?"#FAF4FC":["20","21","22","23","25"].includes(c)?"#F0F7FF":"";
+                        const rowBg=c==="17"?"#F1F8E9":["18","18.1","18.2","18.3"].includes(c)?"#FFF5F5":c==="19"?"#FAF4FC":["20","20.1","20.2","21","22","23","25"].includes(c)?"#F0F7FF":"";
                         return(
                           <tr key={w.id} style={{background:rowBg}}>
                             <td style={{textAlign:"center",fontSize:12,color:"var(--t3)",fontFamily:"'DM Mono',monospace"}}>{i+1}</td>
@@ -9783,7 +9890,182 @@ export default function ENEXSystem(){
     );
   };
 
-  const renderDeliveryNotes=()=>{
+  // ── ENTREGAS Y DESPACHOS — vista por guía ─────────────────────────
+  const DN_DOM_ORDEN={matriz:0,oficina:1,agente:2,autonomo:3};
+  const DN_DOM_IC={matriz:"🏛️",oficina:"🏢",agente:"🤝",autonomo:"🧑‍💻"};
+  const DN_DOM_LBL={matriz:"Clientes directos",oficina:"Oficina",agente:"Agente",autonomo:"Autónomo"};
+  const dnCuenta=ws=>({
+    total:ws.length,
+    pend:ws.filter(w=>w.status?.code==="20").length,
+    suc:ws.filter(w=>["20.1","20.2"].includes(w.status?.code||"")).length,
+    ent:ws.filter(w=>["21","22","23"].includes(w.status?.code||"")).length,
+  });
+  const renderDnGuias=()=>{
+    // Tarjetas de guías con carga por entregar
+    if(!dnGuiaSel){
+      const guias=consolList
+        .map(g=>({g,ws:dnWrsDeGuia(g)}))
+        .filter(x=>x.ws.some(w=>["20","20.1","20.2"].includes(w.status?.code||"")))
+        .sort((a,b)=>new Date(b.g.fecha||0)-new Date(a.g.fecha||0));
+      const q=normTrk(dnBuscar);
+      const lista=q?guias.filter(x=>String(x.g.id).toUpperCase().includes(q)||x.ws.some(w=>[w.id,w.casillero,w.consignee,trkAll(w)].some(v=>String(v||"").toUpperCase().includes(q)))):guias;
+      return (
+        <div>
+          <input className="fi" placeholder="Buscar guía, WR, tracking, casillero o cliente…" value={dnBuscar} onChange={e=>setDnBuscar(e.target.value)}
+            style={{fontSize:15,padding:"9px 12px",marginBottom:12,width:"100%"}}/>
+          {lista.length===0
+            ?<div className="card" style={{textAlign:"center",padding:50,color:"var(--t3)",fontSize:15}}>No hay guías con carga por entregar.</div>
+            :<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:12}}>
+              {lista.map(({g,ws})=>{
+                const c=dnCuenta(ws);
+                const pct=c.total?Math.round(c.ent*100/c.total):0;
+                return (
+                  <div key={g.id} className="card" onClick={()=>{setDnGuiaSel(g.id);setDnBuscar("");setDnAbiertos({});}}
+                    style={{cursor:"pointer",padding:14,border:"1px solid var(--b1)"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,marginBottom:8}}>
+                      <span style={{fontFamily:"'DM Mono',monospace",fontWeight:800,fontSize:18,color:"var(--navy)"}}>{g.id}</span>
+                      <TypeBadge t={g.tipoEnvio}/>
+                    </div>
+                    <div style={{fontSize:14,color:"var(--t2)",marginBottom:10}}>📍 {g.destino||"—"} · {fmtDate(g.fecha)}</div>
+                    <div style={{height:8,background:"var(--bg4)",borderRadius:4,overflow:"hidden",marginBottom:8}}>
+                      <div style={{width:`${pct}%`,height:"100%",background:"var(--green)"}}/>
+                    </div>
+                    <div style={{display:"flex",gap:12,fontSize:13,flexWrap:"wrap"}}>
+                      <span><b style={{color:"var(--orange)"}}>{c.pend}</b> por entregar</span>
+                      {c.suc>0&&<span><b style={{color:"var(--sky)"}}>{c.suc}</b> en sucursal</span>}
+                      <span><b style={{color:"var(--green)"}}>{c.ent}</b> / {c.total} entregados</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>}
+        </div>
+      );
+    }
+
+    // Panel de una guía
+    const g=consolList.find(c=>c.id===dnGuiaSel);
+    if(!g)return <div className="card" style={{padding:30,textAlign:"center"}}><button className="btn-s" onClick={()=>setDnGuiaSel(null)}>← Guías</button></div>;
+    const ws=dnWrsDeGuia(g);
+    const c=dnCuenta(ws);
+    // Agrupar por dominio → cliente
+    const bloques=new Map();
+    ws.forEach(w=>{
+      const dom=dnDomDeWR(w);
+      const k=`${dom.tipo}:${dom.id}`;
+      if(!bloques.has(k))bloques.set(k,{key:k,dom,clientes:new Map()});
+      const cli=cliDeWR(w);
+      const ck=cli?.id||`cas:${w.casillero||w.consignee||w.id}`;
+      const b=bloques.get(k);
+      if(!b.clientes.has(ck))b.clientes.set(ck,{key:ck,cli,nombre:cli?fullName(cli):(w.consignee||"—"),casillero:cli?.casillero||w.casillero||"",wrs:[]});
+      b.clientes.get(ck).wrs.push(w);
+    });
+    const q=dnBuscar.trim().toUpperCase();
+    const clienteCoincide=cl=>!q||[cl.nombre,cl.casillero].some(v=>String(v||"").toUpperCase().includes(q))||cl.wrs.some(w=>[w.id,trkAll(w)].some(v=>String(v||"").toUpperCase().includes(q)));
+    const lista=[...bloques.values()]
+      .map(b=>({...b,clientesArr:[...b.clientes.values()].sort((x,y)=>x.nombre.localeCompare(y.nombre))}))
+      .map(b=>({...b,visibles:b.clientesArr.filter(clienteCoincide)}))
+      .filter(b=>b.visibles.length>0)
+      .sort((x,y)=>(DN_DOM_ORDEN[x.dom.tipo]??9)-(DN_DOM_ORDEN[y.dom.tipo]??9)||x.dom.nombre.localeCompare(y.dom.nombre));
+    const chip=w=>{
+      const nota=dnNotasDeWR(w.id)[0];
+      return (
+        <span key={w.id} style={{display:"inline-flex",alignItems:"center",gap:6,padding:"3px 8px",borderRadius:6,border:"1px solid var(--b1)",background:"var(--bg2)",fontSize:13}}>
+          <span onClick={()=>setSelWR(w)} title="Abrir WR" style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",cursor:"pointer"}}>{w.id}</span>
+          <StBadge st={w.status}/>
+          {nota&&<span onClick={()=>setDnPrint(nota)} title={`Imprimir nota ${nota.id}`} style={{cursor:"pointer"}}>🖨️</span>}
+        </span>
+      );
+    };
+    const filaCliente=(b,cl)=>{
+      const entregables=cl.wrs.filter(dnElegible);
+      return (
+        <div key={cl.key} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderTop:"1px solid var(--b2)",flexWrap:"wrap"}}>
+          <div style={{minWidth:200,flex:"0 0 220px"}}>
+            <div style={{fontWeight:700,fontSize:15,color:"var(--t1)"}}>{cl.nombre}</div>
+            <div style={{fontSize:13,color:"var(--gold2)",fontFamily:"'DM Mono',monospace",fontWeight:700}}>#{cl.casillero||"—"}</div>
+          </div>
+          <div style={{flex:1,display:"flex",gap:6,flexWrap:"wrap",minWidth:200}}>{cl.wrs.map(chip)}</div>
+          {entregables.length>0&&hasPerm("entregar")&&(
+            <button className="btn-p" style={{fontSize:13,padding:"6px 12px",background:"#2E7D32",borderColor:"#2E7D32"}}
+              onClick={()=>dnAbrirConfirmar("entrega",g,cl.cli?{tipo:"cliente",id:cl.cli.id,nombre:cl.nombre}:{tipo:"cliente",id:"",nombre:cl.nombre},entregables,cl.cli)}>
+              📦 Entregar ({entregables.length})
+            </button>
+          )}
+        </div>
+      );
+    };
+    return (
+      <div>
+        <div className="card" style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",marginBottom:12}}>
+          <button className="btn-s" onClick={()=>{setDnGuiaSel(null);setDnBuscar("");}}>← Guías</button>
+          <span style={{fontFamily:"'DM Mono',monospace",fontWeight:800,fontSize:20,color:"var(--navy)"}}>{g.id}</span>
+          <TypeBadge t={g.tipoEnvio}/>
+          <span style={{fontSize:14,color:"var(--t2)"}}>📍 {g.destino||"—"}</span>
+          <span style={{fontSize:14,marginLeft:"auto",display:"flex",gap:12,flexWrap:"wrap"}}>
+            <span><b style={{color:"var(--orange)"}}>{c.pend}</b> por entregar</span>
+            {c.suc>0&&<span><b style={{color:"var(--sky)"}}>{c.suc}</b> en sucursal</span>}
+            <span><b style={{color:"var(--green)"}}>{c.ent}</b> / {c.total} entregados</span>
+          </span>
+        </div>
+        <input className="fi" autoFocus placeholder="Escanear o escribir WR, tracking, casillero o cliente (basta con los últimos dígitos)…" value={dnBuscar} onChange={e=>setDnBuscar(e.target.value)}
+          style={{fontSize:15,padding:"9px 12px",marginBottom:12,width:"100%"}}/>
+        {lista.length===0&&<div className="card" style={{textAlign:"center",padding:40,color:"var(--t3)"}}>Sin coincidencias.</div>}
+        {lista.map(b=>{
+          const dom=b.dom;
+          const todos=b.clientesArr.flatMap(x=>x.wrs);
+          const cb=dnCuenta(todos);
+          const paraDespachar=todos.filter(w=>w.status?.code==="20");
+          const enCamino=todos.filter(w=>w.status?.code==="20.1");
+          const esMatriz=dom.tipo==="matriz";
+          const abierto=esMatriz||!!q||!!dnAbiertos[b.key];
+          return (
+            <div key={b.key} className="card" style={{padding:0,marginBottom:12,overflow:"hidden",borderLeft:`4px solid ${esMatriz?"var(--navy)":"#E65100"}`}}>
+              <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",background:"var(--bg3)",flexWrap:"wrap",cursor:esMatriz?"default":"pointer"}}
+                onClick={()=>{if(!esMatriz)setDnAbiertos(p=>({...p,[b.key]:!p[b.key]}));}}>
+                <span style={{fontSize:20}}>{DN_DOM_IC[dom.tipo]||"•"}</span>
+                <div>
+                  <div style={{fontWeight:800,fontSize:16,color:"var(--navy)"}}>{esMatriz?DN_DOM_LBL.matriz:dom.nombre}</div>
+                  <div style={{fontSize:12,color:"var(--t3)"}}>{esMatriz?(empresaNombre||"Matriz"):DN_DOM_LBL[dom.tipo]} · {b.clientesArr.length} {b.clientesArr.length===1?"cliente":"clientes"} · {cb.total} WR</div>
+                </div>
+                <span style={{fontSize:13,display:"flex",gap:10,marginLeft:"auto",flexWrap:"wrap",alignItems:"center"}}>
+                  <span><b style={{color:"var(--orange)"}}>{cb.pend}</b> pend.</span>
+                  {cb.suc>0&&<span><b style={{color:"var(--sky)"}}>{cb.suc}</b> suc.</span>}
+                  <span><b style={{color:"var(--green)"}}>{cb.ent}</b> entr.</span>
+                  {!esMatriz&&enCamino.length>0&&hasPerm("entregar")&&(
+                    <button className="btn-s" style={{fontSize:13,padding:"5px 10px",borderColor:"var(--sky)",color:"var(--sky)",fontWeight:700}}
+                      onClick={e=>{e.stopPropagation();dnRecibirSucursal(dom,enCamino);}}>📥 Recibido en sucursal ({enCamino.length})</button>
+                  )}
+                  {!esMatriz&&paraDespachar.length>0&&hasPerm("entregar")&&(
+                    <button className="btn-p" style={{fontSize:13,padding:"6px 12px",background:"#E65100",borderColor:"#E65100"}}
+                      onClick={e=>{e.stopPropagation();dnAbrirConfirmar("despacho",g,dom,paraDespachar);}}>🚚 Despachar ({paraDespachar.length})</button>
+                  )}
+                  {!esMatriz&&<span style={{fontSize:14,color:"var(--t3)"}}>{abierto?"▲":"▼"}</span>}
+                </span>
+              </div>
+              {abierto&&b.visibles.map(cl=>filaCliente(b,cl))}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+  const renderDeliveryNotes=()=>(
+    <div className="page-scroll">
+      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,flexWrap:"wrap"}}>
+        <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:18,fontWeight:700,color:"var(--navy)",flex:1}}>📝 Entregas y Despachos</div>
+        <div style={{display:"flex",gap:4,background:"var(--bg4)",borderRadius:7,padding:3,border:"1px solid var(--b1)"}}>
+          {[{k:"guias",l:"🚢 Por guía"},{k:"historial",l:"📜 Historial"}].map(t=>(
+            <button key={t.k} onClick={()=>setDnVista(t.k)}
+              style={{padding:"5px 14px",borderRadius:5,border:"none",cursor:"pointer",fontSize:14,fontWeight:600,
+                background:dnVista===t.k?"var(--navy)":"transparent",color:dnVista===t.k?"#fff":"var(--t2)"}}>{t.l}</button>
+          ))}
+        </div>
+      </div>
+      {dnVista==="guias"?renderDnGuias():renderDnHistorial()}
+    </div>
+  );
+  const renderDnHistorial=()=>{
     const q=(dnSearch||"").toLowerCase().trim();
     const tipoFiltro=dnTipoFiltro||"todos"; // "todos" | "entrega" | "despacho"
     const tipoDe=(n)=>n.tipo||"entrega"; // notas viejas sin campo tipo se tratan como "entrega"
@@ -9796,29 +10078,12 @@ export default function ENEXSystem(){
       if(!q)return true;
       return [n.id,n.consignatario,n.receptorNombre,n.receptorDocumento,n.transportista,n.guiaId].some(v=>String(v||"").toLowerCase().includes(q));
     });
-    const metodoLabel={retiro_oficina:"🏢 Retiro oficina",domicilio:"🏠 Domicilio",transportista:"🚚 Transportista"};
+    const metodoLabel={retiro_oficina:"🏢 Retiro oficina",domicilio:"🏠 Domicilio",transportista:"🚚 Transportista",despacho:"🚚 Despacho"};
     const tipoBadge=(t)=>t==="despacho"
       ?<span style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:8,background:"#FFF3E0",color:"#E65100",border:"1px solid #FFCC80",letterSpacing:.4}}>🚚 DESPACHO</span>
       :<span style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:8,background:"#E8F5E9",color:"#2E7D32",border:"1px solid #A5D6A7",letterSpacing:.4}}>📦 ENTREGA</span>;
     return(
-      <div className="page-scroll">
-        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,flexWrap:"wrap"}}>
-          <div style={{flex:1,minWidth:240}}>
-            <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:18,fontWeight:700,color:"var(--navy)"}}>📝 Entregas y Despachos</div>
-          </div>
-          <div style={{display:"flex",gap:6,fontSize:13}}>
-            <span style={{background:"#E8F5E9",color:"#2E7D32",padding:"4px 10px",borderRadius:10,fontWeight:700,border:"1px solid #A5D6A7"}}>✓ {activas.length} activas</span>
-            <span style={{background:"#FFF3E0",color:"#E65100",padding:"4px 10px",borderRadius:10,fontWeight:700,border:"1px solid #FFCC80"}}>✕ {anuladas.length} anuladas</span>
-          </div>
-          {hasPerm("entregar")&&(
-            <div style={{display:"flex",gap:6}}>
-              <button className="btn-p" onClick={()=>dnOpenNew([],{tipo:"entrega"})} title="Entrega individual a un cliente directo">📦 Nueva Entrega</button>
-              <button className="btn-p" style={{background:"#E65100",borderColor:"#E65100"}} onClick={()=>dnOpenNew([],{tipo:"despacho"})} title="Despacho grupal a Agente / Oficina / Autónomo">🚚 Nuevo Despacho</button>
-            </div>
-          )}
-        </div>
-
-
+      <div>
         <div className="card" style={{marginBottom:10,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
           <div style={{display:"flex",gap:4,background:"var(--bg4)",borderRadius:7,padding:"3px",border:"1px solid var(--b1)"}}>
             {[
@@ -10917,6 +11182,99 @@ export default function ENEXSystem(){
       })()}
 
       {/* ── Delivery Note — MODAL FORMULARIO ────────────────────────────────── */}
+      {dnQuick&&(()=>{
+        const f=dnQuick;
+        const esDesp=f.tipo==="despacho";
+        const color=esDesp?"#E65100":"#2E7D32";
+        const set=(k,v)=>setDnQuick(p=>({...p,[k]:v}));
+        const tog=id=>setDnQuick(p=>({...p,wrIds:p.wrIds.includes(id)?p.wrIds.filter(x=>x!==id):[...p.wrIds,id]}));
+        const sel=f.wrs.filter(w=>f.wrIds.includes(w.id));
+        const pend=dnFacturasPendientes(sel);
+        const aSucursal=esDesp&&f.entidad.tipo==="oficina";
+        const lbl={fontSize:12,fontWeight:700,color:"var(--t2)",marginBottom:3,textTransform:"uppercase",letterSpacing:.4};
+        const campo=(t,k,ph,extra={})=>(
+          <div><div style={lbl}>{t}</div><input className="fi" value={f[k]} onChange={e=>set(k,e.target.value)} placeholder={ph} style={{fontSize:15,width:"100%",...extra}}/></div>
+        );
+        return (
+          <div className="ov">
+            <div className="modal" style={{maxWidth:760,width:"96%"}} onClick={e=>e.stopPropagation()}>
+              <div className="mhd" style={{borderTop:`4px solid ${color}`}}>
+                <div className="mt">{esDesp?`🚚 Despacho — ${f.entidad.nombre}`:`📦 Entrega — ${f.consignatario||f.entidad.nombre}`}</div>
+                <button className="mcl" onClick={()=>setDnQuick(null)}>✕</button>
+              </div>
+              <div className="mbd" style={{maxHeight:"72vh",overflow:"auto"}}>
+                <div style={{fontSize:13,color:"var(--t3)",marginBottom:8}}>Guía <b style={{fontFamily:"'DM Mono',monospace",color:"var(--navy)"}}>{f.guiaId}</b>{aSucursal?" · pasa a Despachado a Sucursal":""}</div>
+                <div style={{border:"1px solid var(--b1)",borderRadius:8,overflow:"hidden",marginBottom:12}}>
+                  <table style={{width:"100%",borderCollapse:"collapse",fontSize:14}}>
+                    <thead><tr style={{background:"var(--bg3)"}}>
+                      <th style={{width:34,padding:6}}><input type="checkbox" checked={f.wrIds.length===f.wrs.length} onChange={e=>set("wrIds",e.target.checked?f.wrs.map(w=>w.id):[])}/></th>
+                      {["N° WR","Cliente","Casillero","Cajas","Peso"].map(h=><th key={h} style={{textAlign:"left",padding:"6px 8px",fontSize:12,color:"var(--navy)",textTransform:"uppercase"}}>{h}</th>)}
+                    </tr></thead>
+                    <tbody>
+                      {f.wrs.map(w=>{
+                        const cl=cliDeWR(w);
+                        return (
+                          <tr key={w.id} onClick={()=>tog(w.id)} style={{cursor:"pointer",borderTop:"1px solid var(--b2)",background:f.wrIds.includes(w.id)?"#FFF9E6":""}}>
+                            <td style={{textAlign:"center",padding:6}}><input type="checkbox" checked={f.wrIds.includes(w.id)} readOnly/></td>
+                            <td style={{padding:"6px 8px",fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)"}}>{w.id}</td>
+                            <td style={{padding:"6px 8px"}}>{cl?fullName(cl):(w.consignee||"—")}</td>
+                            <td style={{padding:"6px 8px",fontFamily:"'DM Mono',monospace",color:"var(--gold2)",fontWeight:700}}>{cl?.casillero||w.casillero||"—"}</td>
+                            <td style={{padding:"6px 8px"}}>{w.cajas||1}</td>
+                            <td style={{padding:"6px 8px",fontFamily:"'DM Mono',monospace"}}>{w.pesoLb||0} lb</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                {pend.length>0&&(
+                  <div style={{background:"#FFF3E0",border:"1px solid #FFB74D",borderRadius:8,padding:"8px 12px",marginBottom:12,fontSize:14,color:"#BF360C"}}>
+                    ⚠️ Pago pendiente: {pend.map(x=>`${x.id} (${fmtMoney((x.total||0)-(x.pagado||0),x.moneda)})`).join(" · ")}
+                  </div>
+                )}
+                {!esDesp&&(
+                  <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap"}}>
+                    {[{k:"consignatario",l:"👤 Recibe el consignatario"},{k:"encargado",l:"🧑‍🤝‍🧑 Recibe un encargado"}].map(o=>(
+                      <button key={o.k} className={f.recibe===o.k?"btn-p":"btn-s"} style={{fontSize:14}}
+                        onClick={()=>setDnQuick(p=>o.k==="consignatario"
+                          ?{...p,recibe:"consignatario",receptorNombre:p.consignatario,receptorDocumento:(clients.find(c=>c.id===p.clienteId)?.cedula)||"",relacion:""}
+                          :{...p,recibe:"encargado",receptorNombre:"",receptorDocumento:"",relacion:""})}>{o.l}</button>
+                    ))}
+                  </div>
+                )}
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                  {campo(esDesp?`Recibe por ${f.entidad.nombre} *`:(f.recibe==="encargado"?"Nombre del encargado *":"Nombre de quien firma *"),"receptorNombre","Nombre y apellido",{textTransform:"uppercase",fontWeight:600})}
+                  {campo(f.recibe==="encargado"?"Cédula *":"Cédula","receptorDocumento","V-12345678")}
+                  {campo("Teléfono","receptorTelefono","0414-1234567")}
+                  {f.recibe==="encargado"&&!esDesp
+                    ?campo("Relación con el consignatario","relacion","Familiar, empleado, chófer…")
+                    :esDesp?campo("Relación / cargo","relacion","Chófer, empleado…"):<div/>}
+                  {!esDesp&&(
+                    <div style={{gridColumn:"1/-1"}}>
+                      <div style={lbl}>Entrega</div>
+                      <div style={{display:"flex",gap:8}}>
+                        {[{k:"retiro_oficina",l:"🏢 Retiro en oficina"},{k:"domicilio",l:"🏠 A domicilio"}].map(o=>(
+                          <button key={o.k} className={f.metodoEntrega===o.k?"btn-p":"btn-s"} style={{fontSize:14}} onClick={()=>set("metodoEntrega",o.k)}>{o.l}</button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {(esDesp||f.metodoEntrega==="domicilio")&&<div style={{gridColumn:"1/-1"}}>{campo(esDesp?"Dirección":"Dirección de entrega *","direccionEntrega","Dirección")}</div>}
+                  <div style={{gridColumn:"1/-1"}}>
+                    <div style={lbl}>Notas</div>
+                    <textarea className="fi" rows={2} value={f.notas} onChange={e=>set("notas",e.target.value)} style={{width:"100%",resize:"vertical",fontSize:14}}/>
+                  </div>
+                </div>
+              </div>
+              <div className="mft">
+                <div style={{fontSize:14,color:"var(--t2)",marginRight:"auto"}}><b>{f.wrIds.length}</b> de {f.wrs.length} WR</div>
+                <button className="btn-s" onClick={()=>setDnQuick(null)}>Cancelar</button>
+                <button className="btn-p" style={{background:color,borderColor:color}} onClick={dnQuickSubmit}>{esDesp?"🚚 Confirmar despacho":"📦 Confirmar entrega"}</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
       {dnModal&&(()=>{
         const f=dnModal;
         const editing=!!f.editId;
@@ -11210,7 +11568,7 @@ export default function ENEXSystem(){
         const totalFt3   =wrs.reduce((s,w)=>s+(parseFloat(w.ft3   )||0),0);
         const totalM3    =wrs.reduce((s,w)=>s+(parseFloat(w.m3    )||0),0);
         const totalFact  =wrs.reduce((s,w)=>s+wrPesoFacturable(w,isAereo).valor,0);
-        const metodoLabel={retiro_oficina:"Retiro en oficina",domicilio:"Entrega a domicilio",transportista:"Transportista / Agente"};
+        const metodoLabel={retiro_oficina:"Retiro en oficina",domicilio:"Entrega a domicilio",transportista:"Transportista / Agente",despacho:"Despacho"};
         // Para despacho, agrupar visualmente los WR por cliente
         const grupos=esDespacho?(()=>{
           const m=new Map();
@@ -11252,7 +11610,7 @@ export default function ENEXSystem(){
                   <table style={{width:"100%",fontSize:13,marginBottom:12}}>
                     <tbody>
                       <tr><td style={{fontWeight:700,width:140,paddingBottom:3}}>{esDespacho?"Receptor (entidad):":"Consignatario:"}</td><td style={{paddingBottom:3}}>{dn.consignatario||dn.receptorEntidad?.nombre||"—"}</td></tr>
-                      <tr><td style={{fontWeight:700,paddingBottom:3}}>Persona que firma:</td><td style={{paddingBottom:3}}>{dn.receptorNombre||"—"}</td></tr>
+                      <tr><td style={{fontWeight:700,paddingBottom:3}}>{esDespacho||dn.receptorEntidad?.recibe==="encargado"?"Recibe:":"Persona que firma:"}</td><td style={{paddingBottom:3}}>{dn.receptorNombre||"—"}{dn.receptorEntidad?.recibe==="encargado"&&!esDespacho?" (encargado)":""}{dn.receptorEntidad?.relacion?` · ${dn.receptorEntidad.relacion}`:""}</td></tr>
                       <tr><td style={{fontWeight:700,paddingBottom:3}}>Documento:</td><td style={{paddingBottom:3}}>{dn.receptorDocumento||"—"}</td></tr>
                       <tr><td style={{fontWeight:700,paddingBottom:3}}>Teléfono:</td><td style={{paddingBottom:3}}>{dn.receptorTelefono||"—"}</td></tr>
                       <tr><td style={{fontWeight:700,paddingBottom:3}}>Método:</td><td style={{paddingBottom:3}}>{metodoLabel[dn.metodoEntrega]||"—"}</td></tr>
