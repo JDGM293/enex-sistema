@@ -19,10 +19,11 @@ const S = `
 html,body{height:100%;overflow:hidden;margin:0;padding:0}
 body{background:var(--bg);color:var(--t1);font-family:Arial,Helvetica,sans-serif;font-size:16px}
 #root{height:100%}
-::-webkit-scrollbar{width:6px;height:6px}
-::-webkit-scrollbar-track{background:var(--bg3)}
-::-webkit-scrollbar-thumb{background:var(--b1);border-radius:6px}
-::-webkit-scrollbar-thumb:hover{background:var(--t4)}
+::-webkit-scrollbar{width:12px;height:12px}
+::-webkit-scrollbar-track{background:var(--bg4)}
+::-webkit-scrollbar-thumb{background:#9AA8BC;border-radius:7px;border:2px solid var(--bg4);min-height:40px;min-width:40px}
+::-webkit-scrollbar-thumb:hover{background:var(--navy)}
+*{scrollbar-width:auto;scrollbar-color:#9AA8BC var(--bg4)}
 input,select,textarea,button{font-family:Arial,Helvetica,sans-serif}
 input.fi:not([type="email"]):not([type="password"]):not([type="number"]){text-transform:uppercase}
 
@@ -954,10 +955,11 @@ const crearBuscador=texto=>{
 const cliDeWRCon=(w,clients)=>clients.find(c=>w.clienteId&&c.id===w.clienteId)||clients.find(c=>w.casillero&&c.casillero===w.casillero)||null;
 const nombreCiudadCon=(v,countries)=>{const V=sinAcentos(v);for(const co of countries||[])for(const ci of (co.cities||[]))if(sinAcentos(ci.code)===V||sinAcentos(ci.name)===V)return sinAcentos(ci.name);return V;};
 // Relación de un WR con una oficina: "salida" (se recibió allí), "entrega" (retira o se despachó allí) o null
+const sucursalDeWR=(w,cli)=>(w&&w.sucursalEntrega!==null&&w.sucursalEntrega!==undefined)?(w.sucursalEntrega||""):((cli&&cli.tipo!=="usuario"&&cli.oficinaId)||"");
 const wrRolOficina=(w,of,{clients,deliveryNotes,countries})=>{
   if(!of)return null;
   const cli=cliDeWRCon(w,clients);
-  if(cli&&cli.tipo!=="usuario"&&cli.oficinaId===of.id)return "entrega";
+  if(sucursalDeWR(w,cli)===of.id)return "entrega";
   if((deliveryNotes||[]).some(n=>!n.anulado&&n.receptorEntidad?.tipo==="oficina"&&n.receptorEntidad.id===of.id&&(n.wrIds||[]).includes(w.id)))return "entrega";
   const ciu=sinAcentos(of.ciudad);
   if(ciu&&nombreCiudadCon(w.origCity,countries)===ciu)return "salida";
@@ -1457,7 +1459,7 @@ const emptyCaja=()=>({
 // elemento del listado es el que predetermina cada Nuevo WR. Si no hay nada
 // configurado (caso límite), queda vacío y el select queda en el primer option.
 const emptyWRF=(defaultTipoPago="")=>({
-  consignee:"",casilleroSearch:"",casillero:"",clienteId:"",
+  consignee:"",casilleroSearch:"",casillero:"",clienteId:"",sucursalEntrega:"",
   remitente:"",remitenteDir:"",remitenteTel:"",remitenteEmail:"",
   chofer:"",idChofer:"",proNumber:"",ocNumber:"",
   tipoPago:defaultTipoPago,tipoEnvio:"",
@@ -2469,7 +2471,7 @@ export default function ENEXSystem(){
   };
 
   // WR FORM state
-  const EMAIL_KEYS_W=["remitenteEmail","email","password","unitDim","unitPeso"];
+  const EMAIL_KEYS_W=["remitenteEmail","email","password","unitDim","unitPeso","sucursalEntrega","clienteId"];
   const sw=(k,v)=>setWrf(p=>({...p,[k]:typeof v==="string"&&!EMAIL_KEYS_W.includes(k)?v.toUpperCase():v}));
 
   // Client search
@@ -2487,6 +2489,7 @@ export default function ENEXSystem(){
     sw("casillero",c.casillero);
     sw("clienteId",c.id);
     sw("casilleroSearch",c.casillero);
+    sw("sucursalEntrega",c.oficinaId||"");
     setClientSearch(fullName(c));
     setClientResults([]);
   };
@@ -2714,6 +2717,7 @@ export default function ENEXSystem(){
         volKg:totalVolKg,volLb:totalVolLb,ft3:totalFt3,m3:totalM3,
         notas:wrf.notas,tipoEnvio:wrf.tipoEnvio,tipoPago:wrf.tipoPago,
         shipper:wrf.remitente,remitenteDir:wrf.remitenteDir||"",cargos:wrf.cargos,
+        sucursalEntrega:wrf.sucursalEntrega||"",
       };
       wrf.cajas.forEach(c=>[c.tracking,c.tracking2,c.tracking3].forEach(t=>{if(t)checkAndRemoveScan(t);}));
       // Subir fotos nuevas al bucket (antes de marcar foto=true)
@@ -2753,6 +2757,7 @@ export default function ENEXSystem(){
           :wrf.notas,
         tipoEnvio:wrf.tipoEnvio,tipoPago:wrf.tipoPago,
         shipper:wrf.remitente,remitenteDir:wrf.remitenteDir||"",usuario:currentUser.id,foto:false,prealerta:false,
+        sucursalEntrega:wrf.sucursalEntrega||"",
         cargos:wrf.cargos,
         ...(esReempaque?{reempaqueDe:[...reempaqueIds],historial:[{code:"1",label:"Recibido",fecha:now,user:currentUser.id,nota:`Reempaque de: ${reempaqueIds.join(", ")}`}]}:{}),
       };
@@ -3468,6 +3473,12 @@ export default function ENEXSystem(){
               </div>
               <div className="fg"><div className="fl">Nombre (si no está registrado)</div><input className="fi" value={wrf.consignee} onChange={e=>sw("consignee",e.target.value)} placeholder="Nombre completo"/></div>
               <div className="fg"><div className="fl">N° Casillero</div><input className="fi" value={wrf.casillero} onChange={e=>sw("casillero",e.target.value)} placeholder="NX-0000" style={{fontFamily:"'DM Mono',monospace",fontWeight:800,fontSize:16,color:"var(--navy)",letterSpacing:1,background:"#EEF3FF",border:"2px solid #B8C8F0"}}/></div>
+              <div className="fg"><div className="fl">Sucursal de entrega</div>
+                <select className="fs" value={wrf.sucursalEntrega||""} onChange={e=>sw("sucursalEntrega",e.target.value)}>
+                  <option value="">🏛️ Principal</option>
+                  {oficinas.map(o=><option key={o.id} value={o.id}>🏢 {o.nombre}{o.ciudad?` — ${o.ciudad}`:""}{o.pais?`, ${o.pais}`:""}</option>)}
+                </select>
+              </div>
             </div>
           </div>
         </div>
@@ -3721,6 +3732,7 @@ export default function ENEXSystem(){
                 unitDim:"in",unitPeso:"lb", // mostrar en pulg/lb (unidades originales)
                 cajas:_rawCajas,
                 consignee:selWR.consignee||"",casilleroSearch:selWR.casillero||"",casillero:selWR.casillero||"",clienteId:selWR.clienteId||"",
+                sucursalEntrega:sucursalDeWR(selWR,cliDeWRCon(selWR,clients)),
                 remitente:selWR.shipper||"",remitenteDir:selWR.remitenteDir||"",tipoPago:selWR.tipoPago||PAY_TYPES[0]||"",tipoEnvio:selWR.tipoEnvio||"",
                 notas:selWR.notas||"",cargos:selWR.cargos||[],
               });
@@ -3874,6 +3886,7 @@ export default function ENEXSystem(){
               <div className="wf"><div className="wfl">Nombre</div><div className="wfv" style={{fontWeight:800,fontSize:20}}>{selWR.consignee||"—"}</div></div>
               <div className="wf"><div className="wfl">Casillero</div><div className="wfv" style={{color:"var(--gold2)",fontWeight:800,fontSize:20}}>#{selWR.casillero||"—"}</div></div>
               {_destAddr&&<div className="wf"><div className="wfl">Dirección</div><div className="wfv">{_destAddr}</div></div>}
+              <div className="wf"><div className="wfl">Sucursal de entrega</div><div className="wfv" style={{fontWeight:600}}>{(()=>{const id=sucursalDeWR(selWR,cliDeWRCon(selWR,clients));const o=oficinas.find(x=>x.id===id);return o?`🏢 ${o.nombre}${o.ciudad?` — ${o.ciudad}`:""}`:"🏛️ Principal";})()}</div></div>
               <div className="wf"><div className="wfl">Ciudad Destino</div><div className="wfv" style={{fontWeight:600,color:"var(--navy)"}}>{selWR.destCity||"—"} · {selWR.destCountry||"—"}</div></div>
               {_cl?.tel1&&<div className="wf"><div className="wfl">Teléfono</div><div className="wfv">{_cl.tel1}</div></div>}
               {_cl?.email&&<div className="wf"><div className="wfl">Email</div><div className="wfv">{_cl.email}</div></div>}
@@ -4786,7 +4799,7 @@ export default function ENEXSystem(){
                 </div>
               </div>
 
-              <div style={{overflowX:"auto"}}>
+              <div className="wr-scroll" style={{overflow:"auto",maxHeight:"68vh"}}>
                 {(()=>{
                   // Columnas dinámicas: Origen solo se muestra en el tab Reempacados.
                   const showOrigen = ecFiltro==="reempacados";
@@ -4826,7 +4839,7 @@ export default function ENEXSystem(){
                   <thead>
                     <tr style={{background:"var(--navy)"}}>
                       {baseCols.map(h=>(
-                        <th key={h} style={{color:"rgba(255,255,255,.8)",fontSize:11,letterSpacing:.8,textTransform:"uppercase",fontWeight:700,padding:"7px 8px",textAlign:"left",borderBottom:"2px solid var(--navy3)",whiteSpace:"nowrap"}}>{h}</th>
+                        <th key={h} style={{position:"sticky",top:0,zIndex:2,background:"var(--navy)",color:"rgba(255,255,255,.8)",fontSize:11,letterSpacing:.8,textTransform:"uppercase",fontWeight:700,padding:"7px 8px",textAlign:"left",borderBottom:"2px solid var(--navy3)",whiteSpace:"nowrap"}}>{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -5467,7 +5480,7 @@ export default function ENEXSystem(){
 
             {/* WR CONFIRMADOS DISPONIBLES — solo del tipoEnvio elegido */}
             <div className="sdiv">WR CONFIRMADOS DISPONIBLES{cf.tipoEnvio?` — ${cf.tipoEnvio} (clic para agregar al contenedor activo)`:" — selecciona primero el Tipo de Envío"}</div>
-            <div style={{background:"var(--bg4)",border:"1px solid var(--b1)",borderRadius:8,padding:"8px 12px",marginBottom:14,maxHeight:160,overflowY:"auto"}}>
+            <div style={{background:"var(--bg4)",border:"1px solid var(--b1)",borderRadius:8,padding:"8px 12px",marginBottom:14,maxHeight:"40vh",overflowY:"auto"}}>
               {!cf.tipoEnvio?(
                 <div style={{color:"var(--orange)",fontSize:13,padding:"8px 0",fontWeight:600}}>⚠️ Selecciona el Tipo de Envío en la sección de arriba para ver los WR confirmados disponibles.</div>
               ):(()=>{
@@ -6027,7 +6040,7 @@ export default function ENEXSystem(){
                   }}>+</button>
                 </div>
               </div>
-              <div style={{maxHeight:400,overflowY:"auto"}}>
+              <div style={{maxHeight:"60vh",overflowY:"auto"}}>
                 {COUNTRIES.map((c,i)=>(
                   <div key={i} onClick={()=>setCfgSelPais(i)}
                     style={{padding:"9px 14px",cursor:"pointer",borderBottom:"1px solid var(--b2)",display:"flex",alignItems:"center",gap:8,
@@ -8208,7 +8221,7 @@ export default function ENEXSystem(){
             )}
           </div>
           {rpqHistOpen&&(
-            <div style={{maxHeight:"32vh",overflow:"auto",border:"1px solid var(--b1)",borderRadius:8}}>
+            <div style={{maxHeight:"55vh",overflow:"auto",border:"1px solid var(--b1)",borderRadius:8}}>
               <table className="wt">
                 <thead><tr><th>N° WR</th><th>Consignatario</th><th>Casillero</th><th>Fecha</th><th>Reempacado en</th><th>Estado</th></tr></thead>
                 <tbody>
@@ -8818,8 +8831,9 @@ export default function ENEXSystem(){
       const d=dnDominioDeCliente(cli);
       if(d)return d;
     }
-    if(cli&&cli.tipo!=="usuario"&&cli.oficinaId){
-      const of=oficinas.find(o=>o.id===cli.oficinaId);
+    const sucId=sucursalDeWR(w,cli);
+    if(sucId){
+      const of=oficinas.find(o=>o.id===sucId);
       if(of&&enDestino(of.pais))return {tipo:"oficina",id:of.id,nombre:of.nombre||of.codigo||"Oficina"};
     }
     return {tipo:"matriz",id:"matriz",nombre:empresaNombre||"Matriz"};
@@ -9438,7 +9452,7 @@ export default function ENEXSystem(){
                   onClick={()=>{setLmSearch(guiaSel.id);setLmTab("status");}}>📶 Ir a Status</button>}
               </div>
 
-              <div style={{maxHeight:"42vh",overflow:"auto",border:"1px solid var(--b1)",borderRadius:8}}>
+              <div style={{maxHeight:"62vh",overflow:"auto",border:"1px solid var(--b1)",borderRadius:8}}>
                 <table className="wt">
                   <thead><tr>
                     <th style={{width:30,textAlign:"center"}}>#</th>
@@ -9471,7 +9485,7 @@ export default function ENEXSystem(){
               {sobrantesGuia.length>0&&(
                 <div style={{marginTop:12,border:"1px dashed #CE93D8",borderRadius:8,padding:10,background:"#FCF5FF"}}>
                   <div style={{fontSize:14,fontWeight:700,color:"#7B1FA2",marginBottom:6}}>➕ Sobrantes detectados en {guiaSel.id} ({sobrantesGuia.length})</div>
-                  <div style={{maxHeight:"20vh",overflow:"auto"}}>
+                  <div style={{maxHeight:"40vh",overflow:"auto"}}>
                     <table className="wt">
                       <thead><tr><th>N° WR</th><th>Consignatario</th><th>Tracking</th><th style={{width:260}}>Resolución</th></tr></thead>
                       <tbody>
@@ -9522,7 +9536,7 @@ export default function ENEXSystem(){
                 <div style={{fontSize:12,color:"var(--t3)"}}>Selecciona una guía arriba para ver el checklist completo.</div>
                 <input className="fi" placeholder="Buscar…" value={rdSearch} onChange={e=>setRdSearch(e.target.value)} style={{fontSize:14,padding:"6px 10px",width:220,marginLeft:"auto"}}/>
               </div>
-              <div style={{maxHeight:"40vh",overflow:"auto",border:"1px solid var(--b1)",borderRadius:8}}>
+              <div style={{maxHeight:"60vh",overflow:"auto",border:"1px solid var(--b1)",borderRadius:8}}>
                 <table className="wt">
                   <thead><tr>
                     <th>N° WR</th><th>Consignatario</th><th>Casillero</th>
@@ -9552,7 +9566,7 @@ export default function ENEXSystem(){
               <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8,flexWrap:"wrap"}}>
                 <div style={{fontSize:15,fontWeight:700,color:"var(--navy)"}}>📦 Últimos WR recibidos en Almacén</div>
               </div>
-              <div style={{maxHeight:"28vh",overflow:"auto",border:"1px solid var(--b1)",borderRadius:8}}>
+              <div style={{maxHeight:"50vh",overflow:"auto",border:"1px solid var(--b1)",borderRadius:8}}>
                 <table className="wt">
                   <thead><tr><th>N° WR</th><th>Consignatario</th><th>Casillero</th><th>Tracking</th><th>Estado</th><th style={{width:170}}>Acciones</th></tr></thead>
                   <tbody>
@@ -10005,7 +10019,7 @@ export default function ENEXSystem(){
             )}
           </div>
           {crHistOpen&&(
-            <div style={{maxHeight:"40vh",overflow:"auto",border:"1px solid var(--b1)",borderRadius:8}}>
+            <div style={{maxHeight:"60vh",overflow:"auto",border:"1px solid var(--b1)",borderRadius:8}}>
               <table className="ct">
                 <thead><tr>
                   <th>N° Egreso</th><th>Fecha</th><th>Agente</th><th>Contacto</th><th>Vehículo</th>
@@ -11220,7 +11234,7 @@ export default function ENEXSystem(){
                 <div style={{marginBottom:6}}>
                   <div style={{fontSize:13,fontWeight:700,color:"var(--t2)",marginBottom:4}}>➕ Agregar WR (elegibles hasta Confirmado: 1, 2, 2.3, 3)</div>
                   <input className="fi" placeholder="Buscar por WR, consignee, tracking…" value={qRef} onChange={e=>setCrModal(p=>({...p,_q:e.target.value}))} style={{marginBottom:6}}/>
-                  <div style={{maxHeight:160,overflow:"auto",border:"1px solid #E0E7EF",borderRadius:4}}>
+                  <div style={{maxHeight:"40vh",overflow:"auto",border:"1px solid #E0E7EF",borderRadius:4}}>
                     {filtered.length===0?(
                       <div style={{padding:10,color:"var(--t3)",fontSize:13,textAlign:"center"}}>No hay WR disponibles{qRef?` para "${qRef}"`:""}</div>
                     ):filtered.map(w=>(
@@ -11580,7 +11594,7 @@ export default function ENEXSystem(){
                           :"No hay clientes con WR por entregar en esta guía."}
                       </div>
                     ):(
-                      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:6,maxHeight:180,overflow:"auto"}}>
+                      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:6,maxHeight:"35vh",overflow:"auto"}}>
                         {receptoresDisponibles.map(r=>{
                           const isSel=f.receptorEntidad?.tipo===r.tipo&&f.receptorEntidad?.id===r.id;
                           const icon={cliente:"👤",agente:"🤝",oficina:"🏢",autonomo:"🧑‍💻"}[r.tipo]||"•";
@@ -11615,7 +11629,7 @@ export default function ENEXSystem(){
                         <button className="btn-s" style={{fontSize:11,padding:"2px 8px"}} onClick={()=>setDnModal(p=>({...p,wrIds:[]}))}>✕ Ninguno</button>
                       </div>
                     </div>
-                    <div style={{maxHeight:220,overflow:"auto",border:"1px solid #E0E7EF",borderRadius:4,background:"#fff"}}>
+                    <div style={{maxHeight:"45vh",overflow:"auto",border:"1px solid #E0E7EF",borderRadius:4,background:"#fff"}}>
                       <table style={{width:"100%",fontSize:12,borderCollapse:"collapse"}}>
                         <thead><tr style={{background:"#F5F7FB",position:"sticky",top:0}}>
                           <th style={{padding:"4px 6px",textAlign:"center",width:28}}></th>
