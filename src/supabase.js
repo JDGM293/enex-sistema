@@ -21,7 +21,7 @@ export const clienteFromDB = (r) => r ? ({
   casillero: r.casillero, rol: r.rol, login: r.login,
   password: r.password, clienteTipo: r.cliente_tipo || 'matriz',
   agenteId: r.agente_id, oficinaId: r.oficina_id,
-  autonomoId: r.autonomo_id, activo: r.activo,
+  autonomoId: r.autonomo_id, vendedorId: r.vendedor_id || '', activo: r.activo,
 }) : null
 
 export const clienteToDB = (c) => ({
@@ -34,7 +34,7 @@ export const clienteToDB = (c) => ({
   casillero: c.casillero, rol: c.rol, login: c.login,
   password: c.password, cliente_tipo: c.clienteTipo || 'matriz',
   agente_id: c.agenteId, oficina_id: c.oficinaId,
-  autonomo_id: c.autonomoId, activo: c.activo ?? true,
+  autonomo_id: c.autonomoId, vendedor_id: c.vendedorId || null, activo: c.activo ?? true,
 })
 
 export const wrFromDB = (r) => r ? ({

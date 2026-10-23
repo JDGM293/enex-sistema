@@ -968,7 +968,8 @@ const crearAlcance=({u,clients,oficinas,deliveryNotes,countries,rolePerms})=>{
   if((rolePerms[u.rol]||[]).includes("todas_sucursales"))return null;
   const ct=c=>c?.clienteTipo||"matriz";
   let clienteOk=()=>false;
-  if(u.rol==="E"||u.rol==="E1")clienteOk=c=>!!c&&c.tipo==="cliente"&&["agente","vendedor_agente"].includes(ct(c))&&!!u.agenteId&&c.agenteId===u.agenteId;
+  if(u.rol==="E")clienteOk=c=>!!c&&c.tipo==="cliente"&&["agente","vendedor_agente"].includes(ct(c))&&!!u.agenteId&&c.agenteId===u.agenteId;
+  else if(u.rol==="E1")clienteOk=c=>!!c&&c.tipo==="cliente"&&c.vendedorId===u.id;
   else if(u.rol==="F")clienteOk=c=>!!c&&ct(c)==="autonomo"&&c.autonomoId===u.id;
   else if(u.rol==="I")clienteOk=c=>!!c&&c.id===u.id;
   else if(u.rol==="G")clienteOk=c=>!!c&&c.tipo==="cliente"&&!!u.oficinaId&&c.oficinaId===u.oficinaId;
@@ -1514,7 +1515,7 @@ const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomo
   const [f,setF]=useState({clienteTipo:"matriz",password:"",...initial,clienteTipo:_initClienteTipo});
   const [emailErr,setEmailErr]=useState("");
   // Campos que NO deben convertirse a mayúsculas (IDs, enums, credenciales)
-  const NO_UPPER_F=["email","login","password","tipo","clienteTipo","agenteId","oficinaId","autonomoId","rol","activo","id"];
+  const NO_UPPER_F=["email","login","password","tipo","clienteTipo","agenteId","oficinaId","autonomoId","vendedorId","rol","activo","id"];
   // Mapa rol → clienteTipo para usuarios (sincroniza automáticamente)
   const ROL_TO_TIPO={"E":"agente","E1":"vendedor_agente","F":"autonomo","G":"oficina"};
   const ff=(k,v)=>setF(p=>{
@@ -1554,6 +1555,14 @@ const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomo
                 <select className="fs" value={f.agenteId||""} onChange={e=>ff("agenteId",e.target.value)}>
                   <option value="">— Selecciona un Agente —</option>
                   {agentes.map(a=><option key={a.id} value={a.id}>{a.codigo} — {a.nombre}</option>)}
+                </select>
+              </div>
+            )}
+            {f.clienteTipo==="vendedor_agente"&&(
+              <div className="fg" style={{marginTop:8}}><div className="fl">Vendedor</div>
+                <select className="fs" value={f.vendedorId||""} onChange={e=>ff("vendedorId",e.target.value)}>
+                  <option value="">— Sin vendedor —</option>
+                  {allClients.filter(c=>c.tipo==="usuario"&&c.rol==="E1"&&(!f.agenteId||c.agenteId===f.agenteId)).map(v=><option key={v.id} value={v.id}>{v.id} — {v.primerNombre} {v.primerApellido}</option>)}
                 </select>
               </div>
             )}
@@ -2363,6 +2372,14 @@ export default function ENEXSystem(){
   // El Administrador (A) siempre tiene todo, para que nadie quede fuera del sistema.
   const hasPerm=p=>currentUser.rol==="A"||(rolePerms[currentUser.rol]||[]).includes(p);
   const canEdit=hasPerm("crear_wr")||hasPerm("editar_wr");
+  // Al crear clientes, quedan bajo el dominio de quien los crea (agente, vendedor o autónomo)
+  const presetDominio=()=>{
+    const u=currentUser;
+    if(u.rol==="E")return {clienteTipo:"agente",agenteId:u.agenteId||"",vendedorId:""};
+    if(u.rol==="E1")return {clienteTipo:"vendedor_agente",agenteId:u.agenteId||"",vendedorId:u.id};
+    if(u.rol==="F")return {clienteTipo:"autonomo",autonomoId:u.id};
+    return {};
+  };
   // Clientes que puede ver este usuario (externos: solo los suyos y los de su carga)
   const alcanceUsr=crearAlcance({u:currentUser,clients,oficinas,deliveryNotes,countries:COUNTRIES,rolePerms});
   const clientesVisibles=(()=>{
@@ -2673,7 +2690,8 @@ export default function ENEXSystem(){
         cedula:"",dir:"",municipio:"",estado:"",pais:"",cp:"",
         tel1:"",tel2:"",email:"",
         casillero:cas,rol:"C",login:"",password:"",
-        clienteTipo:"matriz",agenteId:"",oficinaId:"",autonomoId:"",activo:true,
+        clienteTipo:"matriz",agenteId:"",oficinaId:"",autonomoId:"",vendedorId:"",activo:true,
+        ...presetDominio(),
       };
       setClients(p=>[...p,newCliente]);
       dbUpsertCliente(newCliente);
@@ -11129,7 +11147,7 @@ export default function ENEXSystem(){
         );
       })()}
 
-      {showNewCl&&<ClientModal agentes={agentes} oficinas={oficinas} autonomos={clients.filter(c=>c.tipo==="usuario"&&c.rol==="F")} allClients={clients} title="➕ Nuevo Registro" initial={{tipo:"cliente",clienteTipo:"matriz",primerNombre:"",segundoNombre:"",primerApellido:"",segundoApellido:"",cedula:"",dir:"",municipio:"",estado:"",pais:"",cp:"",tel1:"",tel2:"",email:"",casillero:"",rol:"I",password:""}} onClose={()=>setShowNewCl(false)} onSave={f=>{const esUser=f.tipo==="usuario";const prefix=esUser?"U":"C";const nextNum=clients.filter(c=>c.tipo===(esUser?"usuario":"cliente")).length+1;const newId=`${prefix}-${String(nextNum).padStart(3,"0")}`;const casillero=(!esUser&&!f.casillero)?newId:f.casillero;const newRec={...f,id:newId,casillero,clienteTipo:f.clienteTipo||"matriz"};setClients(p=>[...p,newRec]);dbUpsertCliente(newRec);setShowNewCl(false);logAction("Creó registro",`${newId} — ${f.primerNombre} ${f.primerApellido}`);}}/>}
+      {showNewCl&&<ClientModal agentes={agentes} oficinas={oficinas} autonomos={clients.filter(c=>c.tipo==="usuario"&&c.rol==="F")} allClients={clients} title="➕ Nuevo Registro" initial={{tipo:"cliente",clienteTipo:"matriz",primerNombre:"",segundoNombre:"",primerApellido:"",segundoApellido:"",cedula:"",dir:"",municipio:"",estado:"",pais:"",cp:"",tel1:"",tel2:"",email:"",casillero:"",rol:"I",password:"",...presetDominio()}} onClose={()=>setShowNewCl(false)} onSave={f=>{const esUser=f.tipo==="usuario";const prefix=esUser?"U":"C";const nextNum=clients.filter(c=>c.tipo===(esUser?"usuario":"cliente")).length+1;const newId=`${prefix}-${String(nextNum).padStart(3,"0")}`;const casillero=(!esUser&&!f.casillero)?nextCasillero():f.casillero;const newRec={...f,id:newId,casillero,clienteTipo:f.clienteTipo||"matriz"};setClients(p=>[...p,newRec]);dbUpsertCliente(newRec);setShowNewCl(false);logAction("Creó registro",`${newId} — ${f.primerNombre} ${f.primerApellido}`);}}/>}
       {showEditCl&&<ClientModal agentes={agentes} oficinas={oficinas} autonomos={clients.filter(c=>c.tipo==="usuario"&&c.rol==="F")} allClients={clients} title={`✏️ Editar — ${fullName(showEditCl)}`} initial={showEditCl} onClose={()=>setShowEditCl(null)} onSave={f=>{setClients(p=>p.map(c=>c.id===f.id?f:c));dbUpsertCliente({...f,clienteTipo:f.clienteTipo||"matriz"});logAction("Editó registro",`${f.id} — ${f.primerNombre} ${f.primerApellido}`);setShowEditCl(null);}}/>}
 
       {/* ── Cargo Release — MODAL FORMULARIO ───────────────────────────────── */}
