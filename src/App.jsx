@@ -949,6 +949,35 @@ const crearBuscador=texto=>{
     },
   };
 };
+// ── ALCANCE POR USUARIO ─────────────────────────────────────────────
+// Qué carga ve cada usuario externo. null = ve todo.
+const cliDeWRCon=(w,clients)=>clients.find(c=>w.clienteId&&c.id===w.clienteId)||clients.find(c=>w.casillero&&c.casillero===w.casillero)||null;
+const nombreCiudadCon=(v,countries)=>{const V=sinAcentos(v);for(const co of countries||[])for(const ci of (co.cities||[]))if(sinAcentos(ci.code)===V||sinAcentos(ci.name)===V)return sinAcentos(ci.name);return V;};
+// Relación de un WR con una oficina: "salida" (se recibió allí), "entrega" (retira o se despachó allí) o null
+const wrRolOficina=(w,of,{clients,deliveryNotes,countries})=>{
+  if(!of)return null;
+  const cli=cliDeWRCon(w,clients);
+  if(cli&&cli.tipo!=="usuario"&&cli.oficinaId===of.id)return "entrega";
+  if((deliveryNotes||[]).some(n=>!n.anulado&&n.receptorEntidad?.tipo==="oficina"&&n.receptorEntidad.id===of.id&&(n.wrIds||[]).includes(w.id)))return "entrega";
+  const ciu=sinAcentos(of.ciudad);
+  if(ciu&&nombreCiudadCon(w.origCity,countries)===ciu)return "salida";
+  return null;
+};
+const crearAlcance=({u,clients,oficinas,deliveryNotes,countries,rolePerms})=>{
+  if(!u||!["E","E1","F","G","I"].includes(u.rol))return null;
+  if((rolePerms[u.rol]||[]).includes("todas_sucursales"))return null;
+  const ct=c=>c?.clienteTipo||"matriz";
+  let clienteOk=()=>false;
+  if(u.rol==="E"||u.rol==="E1")clienteOk=c=>!!c&&c.tipo==="cliente"&&["agente","vendedor_agente"].includes(ct(c))&&!!u.agenteId&&c.agenteId===u.agenteId;
+  else if(u.rol==="F")clienteOk=c=>!!c&&ct(c)==="autonomo"&&c.autonomoId===u.id;
+  else if(u.rol==="I")clienteOk=c=>!!c&&c.id===u.id;
+  else if(u.rol==="G")clienteOk=c=>!!c&&c.tipo==="cliente"&&!!u.oficinaId&&c.oficinaId===u.oficinaId;
+  const of=u.rol==="G"?oficinas.find(o=>o.id===u.oficinaId):null;
+  const wrOk=u.rol==="G"
+    ?w=>!!wrRolOficina(w,of,{clients,deliveryNotes,countries})
+    :w=>clienteOk(cliDeWRCon(w,clients));
+  return {clienteOk,wrOk};
+};
 // Si hay varias coincidencias, pide elegir una
 const elegirDeVarios=(varios,etiqueta)=>{
   const lista=varios.slice(0,15).map((it,i)=>`${i+1}. ${etiqueta(it)}`).join("\n");
@@ -2289,28 +2318,14 @@ export default function ENEXSystem(){
 
   // ── LOGIN GATE ─────────────────────────────────────────────────────────────
   useEffect(()=>{
-    if(!currentUser||currentUser.rol!=="G")return;
-    if((rolePerms.G||[]).includes("todas_sucursales"))return;
-    const ofId=currentUser.oficinaId;
-    const of=oficinas.find(o=>o.id===ofId);
-    const ciu=sinAcentos(of?.ciudad);
-    const nombreCiudad=v=>{const V=sinAcentos(v);for(const co of COUNTRIES)for(const ci of (co.cities||[]))if(sinAcentos(ci.code)===V||sinAcentos(ci.name)===V)return sinAcentos(ci.name);return V;};
-    const esDeOficina=w=>{
-      if(!of)return false;
-      // 1) recibido en esta oficina (ciudad de origen)
-      if(ciu&&nombreCiudad(w.origCity)===ciu)return true;
-      // 2) el cliente retira en esta sucursal
-      const cli=clients.find(c=>w.clienteId&&c.id===w.clienteId)||clients.find(c=>w.casillero&&c.casillero===w.casillero);
-      if(cli&&cli.tipo!=="usuario"&&cli.oficinaId===ofId)return true;
-      // 3) despachado a esta sucursal
-      return deliveryNotes.some(n=>!n.anulado&&n.receptorEntidad?.tipo==="oficina"&&n.receptorEntidad.id===ofId&&(n.wrIds||[]).includes(w.id));
-    };
+    const alc=crearAlcance({u:currentUser,clients,oficinas,deliveryNotes,countries:COUNTRIES,rolePerms});
+    if(!alc)return;
     setWrList(prev=>{
       if(!wrAllRef.current)wrAllRef.current=prev;           // primera vez: lista completa
       const m=new Map(wrAllRef.current.map(w=>[w.id,w]));
       prev.forEach(w=>m.set(w.id,w));                         // conservar cambios recientes
       wrAllRef.current=[...m.values()];
-      return wrAllRef.current.filter(esDeOficina);
+      return wrAllRef.current.filter(alc.wrOk);
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[currentUser?.id,wrLoadTick,deliveryNotes,clients,oficinas,COUNTRIES,rolePerms]);
@@ -2348,6 +2363,13 @@ export default function ENEXSystem(){
   // El Administrador (A) siempre tiene todo, para que nadie quede fuera del sistema.
   const hasPerm=p=>currentUser.rol==="A"||(rolePerms[currentUser.rol]||[]).includes(p);
   const canEdit=hasPerm("crear_wr")||hasPerm("editar_wr");
+  // Clientes que puede ver este usuario (externos: solo los suyos y los de su carga)
+  const alcanceUsr=crearAlcance({u:currentUser,clients,oficinas,deliveryNotes,countries:COUNTRIES,rolePerms});
+  const clientesVisibles=(()=>{
+    if(!alcanceUsr)return clients;
+    const enCarga=new Set(wrList.map(w=>cliDeWRCon(w,clients)?.id).filter(Boolean));
+    return clients.filter(c=>c.id===currentUser.id||alcanceUsr.clienteOk(c)||enCarga.has(c.id));
+  })();
   // Nota legal según el país de origen del WR (o la predeterminada)
   const notaLegalWR=w=>{
     const t=(w&&notasLegales[w.origCountry])||notasLegales._default||NOTA_LEGAL_DEFAULT;
@@ -2437,7 +2459,7 @@ export default function ENEXSystem(){
   const handleClientSearch=(q)=>{
     setClientSearch(q);
     if(q.length<2){setClientResults([]);return;}
-    const res=clients.filter(c=>c.tipo==="cliente"&&(
+    const res=clientesVisibles.filter(c=>c.tipo==="cliente"&&(
       fullName(c).toLowerCase().includes(q.toLowerCase())||
       c.casillero.toLowerCase().includes(q.toLowerCase())
     ));
@@ -3087,6 +3109,7 @@ export default function ENEXSystem(){
 
   // ── CLIENTS ────────────────────────────────────────────────────────────────
   const renderClients=()=>{
+    const clients=clientesVisibles;
     // Cuando no hay filtro seleccionado, mostramos sólo el selector (módulo en blanco)
     if(!clFilter){
       const totalCli=clients.filter(c=>c.tipo==="cliente").length;
@@ -4146,7 +4169,7 @@ export default function ENEXSystem(){
     setEcSearch(q);
     setEcCliente(null);
     if(q.length<2){setEcResults([]);return;}
-    const res=clients.filter(c=>c.tipo==="cliente"&&(
+    const res=clientesVisibles.filter(c=>c.tipo==="cliente"&&(
       fullName(c).toLowerCase().includes(q.toLowerCase())||
       (c.casillero||"").toLowerCase().includes(q.toLowerCase())||
       (c.email||"").toLowerCase().includes(q.toLowerCase())||
@@ -4163,7 +4186,7 @@ export default function ENEXSystem(){
       if(c.tipo!=="cliente")return false;
       const ct=c.clienteTipo||"";
       if(g.tipo==="agente")  return ["agente","vendedor_agente"].includes(ct)&&c.agenteId===g.id;
-      if(g.tipo==="oficina") return ["oficina","vendedor_oficina"].includes(ct)&&c.oficinaId===g.id;
+      if(g.tipo==="oficina") return false; // las oficinas no tienen clientes: se usa su carga (ecWRsDeOficina)
       if(g.tipo==="autonomo")return ct==="autonomo"&&c.autonomoId===g.id;
       return false;
     });
@@ -4176,6 +4199,12 @@ export default function ENEXSystem(){
     if(ct==="oficina"||ct==="vendedor_oficina"){const of=oficinas.find(o=>o.id===cl.oficinaId);return{ic:ct==="oficina"?"🏢":"🛒",nombre:of?.nombre||of?.codigo||"⚠️ Sin oficina",tipo:ct==="oficina"?"Oficina":"Vend. Oficina"};}
     if(ct==="autonomo"){const au=clients.find(c=>c.id===cl.autonomoId);return{ic:"🧑‍💻",nombre:au?`${au.primerNombre||""} ${au.primerApellido||""}`.trim():"⚠️ Sin autónomo",tipo:"Autónomo"};}
     return null;
+  };
+  // Carga de una oficina: lo que recibe como sucursal de entrega y lo que envía como oficina de salida
+  const ecWRsDeOficina=g=>{
+    const of=oficinas.find(o=>o.id===g?.id);
+    if(!of)return [];
+    return wrList.filter(w=>!!wrRolOficina(w,of,{clients,deliveryNotes,countries:COUNTRIES}));
   };
   const ecCambiarModo=(m)=>{setEcModo(m);setEcCliente(null);setEcGrupo(null);setEcSearch("");setEcResults([]);};
   const selEcGrupo=(g)=>{setEcGrupo(g);setEcSearch(g.nombre+(g.sub?" — "+g.sub:""));};
@@ -4446,7 +4475,7 @@ export default function ENEXSystem(){
     <div><b>Código / Ref.:</b> ${esc(grupo.sub||"—")}</div>
     <div><b>Email:</b> ${esc(grupo.email||"—")}</div>
     <div><b>Teléfono:</b> ${esc(grupo.tel||"—")}</div>
-    <div style="grid-column:1/-1"><b>Clientes bajo su dominio:</b> ${grupo.nClientes}</div>
+    <div style="grid-column:1/-1"><b>${grupo.tipo==="oficina"?"Clientes con carga en esta oficina":"Clientes bajo su dominio"}:</b> ${grupo.nClientes}</div>
   </div>`:`<div class="cli-box">
     <div><b>Cliente:</b> ${fullName(cli)||"—"}</div>
     <div><b>Casillero:</b> ${cli.casillero||"—"}</div>
@@ -4493,7 +4522,10 @@ export default function ENEXSystem(){
 
   const renderEstadoCuenta=()=>{
     // Modo grupo: clientes del agente / oficina / autónomo elegido
-    const ecCliGrupo=ecGrupo?clientesDeGrupo(ecGrupo):[];
+    const ecWROficina=ecGrupo?.tipo==="oficina"?ecWRsDeOficina(ecGrupo):null;
+    const ecCliGrupo=ecGrupo
+      ?(ecWROficina?[...new Map(ecWROficina.map(w=>cliDeWRCon(w,clients)).filter(Boolean).map(c=>[c.id,c])).values()]:clientesDeGrupo(ecGrupo))
+      :[];
     const ecGrpIds=new Set(ecCliGrupo.map(c=>c.id));
     const ecGrpCas=new Set(ecCliGrupo.map(c=>c.casillero).filter(Boolean));
     const ecCliDeWR=(w)=>clients.find(c=>c.id===w.clienteId)||clients.find(c=>c.casillero&&c.casillero===w.casillero);
@@ -4501,7 +4533,7 @@ export default function ENEXSystem(){
       w.clienteId===ecCliente.id||
       w.casillero===ecCliente.casillero||
       (w.consignee||"").trim().toUpperCase()===(fullName(ecCliente)||"").trim().toUpperCase()
-    ):ecGrupo?wrList.filter(w=>ecGrpIds.has(w.clienteId)||(w.casillero&&ecGrpCas.has(w.casillero))):[];
+    ):ecGrupo?(ecWROficina||wrList.filter(w=>ecGrpIds.has(w.clienteId)||(w.casillero&&ecGrpCas.has(w.casillero)))):[];
     // Resultados de búsqueda en modo grupo (lista corta: se muestra completa sin escribir)
     const ecGrpResults=(ecModo==="cliente"||ecGrupo)?[]:(()=>{
       const q=(ecSearch||"").toLowerCase().trim();
@@ -4605,7 +4637,7 @@ export default function ENEXSystem(){
             {ecGrpResults.length>0&&(
               <div style={{position:"absolute",top:"calc(100% + 4px)",left:0,right:0,background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:8,boxShadow:"0 8px 24px rgba(0,0,0,.12)",zIndex:50,maxHeight:320,overflowY:"auto"}}>
                 {ecGrpResults.map(g=>{
-                  const n=clientesDeGrupo(g).length;
+                  const n=g.tipo==="oficina"?ecWRsDeOficina(g).length:clientesDeGrupo(g).length;
                   return(
                   <div key={g.tipo+g.id} onClick={()=>selEcGrupo(g)}
                     style={{padding:"10px 14px",cursor:"pointer",borderBottom:"1px solid var(--b2)",display:"flex",alignItems:"center",gap:10}}
@@ -4616,7 +4648,7 @@ export default function ENEXSystem(){
                       <div style={{fontWeight:600,color:"var(--t1)",fontSize:15}}>{g.nombre}</div>
                       <div style={{fontSize:13,color:"var(--t3)"}}>{g.sub||"—"}</div>
                     </div>
-                    <span style={{fontSize:12,color:"var(--t3)",whiteSpace:"nowrap"}}>{n} cliente{n!==1?"s":""}</span>
+                    <span style={{fontSize:12,color:"var(--t3)",whiteSpace:"nowrap"}}>{n} {g.tipo==="oficina"?(n!==1?"WR":"WR"):(n!==1?"clientes":"cliente")}</span>
                   </div>
                   );
                 })}
@@ -4641,7 +4673,7 @@ export default function ENEXSystem(){
                     {ecGrupo.sub&&<span>🏷️ {ecGrupo.sub}</span>}
                     {ecGrupo.email&&<span>📧 {ecGrupo.email}</span>}
                     {ecGrupo.tel&&<span>📞 {ecGrupo.tel}</span>}
-                    <span>👥 <strong>{ecCliGrupo.length}</strong> cliente{ecCliGrupo.length!==1?"s":""} bajo su dominio</span>
+                    <span>👥 <strong>{ecCliGrupo.length}</strong> cliente{ecCliGrupo.length!==1?"s":""}{ecGrupo?.tipo==="oficina"?" con carga en esta oficina":" bajo su dominio"}</span>
                   </div>
                 </div>
               </div>
