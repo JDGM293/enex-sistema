@@ -1614,7 +1614,7 @@ const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomo
           <div className="fg"><div className="fl">ID Identificación *</div><input className="fi" value={f.cedula} onChange={e=>ff("cedula",e.target.value)} placeholder="V-00000000"/></div>
           {f.tipo==="cliente"
             ?<div className="fg"><div className="fl">Casillero (auto)</div><input className="fi" value={f.casillero} onChange={e=>ff("casillero",e.target.value)} placeholder="Se genera automático" style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)"}}/></div>
-            :<div className="fg"><div className="fl">Rol del Sistema</div><select className="fs" value={f.rol} onChange={e=>ff("rol",e.target.value)}>{ALL_ROLES.filter(r=>!["H","I"].includes(r.code)).map(r=><option key={r.code} value={r.code}>{r.code} — {r.name}</option>)}</select></div>}
+            :<div className="fg"><div className="fl">Rol del Sistema</div><select className="fs" value={["H","I"].includes(f.rol)?"":(f.rol||"")} onChange={e=>ff("rol",e.target.value)}><option value="">— Selecciona el rol —</option>{ALL_ROLES.filter(r=>!["H","I"].includes(r.code)).map(r=><option key={r.code} value={r.code}>{r.code} — {r.name}</option>)}</select></div>}
           {f.tipo==="usuario"&&<div className="fg"><div className="fl">Login (usuario)</div><input className="fi" value={f.login||f.email} onChange={e=>ff("login",e.target.value)} placeholder="usuario@email.com o nick"/></div>}
         </div>
         {/* Password para todos los registros */}
@@ -1646,6 +1646,8 @@ const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomo
             const dup=allClients.find(c=>c.id!==f.id&&(c.email||"").trim().toLowerCase()===emailLower);
             if(dup){setEmailErr(`El email ya está registrado por ${dup.primerNombre} ${dup.primerApellido} (${dup.casillero||dup.id})`);return;}
           }
+          // Un usuario del sistema necesita un rol de trabajo (no "Cliente")
+          if(f.tipo==="usuario"&&(!f.rol||["H","I"].includes(f.rol))){setEmailErr("Selecciona el rol del usuario.");return;}
           setEmailErr("");
           onSave(f);
         }}>Guardar ✅</button></div>
