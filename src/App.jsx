@@ -4363,6 +4363,7 @@ export default function ENEXSystem(){
       <tr>
         <td style="padding:5px 6px;border-bottom:1px solid #ddd"><span style="background:#eef;color:#222;padding:2px 6px;border-radius:3px;font-size:10px;font-weight:700">${w.status?.code||"—"}</span> ${w.status?.label||""}</td>
         <td style="padding:5px 6px;border-bottom:1px solid #ddd;font-family:monospace;font-weight:700">${w.id}</td>
+        <td style="padding:5px 6px;border-bottom:1px solid #ddd;font-family:monospace;color:#5B3FB5">${esc(getNumGuia(w)||"—")}</td>
         ${grupo?(()=>{const c=grupo.cliDe(w);return `<td style="padding:5px 6px;border-bottom:1px solid #ddd">${esc(c?fullName(c):(w.consignee||"—"))}<div style="font-size:9px;color:#777">${esc(c?.casillero||w.casillero||"")}</div></td>`;})():""}
         <td style="padding:5px 6px;border-bottom:1px solid #ddd;text-align:center">${w.cajas||0}</td>
         <td style="padding:5px 6px;border-bottom:1px solid #ddd;font-family:monospace">${w.pesoLb||0}lb</td>
@@ -4416,15 +4417,15 @@ export default function ENEXSystem(){
   <table>
     <thead>
       <tr>
-        <th>Estado</th><th>N° WR</th>${grupo?"<th>Cliente</th>":""}<th>Cajas</th><th>Peso</th><th>P.Vol</th><th>Ft³</th><th>M³</th><th>Tipo</th><th>Descripción</th><th style="text-align:right">Valor</th>
+        <th>Estado</th><th>N° WR</th><th>N° Guía</th>${grupo?"<th>Cliente</th>":""}<th>Cajas</th><th>Peso</th><th>P.Vol</th><th>Ft³</th><th>M³</th><th>Tipo</th><th>Descripción</th><th style="text-align:right">Valor</th>
       </tr>
     </thead>
     <tbody>
-      ${rows||`<tr><td colspan="${grupo?11:10}" style="padding:30px;text-align:center;color:#888">Sin registros para este filtro.</td></tr>`}
+      ${rows||`<tr><td colspan="${grupo?12:11}" style="padding:30px;text-align:center;color:#888">Sin registros para este filtro.</td></tr>`}
     </tbody>
     ${wrs.length>0?`<tfoot>
       <tr>
-        <td colspan="${grupo?3:2}">TOTALES</td>
+        <td colspan="${grupo?4:3}">TOTALES</td>
         <td style="text-align:center">${totalCajas}</td>
         <td style="font-family:monospace">${totales.pesoLb}lb</td>
         <td style="font-family:monospace">${totales.volLb}lb</td>
@@ -4705,13 +4706,14 @@ export default function ENEXSystem(){
                   //   · N° Guía · [Tipo Envío?]
                   const baseCols = [
                     "Estado","N° WR",
+                    ...(hideMiddle?[]:["N° Guía"]),
                     ...(ecGrupo?["Cliente"]:[]),
                     ...(showOrigen?["Origen"]:[]),
                     "Cajas","Peso lb","P.Vol lb","Ft³","M³",
                     "Tracking",
                     "Contenido","Valor",
                     "Recibido",
-                    ...(hideMiddle?[]:["Confirmado","Consolidado","Enviado","Alm. Destino","Entregado","Cobrado","N° Guía"]),
+                    ...(hideMiddle?[]:["Confirmado","Consolidado","Enviado","Alm. Destino","Entregado","Cobrado"]),
                     ...(showTipoEnvio?["Tipo Envío"]:[])
                   ];
                   // Totales: la fila de TOTALES debe encajar con las celdas
@@ -4721,8 +4723,8 @@ export default function ENEXSystem(){
                   //   hasta antes del Valor (que mostramos en su propia celda).
                   //   Aquí no hay celdas que sumar entre M³ y Valor (Contenido es texto).
                   // - tailColspan cubre Recibido..N°Guía (+Tipo Envío), todas no-sumables.
-                  const firstColspan = 2 + (ecGrupo?1:0) + (showOrigen?1:0);
-                  const tailColspan  = 1 /*Recibido*/ + (hideMiddle?0:7 /*Confirmado..N°Guía*/) + (showTipoEnvio?1:0);
+                  const firstColspan = 2 + (hideMiddle?0:1) + (ecGrupo?1:0) + (showOrigen?1:0);
+                  const tailColspan  = 1 /*Recibido*/ + (hideMiddle?0:6 /*Confirmado..Cobrado*/) + (showTipoEnvio?1:0);
                 return (
                 <table style={{width:"100%",borderCollapse:"collapse",fontSize:12.5,whiteSpace:"nowrap"}}>
                   <thead>
@@ -4754,6 +4756,15 @@ export default function ENEXSystem(){
                             {w.id}
                           </div>
                         </td>
+                        {/* N° Guía — justo después del N° WR */}
+                        {!hideMiddle&&(
+                          <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--purple)",fontWeight:600}}>
+                            {(()=>{const gid=getNumGuia(w);const g=consolList.find(c=>c.id===gid);
+                              return g
+                                ? <span onClick={()=>setRdArchView(g)} title={`Abrir guía ${g.id}`} style={{cursor:"pointer",textDecoration:"underline"}}>{g.id}</span>
+                                : gid;})()}
+                          </td>
+                        )}
                         {/* Cliente — solo en estado de cuenta de agente / oficina / autónomo.
                             Click abre el estado de cuenta de ese cliente. */}
                         {ecGrupo&&(()=>{
@@ -4814,12 +4825,6 @@ export default function ENEXSystem(){
                             <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",fontSize:12,color:getStatusDate(w,"entregado")==="—"?"var(--t3)":"var(--green)",fontWeight:getStatusDate(w,"entregado")==="—"?400:700}}>{getStatusDate(w,"entregado")}</td>
                             {/* Nueva columna Cobrado — antes de N° Guía. */}
                             <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",fontSize:12,color:getStatusDate(w,"cobrado")==="—"?"var(--t3)":"var(--gold2)",fontWeight:getStatusDate(w,"cobrado")==="—"?400:700}}>{getStatusDate(w,"cobrado")}</td>
-                            <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--purple)",fontWeight:600}}>
-                              {(()=>{const gid=getNumGuia(w);const g=consolList.find(c=>c.id===gid);
-                                return g
-                                  ? <span onClick={()=>setRdArchView(g)} title={`Abrir guía ${g.id}`} style={{cursor:"pointer",textDecoration:"underline"}}>{g.id}</span>
-                                  : gid;})()}
-                            </td>
                           </>
                         )}
                         {/* TIPO ENVÍO — al final de la fila (mismo patrón que Dashboard).
