@@ -637,13 +637,8 @@ const ROLE_DEFS={
     perms:["crear_cliente","editar_cliente","crear_wr","editar_wr","ver_wr","ver_confirmacion","imp_wr","imp_factura","ver_estado_cuenta","ver_estado_cliente","ver_tracking","rastrear","ver_prealerta","pre_tracking","pre_factura","ver_pickup","solicitar_pickup","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_factura","ver_fotos","subir_foto","chat_admin","chat_gerencia"]},
 
   G:{code:"G",name:"Oficina",color:"rG",icon:"🏢",
-    desc:"Sucursal regional. Gestiona sus clientes y operaciones locales.",
-    subs:["G1"],
+    desc:"Sucursal de la empresa. Ve la carga que recibe o que se envió por ella.",
     perms:["crear_cliente","editar_cliente","crear_wr","editar_wr","ver_wr","ver_rp","hacer_rp","editar_rp","ver_booking","crear_booking","editar_booking","ver_reempaque","ver_guia","crear_guia","ver_confirmacion","ver_entrega","entregar","ver_reportes","rep_confirmados","imp_wr","imp_guia","imp_etiq_caja","imp_etiq_guia","imp_rp","imp_lista_conf","imp_recibo_entrega","imp_factura","ver_estado_cuenta","ver_estado_oficina","ver_tracking","rastrear","ver_prealerta","pre_tracking","pre_factura","ver_pickup","solicitar_pickup","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_tarifas","ver_factura","registrar_cobro","ver_cuentas_cobrar","ver_bd_clientes","paquetes_sin_reclamo","ver_fotos","subir_foto","chat_admin","chat_gerencia","chat_auxiliar","chat_operaciones"]},
-
-  G1:{code:"G1",name:"Vendedor / Oficina",color:"rG1",icon:"🛒",
-    desc:"Vendedor bajo una oficina. Solo sus clientes.",
-    perms:["crear_cliente","editar_cliente","crear_wr","ver_wr","ver_confirmacion","imp_wr","imp_factura","ver_estado_cuenta","ver_estado_oficina","ver_tracking","rastrear","ver_prealerta","pre_tracking","pre_factura","ver_pickup","solicitar_pickup","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_factura","ver_fotos","subir_foto","chat_admin"]},
 
   H:{code:"H",name:"Usuario Sistema",color:"rH1",icon:"👤",
     desc:"Usuario interno al que se le asigna un rol específico (A-G).",
@@ -657,7 +652,7 @@ const ROLE_DEFS={
 ["C","D","D1","D2"].forEach(r=>ROLE_DEFS[r].perms.push("ver_alertas","ver_documentos"));
 ROLE_DEFS.G.perms.push("ver_documentos");
 // Quien ya podía crear/editar clientes sigue viendo el menú Clientes
-["E","E1","F","G1"].forEach(r=>ROLE_DEFS[r].perms.push("ver_bd_clientes"));
+["E","E1","F"].forEach(r=>ROLE_DEFS[r].perms.push("ver_bd_clientes"));
 const ALL_ROLES=Object.values(ROLE_DEFS);
 // Permisos por defecto de cada rol (los del código). Lo guardado en Configuración los reemplaza.
 const DEFAULT_ROLE_PERMS=Object.fromEntries(ALL_ROLES.map(r=>[r.code,[...r.perms]]));
@@ -1483,14 +1478,16 @@ const WRBarcode=({value,height=50,width=2})=>{
 
 // ─── STANDALONE COMPONENTS (outside main component to avoid hook issues) ─────
 const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomos=[],allClients=[]})=>{
-  const _ROL_TO_TIPO_INIT={"E":"agente","E1":"vendedor_agente","F":"autonomo","G":"oficina","G1":"vendedor_oficina"};
-  const _initClienteTipo=initial?.clienteTipo||(initial?.tipo==="usuario"&&initial?.rol?_ROL_TO_TIPO_INIT[initial.rol]||"matriz":"matriz");
+  const _ROL_TO_TIPO_INIT={"E":"agente","E1":"vendedor_agente","F":"autonomo","G":"oficina"};
+  // Los clientes ya no pertenecen a oficinas (son sucursales): los antiguos pasan a Casa Matriz
+  const _ct0=initial?.clienteTipo||(initial?.tipo==="usuario"&&initial?.rol?_ROL_TO_TIPO_INIT[initial.rol]||"matriz":"matriz");
+  const _initClienteTipo=initial?.tipo!=="usuario"&&["oficina","vendedor_oficina"].includes(_ct0)?"matriz":_ct0;
   const [f,setF]=useState({clienteTipo:"matriz",password:"",...initial,clienteTipo:_initClienteTipo});
   const [emailErr,setEmailErr]=useState("");
   // Campos que NO deben convertirse a mayúsculas (IDs, enums, credenciales)
   const NO_UPPER_F=["email","login","password","tipo","clienteTipo","agenteId","oficinaId","autonomoId","rol","activo","id"];
   // Mapa rol → clienteTipo para usuarios (sincroniza automáticamente)
-  const ROL_TO_TIPO={"E":"agente","E1":"vendedor_agente","F":"autonomo","G":"oficina","G1":"vendedor_oficina"};
+  const ROL_TO_TIPO={"E":"agente","E1":"vendedor_agente","F":"autonomo","G":"oficina"};
   const ff=(k,v)=>setF(p=>{
     const val=typeof v==="string"&&!NO_UPPER_F.includes(k)?v.toUpperCase():v;
     const upd={...p,[k]:val};
@@ -1507,8 +1504,8 @@ const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomo
           {[["cliente","🏠 Cliente"],["usuario","👤 Usuario Sistema"]].map(([v,l])=>
             <button key={v} className={`btn-${f.tipo===v?"p":"s"}`} onClick={()=>ff("tipo",v)}>{l}</button>)}
         </div>
-        {/* Pertenece a — clientes y usuarios */}
-        {(
+        {/* Pertenece a — solo clientes (los usuarios lo toman de su rol) */}
+        {f.tipo!=="usuario"&&(
           <div style={{marginBottom:14}}>
             <div className="sdiv">PERTENECE A</div>
             <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:f.clienteTipo&&f.clienteTipo!=="matriz"?10:0}}>
@@ -1516,8 +1513,6 @@ const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomo
                 {v:"agente",l:"🤝 Agente"},
                 {v:"vendedor_agente",l:"💼 Vendedor de Agente"},
                 {v:"autonomo",l:"🧑‍💻 Autónomo"},
-                {v:"oficina",l:"🏢 Oficina"},
-                {v:"vendedor_oficina",l:"🛒 Vendedor de Oficina"},
                 {v:"matriz",l:"🏛️ Casa Matriz"},
               ].map(op=>(
                 <button key={op.v} className={`btn-${(f.clienteTipo||"matriz")===op.v?"p":"s"}`}
@@ -1542,14 +1537,30 @@ const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomo
                 {autonomos.length===0&&<div style={{fontSize:12,color:"var(--t3)",marginTop:4}}>No hay autónomos registrados en el sistema aún.</div>}
               </div>
             )}
-            {["oficina","vendedor_oficina"].includes(f.clienteTipo||"")&&oficinas.length>0&&(
-              <div className="fg" style={{marginTop:8}}><div className="fl">Oficina *</div>
-                <select className="fs" value={f.oficinaId||""} onChange={e=>ff("oficinaId",e.target.value)}>
-                  <option value="">— Selecciona una Oficina —</option>
-                  {oficinas.map(o=><option key={o.id} value={o.id}>{o.codigo} — {o.nombre}</option>)}
-                </select>
-              </div>
-            )}
+            <div className="fg" style={{marginTop:10}}><div className="fl">Sucursal de entrega</div>
+              <select className="fs" value={f.oficinaId||""} onChange={e=>ff("oficinaId",e.target.value)}>
+                <option value="">🏛️ Principal</option>
+                {oficinas.map(o=><option key={o.id} value={o.id}>🏢 {o.nombre}{o.ciudad?` — ${o.ciudad}`:""}{o.pais?`, ${o.pais}`:""}</option>)}
+              </select>
+            </div>
+          </div>
+        )}
+        {/* Usuario de agente: su agente */}
+        {f.tipo==="usuario"&&["E","E1"].includes(f.rol)&&(
+          <div className="fg" style={{marginBottom:14}}><div className="fl">Agente *</div>
+            <select className="fs" value={f.agenteId||""} onChange={e=>ff("agenteId",e.target.value)}>
+              <option value="">— Selecciona un Agente —</option>
+              {agentes.map(a=><option key={a.id} value={a.id}>{a.codigo} — {a.nombre}</option>)}
+            </select>
+          </div>
+        )}
+        {/* Usuario de oficina: su sucursal */}
+        {f.tipo==="usuario"&&f.rol==="G"&&(
+          <div className="fg" style={{marginBottom:14}}><div className="fl">Oficina (sucursal) *</div>
+            <select className="fs" value={f.oficinaId||""} onChange={e=>ff("oficinaId",e.target.value)}>
+              <option value="">— Selecciona la oficina —</option>
+              {oficinas.map(o=><option key={o.id} value={o.id}>{o.nombre}{o.ciudad?` — ${o.ciudad}`:""}{o.pais?`, ${o.pais}`:""}</option>)}
+            </select>
           </div>
         )}
         <div className="sdiv">DATOS PERSONALES</div>
@@ -2064,6 +2075,10 @@ export default function ENEXSystem(){
   const [crPrint,setCrPrint]=useState(null); // release a imprimir
   // Delivery Notes (entregas)
   const [deliveryNotes,setDeliveryNotes]=useState([]);
+  // Usuario de oficina: solo ve la carga de su sucursal. Se guarda la lista completa
+  // aparte para poder recalcular cuando cambian clientes, oficinas o despachos.
+  const wrAllRef=useRef(null);
+  const [wrLoadTick,setWrLoadTick]=useState(0);
   const [dnModal,setDnModal]=useState(null); // null | {wrIds, consignatario, clienteId, receptorNombre, receptorDocumento, receptorTelefono, direccionEntrega, metodoEntrega, transportista, notas, editId?}
   const [dnSearch,setDnSearch]=useState("");
   const [dnTipoFiltro,setDnTipoFiltro]=useState("todos"); // "todos" | "entrega" | "despacho"
@@ -2207,6 +2222,8 @@ export default function ENEXSystem(){
           return{...w,status:WR_STATUSES.find(s=>s.code===newCode)||WR_STATUSES[0]};
         });
         setWrList(normalized);
+        wrAllRef.current=null;
+        setWrLoadTick(t=>t+1);
       }
       if(ags.length>0)setAgentes(ags);
       if(ofs.length>0)setOficinas(ofs);
@@ -2262,6 +2279,8 @@ export default function ENEXSystem(){
 
   const doLogout=()=>{
     sessClear();
+    // Si la vista estaba limitada a una oficina, recargar para no arrastrar el filtro
+    if(wrAllRef.current){window.location.reload();return;}
     setCurrentUser(null);
     setLoginEmail("");
     setLoginPass("");
@@ -2269,6 +2288,33 @@ export default function ENEXSystem(){
   };
 
   // ── LOGIN GATE ─────────────────────────────────────────────────────────────
+  useEffect(()=>{
+    if(!currentUser||currentUser.rol!=="G")return;
+    if((rolePerms.G||[]).includes("todas_sucursales"))return;
+    const ofId=currentUser.oficinaId;
+    const of=oficinas.find(o=>o.id===ofId);
+    const ciu=sinAcentos(of?.ciudad);
+    const nombreCiudad=v=>{const V=sinAcentos(v);for(const co of COUNTRIES)for(const ci of (co.cities||[]))if(sinAcentos(ci.code)===V||sinAcentos(ci.name)===V)return sinAcentos(ci.name);return V;};
+    const esDeOficina=w=>{
+      if(!of)return false;
+      // 1) recibido en esta oficina (ciudad de origen)
+      if(ciu&&nombreCiudad(w.origCity)===ciu)return true;
+      // 2) el cliente retira en esta sucursal
+      const cli=clients.find(c=>w.clienteId&&c.id===w.clienteId)||clients.find(c=>w.casillero&&c.casillero===w.casillero);
+      if(cli&&cli.tipo!=="usuario"&&cli.oficinaId===ofId)return true;
+      // 3) despachado a esta sucursal
+      return deliveryNotes.some(n=>!n.anulado&&n.receptorEntidad?.tipo==="oficina"&&n.receptorEntidad.id===ofId&&(n.wrIds||[]).includes(w.id));
+    };
+    setWrList(prev=>{
+      if(!wrAllRef.current)wrAllRef.current=prev;           // primera vez: lista completa
+      const m=new Map(wrAllRef.current.map(w=>[w.id,w]));
+      prev.forEach(w=>m.set(w.id,w));                         // conservar cambios recientes
+      wrAllRef.current=[...m.values()];
+      return wrAllRef.current.filter(esDeOficina);
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[currentUser?.id,wrLoadTick,deliveryNotes,clients,oficinas,COUNTRIES,rolePerms]);
+
   if(!currentUser&&sessRestoring)return(
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"var(--navy)",color:"#fff",fontFamily:"Arial,Helvetica,sans-serif",fontSize:16}}>
       <style>{S}</style>
@@ -8700,7 +8746,34 @@ export default function ENEXSystem(){
     return wrList.filter(w=>ids.has(w.id)&&w.status?.code!=="2.3");
   };
   const dnGuiaDeWR=w=>consolList.find(c=>(Array.isArray(c.wrIds)&&c.wrIds.includes(w.id))||(c.containers||[]).some(ct=>(ct.wr||[]).some(r=>r.id===w.id)))||null;
-  const dnDomDeWR=w=>dnDominioDeCliente(cliDeWR(w))||{tipo:"matriz",id:"matriz",nombre:empresaNombre||"Matriz"};
+  // País: compara sin tildes, mayúsculas ni banderas ("USA 🇺🇸" = "USA", "España" = "ESPAÑA")
+  const paisNorm=v=>sinAcentos(v).replace(/[^A-Z]/g,"");
+  const mismoPais=(a,b)=>{const x=paisNorm(a),y=paisNorm(b);return !!x&&!!y&&(x===y||x.startsWith(y)||y.startsWith(x));};
+  const ciudadNombre=v=>{const V=sinAcentos(v);for(const co of COUNTRIES)for(const ci of (co.cities||[]))if(sinAcentos(ci.code)===V||sinAcentos(ci.name)===V)return ci.name;return v||"";};
+  // País de destino de una guía (según sus WR)
+  const dnPaisGuia=g=>{const w=dnWrsDeGuia(g).find(x=>x.destCountry);return w?.destCountry||"";};
+  // Dueño del cliente (agente / autónomo / oficina antigua), para mostrarlo como etiqueta
+  const dnDuenoDeCliente=cli=>dnDominioDeCliente(cli);
+  // A quién se despacha un WR en esta guía: agente o autónomo del cliente, o la sucursal de
+  // entrega del cliente — solo si están en el país de destino. Si no, entrega directa (matriz).
+  const dnDomDeWR=(w,g)=>{
+    const cli=cliDeWR(w);
+    const ct=cli?.clienteTipo||"matriz";
+    const pais=g?dnPaisGuia(g):"";
+    const enDestino=p=>!pais||!p||mismoPais(p,pais);
+    if(ct==="agente"||ct==="vendedor_agente"){
+      const ag=agentes.find(a=>a.id===cli.agenteId);
+      if(ag&&enDestino(ag.pais))return {tipo:"agente",id:ag.id,nombre:ag.nombre||ag.codigo||"Agente"};
+    }else if(ct==="autonomo"){
+      const d=dnDominioDeCliente(cli);
+      if(d)return d;
+    }
+    if(cli&&cli.tipo!=="usuario"&&cli.oficinaId){
+      const of=oficinas.find(o=>o.id===cli.oficinaId);
+      if(of&&enDestino(of.pais))return {tipo:"oficina",id:of.id,nombre:of.nombre||of.codigo||"Oficina"};
+    }
+    return {tipo:"matriz",id:"matriz",nombre:empresaNombre||"Matriz"};
+  };
   const dnNotasDeWR=id=>deliveryNotes.filter(n=>!n.anulado&&(n.wrIds||[]).includes(id)).sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
   const dnFacturasPendientes=ws=>{
     const ids=new Set(ws.map(w=>w.id));
@@ -9985,7 +10058,7 @@ export default function ENEXSystem(){
     // Agrupar por dominio → cliente
     const bloques=new Map();
     ws.forEach(w=>{
-      const dom=dnDomDeWR(w);
+      const dom=dnDomDeWR(w,g);
       const k=`${dom.tipo}:${dom.id}`;
       if(!bloques.has(k))bloques.set(k,{key:k,dom,clientes:new Map()});
       const cli=cliDeWR(w);
@@ -10019,7 +10092,10 @@ export default function ENEXSystem(){
         <div key={cl.key} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderTop:"1px solid var(--b2)",flexWrap:"wrap"}}>
           <div style={{minWidth:200,flex:"0 0 220px"}}>
             <div style={{fontWeight:700,fontSize:15,color:"var(--t1)"}}>{cl.nombre}</div>
-            <div style={{fontSize:13,color:"var(--gold2)",fontFamily:"'DM Mono',monospace",fontWeight:700}}>#{cl.casillero||"—"}</div>
+            <div style={{fontSize:13,color:"var(--gold2)",fontFamily:"'DM Mono',monospace",fontWeight:700}}>#{cl.casillero||"—"}
+              {(()=>{const d=dnDuenoDeCliente(cl.cli);return d&&!(d.tipo===b.dom.tipo&&d.id===b.dom.id)
+                ?<span style={{marginLeft:8,fontFamily:"inherit",fontSize:11,fontWeight:700,color:"var(--t2)",background:"var(--bg4)",border:"1px solid var(--b1)",borderRadius:4,padding:"1px 6px"}}>{DN_DOM_IC[d.tipo]||"•"} {d.nombre}</span>:null;})()}
+            </div>
           </div>
           <div style={{flex:1,display:"flex",gap:6,flexWrap:"wrap",minWidth:200}}>{cl.wrs.map(chip)}</div>
           {entregables.length>0&&hasPerm("entregar")&&(
