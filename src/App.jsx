@@ -2692,7 +2692,7 @@ export default function ENEXSystem(){
         primerApellido:parts.primerApellido,segundoApellido:parts.segundoApellido,
         cedula:"",dir:"",municipio:"",estado:"",pais:"",cp:"",
         tel1:"",tel2:"",email:"",
-        casillero:cas,rol:"C",login:"",password:"",
+        casillero:cas,rol:"I",login:"",password:"",
         clienteTipo:"matriz",agenteId:"",oficinaId:"",autonomoId:"",vendedorId:"",activo:true,
         ...presetDominio(),
       };
