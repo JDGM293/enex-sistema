@@ -8071,6 +8071,7 @@ export default function ENEXSystem(){
                               <button className="btn-s" style={{fontSize:13,padding:"5px 10px"}} onClick={()=>facOpenEdit(f)}>✏️ Revisar</button>
                               <button className="btn-p" style={{fontSize:13,padding:"5px 10px",background:"#1565C0",borderColor:"#1565C0"}} onClick={()=>facEmitirRapido(f)}>📤 Emitir</button>
                             </Fragment>)}
+                            {gr.facturas.filter(f=>f.status==="emitida"&&(hasPerm("editar_factura")||hasPerm("facturar"))).map(f=><button key={"e"+f.id} className="btn-s" style={{fontSize:13,padding:"5px 10px"}} onClick={()=>facOpenEdit(f)}>✏️ Editar</button>)}
                             {gr.facturas.filter(f=>f.status!=="borrador").map(f=><button key={f.id} className="btn-s" style={{fontSize:13,padding:"5px 10px"}} onClick={()=>setFacPrint(f)}>🖨️ Ver</button>)}
                           </div></td>
                         </tr>
