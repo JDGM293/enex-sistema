@@ -8016,6 +8016,8 @@ export default function ENEXSystem(){
                     const facs=[...new Map(grupos.flatMap(x=>x.facturas).map(f=>[f.id,f])).values()];
                     const porMon={};facs.forEach(f=>{porMon[f.moneda||"USD"]=(porMon[f.moneda||"USD"]||0)+(f.total||0);});
                     const pct=tot?Math.round(hechos*100/tot):0;
+                    const nBor=facs.filter(f=>f.status==="borrador").length;
+                    const nSin=grupos.reduce((t,x)=>t+x.pendientes.length,0);
                     return (
                       <div key={g.id} className="card" onClick={()=>{setFacGuiaSel(g.id);setFacGuiaBuscar("");}} style={{cursor:"pointer",padding:14,border:"1px solid var(--b1)"}}>
                         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
@@ -8027,6 +8029,10 @@ export default function ENEXSystem(){
                           <span><b style={{color:hechos===tot?"var(--green)":"var(--orange)"}}>{hechos}</b> / {tot} facturados</span>
                           <span style={{fontFamily:"'DM Mono',monospace",fontWeight:700}}>{Object.entries(porMon).map(([m,v])=>fmtMoney(v,m)).join(" · ")||"—"}</span>
                         </div>
+                        {(nSin>0||nBor>0)&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:8}}>
+                          {nSin>0&&<span style={{fontSize:12,fontWeight:700,padding:"2px 8px",borderRadius:10,color:"#E65100",background:"#FFF3E0",border:"1px solid #FFCC80"}}>🧾 {nSin} WR sin facturar</span>}
+                          {nBor>0&&<span style={{fontSize:12,fontWeight:700,padding:"2px 8px",borderRadius:10,color:"#7A5C00",background:"#FFF8E1",border:"1px solid #FFE082"}}>📤 {nBor} por emitir</span>}
+                        </div>}
                       </div>
                     );
                   })}
