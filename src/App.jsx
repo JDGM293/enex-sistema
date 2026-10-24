@@ -1460,7 +1460,7 @@ const emptyCaja=()=>({
 // configurado (caso límite), queda vacío y el select queda en el primer option.
 const emptyWRF=(defaultTipoPago="")=>({
   consignee:"",casilleroSearch:"",casillero:"",clienteId:"",sucursalEntrega:"",
-  remitente:"",remitenteDir:"",remitenteTel:"",remitenteEmail:"",remitenteDoc:"",remitenteId:"",registrarRemitente:null,
+  remitente:"",remitenteDir:"",remitenteTel:"",remitenteEmail:"",remitenteDoc:"",remitenteId:"",
   chofer:"",idChofer:"",proNumber:"",ocNumber:"",
   tipoPago:defaultTipoPago,tipoEnvio:"",
   notas:"",cargos:[],
@@ -2778,6 +2778,33 @@ export default function ENEXSystem(){
     return count;
   };
 
+  // Registra al remitente del WR como cliente (con su casillero) y lo enlaza
+  const registrarRemitenteCliente=()=>{
+    const rem=String(wrf.remitente||"").trim();
+    if(!rem){window.alert("Escribe el nombre del remitente.");return;}
+    if(!hasPerm("crear_cliente")){window.alert("Tu rol no tiene permiso para crear clientes.");return;}
+    const doc=String(wrf.remitenteDoc||"").trim().toUpperCase(), em=String(wrf.remitenteEmail||"").trim().toLowerCase();
+    const ya=clients.find(c=>doc&&String(c.cedula||"").trim().toUpperCase()===doc)
+      ||clients.find(c=>em&&String(c.email||"").toLowerCase()===em)
+      ||clients.find(c=>sinAcentos(fullName(c))===sinAcentos(rem));
+    if(ya){setWrf(p=>({...p,remitenteId:ya.id}));window.alert(`Ya está registrado: ${fullName(ya)} · casillero ${ya.casillero}.`);return;}
+    const parts=parseNombreCompleto(rem);
+    const cas=nextCasillero();
+    const nc={
+      id:`CLI-${Date.now()}`,tipo:"cliente",
+      primerNombre:parts.primerNombre,segundoNombre:parts.segundoNombre,
+      primerApellido:parts.primerApellido,segundoApellido:parts.segundoApellido,
+      cedula:doc,dir:String(wrf.remitenteDir||"").trim(),municipio:"",estado:"",pais:"",cp:"",
+      tel1:String(wrf.remitenteTel||"").trim(),tel2:"",email:em,
+      casillero:cas,rol:"I",login:"",password:"",
+      clienteTipo:"matriz",agenteId:"",oficinaId:"",autonomoId:"",vendedorId:"",activo:true,
+      ...presetDominio(),
+    };
+    setClients(p=>[...p,nc]);
+    dbUpsertCliente(nc);
+    setWrf(p=>({...p,remitenteId:nc.id}));
+    logAction("Registró remitente como cliente",`${rem} → ${cas}`);
+  };
   const submitWR=async ()=>{
     // Expand dims: each registro × cantidad generates individual dim entries
     const dims=[];
@@ -2819,7 +2846,7 @@ export default function ENEXSystem(){
       logAction("Auto-registró cliente",`${parts.primerNombre} ${parts.primerApellido} → ${cas}`);
     }
     // ── REMITENTE: enlazar con un cliente existente o registrarlo con su casillero ─
-    let _remitenteId=wrf.remitenteId||"",_remCas="";
+    let _remitenteId=wrf.remitenteId||"";
     {
       const rem=String(wrf.remitente||"").trim();
       const esEmpresa=!rem||[empresaNombre,"ENEX"].filter(Boolean).some(x=>sinAcentos(x)===sinAcentos(rem));
@@ -2830,25 +2857,6 @@ export default function ENEXSystem(){
           ||lista.find(c=>em&&String(c.email||"").toLowerCase()===em)
           ||lista.find(c=>sinAcentos(fullName(c))===sinAcentos(rem));
         if(ya)_remitenteId=ya.id;
-        else if(wrf.registrarRemitente??String(wrf.tipoPago||"").toLowerCase().includes("prepa")){
-          const parts=parseNombreCompleto(rem);
-          const cas=nextCasillero(lista);
-          const nid=`CLI-${Date.now()}-R`;
-          const nc={
-            id:nid,tipo:"cliente",
-            primerNombre:parts.primerNombre,segundoNombre:parts.segundoNombre,
-            primerApellido:parts.primerApellido,segundoApellido:parts.segundoApellido,
-            cedula:doc,dir:String(wrf.remitenteDir||"").trim(),municipio:"",estado:"",pais:"",cp:"",
-            tel1:String(wrf.remitenteTel||"").trim(),tel2:"",email:em,
-            casillero:cas,rol:"I",login:"",password:"",
-            clienteTipo:"matriz",agenteId:"",oficinaId:"",autonomoId:"",vendedorId:"",activo:true,
-            ...presetDominio(),
-          };
-          setClients(p=>[...p,nc]);
-          dbUpsertCliente(nc);
-          _remitenteId=nid;_remCas=cas;
-          logAction("Registró remitente como cliente",`${rem} → ${cas}`);
-        }
       }
     }
 
@@ -2943,7 +2951,7 @@ export default function ENEXSystem(){
       // PREPAID: abrir su factura al guardar (si se marcó la opción)
       if(String(n.tipoPago||"").toLowerCase().includes("prepa")&&wrf.facturarPrepaid!==false&&(hasPerm("crear_factura")||hasPerm("facturar"))){
         if(!n.tipoEnvio)window.alert(`WR ${n.id} guardado.\nPara facturarlo como PREPAID asigna el tipo de envío; luego usa «💰 Facturar PREPAID» en el WR.`);
-        else facOpenNew(facConstruirWR({...n,_remitenteCas:_remCas}));
+        else facOpenNew(facConstruirWR(n));
       }
     }
   };
@@ -3620,8 +3628,8 @@ export default function ENEXSystem(){
               <div className="fg"><div className="fl">Dirección</div><input className="fi" value={wrf.remitenteDir} onChange={e=>sw("remitenteDir",e.target.value)}/></div>
               <div className="fg"><div className="fl">Teléfono</div><input className="fi" value={wrf.remitenteTel} onChange={e=>sw("remitenteTel",e.target.value)} placeholder="+1 000 000 0000"/></div>
               <div className="fg"><div className="fl">Email</div><input className="fi" value={wrf.remitenteEmail} onChange={e=>sw("remitenteEmail",e.target.value)}/></div>
-              {!wrf.remitenteId&&String(wrf.remitente||"").trim()&&<label style={{display:"flex",alignItems:"center",gap:6,fontSize:13,fontWeight:600,cursor:"pointer",alignSelf:"end",paddingBottom:8}}>
-                <input type="checkbox" checked={!!(wrf.registrarRemitente??String(wrf.tipoPago||"").toLowerCase().includes("prepa"))} onChange={e=>sw("registrarRemitente",e.target.checked)}/>Registrar como cliente</label>}
+              {!wrf.remitenteId&&String(wrf.remitente||"").trim()&&hasPerm("crear_cliente")&&<div className="fg" style={{alignSelf:"end"}}>
+                <button type="button" className="btn-s" style={{fontSize:13,padding:"7px 12px",width:"100%",borderColor:"var(--green)",color:"var(--green)",fontWeight:700}} onClick={registrarRemitenteCliente}>➕ Registrar como cliente</button></div>}
             </div>
           </div>
           <div>
@@ -3915,7 +3923,7 @@ export default function ENEXSystem(){
                 cajas:_rawCajas,
                 consignee:selWR.consignee||"",casilleroSearch:selWR.casillero||"",casillero:selWR.casillero||"",clienteId:selWR.clienteId||"",
                 sucursalEntrega:sucursalDeWR(selWR,cliDeWRCon(selWR,clients)),
-                remitente:selWR.shipper||"",remitenteDir:selWR.remitenteDir||"",remitenteTel:selWR.remitenteTel||"",remitenteEmail:selWR.remitenteEmail||"",remitenteDoc:selWR.remitenteDoc||"",remitenteId:selWR.remitenteId||"",registrarRemitente:null,tipoPago:selWR.tipoPago||PAY_TYPES[0]||"",tipoEnvio:selWR.tipoEnvio||"",
+                remitente:selWR.shipper||"",remitenteDir:selWR.remitenteDir||"",remitenteTel:selWR.remitenteTel||"",remitenteEmail:selWR.remitenteEmail||"",remitenteDoc:selWR.remitenteDoc||"",remitenteId:selWR.remitenteId||"",tipoPago:selWR.tipoPago||PAY_TYPES[0]||"",tipoEnvio:selWR.tipoEnvio||"",
                 notas:selWR.notas||"",cargos:selWR.cargos||[],
               });
               setShowNewWR(true);setSelWR(null);
