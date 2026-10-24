@@ -7738,6 +7738,26 @@ export default function ENEXSystem(){
     syncWRStatusFromFactura(fact,"emitida");
   };
 
+  // Emitir varios borradores de una vez (una sola confirmación)
+  const facEmitirVarios=lista=>{
+    if(!hasPerm("crear_factura")&&!hasPerm("facturar")&&!hasPerm("editar_factura")){window.alert("Tu rol no tiene permiso.");return;}
+    const sinRec=lista.filter(f=>!String(f.receptorNombre||"").trim());
+    const ok=lista.filter(f=>String(f.receptorNombre||"").trim());
+    if(!ok.length){window.alert("Ninguna factura tiene receptor: ábrelas y complétalas.");return;}
+    const porMon={};ok.forEach(f=>{porMon[f.moneda]=(porMon[f.moneda]||0)+(f.total||0);});
+    const enCero=ok.filter(f=>(f.total||0)<=0);
+    const msg=`¿Emitir ${ok.length} factura(s)?\nTotal: ${Object.entries(porMon).map(([m,v])=>fmtMoney(v,m)).join(" · ")}`
+      +(enCero.length?`\n\n⚠️ ${enCero.length} con total 0: ${enCero.map(f=>f.id).join(", ")}`:"")
+      +(sinRec.length?`\n\n${sinRec.length} sin receptor quedan en borrador: ${sinRec.map(f=>f.id).join(", ")}`:"");
+    if(!window.confirm(msg))return;
+    const now=new Date();
+    const emitidas=ok.map(f=>recalcFactura({...f,status:"emitida",fechaEmision:f.fechaEmision||now}));
+    const m=new Map(emitidas.map(f=>[f.id,f]));
+    setFacturas(p=>p.map(x=>m.get(x.id)||x));
+    emitidas.forEach(f=>{dbUpsertFactura(f);syncWRStatusFromFactura(f,"emitida");});
+    logAction("Emitió facturas",`${emitidas.length} · ${emitidas.map(f=>f.id).join(", ")}`);
+  };
+
   const renderContabilidad=()=>{
     const idsVis=new Set(wrList.map(w=>w.id));
     const facturas=alcanceUsr
@@ -8014,7 +8034,11 @@ export default function ENEXSystem(){
                 <button className="btn-s" onClick={()=>setFacGuiaSel(null)}>← Guías</button>
                 <span style={{fontFamily:"'DM Mono',monospace",fontWeight:800,fontSize:20,color:"var(--navy)"}}>{g.id}</span>
                 <TypeBadge t={g.tipoEnvio}/><span style={{fontSize:14,color:"var(--t2)"}}>📍 {g.destino||"—"}</span>
-                {puedeFac&&pendTot.length>0&&<button className="btn-p" style={{marginLeft:"auto"}} onClick={()=>{const n=facFromGuia(g,true);if(n.length)window.alert(`✅ ${n.length} factura(s) en borrador. Revísalas y emítelas desde esta misma pantalla.`);}}>⚡ Facturar todo lo pendiente ({pendTot.length})</button>}
+                <span style={{marginLeft:"auto",display:"flex",gap:8,flexWrap:"wrap"}}>
+                  {puedeFac&&pendTot.length>0&&<button className="btn-p" onClick={()=>{const n=facFromGuia(g,true);if(n.length)window.alert(`✅ ${n.length} factura(s) en borrador.`);}}>⚡ Facturar todo lo pendiente ({pendTot.length})</button>}
+                  {(()=>{const bor=grupos.flatMap(x=>x.facturas.filter(f=>f.status==="borrador"));
+                    return bor.length>0&&(puedeFac||hasPerm("editar_factura"))&&<button className="btn-p" style={{background:"#1565C0",borderColor:"#1565C0"}} onClick={()=>facEmitirVarios(bor)}>📤 Emitir todo ({bor.length})</button>;})()}
+                </span>
               </div>
               <div className="card" style={{padding:0,overflow:"hidden"}}>
                 <table className="ct" style={{width:"100%",fontSize:14}}>
