@@ -2832,7 +2832,7 @@ export default function ENEXSystem(){
         pesoKg:totalPesoKg,pesoLb:totalPesoLb,
         volKg:totalVolKg,volLb:totalVolLb,ft3:totalFt3,m3:totalM3,
         notas:wrf.notas,tipoEnvio:wrf.tipoEnvio,tipoPago:wrf.tipoPago,
-        shipper:wrf.remitente,remitenteDir:wrf.remitenteDir||"",cargos:wrf.cargos,
+        shipper:wrf.remitente,remitenteDir:wrf.remitenteDir||"",remitenteTel:wrf.remitenteTel||"",remitenteEmail:(wrf.remitenteEmail||"").trim(),cargos:wrf.cargos,
         sucursalEntrega:wrf.sucursalEntrega||"",
       };
       wrf.cajas.forEach(c=>[c.tracking,c.tracking2,c.tracking3].forEach(t=>{if(t)checkAndRemoveScan(t);}));
@@ -2872,7 +2872,7 @@ export default function ENEXSystem(){
           ?`Reempaque de: ${reempaqueIds.join(", ")}${wrf.notas?` | ${wrf.notas}`:""}`
           :wrf.notas,
         tipoEnvio:wrf.tipoEnvio,tipoPago:wrf.tipoPago,
-        shipper:wrf.remitente,remitenteDir:wrf.remitenteDir||"",usuario:currentUser.id,foto:false,prealerta:false,
+        shipper:wrf.remitente,remitenteDir:wrf.remitenteDir||"",remitenteTel:wrf.remitenteTel||"",remitenteEmail:(wrf.remitenteEmail||"").trim(),usuario:currentUser.id,foto:false,prealerta:false,
         sucursalEntrega:wrf.sucursalEntrega||"",
         cargos:wrf.cargos,
         ...(esReempaque?{reempaqueDe:[...reempaqueIds],historial:[{code:"1",label:"Recibido",fecha:now,user:currentUser.id,nota:`Reempaque de: ${reempaqueIds.join(", ")}`}]}:{}),
@@ -3865,7 +3865,7 @@ export default function ENEXSystem(){
                 cajas:_rawCajas,
                 consignee:selWR.consignee||"",casilleroSearch:selWR.casillero||"",casillero:selWR.casillero||"",clienteId:selWR.clienteId||"",
                 sucursalEntrega:sucursalDeWR(selWR,cliDeWRCon(selWR,clients)),
-                remitente:selWR.shipper||"",remitenteDir:selWR.remitenteDir||"",tipoPago:selWR.tipoPago||PAY_TYPES[0]||"",tipoEnvio:selWR.tipoEnvio||"",
+                remitente:selWR.shipper||"",remitenteDir:selWR.remitenteDir||"",remitenteTel:selWR.remitenteTel||"",remitenteEmail:selWR.remitenteEmail||"",tipoPago:selWR.tipoPago||PAY_TYPES[0]||"",tipoEnvio:selWR.tipoEnvio||"",
                 notas:selWR.notas||"",cargos:selWR.cargos||[],
               });
               setShowNewWR(true);setSelWR(null);
@@ -3999,6 +3999,7 @@ export default function ENEXSystem(){
               <div className="wf"><div className="wfl">Nombre / Empresa</div><div className="wfv" style={{fontWeight:800,fontSize:20}}>{selWR.shipper||"—"}</div></div>
               <div className="wf"><div className="wfl">Recibido en</div><div className="wfv" style={{fontWeight:600}}>{_oc?.nombre||selWR.branch||"Casa Matriz"}{_oc?.ciudad?` — ${_oc.ciudad}`:""}</div></div>
               <div className="wf"><div className="wfl">Procedencia</div><div className="wfv">{selWR.remitenteDir||""}</div></div>
+              {(selWR.remitenteTel||selWR.remitenteEmail)&&<div className="wf"><div className="wfl">Contacto</div><div className="wfv">{[selWR.remitenteTel,selWR.remitenteEmail].filter(Boolean).join(" · ")}</div></div>}
             </div>
             <div className="wb">
               <div className="wb-t">📥 Consignatario / Consignee</div>
