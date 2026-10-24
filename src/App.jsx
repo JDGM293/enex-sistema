@@ -651,7 +651,7 @@ const ROLE_DEFS={
 };
 // Los menús nuevos (Alertas, Documentos) se mantienen visibles para quien ya los usaba
 ["C","D","D1","D2"].forEach(r=>ROLE_DEFS[r].perms.push("ver_alertas","ver_documentos"));
-ROLE_DEFS.G.perms.push("ver_documentos");
+ROLE_DEFS.G.perms.push("ver_documentos","crear_factura"); // la oficina de origen factura los PREPAID
 // Quien ya podía crear/editar clientes sigue viendo el menú Clientes
 ["E","E1","F"].forEach(r=>ROLE_DEFS[r].perms.push("ver_bd_clientes"));
 const ALL_ROLES=Object.values(ROLE_DEFS);
@@ -2244,7 +2244,9 @@ export default function ENEXSystem(){
   const [facGuiaSel,setFacGuiaSel]=useState(null);   // guía abierta en Facturación › Por guía
   const [facGuiaBuscar,setFacGuiaBuscar]=useState("");
   const [facturas,setFacturas]=useState([]);
+  const facturasAll=facturas;
   const [pagos,setPagos]=useState([]);
+  const pagosAll=pagos;
   // Facturación v2 (Lote 6)
   const [facModal,setFacModal]=useState(null);   // null | factura en edición
   const [facPrint,setFacPrint]=useState(null);   // factura a imprimir
@@ -7738,6 +7740,12 @@ export default function ENEXSystem(){
   };
 
   const renderContabilidad=()=>{
+    const idsVis=new Set(wrList.map(w=>w.id));
+    const facturas=alcanceUsr
+      ?facturasAll.filter(f=>(f.wrIds||[]).some(id=>idsVis.has(id))||(f.receptorId&&[currentUser.id,currentUser.agenteId].includes(f.receptorId)))
+      :facturasAll;
+    const facIds=new Set(facturas.map(f=>f.id));
+    const pagos=alcanceUsr?pagosAll.filter(p=>facIds.has(p.facturaId)):pagosAll;
     const CTABS=[
       {k:"porguia",l:"🚢 Por guía"},
       {k:"facturas",l:"📄 Facturas"},
