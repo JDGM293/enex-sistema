@@ -7358,7 +7358,7 @@ export default function ENEXSystem(){
     const tablaFlete=fl.length?`<h3>WR y flete <span class="sub">(${aereo?"aéreo — el mayor entre peso real y volumétrico":"marítimo — "+(uniC==="m3"?"metros cúbicos":"pies cúbicos")})</span></h3>
       <table><thead><tr>${th("N° WR")}${conCli?th("Cliente"):""}${th("Cajas",1)}${cm.map(([,t])=>th(t,1)).join("")}${th("A cobrar ("+uni+")",1)}${th("Tarifa",1)}${th("Importe",1)}</tr></thead><tbody>
       ${fl.map(l=>`<tr><td ${td}><b>${e(l.wrId)}</b></td>${conCli?`<td ${td}>${e(l.cliente)}<div class="cas">${e(l.casillero)}</div></td>`:""}<td ${tdr}>${l.cajas||0}</td>${cm.map(([k])=>`<td ${tdr}>${n(l[k])}</td>`).join("")}<td ${tdr}><b>${n(l.cantidad)}</b></td><td ${tdr}>${$(l.precio)}</td><td ${tdr}><b>${$(l.total)}</b></td></tr>`).join("")}
-      <tr class="tot"><td ${td}>${fl.length} WR</td>${conCli?`<td ${td}></td>`:""}<td ${tdr}>${S(fl,"cajas")}</td>${cm.map(([k])=>`<td ${tdr}>${n(S(fl,k))}</td>`).join("")}<td ${tdr}>${n(S(fl,"cantidad"))} ${uni}</td><td ${td}></td><td ${tdr}>${$(S(fl,"total"))}</td></tr>
+      ${fl.length>1?`<tr class="tot"><td style="padding:5px 7px;border-bottom:1px solid #ddd;white-space:nowrap">TOTALES · ${fl.length} WR</td>${conCli?`<td ${td}></td>`:""}<td ${tdr}>${S(fl,"cajas")}</td>${cm.map(([k])=>`<td ${tdr}>${n(S(fl,k))}</td>`).join("")}<td ${tdr}>${n(S(fl,"cantidad"))} ${uni}</td><td ${td}></td><td ${tdr}>${$(S(fl,"total"))}</td></tr>`:""}
       </tbody></table>`:"";
     const tablaSimple=(tt,arr,conWR)=>arr.length?`<h3>${tt}</h3><table><thead><tr>${conWR?th("N° WR"):""}${th("Concepto")}${th("Cant.",1)}${th("Precio",1)}${th("Importe",1)}</tr></thead><tbody>
       ${arr.map(l=>`<tr>${conWR?`<td ${td}>${e(l.wrId||"")}</td>`:""}<td ${td}>${e(l.descripcion)}</td><td ${tdr}>${n(l.cantidad)}</td><td ${tdr}>${$(l.precio)}</td><td ${tdr}><b>${$(l.total)}</b></td></tr>`).join("")}</tbody></table>`:"";
@@ -7369,7 +7369,7 @@ export default function ENEXSystem(){
       .emp{font-size:26px;font-weight:900;letter-spacing:2px;color:#1A2B4A}.num{font-size:18px;font-weight:900;font-family:monospace}
       .box{display:grid;grid-template-columns:1fr 1fr;gap:4px 18px;border:1px solid #ccc;border-radius:6px;padding:10px 12px;margin-bottom:12px}
       h3{font-size:14px;color:#1A2B4A;margin:16px 0 6px}h3 .sub{font-weight:400;color:#666;font-size:12px}
-      table{width:100%;border-collapse:collapse;font-size:12.5px}.tot td{background:#F1F4F9;font-weight:800}.cas{font-size:11px;color:#8a6d1a;font-family:monospace}
+      table{width:100%;border-collapse:collapse;font-size:12.5px}.tot td{background:#F1F4F9;font-weight:800;border-top:2px solid #1A2B4A}.cas{font-size:11px;color:#8a6d1a;font-family:monospace}
       .totales{margin-left:auto;width:320px;margin-top:14px;border:1px solid #ccc;border-radius:6px;padding:10px 12px}
       .tr{display:flex;justify-content:space-between;padding:3px 0}.tr span:last-child{font-family:monospace}
       .gt{border-top:2px solid #1A2B4A;margin-top:6px;padding-top:6px;font-size:17px;font-weight:900;color:#1A2B4A}
@@ -12469,14 +12469,14 @@ export default function ENEXSystem(){
                             <td>{del(l._i)}</td>
                           </tr>
                         ))}
-                        <tr style={{background:"var(--bg4)",fontWeight:800}}>
-                          <td>{fl.length} WR</td>{conCli&&<td></td>}
+                        {fl.length>1&&<tr style={{background:"var(--bg4)",fontWeight:800,borderTop:"2px solid var(--navy)"}}>
+                          <td style={{whiteSpace:"nowrap"}}>TOTALES · {fl.length} WR</td>{conCli&&<td></td>}
                           <td style={{textAlign:"right"}}>{sum(fl,"cajas")}</td>
                           {colsMed.map(([k])=><td key={k} style={{textAlign:"right",fontFamily:"'DM Mono',monospace"}}>{r2(sum(fl,k))}</td>)}
                           <td style={{textAlign:"right",fontFamily:"'DM Mono',monospace"}}>{r2(sum(fl,"cantidad"))} {uni}</td>
                           <td></td>
                           <td style={{textAlign:"right",fontFamily:"'DM Mono',monospace"}}>{fmtMoney(sum(fl,"total"),f.moneda)}</td><td></td>
-                        </tr>
+                        </tr>}
                       </tbody>
                     </table>
                   </div>
