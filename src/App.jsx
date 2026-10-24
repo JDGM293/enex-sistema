@@ -2237,7 +2237,9 @@ export default function ENEXSystem(){
   const [pickupClientResults,setPickupClientResults]=useState([]);
   const CALC_FORM_EMPTY={largo:"",ancho:"",alto:"",pesoLb:"",unitDim:"in",origPais:"",origCiudad:"",destPais:"",destCiudad:"",tipoEnvio:""};
   const [calcForm,setCalcForm]=useState(CALC_FORM_EMPTY);
-  const [contabTab,setContabTab]=useState("facturas");
+  const [contabTab,setContabTab]=useState("porguia");
+  const [facGuiaSel,setFacGuiaSel]=useState(null);   // guía abierta en Facturación › Por guía
+  const [facGuiaBuscar,setFacGuiaBuscar]=useState("");
   const [facturas,setFacturas]=useState([]);
   const [pagos,setPagos]=useState([]);
   // Facturación v2 (Lote 6)
@@ -6372,26 +6374,29 @@ export default function ENEXSystem(){
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
               <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:17,fontWeight:700,color:"var(--navy)",flex:1}}>💰 Tarifas por Ruta y Tipo de Envío</div>
               {hasPerm("crear_tarifa")&&<button className="btn-p" style={{fontSize:13}} onClick={()=>{
-                setTafForm({paisOrig:"",ciudadOrig:"",paisDest:"",ciudadDest:"",tipoEnvio:SEND_TYPES[0]||"",porLb:"",porFt3:"",min:"",moneda:"USD"});
+                setTafForm({paisOrig:"",ciudadOrig:"",paisDest:"",ciudadDest:"",tipoEnvio:SEND_TYPES[0]||"",porLb:"",porFt3:"",min:"",moneda:"USD",aplicaTipo:"",aplicaId:""});
                 setEditTarifa(null);setShowNewTarifa(true);
               }}>+ Nueva Tarifa</button>}
             </div>
             <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,overflow:"hidden"}}>
               <table className="ct">
                 <thead><tr>
-                  <th>Origen</th><th>Destino</th><th>Tipo Envío</th><th>Monto</th><th>Mínimo</th><th>Moneda</th><th>Estado</th><th>Acc.</th>
+                  <th>Aplica a</th><th>Origen</th><th>Destino</th><th>Tipo Envío</th><th>Monto</th><th>Mínimo</th><th>Moneda</th><th>Estado</th><th>Acc.</th>
                 </tr></thead>
                 <tbody>
-                  {tarifas.length===0&&<tr><td colSpan={8} style={{textAlign:"center",padding:30,color:"var(--t3)"}}>No hay tarifas registradas.</td></tr>}
-                  {tarifas.map(t=>{
+                  {tarifas.length===0&&<tr><td colSpan={9} style={{textAlign:"center",padding:30,color:"var(--t3)"}}>No hay tarifas registradas.</td></tr>}
+                  {[...tarifas].sort((a,b)=>(a.aplicaTipo?1:0)-(b.aplicaTipo?1:0)).map(t=>{
                     const esAereo=tipoEsAereo(t.tipoEnvio);
                     const esMaritimo=tipoEsMaritimo(t.tipoEnvio);
                     const sy=cSym(t.moneda);
                     const monto=esAereo?`${sy}${t.porLb}/lb`:esMaritimo?`${sy}${t.porFt3}/ft³`:`${sy}${t.porLb}/lb`;
                     return(
                     <tr key={t.id}>
-                      <td style={{fontWeight:600,fontSize:13}}>{t.paisOrig}-{t.ciudadOrig}</td>
-                      <td style={{fontWeight:600,fontSize:13}}>{t.paisDest}-{t.ciudadDest}</td>
+                      <td>{t.aplicaTipo
+                        ?<span style={{fontSize:12,fontWeight:700,padding:"2px 8px",borderRadius:4,background:"#FFF3E0",color:"#E65100",border:"1px solid #FFCC80"}}>⭐ {nombreAplica(t)}</span>
+                        :<span style={{fontSize:12,color:"var(--t3)",fontWeight:600}}>Predeterminada</span>}</td>
+                      <td style={{fontWeight:600,fontSize:13}}>{[t.paisOrig,t.ciudadOrig].filter(Boolean).join("-")||"Cualquiera"}</td>
+                      <td style={{fontWeight:600,fontSize:13}}>{[t.paisDest,t.ciudadDest].filter(Boolean).join("-")||"Cualquiera"}</td>
                       <td><TypeBadge t={t.tipoEnvio}/></td>
                       <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:esAereo?"var(--green)":"var(--sky)"}}>{monto}</td>
                       <td style={{fontFamily:"'DM Mono',monospace",color:"var(--orange)"}}>{sy}{t.min}</td>
@@ -6412,7 +6417,27 @@ export default function ENEXSystem(){
               <div className="ov">
                 <div className="modal" style={{maxWidth:520}} onClick={e=>e.stopPropagation()}>
                   <div className="mhd"><div className="mt">{editTarifa?"✏️ Editar Tarifa":"➕ Nueva Tarifa"}</div><button className="mcl" onClick={()=>setShowNewTarifa(false)}>✕</button></div>
-                  <div className="sdiv">RUTA</div>
+                  <div className="sdiv">APLICA A</div>
+                  <div className="fgrid g2" style={{marginBottom:10}}>
+                    <div className="fg"><div className="fl">Tipo</div>
+                      <select className="fs" value={tafForm.aplicaTipo||""} onChange={e=>setTafForm(p=>({...p,aplicaTipo:e.target.value,aplicaId:""}))}>
+                        <option value="">Todos (predeterminada)</option>
+                        <option value="cliente">Un cliente</option>
+                        <option value="agente">Un agente</option>
+                        <option value="autonomo">Un autónomo</option>
+                      </select>
+                    </div>
+                    {tafForm.aplicaTipo&&<div className="fg"><div className="fl">¿Cuál?</div>
+                      <select className="fs" value={tafForm.aplicaId||""} onChange={e=>setTafForm(p=>({...p,aplicaId:e.target.value}))}>
+                        <option value="">— Selecciona —</option>
+                        {(tafForm.aplicaTipo==="agente"?agentes.map(a=>({id:a.id,l:`${a.codigo||""} — ${a.nombre||""}`}))
+                          :tafForm.aplicaTipo==="autonomo"?clients.filter(c=>c.tipo==="usuario"&&c.rol==="F").map(c=>({id:c.id,l:`${c.id} — ${fullName(c)}`}))
+                          :clients.filter(c=>c.tipo==="cliente").map(c=>({id:c.id,l:`${c.casillero||c.id} — ${fullName(c)}`}))
+                        ).map(o=><option key={o.id} value={o.id}>{o.l}</option>)}
+                      </select>
+                    </div>}
+                  </div>
+                  <div className="sdiv">RUTA{tafForm.aplicaTipo?" (vacío = cualquier ruta)":""}</div>
                   <div className="fgrid g4" style={{marginBottom:10}}>
                     <div className="fg"><div className="fl">País Origen</div><input className="fi" style={{fontFamily:"'DM Mono',monospace"}} value={tafForm.paisOrig} onChange={e=>setTafForm(p=>({...p,paisOrig:e.target.value.toUpperCase()}))} placeholder="Ej: 01"/></div>
                     <div className="fg"><div className="fl">Ciudad Origen</div><input className="fi" style={{fontFamily:"'DM Mono',monospace"}} value={tafForm.ciudadOrig} onChange={e=>setTafForm(p=>({...p,ciudadOrig:e.target.value.toUpperCase()}))} placeholder="Ej: MIA"/></div>
@@ -6437,6 +6462,7 @@ export default function ENEXSystem(){
                     <button className="btn-s" onClick={()=>setShowNewTarifa(false)}>Cancelar</button>
                     <button className="btn-p" onClick={()=>{
                       if(!tafForm.tipoEnvio)return;
+                      if(tafForm.aplicaTipo&&!tafForm.aplicaId){window.alert("Elige a quién aplica la tarifa especial.");return;}
                       const porLbF=parseFloat(tafForm.porLb)||0;
                       const porFt3F=parseFloat(tafForm.porFt3)||0;
                       const minF=parseFloat(tafForm.min)||0;
@@ -6446,13 +6472,13 @@ export default function ENEXSystem(){
                         dbUpsertTarifa(updated);
                         logAction("Actualizó tarifa",`${tafForm.paisOrig}-${tafForm.ciudadOrig} → ${tafForm.paisDest}-${tafForm.ciudadDest} · ${tafForm.tipoEnvio}`);
                       } else {
-                        const existing=tarifas.find(t=>t.paisOrig===tafForm.paisOrig&&t.ciudadOrig===tafForm.ciudadOrig&&t.paisDest===tafForm.paisDest&&t.ciudadDest===tafForm.ciudadDest&&t.tipoEnvio===tafForm.tipoEnvio);
+                        const existing=tarifas.find(t=>(t.aplicaTipo||"")===(tafForm.aplicaTipo||"")&&(t.aplicaId||"")===(tafForm.aplicaId||"")&&t.paisOrig===tafForm.paisOrig&&t.ciudadOrig===tafForm.ciudadOrig&&t.paisDest===tafForm.paisDest&&t.ciudadDest===tafForm.ciudadDest&&t.tipoEnvio===tafForm.tipoEnvio);
                         if(existing){
                           const updated={...existing,...tafForm,porLb:porLbF,porFt3:porFt3F,min:minF};
                           setTarifas(p=>p.map(t=>t.id===existing.id?updated:t));
                           dbUpsertTarifa(updated);
                         } else {
-                          const nid=`T-${String(tarifas.length+1).padStart(3,"0")}`;
+                          const nid=`T-${String(Math.max(0,...tarifas.map(t=>parseInt(String(t.id).replace(/\D/g,""))||0))+1).padStart(3,"0")}`;
                           const nt={...tafForm,id:nid,porLb:porLbF,porFt3:porFt3F,min:minF,activo:true};
                           setTarifas(p=>[...p,nt]);
                           dbUpsertTarifa(nt);
@@ -7380,12 +7406,25 @@ export default function ENEXSystem(){
     setTimeout(()=>{w.focus();w.print();},300);
   };
   // Tarifa que aplica a un WR según tipo de envío, origen y destino (Configuración › Tarifas)
-  const tarifaParaWR=(w,tipoEnvio)=>{
+  // Primero una tarifa especial del receptor (cliente, agente o autónomo); si no tiene,
+  // la predeterminada de la ruta. En una especial, la ruta vacía vale para cualquier ruta.
+  const nombreAplica=t=>{
+    if(t.aplicaTipo==="agente"){const a=agentes.find(x=>x.id===t.aplicaId);return `Agente ${a?.nombre||a?.codigo||"?"}`;}
+    const c=clients.find(x=>x.id===t.aplicaId);
+    return `${t.aplicaTipo==="autonomo"?"Autónomo":"Cliente"} ${c?fullName(c):"?"}${t.aplicaTipo==="cliente"&&c?.casillero?` (${c.casillero})`:""}`;
+  };
+  const tarifaParaWR=(w,tipoEnvio,receptor=null)=>{
     const te=sinAcentos(tipoEnvio).replace(/[^A-Z]/g,"");
     const oc=nombreCiudadCon(w?.origCity,COUNTRIES), dc=nombreCiudadCon(w?.destCity,COUNTRIES);
     const cands=tarifas.filter(t=>t.activo!==false&&sinAcentos(t.tipoEnvio).replace(/[^A-Z]/g,"")===te);
+    const campo=(v,ok)=>!String(v||"").trim()?1:(ok?4:-100);   // vacío = comodín
+    const ptsEsp=t=>campo(t.ciudadOrig,sinAcentos(t.ciudadOrig)===oc)+campo(t.ciudadDest,sinAcentos(t.ciudadDest)===dc)+campo(t.paisOrig,mismoPais(t.paisOrig,w?.origCountry))+campo(t.paisDest,mismoPais(t.paisDest,w?.destCountry));
+    if(receptor?.tipo&&receptor?.id){
+      const esp=cands.filter(t=>t.aplicaTipo===receptor.tipo&&t.aplicaId===receptor.id).sort((a,b)=>ptsEsp(b)-ptsEsp(a))[0];
+      if(esp&&ptsEsp(esp)>0)return {...esp,_especial:true};
+    }
     const pts=t=>(sinAcentos(t.ciudadOrig)===oc?4:0)+(sinAcentos(t.ciudadDest)===dc?4:0)+(mismoPais(t.paisOrig,w?.origCountry)?2:0)+(mismoPais(t.paisDest,w?.destCountry)?2:0);
-    const best=[...cands].sort((a,b)=>pts(b)-pts(a))[0];
+    const best=cands.filter(t=>!t.aplicaTipo).sort((a,b)=>pts(b)-pts(a))[0];
     return best&&pts(best)>=2?best:null;
   };
   // Precio de un servicio o gasto adicional del catálogo
@@ -7602,86 +7641,90 @@ export default function ENEXSystem(){
   // Excluye los WR PREPAID (se facturan en origen al remitente) y los que ya tienen
   // factura activa. Si silent=true no muestra alerts (uso desde recibirGuiaCompleta).
   // Retorna el número de borradores creados.
-  const facFromGuia=(guia,silent=false)=>{
-    if(!hasPerm("crear_factura")&&!hasPerm("facturar")){
-      if(!silent)window.alert("Tu rol no tiene permiso.");
-      return 0;
-    }
-    const allWR=(guia.containers||[]).flatMap(c=>c.wr||[]);
-    if(allWR.length===0){
-      if(!silent)window.alert("La guía no tiene WR.");
-      return 0;
-    }
-    // Hidratar WRs con el estado real de wrList (los containers pueden tener un snapshot viejo)
-    const wrsHidratados=allWR.map(w=>wrList.find(x=>x.id===w.id)||w);
-    // Filtrar: solo COD (no PREPAID), sin factura activa y no bloqueado por estado (2.3, 25)
-    const facturados=new Set(facturas.filter(f=>f.status!=="anulada"&&Array.isArray(f.wrIds)).flatMap(f=>f.wrIds));
-    const cods=wrsHidratados.filter(w=>{
-      if(!wrPuedeFacturarse(w))return false;            // Reempacado (2.3) y Egresado (25) NO se facturan
-      const esPrepaid=(w.tipoPago||"").toLowerCase().includes("prepa");
-      if(esPrepaid)return false;                         // PREPAID se factura aparte al remitente
-      if(facturados.has(w.id))return false;              // ya tiene factura activa
-      return true;
-    });
-    if(cods.length===0){
-      if(!silent)window.alert("No hay WR COD pendientes de facturar en esta guía. Los PREPAID se facturan aparte; los demás ya tienen factura activa.");
-      return 0;
-    }
-    // Agrupar por receptor según clienteTipo
-    const grupos={};
-    cods.forEach(w=>{
+  // WR facturables de una guía agrupados por receptor (cliente directo, agente o autónomo).
+  // Cada grupo trae sus WR, las facturas activas que ya los cubren y los que faltan por facturar.
+  const facGruposGuia=guia=>{
+    const ids=new Set([...(Array.isArray(guia?.wrIds)?guia.wrIds:[]),...(guia?.containers||[]).flatMap(c=>(c.wr||[]).map(w=>w.id))]);
+    const wrs=wrList.filter(w=>ids.has(w.id));
+    const activas=facturas.filter(f=>f.status!=="anulada"&&f.tipo!=="nota_credito"&&Array.isArray(f.wrIds));
+    const prepaid=[],grupos={};
+    wrs.forEach(w=>{
+      if(!wrPuedeFacturarse(w))return;
+      if((w.tipoPago||"").toLowerCase().includes("prepa")){prepaid.push(w);return;}
       const r=facReceptorParaWR(w);
       if(!r)return;
       const key=`${r.tipo}::${r.id||w.casillero||w.consignee||"sin_id"}`;
-      if(!grupos[key])grupos[key]={receptor:r,wrs:[]};
+      if(!grupos[key])grupos[key]={key,receptor:r,wrs:[]};
       grupos[key].wrs.push(w);
     });
-    let seq=nextInvoiceNum;
-    const nuevas=[];
-    const sinTarifa=[];
+    const lista=Object.values(grupos).map(g=>{
+      const facs=activas.filter(f=>f.wrIds.some(id=>g.wrs.some(w=>w.id===id)));
+      const cubiertos=new Set(facs.flatMap(f=>f.wrIds));
+      return {...g,facturas:facs,pendientes:g.wrs.filter(w=>!cubiertos.has(w.id))};
+    }).sort((x,y)=>({cliente:0,agente:1,autonomo:2}[x.receptor.tipo]??9)-({cliente:0,agente:1,autonomo:2}[y.receptor.tipo]??9)||String(x.receptor.snapshot?.nombre||"").localeCompare(String(y.receptor.snapshot?.nombre||"")));
+    return {grupos:lista,prepaid};
+  };
+  // Arma la factura (borrador) de un receptor con sus WR de la guía
+  const facConstruir=(guia,r,wrs,seq=0)=>{
     const isAereo=dnGuiaEsAerea(guia);
-    Object.values(grupos).forEach(grp=>{
-      const r=grp.receptor;
-      const tf=tarifaParaWR(grp.wrs[0],guia.tipoEnvio);
-      if(!tf)sinTarifa.push(r.snapshot?.nombre||r.id);
-      const precioUnidad=parseFloat(isAereo?tf?.porLb:tf?.porFt3)||0;
-      const fact={
-        ...emptyFactura(),
-        id:buildFacturaId(seq),numero:seq,
-        tipo:"factura",status:"borrador",moneda:tf?.moneda||"USD",
-        fecha:new Date(),fechaEmision:null,
-        receptorTipo:r.tipo,receptorId:r.id||"",
-        receptorNombre:r.snapshot?.nombre||"",receptorDoc:r.snapshot?.doc||"",
-        receptorDir:r.snapshot?.dir||"",receptorTel:r.snapshot?.tel||"",
-        receptorEmail:r.snapshot?.email||"",receptorCasillero:r.snapshot?.casillero||"",
-        tipoEnvio:guia.tipoEnvio||"",
-        tarifa:tf?{porLb:parseFloat(tf.porLb)||0,porFt3:parseFloat(tf.porFt3)||0,min:parseFloat(tf.min)||0,moneda:tf.moneda||"USD",
-          ruta:`${tf.ciudadOrig||tf.paisOrig||""} → ${tf.ciudadDest||tf.paisDest||""}`}:{porLb:0,porFt3:0,min:0,moneda:"USD",ruta:"Sin tarifa"},
-        lineas:lineasDeWRs(grp.wrs,isAereo,precioUnidad,r.tipo!=="cliente"),
-        wrIds:grp.wrs.map(w=>w.id),
-        guiaIds:[guia.id],
-        notas:"",
-        usuario:currentUser.id||currentUser.email||"",
-      };
-      nuevas.push(recalcFactura(fact));
-      seq++;
+    const tf=tarifaParaWR(wrs[0],guia.tipoEnvio,{tipo:r.tipo,id:r.id});
+    const precioUnidad=parseFloat(isAereo?tf?.porLb:tf?.porFt3)||0;
+    return recalcFactura({
+      ...emptyFactura(),
+      id:seq?buildFacturaId(seq):"",numero:seq||0,
+      tipo:"factura",status:"borrador",moneda:tf?.moneda||"USD",
+      fecha:new Date(),fechaEmision:null,
+      receptorTipo:r.tipo,receptorId:r.id||"",
+      receptorNombre:r.snapshot?.nombre||"",receptorDoc:r.snapshot?.doc||"",
+      receptorDir:r.snapshot?.dir||"",receptorTel:r.snapshot?.tel||"",
+      receptorEmail:r.snapshot?.email||"",receptorCasillero:r.snapshot?.casillero||"",
+      tipoEnvio:guia.tipoEnvio||"",
+      tarifa:tf?{porLb:parseFloat(tf.porLb)||0,porFt3:parseFloat(tf.porFt3)||0,min:parseFloat(tf.min)||0,moneda:tf.moneda||"USD",
+        ruta:`${tf.ciudadOrig||tf.paisOrig||"Cualquiera"} → ${tf.ciudadDest||tf.paisDest||"Cualquiera"}`,especial:!!tf._especial,tarifaId:tf.id}
+        :{porLb:0,porFt3:0,min:0,moneda:"USD",ruta:"Sin tarifa"},
+      lineas:lineasDeWRs(wrs,isAereo,precioUnidad,r.tipo!=="cliente"),
+      wrIds:wrs.map(w=>w.id),
+      guiaIds:[guia.id],
+      notas:"",
+      usuario:currentUser.id||currentUser.email||"",
     });
+  };
+  // Crea los borradores de los receptores con WR pendientes (todos, o solo uno con soloKey)
+  const facFromGuia=(guia,silent=false,soloKey=null)=>{
+    if(!hasPerm("crear_factura")&&!hasPerm("facturar")){
+      if(!silent)window.alert("Tu rol no tiene permiso.");
+      return [];
+    }
+    const {grupos}=facGruposGuia(guia);
+    const conPend=grupos.filter(g=>g.pendientes.length>0&&(!soloKey||g.key===soloKey));
+    if(conPend.length===0){if(!silent)window.alert("No hay WR pendientes de facturar.");return [];}
+    let seq=nextInvoiceNum;
+    const nuevas=conPend.map(g=>facConstruir(guia,g.receptor,g.pendientes,seq++));
     setFacturas(p=>[...nuevas,...p]);
     nuevas.forEach(f=>dbUpsertFactura(f));
     setNextInvoiceNum(seq);
     dbSetConfig('factura_sec_next',String(seq));
-    logAction("Generó borradores COD de guía",`${guia.id} → ${nuevas.length} facturas (${cods.length} WR)`);
-    if(!silent&&sinTarifa.length>0)window.alert(`⚠️ No hay tarifa configurada para la ruta y el tipo de envío de: ${sinTarifa.join(", ")}.\nEsas facturas quedaron con precio 0: revisa Configuración › Tarifas o ajusta el precio en la factura.`);
-    if(!silent)window.alert(`✅ ${nuevas.length} borradores COD creados desde guía ${guia.id}.\n${cods.length} WR agrupados por receptor (cliente/agente/oficina/autónomo).\nRevisa y emite desde "Facturas".`);
-    return nuevas.length;
+    logAction("Generó facturas de guía",`${guia.id} → ${nuevas.length} borrador(es)`);
+    return nuevas;
+  };
+  // Emitir sin abrir el editor
+  const facEmitirRapido=f=>{
+    if(!hasPerm("crear_factura")&&!hasPerm("facturar")&&!hasPerm("editar_factura")){window.alert("Tu rol no tiene permiso.");return;}
+    if(!String(f.receptorNombre||"").trim()){window.alert("Falta el nombre del receptor: abre la factura y complétalo.");return;}
+    if((f.total||0)<=0&&!window.confirm(`La factura ${f.id} tiene total ${fmtMoney(f.total||0,f.moneda)}. ¿Emitirla igual?`))return;
+    const fact=recalcFactura({...f,status:"emitida",fechaEmision:f.fechaEmision||new Date()});
+    setFacturas(p=>p.map(x=>x.id===fact.id?fact:x));
+    dbUpsertFactura(fact);
+    logAction("Emitió factura",`${fact.id} · ${fmtMoney(fact.total,fact.moneda)} · ${fact.receptorNombre}`);
+    syncWRStatusFromFactura(fact,"emitida");
   };
 
   const renderContabilidad=()=>{
     const CTABS=[
+      {k:"porguia",l:"🚢 Por guía"},
       {k:"facturas",l:"📄 Facturas"},
       {k:"cxc",l:"💰 Por Cobrar"},
       {k:"pagos",l:"✅ Pagos"},
-      {k:"generar",l:"⚡ Generar de Guía"},
       {k:"reporte",l:"📊 Reporte"},
     ];
     // Filtrar facturas (no incluye anuladas en stats principales)
@@ -7894,36 +7937,104 @@ export default function ENEXSystem(){
           </div>
         )}
 
-        {/* ── GENERAR DE GUÍA ── */}
-        {contabTab==="generar"&&(
-          <div>
-            {consolList.length===0?<div className="card" style={{textAlign:"center",padding:40,color:"var(--t3)"}}>No hay guías consolidadas. Primero crea un embarque en Consolidación.</div>:(
-              <div className="card" style={{padding:0}}>
-                <table className="ct">
-                  <thead><tr><th>N° Guía</th><th>Destino</th><th>Fecha</th><th>WR</th><th>Tipo Envío</th><th>Borradores ya creados</th><th>Acc.</th></tr></thead>
+        {/* ── POR GUÍA ── */}
+        {contabTab==="porguia"&&(()=>{
+          const FST={borrador:{l:"Borrador",c:"#7A5C00",bg:"#FFF8E1"},emitida:{l:"Emitida",c:"#1565C0",bg:"#E3F2FD"},pagada_parcial:{l:"Pago parcial",c:"#E65100",bg:"#FFF3E0"},pagada:{l:"Pagada",c:"#2E7D32",bg:"#E8F5E9"}};
+          const chipF=f=>{const st=FST[f.status]||{l:f.status,c:"var(--t2)",bg:"var(--bg4)"};return <span style={{fontSize:12,fontWeight:700,padding:"2px 8px",borderRadius:10,color:st.c,background:st.bg,whiteSpace:"nowrap"}}>{st.l}</span>;};
+          const IC={cliente:"👤",agente:"🤝",autonomo:"🧑‍💻"};
+          if(!facGuiaSel){
+            const q=(facGuiaBuscar||"").trim().toUpperCase();
+            const tarjetas=consolList.map(g=>{const {grupos,prepaid}=facGruposGuia(g);return {g,grupos,prepaid};})
+              .filter(x=>x.grupos.length>0||x.prepaid.length>0)
+              .filter(x=>!q||String(x.g.id).toUpperCase().includes(q)||x.grupos.some(gr=>String(gr.receptor.snapshot?.nombre||"").toUpperCase().includes(q)))
+              .sort((a,b)=>new Date(b.g.fecha||0)-new Date(a.g.fecha||0));
+            return (
+              <div>
+                <input className="fi" placeholder="Buscar guía o cliente…" value={facGuiaBuscar} onChange={e=>setFacGuiaBuscar(e.target.value)} style={{fontSize:15,padding:"9px 12px",marginBottom:12,width:"100%"}}/>
+                {tarjetas.length===0?<div className="card" style={{textAlign:"center",padding:50,color:"var(--t3)"}}>No hay guías con carga por facturar.</div>:
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(290px,1fr))",gap:12}}>
+                  {tarjetas.map(({g,grupos})=>{
+                    const tot=grupos.length, hechos=grupos.filter(x=>x.pendientes.length===0).length;
+                    const facs=[...new Map(grupos.flatMap(x=>x.facturas).map(f=>[f.id,f])).values()];
+                    const porMon={};facs.forEach(f=>{porMon[f.moneda||"USD"]=(porMon[f.moneda||"USD"]||0)+(f.total||0);});
+                    const pct=tot?Math.round(hechos*100/tot):0;
+                    return (
+                      <div key={g.id} className="card" onClick={()=>{setFacGuiaSel(g.id);setFacGuiaBuscar("");}} style={{cursor:"pointer",padding:14,border:"1px solid var(--b1)"}}>
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                          <span style={{fontFamily:"'DM Mono',monospace",fontWeight:800,fontSize:18,color:"var(--navy)"}}>{g.id}</span><TypeBadge t={g.tipoEnvio}/>
+                        </div>
+                        <div style={{fontSize:14,color:"var(--t2)",marginBottom:8}}>📍 {g.destino||"—"} · {fmtDate(g.fecha)}</div>
+                        <div style={{height:8,background:"var(--bg4)",borderRadius:4,overflow:"hidden",marginBottom:8}}><div style={{width:`${pct}%`,height:"100%",background:"var(--green)"}}/></div>
+                        <div style={{display:"flex",justifyContent:"space-between",fontSize:13,flexWrap:"wrap",gap:6}}>
+                          <span><b style={{color:hechos===tot?"var(--green)":"var(--orange)"}}>{hechos}</b> / {tot} facturados</span>
+                          <span style={{fontFamily:"'DM Mono',monospace",fontWeight:700}}>{Object.entries(porMon).map(([m,v])=>fmtMoney(v,m)).join(" · ")||"—"}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>}
+              </div>
+            );
+          }
+          const g=consolList.find(c=>c.id===facGuiaSel);
+          if(!g)return <div className="card" style={{padding:30,textAlign:"center"}}><button className="btn-s" onClick={()=>setFacGuiaSel(null)}>← Guías</button></div>;
+          const {grupos,prepaid}=facGruposGuia(g);
+          const isAereoG=dnGuiaEsAerea(g);
+          const uniG=isAereoG?"lb":"ft³";
+          const pendTot=grupos.filter(x=>x.pendientes.length>0);
+          const puedeFac=hasPerm("crear_factura")||hasPerm("facturar");
+          const facturarUno=gr=>{const n=facFromGuia(g,true,gr.key);if(n[0])facOpenEdit(n[0]);};
+          return (
+            <div>
+              <div className="card" style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",marginBottom:12}}>
+                <button className="btn-s" onClick={()=>setFacGuiaSel(null)}>← Guías</button>
+                <span style={{fontFamily:"'DM Mono',monospace",fontWeight:800,fontSize:20,color:"var(--navy)"}}>{g.id}</span>
+                <TypeBadge t={g.tipoEnvio}/><span style={{fontSize:14,color:"var(--t2)"}}>📍 {g.destino||"—"}</span>
+                {puedeFac&&pendTot.length>0&&<button className="btn-p" style={{marginLeft:"auto"}} onClick={()=>{const n=facFromGuia(g,true);if(n.length)window.alert(`✅ ${n.length} factura(s) en borrador. Revísalas y emítelas desde esta misma pantalla.`);}}>⚡ Facturar todo lo pendiente ({pendTot.length})</button>}
+              </div>
+              <div className="card" style={{padding:0,overflow:"hidden"}}>
+                <table className="ct" style={{width:"100%",fontSize:14}}>
+                  <thead><tr><th>Receptor</th><th style={{textAlign:"right"}}>WR</th><th style={{textAlign:"right"}}>A cobrar</th><th>Tarifa</th><th style={{textAlign:"right"}}>Importe</th><th>Factura</th><th style={{width:240}}></th></tr></thead>
                   <tbody>
-                    {consolList.map(g=>{
-                      const yaFact=facturas.filter(f=>(f.guiaIds||[]).includes(g.id));
+                    {grupos.map(gr=>{
+                      const r=gr.receptor;
+                      const est=gr.pendientes.length?facConstruir(g,r,gr.pendientes):null;
+                      const cobrar=gr.wrs.reduce((t,w)=>t+wrPesoFacturable(w,isAereoG).valor,0);
+                      const tf=tarifaParaWR(gr.wrs[0],g.tipoEnvio,{tipo:r.tipo,id:r.id});
                       return (
-                        <tr key={g.id}>
-                          <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",fontSize:14}}>{g.id}</span></td>
-                          <td style={{fontWeight:600}}>{g.destino}</td>
-                          <td style={{fontFamily:"'DM Mono',monospace",fontSize:13}}>{fmtDate(g.fecha)}</td>
-                          <td style={{textAlign:"center",fontWeight:700}}>{g.totalWR}</td>
-                          <td><TypeBadge t={g.tipoEnvio}/></td>
-                          <td>{yaFact.length>0?<span style={{fontSize:13,fontWeight:700,color:"var(--green)"}}>{yaFact.length} factura(s)</span>:<span style={{fontSize:13,color:"var(--t3)"}}>—</span>}</td>
-                          <td>
-                            {(hasPerm("crear_factura")||hasPerm("facturar"))&&<button className="btn-p" style={{fontSize:12,padding:"3px 10px"}} onClick={()=>facFromGuia(g)}>⚡ Generar Borradores</button>}
+                        <tr key={gr.key} style={{verticalAlign:"top"}}>
+                          <td><div style={{fontWeight:700}}>{IC[r.tipo]||"•"} {r.snapshot?.nombre||"—"}</div>
+                            <div style={{fontSize:12,color:"var(--t3)"}}>{r.tipo==="cliente"?(r.snapshot?.casillero?`#${r.snapshot.casillero}`:"Cliente"):r.tipo==="agente"?"Agente":"Autónomo"}</div></td>
+                          <td style={{textAlign:"right",fontWeight:700}}>{gr.wrs.length}</td>
+                          <td style={{textAlign:"right",fontFamily:"'DM Mono',monospace"}}>{r2(cobrar)} {uniG}</td>
+                          <td>{tf?<span style={{fontSize:13}}>{tf._especial&&<b style={{color:"#E65100"}}>⭐ </b>}{fmtMoney(isAereoG?tf.porLb:tf.porFt3,tf.moneda)}/{uniG}<div style={{fontSize:11,color:"var(--t3)"}}>{tf._especial?"Especial":"Predeterminada"} · mín. {fmtMoney(tf.min,tf.moneda)}</div></span>
+                            :<span style={{fontSize:13,color:"var(--red)",fontWeight:700}}>Sin tarifa</span>}</td>
+                          <td style={{textAlign:"right",fontFamily:"'DM Mono',monospace",fontWeight:800}}>
+                            {gr.facturas.map(f=><div key={f.id}>{fmtMoney(f.total,f.moneda)}</div>)}
+                            {est&&<div style={{color:"var(--t3)",fontWeight:600}} title="Estimado de lo pendiente">≈ {fmtMoney(est.total,est.moneda)}</div>}
                           </td>
+                          <td>{gr.facturas.map(f=><div key={f.id} style={{display:"flex",gap:6,alignItems:"center",marginBottom:3}}>
+                                <span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)"}}>{f.id}</span>{chipF(f)}</div>)}
+                              {gr.pendientes.length>0&&<span style={{fontSize:12,fontWeight:700,color:"var(--orange)"}}>{gr.pendientes.length} WR sin facturar</span>}</td>
+                          <td><div style={{display:"flex",gap:6,flexWrap:"wrap",justifyContent:"flex-end"}}>
+                            {gr.pendientes.length>0&&puedeFac&&<button className="btn-p" style={{fontSize:13,padding:"5px 12px"}} onClick={()=>facturarUno(gr)}>🧾 Facturar</button>}
+                            {gr.facturas.filter(f=>f.status==="borrador").map(f=><Fragment key={f.id}>
+                              <button className="btn-s" style={{fontSize:13,padding:"5px 10px"}} onClick={()=>facOpenEdit(f)}>✏️ Revisar</button>
+                              <button className="btn-p" style={{fontSize:13,padding:"5px 10px",background:"#1565C0",borderColor:"#1565C0"}} onClick={()=>facEmitirRapido(f)}>📤 Emitir</button>
+                            </Fragment>)}
+                            {gr.facturas.filter(f=>f.status!=="borrador").map(f=><button key={f.id} className="btn-s" style={{fontSize:13,padding:"5px 10px"}} onClick={()=>setFacPrint(f)}>🖨️ Ver</button>)}
+                          </div></td>
                         </tr>
                       );
                     })}
+                    {grupos.length===0&&<tr><td colSpan={7} style={{textAlign:"center",padding:30,color:"var(--t3)"}}>No hay WR por facturar en esta guía.</td></tr>}
                   </tbody>
                 </table>
               </div>
-            )}
-          </div>
-        )}
+              {prepaid.length>0&&<div style={{marginTop:10,fontSize:13,color:"var(--t2)"}}>💳 {prepaid.length} WR PREPAID en esta guía: se facturan aparte al remitente.</div>}
+            </div>
+          );
+        })()}
 
         {/* ── REPORTE ── */}
         {contabTab==="reporte"&&(()=>{
@@ -10572,7 +10683,7 @@ export default function ENEXSystem(){
       {id:"cargorelease",ic:"🚀",l:"Cargo Release"},
     ]},
     {label:"Administración",items:[
-      {id:"facturacion",ic:"🧾",l:"Facturación",onClick:()=>{setTab("contabilidad");setContabTab("facturas");},activeWhen:()=>tab==="contabilidad"&&contabTab==="facturas"},
+      {id:"facturacion",ic:"🧾",l:"Facturación",onClick:()=>{setTab("contabilidad");setContabTab("porguia");setFacGuiaSel(null);},activeWhen:()=>tab==="contabilidad"&&["porguia","facturas"].includes(contabTab)},
       {id:"entregasydespachos",ic:"📝",l:"Entregas y Despachos"},
       {id:"contabilidad",ic:"💰",l:"Contabilidad"},
     ]},
@@ -12217,6 +12328,19 @@ export default function ENEXSystem(){
                 <button className="mcl" onClick={()=>setFacModal(null)}>✕</button>
               </div>
               <div className="mb" style={{padding:14}}>
+                {(f.guiaIds||[]).length>0&&!f._verDatos?(
+                  <div style={{display:"flex",gap:14,alignItems:"flex-start",flexWrap:"wrap",border:"1px solid var(--b1)",borderRadius:8,padding:"10px 12px"}}>
+                    <div style={{flex:1,minWidth:260}}>
+                      <div style={{fontSize:17,fontWeight:800,color:"var(--navy)"}}>{f.receptorNombre||"—"}</div>
+                      <div style={{fontSize:13,color:"var(--t2)",marginTop:2}}>
+                        {[f.receptorTipo==="agente"?"Agente":f.receptorTipo==="autonomo"?"Autónomo":"Cliente",f.receptorCasillero&&`#${f.receptorCasillero}`,f.receptorDoc&&`ID ${f.receptorDoc}`,f.receptorTel,f.receptorEmail].filter(Boolean).join(" · ")}
+                      </div>
+                      {f.receptorDir&&<div style={{fontSize:13,color:"var(--t3)"}}>{f.receptorDir}</div>}
+                    </div>
+                    <div style={{fontSize:13,color:"var(--t2)",textAlign:"right"}}>{fmtDate(f.fecha)} · {f.moneda}</div>
+                    <button className="btn-s" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>setFacModal(p=>({...p,_verDatos:true}))}>✏️ Editar datos</button>
+                  </div>
+                ):(<>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:10,marginBottom:10}}>
                   <div>
                     <label className="fl">Tipo documento</label>
@@ -12281,6 +12405,7 @@ export default function ENEXSystem(){
                   </div>
                 </div>
 
+</>)}
                 {/* GUÍA, TIPO DE ENVÍO Y TARIFA */}
                 <div style={{display:"flex",gap:14,flexWrap:"wrap",alignItems:"flex-end",background:"var(--bg4)",border:"1px solid var(--b1)",borderRadius:8,padding:"10px 12px",marginTop:6}}>
                   <div><div className="fl">Guía</div><div style={{fontFamily:"'DM Mono',monospace",fontWeight:800,color:"var(--navy)"}}>{(f.guiaIds||[]).join(", ")||"—"}</div></div>

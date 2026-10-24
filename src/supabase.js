@@ -180,6 +180,7 @@ export const dbGetTarifas = async () => {
     paisDest: r.pais_dest, ciudadDest: r.ciudad_dest,
     tipoEnvio: r.tipo_envio, porLb: r.por_lb, porFt3: r.por_ft3,
     min: r.min, moneda: r.moneda, activo: r.activo,
+    aplicaTipo: r.aplica_tipo || '', aplicaId: r.aplica_id || '',
   }))
 }
 
@@ -189,6 +190,7 @@ export const dbUpsertTarifa = async (t) => {
     pais_dest: t.paisDest, ciudad_dest: t.ciudadDest,
     tipo_envio: t.tipoEnvio, por_lb: t.porLb, por_ft3: t.porFt3,
     min: t.min, moneda: t.moneda, activo: t.activo,
+    aplica_tipo: t.aplicaTipo || null, aplica_id: t.aplicaId || null,
   })
   if (error) console.error('upsertTarifa:', error)
 }
