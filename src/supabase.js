@@ -471,6 +471,11 @@ export const dbGetPagos = async () => {
     anulado: r.anulado ?? false,
     motivoAnulacion: r.motivo_anulacion || '',
     usuario: r.usuario || '',
+    reciboId: r.recibo_id || '',
+    pagadorTipo: r.pagador_tipo || '',
+    pagadorId: r.pagador_id || '',
+    pagadorNombre: r.pagador_nombre || '',
+    comprobanteUrl: r.comprobante_url || '',
   }))
 }
 
@@ -487,6 +492,11 @@ export const dbUpsertPago = async (p) => {
     anulado: p.anulado ?? false,
     motivo_anulacion: p.motivoAnulacion || '',
     usuario: p.usuario || '',
+    recibo_id: p.reciboId || '',
+    pagador_tipo: p.pagadorTipo || '',
+    pagador_id: p.pagadorId || '',
+    pagador_nombre: p.pagadorNombre || '',
+    comprobante_url: p.comprobanteUrl || '',
   })
   if (error) console.error('upsertPago:', error)
 }
@@ -567,6 +577,19 @@ export const storageUploadFoto = async (file, wrId, cajaIdx=0) => {
   if (error) { console.error('storageUploadFoto:', error); return null }
   const { data: pub } = supabase.storage.from(FOTOS_BUCKET).getPublicUrl(path)
   return { path, url: pub?.publicUrl || '' }
+}
+
+// Comprobante de un pago (foto o PDF del Zelle / transferencia)
+export const storageUploadComprobante = async (file, reciboId) => {
+  if (!file) return null
+  const ext = ((file.name || '').split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg'
+  const path = `pagos/${reciboId}/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`
+  const { error } = await supabase.storage.from(FOTOS_BUCKET).upload(path, file, {
+    cacheControl: '3600', upsert: false, contentType: file.type || 'application/octet-stream',
+  })
+  if (error) { console.error('storageUploadComprobante:', error); return null }
+  const { data: pub } = supabase.storage.from(FOTOS_BUCKET).getPublicUrl(path)
+  return pub?.publicUrl || ''
 }
 
 // Borra el blob del bucket (solo Storage, no la fila en wr_fotos).
