@@ -9217,8 +9217,12 @@ export default function ENEXSystem(){
         metodoEntrega:"retiro_oficina",direccionEntrega:cli?[cli.dir,cli.municipio,cli.estado].filter(Boolean).join(", "):"",notas:""});
     }else{
       const d=dnDatosEntidad(entidad);
+      const aSuc=entidad.tipo==="oficina";
       setDnQuick({tipo,guiaId:guia.id,entidad,wrs,wrIds:wrs.map(w=>w.id),clienteId:"",
-        consignatario:entidad.nombre,recibe:"encargado",receptorNombre:(d.contacto||"").toUpperCase(),receptorDocumento:d.doc,receptorTelefono:d.tel,relacion:entidad.tipo==="autonomo"?"Autónomo":(d.contacto?"Contacto":""),
+        consignatario:entidad.nombre,recibe:"encargado",
+        // En sucursal quien recibe se anota al confirmar la llegada
+        receptorNombre:aSuc?"":(d.contacto||"").toUpperCase(),receptorDocumento:aSuc?"":d.doc,receptorTelefono:d.tel,relacion:"",
+        despacha:fullName(currentUser).toUpperCase(),chofer:"",choferId:"",vehiculo:"",
         metodoEntrega:"despacho",direccionEntrega:d.dir,notas:""});
     }
   };
@@ -9233,8 +9237,12 @@ export default function ENEXSystem(){
   const dnQuickSubmit=()=>{
     const f=dnQuick; if(!f)return;
     if(f.wrIds.length===0){window.alert("Marca al menos 1 WR.");return;}
-    if(!f.receptorNombre.trim()){window.alert(f.tipo==="despacho"?"Falta el nombre de quien recibe.":"Falta el nombre de quien firma.");return;}
-    if(f.recibe==="encargado"&&!f.receptorDocumento.trim()){window.alert("Falta el ID de identificación de quien recibe.");return;}
+    if(f.tipo==="despacho"){
+      if(!String(f.despacha||"").trim()){window.alert("Falta quién despacha.");return;}
+    }else{
+      if(!f.receptorNombre.trim()){window.alert("Falta el nombre de quien firma.");return;}
+      if(f.recibe==="encargado"&&!f.receptorDocumento.trim()){window.alert("Falta el ID de identificación de quien recibe.");return;}
+    }
     if(f.metodoEntrega==="domicilio"&&!f.direccionEntrega.trim()){window.alert("Falta la dirección de entrega.");return;}
     const pend=dnFacturasPendientes(f.wrs.filter(w=>f.wrIds.includes(w.id)));
     if(pend.length>0&&!window.confirm(`⚠️ Hay ${pend.length} factura(s) con pago pendiente:\n${pend.map(x=>`• ${x.id} — ${fmtMoney(x.total-(x.pagado||0),x.moneda)}`).join("\n")}\n\n¿Entregar de todos modos?`))return;
@@ -9243,17 +9251,18 @@ export default function ENEXSystem(){
     const aSucursal=f.tipo==="despacho"&&f.entidad.tipo==="oficina";
     const dn={
       id,fecha:now,tipo:f.tipo,guiaId:f.guiaId,
-      receptorEntidad:{...f.entidad,recibe:f.recibe,relacion:f.recibe==="encargado"?f.relacion.trim():""},
+      receptorEntidad:{...f.entidad,recibe:f.recibe,relacion:f.recibe==="encargado"?(f.relacion||"").trim():"",
+        ...(f.tipo==="despacho"?{despacha:String(f.despacha||"").trim(),chofer:String(f.chofer||"").trim(),choferId:String(f.choferId||"").trim(),vehiculo:String(f.vehiculo||"").trim()}:{})},
       wrIds:[...f.wrIds],clienteId:f.clienteId||"",
       consignatario:f.consignatario.trim(),
       receptorNombre:f.receptorNombre.trim(),receptorDocumento:f.receptorDocumento.trim(),receptorTelefono:f.receptorTelefono.trim(),
-      direccionEntrega:f.direccionEntrega.trim(),metodoEntrega:f.metodoEntrega,transportista:"",notas:f.notas.trim(),
+      direccionEntrega:f.direccionEntrega.trim(),metodoEntrega:f.metodoEntrega,transportista:f.tipo==="despacho"?String(f.chofer||"").trim():"",notas:f.notas.trim(),
       usuario:currentUser.id||currentUser.email||"",firmaDataUrl:"",anulado:false,motivoAnulacion:"",
     };
     const st=getStatus(aSucursal?"20.1":"21");
     const notaHist=aSucursal
-      ?`Despacho ${id} → ${f.entidad.nombre} · recibe ${dn.receptorNombre}`
-      :`${f.tipo==="despacho"?"Despacho":"Entrega"} ${id} → ${dn.receptorNombre}${f.recibe==="encargado"?` (encargado${dn.receptorEntidad.relacion?`, ${dn.receptorEntidad.relacion}`:""})`:""}${f.tipo==="despacho"?` por ${f.entidad.nombre}`:""}`;
+      ?`Despacho ${id} → ${f.entidad.nombre} · despacha ${dn.receptorEntidad.despacha}${dn.receptorEntidad.chofer?` · transporta ${dn.receptorEntidad.chofer}`:""}`
+      :`${f.tipo==="despacho"?"Despacho":"Entrega"} ${id} → ${dn.receptorNombre||f.entidad.nombre}${f.recibe==="encargado"&&f.tipo!=="despacho"?` (encargado${dn.receptorEntidad.relacion?`, ${dn.receptorEntidad.relacion}`:""})`:""}${f.tipo==="despacho"?` por ${f.entidad.nombre}`:""}`;
     setDeliveryNotes(p=>[dn,...p]);
     setWrList(p=>p.map(w=>{
       if(!dn.wrIds.includes(w.id))return w;
@@ -9270,11 +9279,22 @@ export default function ENEXSystem(){
   const dnRecibirSucursal=(dom,wrs)=>{
     if(!hasPerm("entregar")){window.alert("Tu rol no tiene permiso.");return;}
     if(!wrs.length)return;
-    if(!window.confirm(`¿Confirmar que ${dom.nombre} recibió ${wrs.length} WR?`))return;
+    const quien=window.prompt(`¿Quién recibe en ${dom.nombre}? (${wrs.length} WR)`,fullName(currentUser).toUpperCase());
+    if(quien===null)return;
+    if(!quien.trim()){window.alert("Escribe el nombre de quien recibe.");return;}
+    const recibe=quien.trim().toUpperCase();
     const st=getStatus("20.2"); const now=new Date(); const ids=wrs.map(w=>w.id);
+    // Anotar en las notas de despacho quién recibió y cuándo
+    setDeliveryNotes(p=>p.map(n=>{
+      if(n.anulado||n.tipo!=="despacho"||n.receptorEntidad?.tipo!=="oficina"||n.receptorEntidad?.id!==dom.id)return n;
+      if(!(n.wrIds||[]).some(id=>ids.includes(id))||n.receptorEntidad?.recibidoPor)return n;
+      const u={...n,receptorNombre:n.receptorNombre||recibe,receptorEntidad:{...n.receptorEntidad,recibidoPor:recibe,recibidoFecha:now.toISOString()}};
+      dbUpsertDeliveryNote(u);
+      return u;
+    }));
     setWrList(p=>p.map(w=>{
       if(!ids.includes(w.id))return w;
-      const upd={...w,status:st,historial:[...(w.historial||[]),{code:"20.2",label:st.label,fecha:now,user:currentUser.id,nota:`Recibido en sucursal ${dom.nombre}`}]};
+      const upd={...w,status:st,historial:[...(w.historial||[]),{code:"20.2",label:st.label,fecha:now,user:currentUser.id,nota:`Recibido en sucursal ${dom.nombre} · recibe ${recibe}`}]};
       dbUpsertWR(upd);
       return upd;
     }));
@@ -11800,13 +11820,21 @@ export default function ENEXSystem(){
                     ))}
                   </div>
                 )}
+                {esDesp&&(
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+                    {campo("Despacha (empleado) *","despacha","Nombre y apellido",{textTransform:"uppercase",fontWeight:600})}
+                    {campo("Transporta (chofer / transportista)","chofer","Nombre o empresa",{textTransform:"uppercase"})}
+                    {campo("ID de quien transporta","choferId","Nº de identificación")}
+                    {campo("Vehículo / placa","vehiculo","Placa",{textTransform:"uppercase"})}
+                  </div>
+                )}
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-                  {campo(esDesp?`Recibe por ${f.entidad.nombre} *`:(f.recibe==="encargado"?"Nombre del encargado *":"Nombre de quien firma *"),"receptorNombre","Nombre y apellido",{textTransform:"uppercase",fontWeight:600})}
-                  {campo(f.recibe==="encargado"?"ID Identificación *":"ID Identificación","receptorDocumento","Nº de identificación")}
-                  {campo("Teléfono","receptorTelefono","0414-1234567")}
+                  {!aSucursal&&campo(esDesp?`Recibe por ${f.entidad.nombre}`:(f.recibe==="encargado"?"Nombre del encargado *":"Nombre de quien firma *"),"receptorNombre","Nombre y apellido",{textTransform:"uppercase",fontWeight:600})}
+                  {!aSucursal&&campo(f.recibe==="encargado"&&!esDesp?"ID Identificación *":"ID Identificación","receptorDocumento","Nº de identificación")}
+                  {!aSucursal&&campo("Teléfono","receptorTelefono","Teléfono")}
                   {f.recibe==="encargado"&&!esDesp
                     ?campo("Relación con el consignatario","relacion","Familiar, empleado, chófer…")
-                    :esDesp?campo("Relación / cargo","relacion","Chófer, empleado…"):<div/>}
+                    :<div/>}
                   {!esDesp&&(
                     <div style={{gridColumn:"1/-1"}}>
                       <div style={lbl}>Entrega</div>
@@ -12168,12 +12196,15 @@ export default function ENEXSystem(){
                   <table style={{width:"100%",fontSize:13,marginBottom:12}}>
                     <tbody>
                       <tr><td style={{fontWeight:700,width:140,paddingBottom:3}}>{esDespacho?"Receptor (entidad):":"Consignatario:"}</td><td style={{paddingBottom:3}}>{dn.consignatario||dn.receptorEntidad?.nombre||"—"}</td></tr>
+                      {esDespacho&&dn.receptorEntidad?.despacha&&<tr><td style={{fontWeight:700,paddingBottom:3}}>Despacha:</td><td style={{paddingBottom:3}}>{dn.receptorEntidad.despacha}</td></tr>}
+                      {esDespacho&&dn.receptorEntidad?.chofer&&<tr><td style={{fontWeight:700,paddingBottom:3}}>Transporta:</td><td style={{paddingBottom:3}}>{dn.receptorEntidad.chofer}{dn.receptorEntidad.choferId?` · ID ${dn.receptorEntidad.choferId}`:""}{dn.receptorEntidad.vehiculo?` · ${dn.receptorEntidad.vehiculo}`:""}</td></tr>}
+                      {esDespacho&&dn.receptorEntidad?.recibidoPor&&<tr><td style={{fontWeight:700,paddingBottom:3}}>Recibido en sucursal:</td><td style={{paddingBottom:3}}>{dn.receptorEntidad.recibidoPor} · {fmtDate(dn.receptorEntidad.recibidoFecha)} {fmtTime(dn.receptorEntidad.recibidoFecha)}</td></tr>}
                       <tr><td style={{fontWeight:700,paddingBottom:3}}>{esDespacho||dn.receptorEntidad?.recibe==="encargado"?"Recibe:":"Persona que firma:"}</td><td style={{paddingBottom:3}}>{dn.receptorNombre||"—"}{dn.receptorEntidad?.recibe==="encargado"&&!esDespacho?" (encargado)":""}{dn.receptorEntidad?.relacion?` · ${dn.receptorEntidad.relacion}`:""}</td></tr>
                       <tr><td style={{fontWeight:700,paddingBottom:3}}>ID Identificación:</td><td style={{paddingBottom:3}}>{dn.receptorDocumento||"—"}</td></tr>
                       <tr><td style={{fontWeight:700,paddingBottom:3}}>Teléfono:</td><td style={{paddingBottom:3}}>{dn.receptorTelefono||"—"}</td></tr>
                       <tr><td style={{fontWeight:700,paddingBottom:3}}>Método:</td><td style={{paddingBottom:3}}>{metodoLabel[dn.metodoEntrega]||"—"}</td></tr>
                       {dn.direccionEntrega&&<tr><td style={{fontWeight:700,paddingBottom:3,verticalAlign:"top"}}>Dirección:</td><td style={{paddingBottom:3}}>{dn.direccionEntrega}</td></tr>}
-                      {dn.transportista&&<tr><td style={{fontWeight:700,paddingBottom:3}}>Transportista:</td><td style={{paddingBottom:3}}>{dn.transportista}</td></tr>}
+                      {dn.transportista&&!esDespacho&&<tr><td style={{fontWeight:700,paddingBottom:3}}>Transportista:</td><td style={{paddingBottom:3}}>{dn.transportista}</td></tr>}
                       {dn.notas&&<tr><td style={{fontWeight:700,paddingBottom:3,verticalAlign:"top"}}>Notas:</td><td style={{paddingBottom:3,whiteSpace:"pre-wrap"}}>{dn.notas}</td></tr>}
                       {dn.anulado&&dn.motivoAnulacion&&<tr><td style={{fontWeight:700,color:"#C62828"}}>Motivo anulación:</td><td style={{color:"#C62828"}}>{dn.motivoAnulacion}</td></tr>}
                     </tbody>
@@ -12290,9 +12321,13 @@ export default function ENEXSystem(){
 
                   <div style={{display:"flex",justifyContent:"space-between",gap:40,marginTop:40}}>
                     <div style={{flex:1,textAlign:"center"}}>
-                      <div style={{borderTop:"1px solid #000",paddingTop:4,fontSize:12,fontWeight:700}}>Entrega ENEX</div>
-                      <div style={{fontSize:11,color:"#555",marginTop:2}}>Firma y sello</div>
+                      <div style={{borderTop:"1px solid #000",paddingTop:4,fontSize:12,fontWeight:700}}>{esDespacho?"Despacha":"Entrega ENEX"}</div>
+                      <div style={{fontSize:11,color:"#555",marginTop:2}}>{esDespacho&&dn.receptorEntidad?.despacha?dn.receptorEntidad.despacha:"Firma y sello"}</div>
                     </div>
+                    {esDespacho&&<div style={{flex:1,textAlign:"center"}}>
+                      <div style={{borderTop:"1px solid #000",paddingTop:4,fontSize:12,fontWeight:700}}>Transporta</div>
+                      <div style={{fontSize:11,color:"#555",marginTop:2}}>{dn.receptorEntidad?.chofer||"\u00a0"}{dn.receptorEntidad?.choferId?` · ${dn.receptorEntidad.choferId}`:""}</div>
+                    </div>}
                     <div style={{flex:1,textAlign:"center"}}>
                       <div style={{borderTop:"1px solid #000",paddingTop:4,fontSize:12,fontWeight:700}}>Recibe conforme</div>
                       <div style={{fontSize:11,color:"#555",marginTop:2}}>{dn.receptorNombre||"—"}{dn.receptorDocumento?` · ${dn.receptorDocumento}`:""}</div>
