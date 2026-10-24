@@ -1508,6 +1508,9 @@ const WRBarcode=({value,height=50,width=2})=>{
   return <svg width={bits.length*width} height={height} style={{display:"block"}}>{rects}</svg>;
 };
 
+// Etiquetas de unidades de cobro
+const UNI_LBL={lb:"lb",kg:"kg",ft3:"ft³","ft³":"ft³",m3:"m³"};
+const unidadTarifa=(t,esAereo)=>{const u=t?.unidad;if(esAereo)return u==="kg"?"kg":"lb";return u==="m3"?"m3":"ft3";};
 // Campo de contraseña con botón para ver / ocultar lo que se escribe
 const PwInput=({style,...props})=>{
   const [ver,setVer]=useState(false);
@@ -2894,6 +2897,11 @@ export default function ENEXSystem(){
       logAction("Creó WR",wrNumPrev);
       if(uploadedCount>0) logAction("Subió fotos WR",`${n.id} (${uploadedCount})`);
       setShowLabels({wr:n,dims,remitente:wrf.remitente,tipoEnvio:wrf.tipoEnvio});
+      // PREPAID: abrir su factura al guardar (si se marcó la opción)
+      if(String(n.tipoPago||"").toLowerCase().includes("prepa")&&wrf.facturarPrepaid!==false&&(hasPerm("crear_factura")||hasPerm("facturar"))){
+        if(!n.tipoEnvio)window.alert(`WR ${n.id} guardado.\nPara facturarlo como PREPAID asigna el tipo de envío; luego usa «💰 Facturar PREPAID» en el WR.`);
+        else facOpenNew(facConstruirWR(n));
+      }
     }
   };
 
@@ -3601,7 +3609,12 @@ export default function ENEXSystem(){
               {SEND_TYPES.map(t=><option key={t}>{t}</option>)}
             </select>
           </div>
-          <div className="fg"><div className="fl">Tipo de Pago</div><select className="fs" value={wrf.tipoPago} onChange={e=>sw("tipoPago",e.target.value)}>{PAY_TYPES.map(t=><option key={t}>{t}</option>)}</select></div>
+          <div className="fg"><div className="fl">Tipo de Pago
+            {!editWR&&String(wrf.tipoPago||"").toLowerCase().includes("prepa")&&(hasPerm("crear_factura")||hasPerm("facturar"))&&(
+              <label style={{marginLeft:10,fontWeight:700,color:"var(--navy)",textTransform:"none",letterSpacing:0,cursor:"pointer"}}>
+                <input type="checkbox" checked={wrf.facturarPrepaid!==false} onChange={e=>sw("facturarPrepaid",e.target.checked)} style={{marginRight:4}}/>🧾 Facturar al guardar
+              </label>)}
+          </div><select className="fs" value={wrf.tipoPago} onChange={e=>sw("tipoPago",e.target.value)}>{PAY_TYPES.map(t=><option key={t}>{t}</option>)}</select></div>
           <div className="fg">
             <div className="fl">Pertenece a</div>
             <div className="fi ro" style={{fontSize:13}}>
@@ -3865,21 +3878,8 @@ export default function ENEXSystem(){
                 <button className="btn-s" style={{fontSize:12,padding:"4px 10px",background:"#FFF9E7",borderColor:"#F0C040",color:"#8B6914",fontWeight:700}}
                   title={esPrepaid?"Facturar PREPAID al remitente":"Facturar COD al receptor según tipo de cliente"}
                   onClick={()=>{
-                    const r=facReceptorParaWR(selWR);
-                    const valor=parseFloat(selWR.valor)||0;
-                    const flete=Array.isArray(selWR.cargos)?selWR.cargos.reduce((s,c)=>{const m=parseFloat(c?.monto||c?.precio||0);return s+(isNaN(m)?0:m);},0):0;
-                    const lineas=[
-                      {descripcion:`Flete internacional — WR ${selWR.id}${esPrepaid?" (PREPAID)":" (COD)"}`,cantidad:1,precio:flete||valor||0,total:flete||valor||0},
-                    ];
-                    facOpenNew({
-                      tipo:"factura",moneda:"USD",
-                      receptorTipo:r?.tipo||"cliente",receptorId:r?.id||"",
-                      receptorNombre:r?.snapshot?.nombre||"",receptorDoc:r?.snapshot?.doc||"",
-                      receptorDir:r?.snapshot?.dir||"",receptorTel:r?.snapshot?.tel||"",
-                      receptorEmail:r?.snapshot?.email||"",receptorCasillero:r?.snapshot?.casillero||"",
-                      lineas, wrIds:[selWR.id],
-                      notas:`WR ${selWR.id} · ${selWR.consignee||""} · ${selWR.casillero||""}${esPrepaid?" · PREPAID (remitente: "+(selWR.remitente||selWR.shipper||"—")+")":""}`,
-                    });
+                    if(!selWR.tipoEnvio){window.alert("Asigna primero el tipo de envío del WR para poder calcular la tarifa.");return;}
+                    facOpenNew(facConstruirWR(selWR));
                     setSelWR(null);
                   }}>💰 Facturar {esPrepaid?"PREPAID":"COD"}</button>
               );
@@ -6389,7 +6389,7 @@ export default function ENEXSystem(){
                     const esAereo=tipoEsAereo(t.tipoEnvio);
                     const esMaritimo=tipoEsMaritimo(t.tipoEnvio);
                     const sy=cSym(t.moneda);
-                    const monto=esAereo?`${sy}${t.porLb}/lb`:esMaritimo?`${sy}${t.porFt3}/ft³`:`${sy}${t.porLb}/lb`;
+                    const monto=esAereo?`${sy}${t.porLb}/${t.unidad==="kg"?"kg":"lb"}`:esMaritimo?`${sy}${t.porFt3}/${t.unidad==="m3"?"m³":"ft³"}`:`${sy}${t.porLb}/lb`;
                     return(
                     <tr key={t.id}>
                       <td>{t.aplicaTipo
@@ -6452,8 +6452,16 @@ export default function ENEXSystem(){
                         {SEND_TYPES.map(t=><option key={t} value={t}>{t}</option>)}
                       </select>
                     </div>
-                    {formEsAereo&&<div className="fg"><div className="fl">Precio por lb ({cSym(tafForm.moneda)})</div><input className="fi" type="number" step="0.01" min="0" value={tafForm.porLb} onChange={e=>setTafForm(p=>({...p,porLb:e.target.value}))}/></div>}
-                    {formEsMaritimo&&<div className="fg"><div className="fl">Precio por ft³ ({cSym(tafForm.moneda)})</div><input className="fi" type="number" step="0.01" min="0" value={tafForm.porFt3} onChange={e=>setTafForm(p=>({...p,porFt3:e.target.value}))}/></div>}
+                    {formEsAereo&&<div className="fg"><div className="fl">Se cobra por</div>
+                      <select className="fs" value={tafForm.unidad==="kg"?"kg":"lb"} onChange={e=>setTafForm(p=>({...p,unidad:e.target.value}))}>
+                        <option value="lb">Libra (lb)</option><option value="kg">Kilo (kg)</option>
+                      </select></div>}
+                    {formEsAereo&&<div className="fg"><div className="fl">Precio por {tafForm.unidad==="kg"?"kg":"lb"} ({cSym(tafForm.moneda)})</div><input className="fi" type="number" step="0.01" min="0" value={tafForm.porLb} onChange={e=>setTafForm(p=>({...p,porLb:e.target.value}))}/></div>}
+                    {formEsMaritimo&&<div className="fg"><div className="fl">Se cobra por</div>
+                      <select className="fs" value={tafForm.unidad==="m3"?"m3":"ft3"} onChange={e=>setTafForm(p=>({...p,unidad:e.target.value}))}>
+                        <option value="ft3">Pie cúbico (ft³)</option><option value="m3">Metro cúbico (m³)</option>
+                      </select></div>}
+                    {formEsMaritimo&&<div className="fg"><div className="fl">Precio por {tafForm.unidad==="m3"?"m³":"ft³"} ({cSym(tafForm.moneda)})</div><input className="fi" type="number" step="0.01" min="0" value={tafForm.porFt3} onChange={e=>setTafForm(p=>({...p,porFt3:e.target.value}))}/></div>}
                     {!formEsAereo&&!formEsMaritimo&&tafForm.tipoEnvio&&<div className="fg"><div className="fl">Precio por lb ({cSym(tafForm.moneda)})</div><input className="fi" type="number" step="0.01" min="0" value={tafForm.porLb} onChange={e=>setTafForm(p=>({...p,porLb:e.target.value}))}/></div>}
                     <div className="fg"><div className="fl">Cargo mínimo ({cSym(tafForm.moneda)})</div><input className="fi" type="number" step="0.01" min="0" value={tafForm.min} onChange={e=>setTafForm(p=>({...p,min:e.target.value}))}/></div>
                     <div className="fg"><div className="fl">Moneda</div><select className="fs" value={tafForm.moneda} onChange={e=>setTafForm(p=>({...p,moneda:e.target.value}))}><option>USD</option><option>EUR</option><option>VES</option><option>COP</option><option>MXN</option><option>ARS</option><option>CLP</option><option>PEN</option><option>BRL</option><option>DOP</option><option>PAB</option></select></div>
@@ -7336,18 +7344,20 @@ export default function ENEXSystem(){
     const L=(f.lineas||[]).map(l=>({...l,tipo:l.tipo||"extra"}));
     const fl=L.filter(l=>l.tipo==="flete"),ad=L.filter(l=>l.tipo==="adicional"),mn=L.filter(l=>l.tipo==="minimo"),ex=L.filter(l=>l.tipo==="extra");
     const S=(a,k)=>a.reduce((t,l)=>t+(parseFloat(l[k])||0),0);
-    const aereo=/^a[eé]r/i.test(f.tipoEnvio||"")||fl.some(l=>l.unidad==="lb");
-    const uni=aereo?"lb":"ft³";
+    const aereo=/^a[eé]r/i.test(f.tipoEnvio||"")||fl.some(l=>["lb","kg"].includes(l.unidad));
+    const uniC=fl[0]?.unidad||f.tarifa?.unidad||(aereo?"lb":"ft3");
+    const uni=UNI_LBL[uniC]||uniC;
+    const cm=aereo?(uniC==="kg"?[["pesoKg","Kg."],["volKg","Kg. Vol"]]:[["pesoLb","Lb."],["volLb","Lb. Vol"]]):[["ft3","Ft³"],["m3","M³"]];
     const conCli=fl.some(l=>l.cliente);
     const titulo=f.tipo==="nota_credito"?"NOTA DE CRÉDITO":f.tipo==="proforma"?"PROFORMA":"FACTURA";
     const pagosAplic=pagos.filter(p=>p.facturaId===f.id&&!p.anulado);
     const td='style="padding:5px 7px;border-bottom:1px solid #ddd"';
     const tdr='style="padding:5px 7px;border-bottom:1px solid #ddd;text-align:right;font-family:monospace"';
     const th=(t,r)=>`<th style="padding:6px 7px;background:#1A2B4A;color:#fff;font-size:11px;text-transform:uppercase;letter-spacing:.5px;text-align:${r?"right":"left"}">${t}</th>`;
-    const tablaFlete=fl.length?`<h3>WR y flete <span class="sub">(${aereo?"aéreo — mayor entre peso real y volumétrico":"marítimo — pies cúbicos"})</span></h3>
-      <table><thead><tr>${th("N° WR")}${conCli?th("Cliente"):""}${th("Cajas",1)}${th("Lb.",1)}${th("Lb. Vol",1)}${th("Ft³",1)}${th("A cobrar ("+uni+")",1)}${th("Tarifa",1)}${th("Importe",1)}</tr></thead><tbody>
-      ${fl.map(l=>`<tr><td ${td}><b>${e(l.wrId)}</b></td>${conCli?`<td ${td}>${e(l.cliente)}<div class="cas">${e(l.casillero)}</div></td>`:""}<td ${tdr}>${l.cajas||0}</td><td ${tdr}>${n(l.pesoLb)}</td><td ${tdr}>${n(l.volLb)}</td><td ${tdr}>${n(l.ft3)}</td><td ${tdr}><b>${n(l.cantidad)}</b></td><td ${tdr}>${$(l.precio)}</td><td ${tdr}><b>${$(l.total)}</b></td></tr>`).join("")}
-      <tr class="tot"><td ${td}>${fl.length} WR</td>${conCli?`<td ${td}></td>`:""}<td ${tdr}>${S(fl,"cajas")}</td><td ${tdr}>${n(S(fl,"pesoLb"))}</td><td ${tdr}>${n(S(fl,"volLb"))}</td><td ${tdr}>${n(S(fl,"ft3"))}</td><td ${tdr}>${n(S(fl,"cantidad"))} ${uni}</td><td ${td}></td><td ${tdr}>${$(S(fl,"total"))}</td></tr>
+    const tablaFlete=fl.length?`<h3>WR y flete <span class="sub">(${aereo?"aéreo — el mayor entre peso real y volumétrico":"marítimo — "+(uniC==="m3"?"metros cúbicos":"pies cúbicos")})</span></h3>
+      <table><thead><tr>${th("N° WR")}${conCli?th("Cliente"):""}${th("Cajas",1)}${cm.map(([,t])=>th(t,1)).join("")}${th("A cobrar ("+uni+")",1)}${th("Tarifa",1)}${th("Importe",1)}</tr></thead><tbody>
+      ${fl.map(l=>`<tr><td ${td}><b>${e(l.wrId)}</b></td>${conCli?`<td ${td}>${e(l.cliente)}<div class="cas">${e(l.casillero)}</div></td>`:""}<td ${tdr}>${l.cajas||0}</td>${cm.map(([k])=>`<td ${tdr}>${n(l[k])}</td>`).join("")}<td ${tdr}><b>${n(l.cantidad)}</b></td><td ${tdr}>${$(l.precio)}</td><td ${tdr}><b>${$(l.total)}</b></td></tr>`).join("")}
+      <tr class="tot"><td ${td}>${fl.length} WR</td>${conCli?`<td ${td}></td>`:""}<td ${tdr}>${S(fl,"cajas")}</td>${cm.map(([k])=>`<td ${tdr}>${n(S(fl,k))}</td>`).join("")}<td ${tdr}>${n(S(fl,"cantidad"))} ${uni}</td><td ${td}></td><td ${tdr}>${$(S(fl,"total"))}</td></tr>
       </tbody></table>`:"";
     const tablaSimple=(tt,arr,conWR)=>arr.length?`<h3>${tt}</h3><table><thead><tr>${conWR?th("N° WR"):""}${th("Concepto")}${th("Cant.",1)}${th("Precio",1)}${th("Importe",1)}</tr></thead><tbody>
       ${arr.map(l=>`<tr>${conWR?`<td ${td}>${e(l.wrId||"")}</td>`:""}<td ${td}>${e(l.descripcion)}</td><td ${tdr}>${n(l.cantidad)}</td><td ${tdr}>${$(l.precio)}</td><td ${tdr}><b>${$(l.total)}</b></td></tr>`).join("")}</tbody></table>`:"";
@@ -7434,13 +7444,14 @@ export default function ENEXSystem(){
     return null;
   };
   // Líneas de flete y adicionales para un grupo de WR
-  const lineasDeWRs=(wrs,isAereo,precioUnidad,conCliente)=>{
+  const lineasDeWRs=(wrs,isAereo,precioUnidad,conCliente,unidad="")=>{
     const out=[];
     wrs.forEach(w=>{
-      const pf=wrPesoFacturable(w,isAereo);
+      const pf=wrPesoFacturable(w,isAereo,unidad);
       const cl=cliDeWRCon(w,clients);
       out.push({tipo:"flete",wrId:w.id,cliente:conCliente?(cl?fullName(cl):(w.consignee||"")):"",casillero:cl?.casillero||w.casillero||"",
-        cajas:w.cajas||1,pesoLb:parseFloat(w.pesoLb)||0,volLb:parseFloat(w.volLb)||0,ft3:parseFloat(w.ft3)||0,unidad:pf.unidad,
+        cajas:w.cajas||1,pesoLb:parseFloat(w.pesoLb)||0,volLb:parseFloat(w.volLb)||0,pesoKg:parseFloat(w.pesoKg)||0,volKg:parseFloat(w.volKg)||0,
+        ft3:parseFloat(w.ft3)||0,m3:parseFloat(w.m3)||0,unidad:pf.unidad,
         descripcion:`Flete WR ${w.id}`,cantidad:r2(pf.valor),precio:precioUnidad,total:0});
       (Array.isArray(w.cargos)?w.cargos:[]).forEach(c=>{
         const nombre=typeof c==="string"?c:(c?.concepto||c?.nombre||"");
@@ -7669,6 +7680,7 @@ export default function ENEXSystem(){
     const isAereo=dnGuiaEsAerea(guia);
     const tf=tarifaParaWR(wrs[0],guia.tipoEnvio,{tipo:r.tipo,id:r.id});
     const precioUnidad=parseFloat(isAereo?tf?.porLb:tf?.porFt3)||0;
+    const unidad=unidadTarifa(tf,isAereo);
     return recalcFactura({
       ...emptyFactura(),
       id:seq?buildFacturaId(seq):"",numero:seq||0,
@@ -7679,15 +7691,21 @@ export default function ENEXSystem(){
       receptorDir:r.snapshot?.dir||"",receptorTel:r.snapshot?.tel||"",
       receptorEmail:r.snapshot?.email||"",receptorCasillero:r.snapshot?.casillero||"",
       tipoEnvio:guia.tipoEnvio||"",
-      tarifa:tf?{porLb:parseFloat(tf.porLb)||0,porFt3:parseFloat(tf.porFt3)||0,min:parseFloat(tf.min)||0,moneda:tf.moneda||"USD",
+      tarifa:tf?{porLb:parseFloat(tf.porLb)||0,porFt3:parseFloat(tf.porFt3)||0,min:parseFloat(tf.min)||0,moneda:tf.moneda||"USD",unidad,
         ruta:`${tf.ciudadOrig||tf.paisOrig||"Cualquiera"} → ${tf.ciudadDest||tf.paisDest||"Cualquiera"}`,especial:!!tf._especial,tarifaId:tf.id}
-        :{porLb:0,porFt3:0,min:0,moneda:"USD",ruta:"Sin tarifa"},
-      lineas:lineasDeWRs(wrs,isAereo,precioUnidad,r.tipo!=="cliente"),
+        :{porLb:0,porFt3:0,min:0,moneda:"USD",unidad,ruta:"Sin tarifa"},
+      lineas:lineasDeWRs(wrs,isAereo,precioUnidad,r.tipo!=="cliente",unidad),
       wrIds:wrs.map(w=>w.id),
       guiaIds:[guia.id],
       notas:"",
       usuario:currentUser.id||currentUser.email||"",
     });
+  };
+  // Factura de un solo WR (PREPAID al registrarlo, o desde su detalle), con la tarifa de su tipo de envío
+  const facConstruirWR=w=>{
+    const r=facReceptorParaWR(w)||{tipo:"cliente",id:"",snapshot:{}};
+    const f=facConstruir({id:"",tipoEnvio:w.tipoEnvio||""},r,[w]);
+    return {...f,guiaIds:[],notas:(w.tipoPago||"").toLowerCase().includes("prepa")?`PREPAID · WR ${w.id} · consignatario ${w.consignee||""}${w.casillero?` (#${w.casillero})`:""}`:""};
   };
   // Crea los borradores de los receptores con WR pendientes (todos, o solo uno con soloKey)
   const facFromGuia=(guia,silent=false,soloKey=null)=>{
@@ -7980,7 +7998,6 @@ export default function ENEXSystem(){
           if(!g)return <div className="card" style={{padding:30,textAlign:"center"}}><button className="btn-s" onClick={()=>setFacGuiaSel(null)}>← Guías</button></div>;
           const {grupos,prepaid}=facGruposGuia(g);
           const isAereoG=dnGuiaEsAerea(g);
-          const uniG=isAereoG?"lb":"ft³";
           const pendTot=grupos.filter(x=>x.pendientes.length>0);
           const puedeFac=hasPerm("crear_factura")||hasPerm("facturar");
           const facturarUno=gr=>{const n=facFromGuia(g,true,gr.key);if(n[0])facOpenEdit(n[0]);};
@@ -7999,8 +8016,9 @@ export default function ENEXSystem(){
                     {grupos.map(gr=>{
                       const r=gr.receptor;
                       const est=gr.pendientes.length?facConstruir(g,r,gr.pendientes):null;
-                      const cobrar=gr.wrs.reduce((t,w)=>t+wrPesoFacturable(w,isAereoG).valor,0);
                       const tf=tarifaParaWR(gr.wrs[0],g.tipoEnvio,{tipo:r.tipo,id:r.id});
+                      const uC=unidadTarifa(tf,isAereoG), uniG=UNI_LBL[uC];
+                      const cobrar=gr.wrs.reduce((t,w)=>t+wrPesoFacturable(w,isAereoG,uC).valor,0);
                       return (
                         <tr key={gr.key} style={{verticalAlign:"top"}}>
                           <td><div style={{fontWeight:700}}>{IC[r.tipo]||"•"} {r.snapshot?.nombre||"—"}</div>
@@ -9022,13 +9040,16 @@ export default function ENEXSystem(){
   // Aéreo: max(pesoLb, volLb) — estándar de la industria; lo voluminoso paga
   //        más que su peso bruto.
   // Marítimo: ft³ (también devolvemos m³ para mostrar ambos).
-  const wrPesoFacturable=(w,isAereo)=>{
+  // unidad: "lb" o "kg" (aéreo: el mayor entre peso real y volumétrico), "ft3" o "m3" (marítimo)
+  const wrPesoFacturable=(w,isAereo,unidad="")=>{
     if(isAereo){
-      const real=parseFloat(w.pesoLb)||0;
-      const vol =parseFloat(w.volLb )||0;
-      return {valor:Math.max(real,vol), unidad:"lb", real, vol};
+      const kg=unidad==="kg";
+      const real=parseFloat(kg?w.pesoKg:w.pesoLb)||0;
+      const vol =parseFloat(kg?w.volKg:w.volLb )||0;
+      return {valor:Math.max(real,vol), unidad:kg?"kg":"lb", real, vol};
     }
-    return {valor:parseFloat(w.ft3)||0, unidad:"ft³", ft3:parseFloat(w.ft3)||0, m3:parseFloat(w.m3)||0};
+    if(unidad==="m3")return {valor:parseFloat(w.m3)||0, unidad:"m3", ft3:parseFloat(w.ft3)||0, m3:parseFloat(w.m3)||0};
+    return {valor:parseFloat(w.ft3)||0, unidad:"ft3", ft3:parseFloat(w.ft3)||0, m3:parseFloat(w.m3)||0};
   };
   // Resuelve a qué "dominio" pertenece un cliente:
   //   matriz → null (sin dominio, es cliente directo)
@@ -12287,8 +12308,10 @@ export default function ENEXSystem(){
         const L=(f.lineas||[]).map((l,i)=>({...l,tipo:l.tipo||"extra",_i:i}));
         const fl=L.filter(l=>l.tipo==="flete"), ad=L.filter(l=>l.tipo==="adicional"), mn=L.filter(l=>l.tipo==="minimo"), ex=L.filter(l=>l.tipo==="extra");
         const sum=(arr,k)=>arr.reduce((t,l)=>t+(parseFloat(l[k])||0),0);
-        const esAereoF=/^a[eé]r/i.test(f.tipoEnvio||"")||fl.some(l=>l.unidad==="lb");
-        const uni=esAereoF?"lb":"ft³";
+        const esAereoF=/^a[eé]r/i.test(f.tipoEnvio||"")||fl.some(l=>["lb","kg"].includes(l.unidad));
+        const uniC=fl[0]?.unidad||f.tarifa?.unidad||(esAereoF?"lb":"ft3");
+        const uni=UNI_LBL[uniC]||uniC;
+        const colsMed=esAereoF?(uniC==="kg"?[["pesoKg","Kg."],["volKg","Kg. Vol"]]:[["pesoLb","Lb."],["volLb","Lb. Vol"]]):[["ft3","Ft³"],["m3","M³"]];
         const conCli=fl.some(l=>l.cliente);
         const catalogo=[...SERVICIOS_CAT.map(x=>({...x,g:"Servicio"})),...GASTOS_CAT.map(x=>({...x,g:"Gasto"}))];
         const setTarifa=(k,v)=>setF(p=>{
@@ -12419,11 +12442,11 @@ export default function ENEXSystem(){
 
                 {/* WR Y FLETE */}
                 {fl.length>0&&<>
-                  <div style={secT}>📦 WR y flete <span style={{fontSize:13,color:"var(--t3)",fontWeight:500}}>({esAereoF?"aéreo: mayor entre peso real y volumétrico":"marítimo: pies cúbicos"})</span></div>
+                  <div style={secT}>📦 WR y flete <span style={{fontSize:13,color:"var(--t3)",fontWeight:500}}>({esAereoF?"aéreo: el mayor entre peso real y volumétrico":`marítimo: ${uniC==="m3"?"metros cúbicos":"pies cúbicos"}`})</span></div>
                   <div style={{overflowX:"auto",border:"1px solid var(--b1)",borderRadius:8}}>
                     <table className="ct" style={{width:"100%",fontSize:14}}>
                       <thead><tr>
-                        <th>N° WR</th>{conCli&&<th>Cliente</th>}<th style={{textAlign:"right"}}>Cajas</th><th style={{textAlign:"right"}}>Lb.</th><th style={{textAlign:"right"}}>Lb. Vol</th><th style={{textAlign:"right"}}>Ft³</th>
+                        <th>N° WR</th>{conCli&&<th>Cliente</th>}<th style={{textAlign:"right"}}>Cajas</th>{colsMed.map(([k,t])=><th key={k} style={{textAlign:"right"}}>{t}</th>)}
                         <th style={{textAlign:"right"}}>A cobrar ({uni})</th><th style={{textAlign:"right"}}>Tarifa</th><th style={{textAlign:"right"}}>Importe</th><th></th>
                       </tr></thead>
                       <tbody>
@@ -12432,9 +12455,7 @@ export default function ENEXSystem(){
                             <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)"}}>{l.wrId}</td>
                             {conCli&&<td>{l.cliente}<div style={{fontSize:12,color:"var(--gold2)",fontFamily:"'DM Mono',monospace"}}>{l.casillero}</div></td>}
                             <td style={{textAlign:"right"}}>{l.cajas}</td>
-                            <td style={{textAlign:"right",fontFamily:"'DM Mono',monospace"}}>{l.pesoLb}</td>
-                            <td style={{textAlign:"right",fontFamily:"'DM Mono',monospace"}}>{l.volLb}</td>
-                            <td style={{textAlign:"right",fontFamily:"'DM Mono',monospace"}}>{l.ft3}</td>
+                            {colsMed.map(([k])=><td key={k} style={{textAlign:"right",fontFamily:"'DM Mono',monospace"}}>{l[k]??"—"}</td>)}
                             <td style={{textAlign:"right"}}>{numIn(l.cantidad,v=>updL(l._i,"cantidad",v),80)}</td>
                             <td style={{textAlign:"right"}}>{numIn(l.precio,v=>updL(l._i,"precio",v),80)}</td>
                             <td style={{textAlign:"right",fontFamily:"'DM Mono',monospace",fontWeight:700}}>{fmtMoney(l.total,f.moneda)}</td>
@@ -12444,9 +12465,7 @@ export default function ENEXSystem(){
                         <tr style={{background:"var(--bg4)",fontWeight:800}}>
                           <td>{fl.length} WR</td>{conCli&&<td></td>}
                           <td style={{textAlign:"right"}}>{sum(fl,"cajas")}</td>
-                          <td style={{textAlign:"right",fontFamily:"'DM Mono',monospace"}}>{r2(sum(fl,"pesoLb"))}</td>
-                          <td style={{textAlign:"right",fontFamily:"'DM Mono',monospace"}}>{r2(sum(fl,"volLb"))}</td>
-                          <td style={{textAlign:"right",fontFamily:"'DM Mono',monospace"}}>{r2(sum(fl,"ft3"))}</td>
+                          {colsMed.map(([k])=><td key={k} style={{textAlign:"right",fontFamily:"'DM Mono',monospace"}}>{r2(sum(fl,k))}</td>)}
                           <td style={{textAlign:"right",fontFamily:"'DM Mono',monospace"}}>{r2(sum(fl,"cantidad"))} {uni}</td>
                           <td></td>
                           <td style={{textAlign:"right",fontFamily:"'DM Mono',monospace"}}>{fmtMoney(sum(fl,"total"),f.moneda)}</td><td></td>
