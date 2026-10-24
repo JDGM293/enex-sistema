@@ -1460,7 +1460,7 @@ const emptyCaja=()=>({
 // configurado (caso límite), queda vacío y el select queda en el primer option.
 const emptyWRF=(defaultTipoPago="")=>({
   consignee:"",casilleroSearch:"",casillero:"",clienteId:"",sucursalEntrega:"",
-  remitente:"",remitenteDir:"",remitenteTel:"",remitenteEmail:"",
+  remitente:"",remitenteDir:"",remitenteTel:"",remitenteEmail:"",remitenteDoc:"",remitenteId:"",registrarRemitente:null,
   chofer:"",idChofer:"",proNumber:"",ocNumber:"",
   tipoPago:defaultTipoPago,tipoEnvio:"",
   notas:"",cargos:[],
@@ -2587,7 +2587,7 @@ export default function ENEXSystem(){
   };
 
   // WR FORM state
-  const EMAIL_KEYS_W=["remitenteEmail","email","password","unitDim","unitPeso","sucursalEntrega","clienteId"];
+  const EMAIL_KEYS_W=["remitenteId","remitenteEmail","email","password","unitDim","unitPeso","sucursalEntrega","clienteId"];
   const sw=(k,v)=>setWrf(p=>({...p,[k]:typeof v==="string"&&!EMAIL_KEYS_W.includes(k)?v.toUpperCase():v}));
 
   // Client search
@@ -2743,8 +2743,8 @@ export default function ENEXSystem(){
   const seqPrev=String(_wrNextSeq+(wrSecInicio-1)).padStart(7,"0");
 
   // Genera el próximo número de casillero basado en los existentes
-  const nextCasillero=()=>{
-    const nums=clients
+  const nextCasillero=(lista=clients)=>{
+    const nums=lista
       .filter(c=>c.casillero&&/\d/.test(c.casillero))
       .map(c=>parseInt(String(c.casillero).replace(/\D/g,""),10)||0);
     const max=nums.length>0?Math.max(...nums):0;
@@ -2818,6 +2818,39 @@ export default function ENEXSystem(){
       _casillero=cas;
       logAction("Auto-registró cliente",`${parts.primerNombre} ${parts.primerApellido} → ${cas}`);
     }
+    // ── REMITENTE: enlazar con un cliente existente o registrarlo con su casillero ─
+    let _remitenteId=wrf.remitenteId||"",_remCas="";
+    {
+      const rem=String(wrf.remitente||"").trim();
+      const esEmpresa=!rem||[empresaNombre,"ENEX"].filter(Boolean).some(x=>sinAcentos(x)===sinAcentos(rem));
+      if(!_remitenteId&&!esEmpresa){
+        const lista=[...clients,...(_clienteId&&!clients.some(c=>c.id===_clienteId)?[{id:_clienteId,casillero:_casillero,...parseNombreCompleto(wrf.consignee),cedula:"",email:""}]:[])];
+        const doc=String(wrf.remitenteDoc||"").trim().toUpperCase(), em=String(wrf.remitenteEmail||"").trim().toLowerCase();
+        const ya=lista.find(c=>doc&&String(c.cedula||"").trim().toUpperCase()===doc)
+          ||lista.find(c=>em&&String(c.email||"").toLowerCase()===em)
+          ||lista.find(c=>sinAcentos(fullName(c))===sinAcentos(rem));
+        if(ya)_remitenteId=ya.id;
+        else if(wrf.registrarRemitente??String(wrf.tipoPago||"").toLowerCase().includes("prepa")){
+          const parts=parseNombreCompleto(rem);
+          const cas=nextCasillero(lista);
+          const nid=`CLI-${Date.now()}-R`;
+          const nc={
+            id:nid,tipo:"cliente",
+            primerNombre:parts.primerNombre,segundoNombre:parts.segundoNombre,
+            primerApellido:parts.primerApellido,segundoApellido:parts.segundoApellido,
+            cedula:doc,dir:String(wrf.remitenteDir||"").trim(),municipio:"",estado:"",pais:"",cp:"",
+            tel1:String(wrf.remitenteTel||"").trim(),tel2:"",email:em,
+            casillero:cas,rol:"I",login:"",password:"",
+            clienteTipo:"matriz",agenteId:"",oficinaId:"",autonomoId:"",vendedorId:"",activo:true,
+            ...presetDominio(),
+          };
+          setClients(p=>[...p,nc]);
+          dbUpsertCliente(nc);
+          _remitenteId=nid;_remCas=cas;
+          logAction("Registró remitente como cliente",`${rem} → ${cas}`);
+        }
+      }
+    }
 
     if(editWR){
       // ── EDIT MODE: update existing WR ──────────────────────────────────────
@@ -2832,7 +2865,7 @@ export default function ENEXSystem(){
         pesoKg:totalPesoKg,pesoLb:totalPesoLb,
         volKg:totalVolKg,volLb:totalVolLb,ft3:totalFt3,m3:totalM3,
         notas:wrf.notas,tipoEnvio:wrf.tipoEnvio,tipoPago:wrf.tipoPago,
-        shipper:wrf.remitente,remitenteDir:wrf.remitenteDir||"",remitenteTel:wrf.remitenteTel||"",remitenteEmail:(wrf.remitenteEmail||"").trim(),cargos:wrf.cargos,
+        shipper:wrf.remitente,remitenteDir:wrf.remitenteDir||"",remitenteTel:wrf.remitenteTel||"",remitenteEmail:(wrf.remitenteEmail||"").trim(),remitenteDoc:(wrf.remitenteDoc||"").trim(),remitenteId:_remitenteId,cargos:wrf.cargos,
         sucursalEntrega:wrf.sucursalEntrega||"",
       };
       // Con tipo de envío asignado y aún en Recibido/Origen → Confirmado
@@ -2875,7 +2908,7 @@ export default function ENEXSystem(){
           ?`Reempaque de: ${reempaqueIds.join(", ")}${wrf.notas?` | ${wrf.notas}`:""}`
           :wrf.notas,
         tipoEnvio:wrf.tipoEnvio,tipoPago:wrf.tipoPago,
-        shipper:wrf.remitente,remitenteDir:wrf.remitenteDir||"",remitenteTel:wrf.remitenteTel||"",remitenteEmail:(wrf.remitenteEmail||"").trim(),usuario:currentUser.id,foto:false,prealerta:false,
+        shipper:wrf.remitente,remitenteDir:wrf.remitenteDir||"",remitenteTel:wrf.remitenteTel||"",remitenteEmail:(wrf.remitenteEmail||"").trim(),remitenteDoc:(wrf.remitenteDoc||"").trim(),remitenteId:_remitenteId,usuario:currentUser.id,foto:false,prealerta:false,
         sucursalEntrega:wrf.sucursalEntrega||"",
         cargos:wrf.cargos,
         ...(esReempaque?{reempaqueDe:[...reempaqueIds],historial:[{code:"1",label:"Recibido",fecha:now,user:currentUser.id,nota:`Reempaque de: ${reempaqueIds.join(", ")}`}]}:{}),
@@ -2910,7 +2943,7 @@ export default function ENEXSystem(){
       // PREPAID: abrir su factura al guardar (si se marcó la opción)
       if(String(n.tipoPago||"").toLowerCase().includes("prepa")&&wrf.facturarPrepaid!==false&&(hasPerm("crear_factura")||hasPerm("facturar"))){
         if(!n.tipoEnvio)window.alert(`WR ${n.id} guardado.\nPara facturarlo como PREPAID asigna el tipo de envío; luego usa «💰 Facturar PREPAID» en el WR.`);
-        else facOpenNew(facConstruirWR(n));
+        else facOpenNew(facConstruirWR({...n,_remitenteCas:_remCas}));
       }
     }
   };
@@ -3574,10 +3607,21 @@ export default function ENEXSystem(){
           <div>
             <div className="sdiv">INFORMACIÓN DEL REMITENTE</div>
             <div className="fgrid" style={{gap:8}}>
-              <div className="fg"><div className="fl">Nombre / Empresa</div><input className="fi" value={wrf.remitente} onChange={e=>sw("remitente",e.target.value)} placeholder="Empresa / Remitente"/></div>
+              <div className="fg fi-search"><div className="fl">Nombre / Empresa {wrf.remitenteId&&(()=>{const c=clients.find(x=>x.id===wrf.remitenteId);return c?<span style={{color:"var(--gold2)",fontFamily:"'DM Mono',monospace",fontWeight:700}}>#{c.casillero} <span onClick={()=>setWrf(p=>({...p,remitenteId:""}))} style={{cursor:"pointer",color:"var(--red)",marginLeft:4}}>✕</span></span>:null;})()}</div>
+                <input className="fi" value={wrf.remitente} onChange={e=>{sw("remitente",e.target.value);if(wrf.remitenteId)setWrf(p=>({...p,remitenteId:""}));}} placeholder="Nombre, casillero, ID o teléfono"/>
+                {(()=>{const bq=!wrf.remitenteId&&String(wrf.remitente||"").trim().length>=2?crearBuscador(wrf.remitente):null;
+                  const res=bq?clients.filter(c=>c.tipo!=="usuario"&&(bq.nombre(fullName(c))||bq.casillero(c.casillero)||bq.codigo(c.cedula||"")||bq.codigo(c.tel1||""))).slice(0,8):[];
+                  return res.length>0&&<div className="fi-search-res">{res.map(c=>(
+                    <div key={c.id} className="fi-search-item" onClick={()=>setWrf(p=>({...p,remitenteId:c.id,remitente:fullName(c).toUpperCase(),remitenteDoc:c.cedula||p.remitenteDoc,remitenteTel:c.tel1||p.remitenteTel,remitenteEmail:c.email||p.remitenteEmail,remitenteDir:[c.dir,c.municipio,c.estado].filter(Boolean).join(", ").toUpperCase()||p.remitenteDir}))}>
+                      {fullName(c)}<span className="fi-search-cas">#{c.casillero}</span>{c.cedula&&<span style={{fontSize:12,color:"var(--t3)",marginLeft:8}}>ID {c.cedula}</span>}
+                    </div>))}</div>;})()}
+              </div>
+              <div className="fg"><div className="fl">ID Identificación</div><input className="fi" value={wrf.remitenteDoc} onChange={e=>sw("remitenteDoc",e.target.value)}/></div>
               <div className="fg"><div className="fl">Dirección</div><input className="fi" value={wrf.remitenteDir} onChange={e=>sw("remitenteDir",e.target.value)}/></div>
               <div className="fg"><div className="fl">Teléfono</div><input className="fi" value={wrf.remitenteTel} onChange={e=>sw("remitenteTel",e.target.value)} placeholder="+1 000 000 0000"/></div>
               <div className="fg"><div className="fl">Email</div><input className="fi" value={wrf.remitenteEmail} onChange={e=>sw("remitenteEmail",e.target.value)}/></div>
+              {!wrf.remitenteId&&String(wrf.remitente||"").trim()&&<label style={{display:"flex",alignItems:"center",gap:6,fontSize:13,fontWeight:600,cursor:"pointer",alignSelf:"end",paddingBottom:8}}>
+                <input type="checkbox" checked={!!(wrf.registrarRemitente??String(wrf.tipoPago||"").toLowerCase().includes("prepa"))} onChange={e=>sw("registrarRemitente",e.target.checked)}/>Registrar como cliente</label>}
             </div>
           </div>
           <div>
@@ -3585,7 +3629,7 @@ export default function ENEXSystem(){
             <div className="fgrid" style={{gap:8}}>
               <div className="fg fi-search">
                 <div className="fl">Buscar por Nombre o N° Casillero</div>
-                <input className="fi" value={clientSearch} onChange={e=>handleClientSearch(e.target.value)} placeholder="Escribir nombre o casillero NX-0000…"/>
+                <input className="fi" value={clientSearch} onChange={e=>handleClientSearch(e.target.value)} placeholder="Nombre o casillero"/>
                 {clientResults.length>0&&(
                   <div className="fi-search-res">
                     {clientResults.map(c=>(
@@ -3871,7 +3915,7 @@ export default function ENEXSystem(){
                 cajas:_rawCajas,
                 consignee:selWR.consignee||"",casilleroSearch:selWR.casillero||"",casillero:selWR.casillero||"",clienteId:selWR.clienteId||"",
                 sucursalEntrega:sucursalDeWR(selWR,cliDeWRCon(selWR,clients)),
-                remitente:selWR.shipper||"",remitenteDir:selWR.remitenteDir||"",remitenteTel:selWR.remitenteTel||"",remitenteEmail:selWR.remitenteEmail||"",tipoPago:selWR.tipoPago||PAY_TYPES[0]||"",tipoEnvio:selWR.tipoEnvio||"",
+                remitente:selWR.shipper||"",remitenteDir:selWR.remitenteDir||"",remitenteTel:selWR.remitenteTel||"",remitenteEmail:selWR.remitenteEmail||"",remitenteDoc:selWR.remitenteDoc||"",remitenteId:selWR.remitenteId||"",registrarRemitente:null,tipoPago:selWR.tipoPago||PAY_TYPES[0]||"",tipoEnvio:selWR.tipoEnvio||"",
                 notas:selWR.notas||"",cargos:selWR.cargos||[],
               });
               setShowNewWR(true);setSelWR(null);
@@ -4005,6 +4049,7 @@ export default function ENEXSystem(){
               <div className="wf"><div className="wfl">Nombre / Empresa</div><div className="wfv" style={{fontWeight:800,fontSize:20}}>{selWR.shipper||"—"}</div></div>
               <div className="wf"><div className="wfl">Recibido en</div><div className="wfv" style={{fontWeight:600}}>{_oc?.nombre||selWR.branch||"Casa Matriz"}{_oc?.ciudad?` — ${_oc.ciudad}`:""}</div></div>
               <div className="wf"><div className="wfl">Procedencia</div><div className="wfv">{selWR.remitenteDir||""}</div></div>
+              {selWR.remitenteDoc&&<div className="wf"><div className="wfl">ID Identificación</div><div className="wfv">{selWR.remitenteDoc}</div></div>}
               {(selWR.remitenteTel||selWR.remitenteEmail)&&<div className="wf"><div className="wfl">Contacto</div><div className="wfv">{[selWR.remitenteTel,selWR.remitenteEmail].filter(Boolean).join(" · ")}</div></div>}
             </div>
             <div className="wb">
@@ -7250,12 +7295,15 @@ export default function ENEXSystem(){
       const rem=String(w.remitente||w.shipper||"").trim();
       const esEmpresa=!rem||[empresaNombre,"ENEX"].filter(Boolean).some(n=>sinAcentos(n)===sinAcentos(rem));
       if(!esEmpresa){
+        if(w.remitenteId&&!clients.some(c=>c.id===w.remitenteId))return {tipo:"cliente",id:w.remitenteId,snapshot:{nombre:rem,doc:w.remitenteDoc||"",dir:w.remitenteDir||"",tel:w.remitenteTel||"",email:w.remitenteEmail||"",casillero:w._remitenteCas||""}};
+        if(w.remitenteId&&clients.some(c=>c.id===w.remitenteId)){const sn=lookupReceptor("cliente",w.remitenteId);
+          return {tipo:"cliente",id:w.remitenteId,snapshot:{...sn,doc:sn.doc||w.remitenteDoc||"",tel:sn.tel||w.remitenteTel||"",email:sn.email||w.remitenteEmail||"",dir:sn.dir||w.remitenteDir||""}};}
         const em=String(w.remitenteEmail||"").trim().toLowerCase();
         const reg=clients.find(c=>em&&String(c.email||"").toLowerCase()===em)
           ||clients.find(c=>sinAcentos(fullName(c))===sinAcentos(rem)||(c.empresa&&sinAcentos(c.empresa)===sinAcentos(rem)));
         if(reg)return {tipo:"cliente",id:reg.id,snapshot:lookupReceptor("cliente",reg.id)};
         return {tipo:"cliente", id:"", snapshot:{
-          nombre:rem,doc:"",dir:w.remitenteDir||"",tel:w.remitenteTel||"",email:w.remitenteEmail||"",casillero:"",
+          nombre:rem,doc:w.remitenteDoc||"",dir:w.remitenteDir||"",tel:w.remitenteTel||"",email:w.remitenteEmail||"",casillero:"",
         }};
       }
       const due=clients.find(c=>c.id===w.clienteId)||clients.find(c=>c.casillero===w.casillero);
