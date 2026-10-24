@@ -2243,6 +2243,7 @@ export default function ENEXSystem(){
   const [contabTab,setContabTab]=useState("porguia");
   const [facGuiaSel,setFacGuiaSel]=useState(null);   // guía abierta en Facturación › Por guía
   const [facGuiaBuscar,setFacGuiaBuscar]=useState("");
+  const [facGuiaVista,setFacGuiaVista]=useState("pendientes"); // "pendientes" | "historial"
   const [facturas,setFacturas]=useState([]);
   const facturasAll=facturas;
   const [pagos,setPagos]=useState([]);
@@ -7991,14 +7992,26 @@ export default function ENEXSystem(){
             const q=(facGuiaBuscar||"").trim().toUpperCase();
             const tarjetas=consolList.map(g=>{const {grupos,prepaid}=facGruposGuia(g);return {g,grupos,prepaid};})
               .filter(x=>x.grupos.length>0||x.prepaid.length>0)
+              .map(x=>({...x,completa:x.grupos.every(gr=>gr.pendientes.length===0&&!gr.facturas.some(f=>f.status==="borrador"))}));
+            const nPend=tarjetas.filter(x=>!x.completa).length, nHist=tarjetas.length-nPend;
+            const visibles=tarjetas.filter(x=>facGuiaVista==="historial"?x.completa:!x.completa)
               .filter(x=>!q||String(x.g.id).toUpperCase().includes(q)||x.grupos.some(gr=>String(gr.receptor.snapshot?.nombre||"").toUpperCase().includes(q)))
               .sort((a,b)=>new Date(b.g.fecha||0)-new Date(a.g.fecha||0));
             return (
               <div>
-                <input className="fi" placeholder="Buscar guía o cliente…" value={facGuiaBuscar} onChange={e=>setFacGuiaBuscar(e.target.value)} style={{fontSize:15,padding:"9px 12px",marginBottom:12,width:"100%"}}/>
-                {tarjetas.length===0?<div className="card" style={{textAlign:"center",padding:50,color:"var(--t3)"}}>No hay guías con carga por facturar.</div>:
+                <div style={{display:"flex",gap:10,marginBottom:12,flexWrap:"wrap",alignItems:"center"}}>
+                  <div style={{display:"flex",gap:4,background:"var(--bg4)",borderRadius:7,padding:3,border:"1px solid var(--b1)"}}>
+                    {[{k:"pendientes",l:"⏳ Pendientes",n:nPend},{k:"historial",l:"📜 Historial",n:nHist}].map(t=>(
+                      <button key={t.k} onClick={()=>setFacGuiaVista(t.k)} style={{padding:"5px 14px",borderRadius:5,border:"none",cursor:"pointer",fontSize:14,fontWeight:600,display:"flex",gap:6,alignItems:"center",
+                        background:facGuiaVista===t.k?"var(--navy)":"transparent",color:facGuiaVista===t.k?"#fff":"var(--t2)"}}>{t.l}
+                        <span style={{background:facGuiaVista===t.k?"rgba(255,255,255,.2)":"var(--bg5)",borderRadius:3,padding:"0 6px",fontSize:11,fontWeight:800}}>{t.n}</span></button>
+                    ))}
+                  </div>
+                  <input className="fi" placeholder="Buscar guía o cliente…" value={facGuiaBuscar} onChange={e=>setFacGuiaBuscar(e.target.value)} style={{fontSize:15,padding:"9px 12px",flex:1,minWidth:220}}/>
+                </div>
+                {visibles.length===0?<div className="card" style={{textAlign:"center",padding:50,color:"var(--t3)"}}>{facGuiaVista==="historial"?"No hay guías completamente facturadas.":"No hay guías con carga por facturar."}</div>:
                 <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(290px,1fr))",gap:12}}>
-                  {tarjetas.map(({g,grupos})=>{
+                  {visibles.map(({g,grupos})=>{
                     const tot=grupos.length, hechos=grupos.filter(x=>x.pendientes.length===0).length;
                     const facs=[...new Map(grupos.flatMap(x=>x.facturas).map(f=>[f.id,f])).values()];
                     const porMon={};facs.forEach(f=>{porMon[f.moneda||"USD"]=(porMon[f.moneda||"USD"]||0)+(f.total||0);});
