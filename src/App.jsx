@@ -1508,6 +1508,20 @@ const WRBarcode=({value,height=50,width=2})=>{
   return <svg width={bits.length*width} height={height} style={{display:"block"}}>{rects}</svg>;
 };
 
+// Campo de contraseña con botón para ver / ocultar lo que se escribe
+const PwInput=({style,...props})=>{
+  const [ver,setVer]=useState(false);
+  return (
+    <div style={{position:"relative",width:"100%"}}>
+      <input {...props} type={ver?"text":"password"} style={{...(style||{}),width:"100%",paddingRight:38,textTransform:"none"}}/>
+      <button type="button" tabIndex={-1} onClick={()=>setVer(v=>!v)} title={ver?"Ocultar":"Mostrar"}
+        style={{position:"absolute",right:6,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:16,padding:4,lineHeight:1,opacity:ver?1:.6}}>
+        {ver?"🙈":"👁️"}
+      </button>
+    </div>
+  );
+};
+
 // ─── STANDALONE COMPONENTS (outside main component to avoid hook issues) ─────
 const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomos=[],allClients=[]})=>{
   const _ROL_TO_TIPO_INIT={"E":"agente","E1":"vendedor_agente","F":"autonomo","G":"oficina"};
@@ -1620,7 +1634,7 @@ const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomo
         {/* Password para todos los registros */}
         <div className="fgrid g2" style={{marginBottom:10}}>
           <div className="fg"><div className="fl">{initial?.authId?"Nueva contraseña":"Contraseña (acceso al sistema)"}</div>
-            <input className="fi" type="password" autoComplete="new-password" value={f.password||""} onChange={e=>ff("password",e.target.value)} placeholder={initial?.authId?"Déjala en blanco para no cambiarla":"Mínimo 6 caracteres"}/>
+            <PwInput className="fi" autoComplete="new-password" value={f.password||""} onChange={e=>ff("password",e.target.value)} placeholder={initial?.authId?"Déjala en blanco para no cambiarla":"Mínimo 6 caracteres"}/>
           </div>
           <div className="fg"><div className="fl" style={{fontSize:12,color:initial?.authId?"var(--green)":"var(--t3)"}}>{initial?.authId?"✓ Tiene acceso al sistema":"Sin acceso. Escribe una contraseña para dárselo."}</div></div>
         </div>
@@ -2390,8 +2404,8 @@ export default function ENEXSystem(){
           if(a.length<6){setLoginErr("Mínimo 6 caracteres");return;}if(a!==b){setLoginErr("Las contraseñas no coinciden");return;}
           const err=await cambiarMiClave(a);if(err){setLoginErr(err);return;}setLoginErr("");setRecovery(false);}}
           style={{display:"flex",flexDirection:"column",gap:12}}>
-          <input className="fi" name="a" type="password" placeholder="Nueva contraseña (mínimo 6)"/>
-          <input className="fi" name="b" type="password" placeholder="Repite la contraseña"/>
+          <PwInput className="fi" name="a" placeholder="Nueva contraseña (mínimo 6)"/>
+          <PwInput className="fi" name="b" placeholder="Repite la contraseña"/>
           {loginErr&&<div style={{color:"var(--red)",fontSize:14,textAlign:"center"}}>{loginErr}</div>}
           <button className="btn-p" type="submit">Guardar y entrar</button>
         </form>
@@ -2414,7 +2428,7 @@ export default function ENEXSystem(){
         </div>
         <div style={{display:"flex",flexDirection:"column",gap:12}}>
           <input className="fi" placeholder="Email o usuario" autoComplete="username" value={loginEmail} onChange={e=>setLoginEmail(e.target.value)} onKeyDown={e=>e.key==="Enter"&&doLogin()} style={{textTransform:"none"}}/>
-          <input className="fi" type="password" autoComplete="current-password" placeholder="Contraseña" value={loginPass} onChange={e=>setLoginPass(e.target.value)} onKeyDown={e=>e.key==="Enter"&&doLogin()}/>
+          <PwInput className="fi" autoComplete="current-password" placeholder="Contraseña" value={loginPass} onChange={e=>setLoginPass(e.target.value)} onKeyDown={e=>e.key==="Enter"&&doLogin()}/>
           {loginErr&&<div style={{color:"var(--red)",fontSize:14,textAlign:"center"}}>{loginErr}</div>}
           {loginInfo&&<div style={{color:"var(--green)",fontSize:14,textAlign:"center"}}>{loginInfo}</div>}
           <button className="btn-p" onClick={doLogin} disabled={loginBusy} style={{marginTop:8}}>{loginBusy?"Entrando…":"Ingresar"}</button>
@@ -11426,8 +11440,8 @@ export default function ENEXSystem(){
               {pwModal.ok
                 ?<div style={{color:"var(--green)",fontWeight:700,textAlign:"center",padding:10}}>✓ Contraseña cambiada</div>
                 :<>
-                  <input className="fi" type="password" placeholder="Nueva contraseña (mínimo 6)" value={pwModal.a} onChange={e=>setPwModal(p=>({...p,a:e.target.value}))}/>
-                  <input className="fi" type="password" placeholder="Repite la contraseña" value={pwModal.b} onChange={e=>setPwModal(p=>({...p,b:e.target.value}))}/>
+                  <PwInput className="fi" placeholder="Nueva contraseña (mínimo 6)" value={pwModal.a} onChange={e=>setPwModal(p=>({...p,a:e.target.value}))}/>
+                  <PwInput className="fi" placeholder="Repite la contraseña" value={pwModal.b} onChange={e=>setPwModal(p=>({...p,b:e.target.value}))}/>
                   {pwModal.err&&<div style={{color:"var(--red)",fontSize:14}}>{pwModal.err}</div>}
                 </>}
             </div>
