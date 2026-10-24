@@ -10429,8 +10429,8 @@ export default function ENEXSystem(){
       {id:"cargorelease",ic:"🚀",l:"Cargo Release"},
     ]},
     {label:"Administración",items:[
-      {id:"entregasydespachos",ic:"📝",l:"Entregas y Despachos"},
       {id:"facturacion",ic:"🧾",l:"Facturación",onClick:()=>{setTab("contabilidad");setContabTab("facturas");},activeWhen:()=>tab==="contabilidad"&&contabTab==="facturas"},
+      {id:"entregasydespachos",ic:"📝",l:"Entregas y Despachos"},
       {id:"contabilidad",ic:"💰",l:"Contabilidad"},
     ]},
     {label:"Gestión",items:[
