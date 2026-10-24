@@ -7185,7 +7185,6 @@ export default function ENEXSystem(){
     {k:"cliente",l:"Cliente (consignatario)"},
     {k:"agente",l:"Agente"},
     {k:"autonomo",l:"Autónomo"},
-    {k:"oficina",l:"Oficina"},
   ];
   const FAC_STATUS_LABEL={borrador:"📝 Borrador",emitida:"📤 Emitida",pagada_parcial:"⏳ Pago parcial",pagada:"✅ Pagada",anulada:"✕ Anulada"};
   const FAC_STATUS_CLS={borrador:"s5",emitida:"s2",pagada_parcial:"s4",pagada:"s3",anulada:"s1"};
