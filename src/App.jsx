@@ -2835,6 +2835,9 @@ export default function ENEXSystem(){
         shipper:wrf.remitente,remitenteDir:wrf.remitenteDir||"",remitenteTel:wrf.remitenteTel||"",remitenteEmail:(wrf.remitenteEmail||"").trim(),cargos:wrf.cargos,
         sucursalEntrega:wrf.sucursalEntrega||"",
       };
+      // Con tipo de envío asignado y aún en Recibido/Origen → Confirmado
+      {const _w=updated;const _st3=WR_STATUSES.find(x=>x.code==="3");
+        if(_w.tipoEnvio&&["1","2"].includes(_w.status?.code||"1")&&_st3){_w.status=_st3;_w.historial=[...(_w.historial||[]),{code:"3",label:_st3.label,fecha:new Date(),user:currentUser.id,nota:`Confirmado al editar: ${_w.tipoEnvio}`}];}}
       wrf.cajas.forEach(c=>[c.tracking,c.tracking2,c.tracking3].forEach(t=>{if(t)checkAndRemoveScan(t);}));
       // Subir fotos nuevas al bucket (antes de marcar foto=true)
       const uploadedCount=await uploadFotosForWR(editWR.id, wrf.cajas, currentUser?.id||'');
@@ -2877,6 +2880,9 @@ export default function ENEXSystem(){
         cargos:wrf.cargos,
         ...(esReempaque?{reempaqueDe:[...reempaqueIds],historial:[{code:"1",label:"Recibido",fecha:now,user:currentUser.id,nota:`Reempaque de: ${reempaqueIds.join(", ")}`}]}:{}),
       };
+      // Con tipo de envío asignado y aún en Recibido/Origen → Confirmado
+      {const _w=n;const _st3=WR_STATUSES.find(x=>x.code==="3");
+        if(_w.tipoEnvio&&["1","2"].includes(_w.status?.code||"1")&&_st3){_w.status=_st3;_w.historial=[...(_w.historial||[]),{code:"3",label:_st3.label,fecha:new Date(),user:currentUser.id,nota:`Confirmado al registrar: ${_w.tipoEnvio}`}];}}
       wrf.cajas.forEach(c=>[c.tracking,c.tracking2,c.tracking3].forEach(t=>{if(t)checkAndRemoveScan(t);}));
       // Si es reempaque, marcar padres como REEMPACADO (2.3) y guardar referencia hacia este WR nuevo
       let padresUpd=[];
@@ -7537,6 +7543,15 @@ export default function ENEXSystem(){
     // Sync: WRs vinculados que estén en 21 (Entregado) pasan a 22 (Por Cobrar)
     syncWRStatusFromFactura(fact,"emitida");
     setFacModal(null);
+    if(isNew||f.status==="borrador")cobrarSiPrepaid(fact);
+  };
+  // PREPAID se cobra al emitir: abrir el registro de cobro de esa factura
+  const cobrarSiPrepaid=fact=>{
+    if(fact.tipo==="nota_credito"||(fact.total||0)<=0)return;
+    const ws=wrList.filter(w=>(fact.wrIds||[]).includes(w.id));
+    if(!ws.length||!ws.every(w=>(w.tipoPago||"").toLowerCase().includes("prepa")))return;
+    if(!hasPerm("registrar_pago")&&!hasPerm("cobrar"))return;
+    cobroAbrir(pagadorDeFactura(fact),null,{...fact,saldo:fact.total-(parseFloat(fact.pagado)||0)});
   };
   const facAnular=(f)=>{
     if(!hasPerm("anular_factura")&&!hasPerm("facturar")){window.alert("Tu rol no tiene permiso para anular facturas.");return;}
@@ -7644,8 +7659,10 @@ export default function ENEXSystem(){
     facturas.filter(f=>["emitida","pagada_parcial"].includes(f.status)&&f.tipo!=="nota_credito"&&(f.saldo||0)>0.001).forEach(f=>{const pg=pagadorDeFactura(f);m.set(pagKey(pg),pg);});
     pagos.filter(p=>!p.anulado&&!p.facturaId).forEach(p=>{const pg=pagadorDePago(p);if(pg)m.set(pagKey(pg),pg);});
     return [...m.values()].sort((a,b)=>String(a.nombre).localeCompare(String(b.nombre)));};
-  const cobroAbrir=(pg,preSel=null)=>{
+  const cobroAbrir=(pg,preSel=null,recien=null)=>{
     if(!hasPerm("registrar_pago")&&!hasPerm("cobrar")){window.alert("Tu rol no tiene permiso para registrar pagos.");return;}
+    if(recien){setCobroModal({fecha:new Date(),tipoPago:"efectivo",referencia:"",nota:"",archivo:null,pagador:pg,moneda:recien.moneda||"USD",sel:{[recien.id]:true},usarSaldo:saldoFavorDe(pg,recien.moneda||"USD")>0,
+      monto:String(Math.max(0,Math.round(((recien.saldo??recien.total)-saldoFavorDe(pg,recien.moneda||"USD"))*100)/100))});return;}
     const base={fecha:new Date(),tipoPago:"efectivo",referencia:"",nota:"",archivo:null};
     if(!pg){setCobroModal({...base,pagador:null,moneda:"USD",sel:{},monto:"",usarSaldo:true});return;}
     const abiertas=facAbiertasDe(pg);
@@ -7913,6 +7930,7 @@ export default function ENEXSystem(){
     dbUpsertFactura(fact);
     logAction("Emitió factura",`${fact.id} · ${fmtMoney(fact.total,fact.moneda)} · ${fact.receptorNombre}`);
     syncWRStatusFromFactura(fact,"emitida");
+    cobrarSiPrepaid(fact);
   };
 
   // Emitir varios borradores de una vez (una sola confirmación)
