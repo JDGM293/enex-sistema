@@ -1673,6 +1673,31 @@ const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomo
 };
 
 
+// Lista de conceptos con precio (servicios / gastos adicionales)
+const PriceListEditor=({title,items,onSave,placeholder})=>{
+  const [nombre,setNombre]=useState("");
+  const [precio,setPrecio]=useState("");
+  const add=()=>{const n=nombre.trim().toUpperCase();if(!n)return;if(items.some(i=>i.nombre===n)){window.alert("Ya existe.");return;}onSave([...items,{nombre:n,precio:parseFloat(precio)||0}]);setNombre("");setPrecio("");};
+  return (
+    <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,padding:"14px 16px",marginBottom:14}}>
+      <div style={{fontSize:15,fontWeight:700,color:"var(--navy)",marginBottom:10}}>{title}</div>
+      <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap"}}>
+        <input className="fi" style={{flex:2,minWidth:200}} value={nombre} onChange={e=>setNombre(e.target.value.toUpperCase())} placeholder={placeholder} onKeyDown={e=>e.key==="Enter"&&add()}/>
+        <input className="fi" type="number" step="0.01" style={{width:120}} value={precio} onChange={e=>setPrecio(e.target.value)} placeholder="Precio" onKeyDown={e=>e.key==="Enter"&&add()}/>
+        <button className="btn-p" onClick={add}>+ Agregar</button>
+      </div>
+      {items.length===0?<div style={{color:"var(--t3)",fontSize:14}}>Sin conceptos.</div>:
+        <table className="ct"><thead><tr><th>Concepto</th><th style={{width:140,textAlign:"right"}}>Precio</th><th style={{width:50}}></th></tr></thead>
+          <tbody>{items.map((it,i)=>(
+            <tr key={it.nombre}>
+              <td style={{fontWeight:600}}>{it.nombre}</td>
+              <td style={{textAlign:"right"}}><input className="fi" type="number" step="0.01" style={{width:110,textAlign:"right",fontFamily:"'DM Mono',monospace"}} defaultValue={it.precio}
+                onBlur={e=>{const v=parseFloat(e.target.value)||0;if(v!==it.precio)onSave(items.map((x,j)=>j===i?{...x,precio:v}:x));}}/></td>
+              <td><button className="btn-d" style={{fontSize:12,padding:"2px 8px"}} onClick={()=>{if(window.confirm(`¿Quitar ${it.nombre}?`))onSave(items.filter((_,j)=>j!==i));}}>✕</button></td>
+            </tr>))}</tbody></table>}
+    </div>
+  );
+};
 const ListEditor=({title,items,onAdd,onDelete,placeholder,mono})=>{
   const [v,setV]=useState("");
   return (
@@ -2064,7 +2089,11 @@ export default function ENEXSystem(){
   // ── CONFIGURACIÓN — listas editables ──────────────────────────────────────
   const [SEND_TYPES,setSendTypes]=useState(SEND_TYPES_INIT);
   const [PAY_TYPES,setPayTypes]=useState(PAY_TYPES_INIT);
-  const [CHARGES_OPT,setChargesOpt]=useState([]);
+  const [CHARGES_OPT,setChargesOpt]=useState([]); // antiguo (solo nombres)
+  // Catálogo con precio: servicios y gastos adicionales
+  const [SERVICIOS_CAT,setServiciosCat]=useState([]);
+  const [GASTOS_CAT,setGastosCat]=useState([]);
+  const [catCargado,setCatCargado]=useState(false);
   const [CONTAINER_TYPES,setContainerTypes]=useState([]);
   const [COUNTRIES,setCountries]=useState([]);
 
@@ -2316,6 +2345,11 @@ export default function ENEXSystem(){
       }
       if(payT&&payT.length>0)setPayTypes(payT);
       if(chargesT&&chargesT.length>0)setChargesOpt(chargesT);
+      {const [sv,gs]=await Promise.all([dbGetConfig('servicios_cat'),dbGetConfig('gastos_cat')]);
+       const norm=a=>Array.isArray(a)?a.map(x=>typeof x==="string"?{nombre:x,precio:0}:{nombre:String(x.nombre||""),precio:parseFloat(x.precio)||0}).filter(x=>x.nombre):[];
+       setServiciosCat(norm(sv));
+       setGastosCat(Array.isArray(gs)?norm(gs):norm(chargesT));
+       setCatCargado(true);}
       if(contT&&contT.length>0)setContainerTypes(contT);
       if(countriesT&&countriesT.length>0)setCountries(countriesT);
       if(wrNumT)setWrNumTipo(wrNumT);
@@ -3753,13 +3787,19 @@ export default function ENEXSystem(){
         )}
 
         {/* NOTAS Y CARGOS */}
-        <div className="sdiv">NOTAS Y CARGOS APLICABLES</div>
+        <div className="sdiv">NOTAS, SERVICIOS Y GASTOS ADICIONALES</div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:4}}>
           <div className="fg"><div className="fl">Notas y Observaciones</div><textarea className="ft" value={wrf.notas} onChange={e=>sw("notas",e.target.value)} placeholder="Frágil, NO VOLTEAR, manejo especial…"/></div>
-          <div className="fg"><div className="fl">Cargos Aplicables</div>
-            <div style={{display:"flex",flexWrap:"wrap",gap:5,marginTop:4}}>
-              {CHARGES_OPT.map(c=><button key={c} className={`btn-${wrf.cargos.includes(c)?"p":"s"}`} style={{fontSize:12,padding:"4px 9px"}} onClick={()=>sw("cargos",wrf.cargos.includes(c)?wrf.cargos.filter(x=>x!==c):[...wrf.cargos,c])}>{c}</button>)}
-            </div>
+          <div className="fg">
+            {[{t:"Servicios adicionales",l:SERVICIOS_CAT},{t:"Gastos adicionales",l:GASTOS_CAT}].map(g=>(
+              <div key={g.t} style={{marginBottom:8}}>
+                <div className="fl">{g.t}</div>
+                <div style={{display:"flex",flexWrap:"wrap",gap:5,marginTop:4}}>
+                  {g.l.length===0&&<span style={{fontSize:12,color:"var(--t3)"}}>—</span>}
+                  {g.l.map(({nombre:c,precio})=><button key={c} className={`btn-${wrf.cargos.includes(c)?"p":"s"}`} style={{fontSize:12,padding:"4px 9px"}} onClick={()=>sw("cargos",wrf.cargos.includes(c)?wrf.cargos.filter(x=>x!==c):[...wrf.cargos,c])}>{c} <span style={{opacity:.7}}>${precio}</span></button>)}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
@@ -5839,7 +5879,7 @@ export default function ENEXSystem(){
       {k:"numeracion",l:"Numeración",ic:"🔢"},
       {k:"tipoenvio",l:"Tipo de Envío",ic:"✈️"},
       {k:"servicios",l:"Servicios Adicionales",ic:"⚡"},
-      {k:"cargos",l:"Cargos Adicionales",ic:"💲"},
+      {k:"cargos",l:"Gastos Adicionales",ic:"💲"},
       {k:"pagos",l:"Tipos de Pago",ic:"💳"},
       {k:"contenedores",l:"Tipos de Contenedor",ic:"📦"},
       {k:"paises",l:"Países y Ciudades",ic:"🌎"},
@@ -5979,21 +6019,14 @@ export default function ENEXSystem(){
 
         {/* ── SERVICIOS ADICIONALES ── */}
         {cfgTab==="servicios"&&(
-          <ListEditor title="⚡ Servicios Adicionales" items={CHARGES_OPT}
-            onAdd={v=>{const n=[...CHARGES_OPT,v];setChargesOpt(n);dbSetConfig('charges',n);}}
-            onDelete={i=>{const n=CHARGES_OPT.filter((_,j)=>j!==i);setChargesOpt(n);dbSetConfig('charges',n);}}
-            placeholder="Ej: Embalaje Especial, Custodia…"/>
+          <PriceListEditor title="⚡ Servicios Adicionales" items={SERVICIOS_CAT} placeholder="Ej: Embalaje especial, Custodia…"
+            onSave={n=>{setServiciosCat(n);dbSetConfig('servicios_cat',n);}}/>
         )}
 
-        {/* ── CARGOS ADICIONALES ── */}
+        {/* ── GASTOS ADICIONALES ── */}
         {cfgTab==="cargos"&&(
-          <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,padding:"14px 16px",marginBottom:14}}>
-            <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:15,fontWeight:700,color:"var(--navy)",marginBottom:8}}>💲 Cargos Adicionales</div>
-            <ListEditor title="" items={CHARGES_OPT}
-              onAdd={v=>{const n=[...CHARGES_OPT,v];setChargesOpt(n);dbSetConfig('charges',n);}}
-              onDelete={i=>{const n=CHARGES_OPT.filter((_,j)=>j!==i);setChargesOpt(n);dbSetConfig('charges',n);}}
-              placeholder="Ej: Recargo Combustible, Seguro Premium…"/>
-          </div>
+          <PriceListEditor title="💲 Gastos Adicionales" items={GASTOS_CAT} placeholder="Ej: Recargo combustible, Seguro…"
+            onSave={n=>{setGastosCat(n);dbSetConfig('gastos_cat',n);}}/>
         )}
 
         {/* ── TIPOS DE PAGO ── */}
@@ -7177,10 +7210,6 @@ export default function ENEXSystem(){
       const id=cli?.agenteId||"";
       return {tipo:"agente",id,snapshot:lookupReceptor("agente",id)};
     }
-    if(ct==="oficina"||ct==="vendedor_oficina"){
-      const id=cli?.oficinaId||"";
-      return {tipo:"oficina",id,snapshot:lookupReceptor("oficina",id)};
-    }
     if(ct==="autonomo"){
       const id=cli?.autonomoId||"";
       return {tipo:"autonomo",id,snapshot:lookupReceptor("autonomo",id)};
@@ -7243,20 +7272,145 @@ export default function ENEXSystem(){
     receptorTipo:"cliente",receptorId:"",
     receptorNombre:"",receptorDoc:"",receptorDir:"",receptorTel:"",receptorEmail:"",receptorCasillero:"",
     lineas:[emptyLinea()],
-    subtotal:0,descuento:0,total:0,pagado:0,saldo:0,
+    subtotal:0,descuento:0,descuentoTipo:"monto",descuentoValor:0,total:0,pagado:0,saldo:0,
+    tipoEnvio:"",tarifa:null,
     wrIds:[],guiaIds:[],ncFacturaOrigen:"",
     notas:"",condiciones:"Pago contado. Después de 15 días, aplica recargo por mora.",
     usuario:currentUser.id||currentUser.email||"",motivoAnulacion:"",fechaAnulacion:null,
   });
 
+  // Tipos de línea: flete (un WR × peso o volumen × tarifa), adicional (servicio/gasto de un WR),
+  // minimo (ajuste automático al mínimo de la tarifa, sobre el total del flete) y extra (cobro libre).
+  const r2=v=>Math.round((parseFloat(v)||0)*100)/100;
+  const FAC_ORDEN={flete:0,adicional:1,minimo:2,extra:3};
   const recalcFactura=(f)=>{
-    const lineas=(f.lineas||[]).map(l=>({...l,total:(parseFloat(l.cantidad)||0)*(parseFloat(l.precio)||0)}));
-    const subtotal=lineas.reduce((s,l)=>s+l.total,0);
-    const descuento=parseFloat(f.descuento)||0;
-    const total=Math.max(0,subtotal-descuento);
+    let lineas=(f.lineas||[]).filter(l=>l.tipo!=="minimo").map(l=>({...l,tipo:l.tipo||"extra",total:r2((parseFloat(l.cantidad)||0)*(parseFloat(l.precio)||0))}));
+    const hayFlete=lineas.some(l=>l.tipo==="flete");
+    const flete=lineas.filter(l=>l.tipo==="flete").reduce((s,l)=>s+l.total,0);
+    const minimo=parseFloat(f.tarifa?.min)||0;
+    if(hayFlete&&minimo>0&&flete<minimo){
+      const aj=r2(minimo-flete);
+      lineas.push({tipo:"minimo",descripcion:`Ajuste a mínimo de tarifa (${fmtMoney(minimo,f.moneda)})`,cantidad:1,precio:aj,total:aj});
+    }
+    lineas=lineas.map((l,i)=>({l,i})).sort((a,b)=>(FAC_ORDEN[a.l.tipo]??9)-(FAC_ORDEN[b.l.tipo]??9)||a.i-b.i).map(x=>x.l);
+    const subtotal=r2(lineas.reduce((s,l)=>s+l.total,0));
+    const dTipo=f.descuentoTipo||"monto";
+    const dValor=parseFloat(f.descuentoValor??f.descuento)||0;
+    const descuento=r2(dTipo==="pct"?subtotal*Math.min(100,Math.max(0,dValor))/100:dValor);
+    const total=r2(Math.max(0,subtotal-descuento));
     const pagado=parseFloat(f.pagado)||0;
     const saldo=Math.max(0,total-pagado);
-    return{...f,lineas,subtotal,total,saldo};
+    return{...f,lineas,subtotal,descuento,descuentoTipo:dTipo,descuentoValor:dValor,total,saldo};
+  };
+  // Documento de la factura (se muestra en pantalla y se imprime tal cual)
+  const facturaHTML=f=>{
+    const e=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
+    const $=v=>fmtMoney(v,f.moneda);
+    const n=v=>(Math.round((parseFloat(v)||0)*100)/100).toLocaleString("es",{minimumFractionDigits:0,maximumFractionDigits:2});
+    const L=(f.lineas||[]).map(l=>({...l,tipo:l.tipo||"extra"}));
+    const fl=L.filter(l=>l.tipo==="flete"),ad=L.filter(l=>l.tipo==="adicional"),mn=L.filter(l=>l.tipo==="minimo"),ex=L.filter(l=>l.tipo==="extra");
+    const S=(a,k)=>a.reduce((t,l)=>t+(parseFloat(l[k])||0),0);
+    const aereo=/^a[eé]r/i.test(f.tipoEnvio||"")||fl.some(l=>l.unidad==="lb");
+    const uni=aereo?"lb":"ft³";
+    const conCli=fl.some(l=>l.cliente);
+    const titulo=f.tipo==="nota_credito"?"NOTA DE CRÉDITO":f.tipo==="proforma"?"PROFORMA":"FACTURA";
+    const pagosAplic=pagos.filter(p=>p.facturaId===f.id&&!p.anulado);
+    const td='style="padding:5px 7px;border-bottom:1px solid #ddd"';
+    const tdr='style="padding:5px 7px;border-bottom:1px solid #ddd;text-align:right;font-family:monospace"';
+    const th=(t,r)=>`<th style="padding:6px 7px;background:#1A2B4A;color:#fff;font-size:11px;text-transform:uppercase;letter-spacing:.5px;text-align:${r?"right":"left"}">${t}</th>`;
+    const tablaFlete=fl.length?`<h3>WR y flete <span class="sub">(${aereo?"aéreo — mayor entre peso real y volumétrico":"marítimo — pies cúbicos"})</span></h3>
+      <table><thead><tr>${th("N° WR")}${conCli?th("Cliente"):""}${th("Cajas",1)}${th("Lb.",1)}${th("Lb. Vol",1)}${th("Ft³",1)}${th("A cobrar ("+uni+")",1)}${th("Tarifa",1)}${th("Importe",1)}</tr></thead><tbody>
+      ${fl.map(l=>`<tr><td ${td}><b>${e(l.wrId)}</b></td>${conCli?`<td ${td}>${e(l.cliente)}<div class="cas">${e(l.casillero)}</div></td>`:""}<td ${tdr}>${l.cajas||0}</td><td ${tdr}>${n(l.pesoLb)}</td><td ${tdr}>${n(l.volLb)}</td><td ${tdr}>${n(l.ft3)}</td><td ${tdr}><b>${n(l.cantidad)}</b></td><td ${tdr}>${$(l.precio)}</td><td ${tdr}><b>${$(l.total)}</b></td></tr>`).join("")}
+      <tr class="tot"><td ${td}>${fl.length} WR</td>${conCli?`<td ${td}></td>`:""}<td ${tdr}>${S(fl,"cajas")}</td><td ${tdr}>${n(S(fl,"pesoLb"))}</td><td ${tdr}>${n(S(fl,"volLb"))}</td><td ${tdr}>${n(S(fl,"ft3"))}</td><td ${tdr}>${n(S(fl,"cantidad"))} ${uni}</td><td ${td}></td><td ${tdr}>${$(S(fl,"total"))}</td></tr>
+      </tbody></table>`:"";
+    const tablaSimple=(tt,arr,conWR)=>arr.length?`<h3>${tt}</h3><table><thead><tr>${conWR?th("N° WR"):""}${th("Concepto")}${th("Cant.",1)}${th("Precio",1)}${th("Importe",1)}</tr></thead><tbody>
+      ${arr.map(l=>`<tr>${conWR?`<td ${td}>${e(l.wrId||"")}</td>`:""}<td ${td}>${e(l.descripcion)}</td><td ${tdr}>${n(l.cantidad)}</td><td ${tdr}>${$(l.precio)}</td><td ${tdr}><b>${$(l.total)}</b></td></tr>`).join("")}</tbody></table>`:"";
+    const filaTot=(k,v,cls="")=>`<div class="tr ${cls}"><span>${k}</span><span>${v}</span></div>`;
+    return `<!doctype html><html><head><meta charset="utf-8"><title>${titulo} ${e(f.id)}</title><style>
+      *{box-sizing:border-box}body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:0;padding:24px;font-size:13px}
+      .hd{display:flex;justify-content:space-between;border-bottom:3px solid #1A2B4A;padding-bottom:10px;margin-bottom:14px}
+      .emp{font-size:26px;font-weight:900;letter-spacing:2px;color:#1A2B4A}.num{font-size:18px;font-weight:900;font-family:monospace}
+      .box{display:grid;grid-template-columns:1fr 1fr;gap:4px 18px;border:1px solid #ccc;border-radius:6px;padding:10px 12px;margin-bottom:12px}
+      h3{font-size:14px;color:#1A2B4A;margin:16px 0 6px}h3 .sub{font-weight:400;color:#666;font-size:12px}
+      table{width:100%;border-collapse:collapse;font-size:12.5px}.tot td{background:#F1F4F9;font-weight:800}.cas{font-size:11px;color:#8a6d1a;font-family:monospace}
+      .totales{margin-left:auto;width:320px;margin-top:14px;border:1px solid #ccc;border-radius:6px;padding:10px 12px}
+      .tr{display:flex;justify-content:space-between;padding:3px 0}.tr span:last-child{font-family:monospace}
+      .gt{border-top:2px solid #1A2B4A;margin-top:6px;padding-top:6px;font-size:17px;font-weight:900;color:#1A2B4A}
+      .anul{color:#C62828;font-weight:900;font-size:20px;text-align:center;border:2px solid #C62828;padding:4px;margin-bottom:10px}
+      .pie{margin-top:16px;font-size:11.5px;color:#444;white-space:pre-wrap}
+      @media print{body{padding:0}@page{size:letter portrait;margin:.45in}}
+    </style></head><body>
+      ${f.status==="anulada"?`<div class="anul">ANULADA${f.motivoAnulacion?` — ${e(f.motivoAnulacion)}`:""}</div>`:""}
+      <div class="hd"><div><div class="emp">${e(empresaNombre||"ENEX")}</div><div>International Courier</div></div>
+        <div style="text-align:right"><div style="font-weight:800">${titulo}</div><div class="num">Nº ${e(f.id)}</div>
+          <div>Fecha: ${fmtDate(f.fecha)}</div>${f.fechaEmision?`<div>Emisión: ${fmtDate(f.fechaEmision)}</div>`:""}
+          <div>Moneda: ${e(f.moneda)}</div>${f.ncFacturaOrigen?`<div>Ref. factura: ${e(f.ncFacturaOrigen)}</div>`:""}</div></div>
+      <div class="box">
+        <div><b>${f.receptorTipo==="agente"?"Agente":f.receptorTipo==="autonomo"?"Autónomo":"Cliente"}:</b> ${e(f.receptorNombre)}</div>
+        <div><b>ID Identificación:</b> ${e(f.receptorDoc||"—")}</div>
+        ${f.receptorCasillero?`<div><b>Casillero:</b> ${e(f.receptorCasillero)}</div>`:""}
+        <div><b>Teléfono:</b> ${e(f.receptorTel||"—")}</div>
+        <div style="grid-column:1/-1"><b>Dirección:</b> ${e(f.receptorDir||"—")}</div>
+        <div><b>Email:</b> ${e(f.receptorEmail||"—")}</div>
+        ${(f.guiaIds||[]).length?`<div><b>Guía:</b> ${e(f.guiaIds.join(", "))}</div>`:""}
+        ${f.tipoEnvio?`<div><b>Tipo de envío:</b> ${e(f.tipoEnvio)}</div>`:""}
+      </div>
+      ${tablaFlete}
+      ${tablaSimple("Servicios y gastos adicionales",ad,true)}
+      ${tablaSimple("Cobros extra",ex,false)}
+      <div class="totales">
+        ${fl.length?filaTot("Flete",$(S(fl,"total"))):""}
+        ${mn.length?filaTot("Ajuste a mínimo",$(S(mn,"total"))):""}
+        ${ad.length?filaTot("Servicios y gastos",$(S(ad,"total"))):""}
+        ${ex.length?filaTot("Cobros extra",$(S(ex,"total"))):""}
+        ${filaTot("<b>Subtotal</b>",`<b>${$(f.subtotal)}</b>`)}
+        ${(f.descuento||0)>0?filaTot(`Descuento${f.descuentoTipo==="pct"?` (${n(f.descuentoValor)}%)`:""}`,`−${$(f.descuento)}`):""}
+        ${filaTot("TOTAL",$(f.total),"gt")}
+        ${(f.pagado||0)>0?filaTot("Pagado",$(f.pagado))+filaTot("<b>Saldo</b>",`<b>${$(f.saldo)}</b>`):""}
+      </div>
+      ${pagosAplic.length?`<h3>Pagos aplicados</h3><table><thead><tr>${th("Nº Pago")}${th("Fecha")}${th("Tipo")}${th("Ref.")}${th("Monto",1)}</tr></thead><tbody>${pagosAplic.map(p=>`<tr><td ${td}>${e(p.id)}</td><td ${td}>${fmtDate(p.fecha)}</td><td ${td}>${e((PAY_METHODS.find(m=>m.k===p.tipoPago)||{l:p.tipoPago||""}).l)}</td><td ${td}>${e([p.referencia,p.notaReferencial].filter(Boolean).join(" · "))}</td><td ${tdr}>${fmtMoney(p.monto,p.moneda||f.moneda)}</td></tr>`).join("")}</tbody></table>`:""}
+      ${f.notas?`<div class="pie"><b>Notas:</b> ${e(f.notas)}</div>`:""}
+      ${f.condiciones?`<div class="pie"><b>Condiciones:</b> ${e(f.condiciones)}</div>`:""}
+    </body></html>`;
+  };
+  const printFactura=f=>{
+    const w=window.open("","_blank","width=900,height=1100");
+    if(!w){window.alert("El navegador bloqueó la ventana de impresión.");return;}
+    w.document.write(facturaHTML(f));w.document.close();
+    setTimeout(()=>{w.focus();w.print();},300);
+  };
+  // Tarifa que aplica a un WR según tipo de envío, origen y destino (Configuración › Tarifas)
+  const tarifaParaWR=(w,tipoEnvio)=>{
+    const te=sinAcentos(tipoEnvio).replace(/[^A-Z]/g,"");
+    const oc=nombreCiudadCon(w?.origCity,COUNTRIES), dc=nombreCiudadCon(w?.destCity,COUNTRIES);
+    const cands=tarifas.filter(t=>t.activo!==false&&sinAcentos(t.tipoEnvio).replace(/[^A-Z]/g,"")===te);
+    const pts=t=>(sinAcentos(t.ciudadOrig)===oc?4:0)+(sinAcentos(t.ciudadDest)===dc?4:0)+(mismoPais(t.paisOrig,w?.origCountry)?2:0)+(mismoPais(t.paisDest,w?.destCountry)?2:0);
+    const best=[...cands].sort((a,b)=>pts(b)-pts(a))[0];
+    return best&&pts(best)>=2?best:null;
+  };
+  // Precio de un servicio o gasto adicional del catálogo
+  const adicionalDeCatalogo=nombre=>{
+    const s=SERVICIOS_CAT.find(x=>x.nombre===nombre);if(s)return {tipo:"Servicio",precio:s.precio};
+    const g=GASTOS_CAT.find(x=>x.nombre===nombre);if(g)return {tipo:"Gasto",precio:g.precio};
+    return null;
+  };
+  // Líneas de flete y adicionales para un grupo de WR
+  const lineasDeWRs=(wrs,isAereo,precioUnidad,conCliente)=>{
+    const out=[];
+    wrs.forEach(w=>{
+      const pf=wrPesoFacturable(w,isAereo);
+      const cl=cliDeWRCon(w,clients);
+      out.push({tipo:"flete",wrId:w.id,cliente:conCliente?(cl?fullName(cl):(w.consignee||"")):"",casillero:cl?.casillero||w.casillero||"",
+        cajas:w.cajas||1,pesoLb:parseFloat(w.pesoLb)||0,volLb:parseFloat(w.volLb)||0,ft3:parseFloat(w.ft3)||0,unidad:pf.unidad,
+        descripcion:`Flete WR ${w.id}`,cantidad:r2(pf.valor),precio:precioUnidad,total:0});
+      (Array.isArray(w.cargos)?w.cargos:[]).forEach(c=>{
+        const nombre=typeof c==="string"?c:(c?.concepto||c?.nombre||"");
+        if(!nombre)return;
+        const cat=adicionalDeCatalogo(nombre);
+        out.push({tipo:"adicional",wrId:w.id,descripcion:nombre,cantidad:1,precio:cat?.precio||0,total:0});
+      });
+    });
+    return out;
   };
 
   const facOpenNew=(prefill={})=>{
@@ -7484,30 +7638,29 @@ export default function ENEXSystem(){
     });
     let seq=nextInvoiceNum;
     const nuevas=[];
+    const sinTarifa=[];
+    const isAereo=dnGuiaEsAerea(guia);
     Object.values(grupos).forEach(grp=>{
       const r=grp.receptor;
-      const fleteTotal=grp.wrs.reduce((s,w)=>{
-        const cargosFlete=Array.isArray(w.cargos)?w.cargos.find(c=>(c.concepto||"").toLowerCase().includes("flete")||c.tipo==="flete"):null;
-        const monto=parseFloat(cargosFlete?.monto||cargosFlete?.precio||0);
-        return s+(isNaN(monto)?0:monto);
-      },0);
-      const valorTotal=grp.wrs.reduce((s,w)=>s+(parseFloat(w.valor)||0),0);
-      const lineas=[
-        {descripcion:`Flete internacional COD — Guía ${guia.id} (${grp.wrs.length} WR · receptor: ${r.tipo})`,cantidad:1,precio:fleteTotal||0,total:fleteTotal||0},
-      ];
+      const tf=tarifaParaWR(grp.wrs[0],guia.tipoEnvio);
+      if(!tf)sinTarifa.push(r.snapshot?.nombre||r.id);
+      const precioUnidad=parseFloat(isAereo?tf?.porLb:tf?.porFt3)||0;
       const fact={
         ...emptyFactura(),
         id:buildFacturaId(seq),numero:seq,
-        tipo:"factura",status:"borrador",moneda:"USD",
+        tipo:"factura",status:"borrador",moneda:tf?.moneda||"USD",
         fecha:new Date(),fechaEmision:null,
         receptorTipo:r.tipo,receptorId:r.id||"",
         receptorNombre:r.snapshot?.nombre||"",receptorDoc:r.snapshot?.doc||"",
         receptorDir:r.snapshot?.dir||"",receptorTel:r.snapshot?.tel||"",
         receptorEmail:r.snapshot?.email||"",receptorCasillero:r.snapshot?.casillero||"",
-        lineas,
+        tipoEnvio:guia.tipoEnvio||"",
+        tarifa:tf?{porLb:parseFloat(tf.porLb)||0,porFt3:parseFloat(tf.porFt3)||0,min:parseFloat(tf.min)||0,moneda:tf.moneda||"USD",
+          ruta:`${tf.ciudadOrig||tf.paisOrig||""} → ${tf.ciudadDest||tf.paisDest||""}`}:{porLb:0,porFt3:0,min:0,moneda:"USD",ruta:"Sin tarifa"},
+        lineas:lineasDeWRs(grp.wrs,isAereo,precioUnidad,r.tipo!=="cliente"),
         wrIds:grp.wrs.map(w=>w.id),
         guiaIds:[guia.id],
-        notas:`Borrador COD auto-generado desde guía ${guia.id}. WRs: ${grp.wrs.map(w=>w.id).join(", ")}. Valor declarado total: $${valorTotal.toFixed(2)}. Revisa líneas antes de emitir.`,
+        notas:"",
         usuario:currentUser.id||currentUser.email||"",
       };
       nuevas.push(recalcFactura(fact));
@@ -7518,6 +7671,7 @@ export default function ENEXSystem(){
     setNextInvoiceNum(seq);
     dbSetConfig('factura_sec_next',String(seq));
     logAction("Generó borradores COD de guía",`${guia.id} → ${nuevas.length} facturas (${cods.length} WR)`);
+    if(!silent&&sinTarifa.length>0)window.alert(`⚠️ No hay tarifa configurada para la ruta y el tipo de envío de: ${sinTarifa.join(", ")}.\nEsas facturas quedaron con precio 0: revisa Configuración › Tarifas o ajusta el precio en la factura.`);
     if(!silent)window.alert(`✅ ${nuevas.length} borradores COD creados desde guía ${guia.id}.\n${cods.length} WR agrupados por receptor (cliente/agente/oficina/autónomo).\nRevisa y emite desde "Facturas".`);
     return nuevas.length;
   };
@@ -8560,19 +8714,8 @@ export default function ENEXSystem(){
     dbUpsertConsolidacion(updGuia);
     logAction(`Cerró recepción guía ${guia.id}`,`${recibidos.length} WR → Por Entrega · ${faltantes} faltantes · ${sobrantes} sobrantes`);
     setRdSelGuia("");
-    // Ofrecer auto-generar facturas COD para esta guía (excluye PREPAID, agrupa por clienteTipo)
-    const wrsCODSinFactura=recibidos.filter(w=>{
-      const esPrepaid=(w.tipoPago||"").toLowerCase().includes("prepa");
-      if(esPrepaid)return false;
-      return !facturas.some(f=>f.status!=="anulada"&&Array.isArray(f.wrIds)&&f.wrIds.includes(w.id));
-    });
-    const ofrecerFacturar=wrsCODSinFactura.length>0&&(hasPerm("crear_factura")||hasPerm("facturar"));
-    const okMsg=`✅ Guía ${guia.id} cerrada.\n${recibidos.length} WR pasaron a Por Entrega (20).`;
-    if(ofrecerFacturar&&window.confirm(`${okMsg}\n\n¿Generar los borradores COD para esta guía?\n${wrsCODSinFactura.length} WR COD agrupados por receptor (cliente / agente / oficina / autónomo).\nLos PREPAID se facturan aparte al remitente.`)){
-      facFromGuia(updGuia,false);
-    } else if(!ofrecerFacturar){
-      window.alert(okMsg);
-    }
+    // Las facturas se generan con el botón de Facturación (no automáticamente)
+    window.alert(`✅ Guía ${guia.id} cerrada.\n${recibidos.length} WR pasaron a Por Entrega (20).`);
   };
   // Marca como recibidos (17 Almacén) todos los WR de una guía, en un paso.
   // NO archiva la guía — la archivación requiere `cerrarRecepcionGuia` (paso 2).
@@ -12026,27 +12169,25 @@ export default function ENEXSystem(){
       {/* ── Factura Modal (borrador / editar / emitir) ── */}
       {facModal&&(()=>{
         const f=facModal;
-        const addLinea=()=>setFacModal(p=>({...p,lineas:[...(p.lineas||[]),{descripcion:"",cantidad:1,precio:0,total:0}]}));
-        const updLinea=(i,k,v)=>setFacModal(p=>{
-          const L=[...(p.lineas||[])];
-          L[i]={...L[i],[k]:v};
-          L[i].total=(parseFloat(L[i].cantidad)||0)*(parseFloat(L[i].precio)||0);
-          const subtotal=L.reduce((s,l)=>s+l.total,0);
-          const desc=parseFloat(p.descuento)||0;
-          const total=Math.max(0,subtotal-desc);
-          const pagado=parseFloat(p.pagado)||0;
-          const saldo=Math.max(0,total-pagado);
-          return{...p,lineas:L,subtotal,total,saldo};
+        const setF=fn=>setFacModal(p=>recalcFactura(fn(p)));
+        const updL=(idx,k,v)=>setF(p=>({...p,lineas:p.lineas.map((l,i)=>i===idx?{...l,[k]:v}:l)}));
+        const delL=idx=>setF(p=>({...p,lineas:p.lineas.filter((_,i)=>i!==idx)}));
+        const addL=l=>setF(p=>({...p,lineas:[...(p.lineas||[]),{cantidad:1,precio:0,total:0,descripcion:"",...l}]}));
+        const L=(f.lineas||[]).map((l,i)=>({...l,tipo:l.tipo||"extra",_i:i}));
+        const fl=L.filter(l=>l.tipo==="flete"), ad=L.filter(l=>l.tipo==="adicional"), mn=L.filter(l=>l.tipo==="minimo"), ex=L.filter(l=>l.tipo==="extra");
+        const sum=(arr,k)=>arr.reduce((t,l)=>t+(parseFloat(l[k])||0),0);
+        const esAereoF=/^a[eé]r/i.test(f.tipoEnvio||"")||fl.some(l=>l.unidad==="lb");
+        const uni=esAereoF?"lb":"ft³";
+        const conCli=fl.some(l=>l.cliente);
+        const catalogo=[...SERVICIOS_CAT.map(x=>({...x,g:"Servicio"})),...GASTOS_CAT.map(x=>({...x,g:"Gasto"}))];
+        const setTarifa=(k,v)=>setF(p=>{
+          const t={...(p.tarifa||{porLb:0,porFt3:0,min:0}),[k]:parseFloat(v)||0};
+          const precio=esAereoF?t.porLb:t.porFt3;
+          return {...p,tarifa:t,lineas:(k==="min")?p.lineas:p.lineas.map(l=>l.tipo==="flete"?{...l,precio}:l)};
         });
-        const delLinea=(i)=>setFacModal(p=>{
-          const L=(p.lineas||[]).filter((_,j)=>j!==i);
-          const subtotal=L.reduce((s,l)=>s+(parseFloat(l.total)||0),0);
-          const desc=parseFloat(p.descuento)||0;
-          const total=Math.max(0,subtotal-desc);
-          const pagado=parseFloat(p.pagado)||0;
-          const saldo=Math.max(0,total-pagado);
-          return{...p,lineas:L.length?L:[{descripcion:"",cantidad:1,precio:0,total:0}],subtotal,total,saldo};
-        });
+        const numIn=(val,on,w=90)=><input className="fi" type="number" step="0.01" value={val} onChange={e=>on(e.target.value)} style={{width:w,fontFamily:"'DM Mono',monospace",textAlign:"right",padding:"4px 6px"}}/>;
+        const del=i=><button className="btn-s" style={{fontSize:11,padding:"2px 6px",color:"var(--red)",borderColor:"var(--red)"}} onClick={()=>delL(i)}>✕</button>;
+        const secT={fontSize:15,fontWeight:700,color:"var(--navy)",margin:"16px 0 6px",display:"flex",alignItems:"center",gap:10};
         const setRec=(tipo,id)=>{
           const r=lookupReceptor(tipo,id);
           setFacModal(p=>({...p,receptorTipo:tipo,receptorId:id,
@@ -12063,7 +12204,7 @@ export default function ENEXSystem(){
               :[];
         return(
           <div className="modal-backdrop">
-            <div className="modal" style={{width:900,maxHeight:"92vh",overflow:"auto"}}>
+            <div className="modal" style={{width:1150,maxWidth:"98vw",maxHeight:"94vh",overflow:"auto"}}>
               <div className="mh">
                 <div>
                   <div style={{fontSize:17,fontWeight:700,color:"var(--navy)"}}>
@@ -12140,58 +12281,127 @@ export default function ENEXSystem(){
                   </div>
                 </div>
 
-                <div style={{marginTop:12,marginBottom:6,display:"flex",alignItems:"center",gap:10}}>
-                  <div style={{fontSize:15,fontWeight:700,color:"var(--navy)"}}>Líneas</div>
-                  <button className="btn-s" style={{fontSize:12,padding:"2px 8px"}} onClick={addLinea}>+ Agregar línea</button>
+                {/* GUÍA, TIPO DE ENVÍO Y TARIFA */}
+                <div style={{display:"flex",gap:14,flexWrap:"wrap",alignItems:"flex-end",background:"var(--bg4)",border:"1px solid var(--b1)",borderRadius:8,padding:"10px 12px",marginTop:6}}>
+                  <div><div className="fl">Guía</div><div style={{fontFamily:"'DM Mono',monospace",fontWeight:800,color:"var(--navy)"}}>{(f.guiaIds||[]).join(", ")||"—"}</div></div>
+                  <div><div className="fl">Tipo de envío</div><div style={{fontWeight:700}}>{f.tipoEnvio||"—"}</div></div>
+                  {f.tarifa?.ruta&&<div><div className="fl">Ruta</div><div style={{fontWeight:600}}>{f.tarifa.ruta}</div></div>}
+                  {fl.length>0&&<>
+                    <div><div className="fl">Tarifa por {uni}</div>{numIn(esAereoF?(f.tarifa?.porLb??0):(f.tarifa?.porFt3??0),v=>setTarifa(esAereoF?"porLb":"porFt3",v))}</div>
+                    <div><div className="fl">Mínimo factura</div>{numIn(f.tarifa?.min??0,v=>setTarifa("min",v))}</div>
+                  </>}
                 </div>
-                <table className="ct" style={{width:"100%"}}>
-                  <thead><tr><th style={{width:"50%"}}>Descripción</th><th style={{width:80}}>Cantidad</th><th style={{width:100}}>Precio</th><th style={{width:100}}>Total</th><th style={{width:40}}></th></tr></thead>
-                  <tbody>
-                    {(f.lineas||[]).map((l,i)=>(
-                      <tr key={i}>
-                        <td><input className="fi" value={l.descripcion} onChange={e=>updLinea(i,"descripcion",e.target.value)} placeholder="Descripción del servicio/producto"/></td>
-                        <td><input className="fi" type="number" step="0.01" value={l.cantidad} onChange={e=>updLinea(i,"cantidad",e.target.value)}/></td>
-                        <td><input className="fi" type="number" step="0.01" value={l.precio} onChange={e=>updLinea(i,"precio",e.target.value)}/></td>
-                        <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700,textAlign:"right"}}>{fmtMoney(l.total,f.moneda)}</td>
-                        <td><button className="btn-s" style={{fontSize:11,padding:"2px 6px",color:"var(--red)",borderColor:"var(--red)"}} onClick={()=>delLinea(i)}>✕</button></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
 
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginTop:14}}>
+                {/* WR Y FLETE */}
+                {fl.length>0&&<>
+                  <div style={secT}>📦 WR y flete <span style={{fontSize:13,color:"var(--t3)",fontWeight:500}}>({esAereoF?"aéreo: mayor entre peso real y volumétrico":"marítimo: pies cúbicos"})</span></div>
+                  <div style={{overflowX:"auto",border:"1px solid var(--b1)",borderRadius:8}}>
+                    <table className="ct" style={{width:"100%",fontSize:14}}>
+                      <thead><tr>
+                        <th>N° WR</th>{conCli&&<th>Cliente</th>}<th style={{textAlign:"right"}}>Cajas</th><th style={{textAlign:"right"}}>Lb.</th><th style={{textAlign:"right"}}>Lb. Vol</th><th style={{textAlign:"right"}}>Ft³</th>
+                        <th style={{textAlign:"right"}}>A cobrar ({uni})</th><th style={{textAlign:"right"}}>Tarifa</th><th style={{textAlign:"right"}}>Importe</th><th></th>
+                      </tr></thead>
+                      <tbody>
+                        {fl.map(l=>(
+                          <tr key={l._i}>
+                            <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)"}}>{l.wrId}</td>
+                            {conCli&&<td>{l.cliente}<div style={{fontSize:12,color:"var(--gold2)",fontFamily:"'DM Mono',monospace"}}>{l.casillero}</div></td>}
+                            <td style={{textAlign:"right"}}>{l.cajas}</td>
+                            <td style={{textAlign:"right",fontFamily:"'DM Mono',monospace"}}>{l.pesoLb}</td>
+                            <td style={{textAlign:"right",fontFamily:"'DM Mono',monospace"}}>{l.volLb}</td>
+                            <td style={{textAlign:"right",fontFamily:"'DM Mono',monospace"}}>{l.ft3}</td>
+                            <td style={{textAlign:"right"}}>{numIn(l.cantidad,v=>updL(l._i,"cantidad",v),80)}</td>
+                            <td style={{textAlign:"right"}}>{numIn(l.precio,v=>updL(l._i,"precio",v),80)}</td>
+                            <td style={{textAlign:"right",fontFamily:"'DM Mono',monospace",fontWeight:700}}>{fmtMoney(l.total,f.moneda)}</td>
+                            <td>{del(l._i)}</td>
+                          </tr>
+                        ))}
+                        <tr style={{background:"var(--bg4)",fontWeight:800}}>
+                          <td>{fl.length} WR</td>{conCli&&<td></td>}
+                          <td style={{textAlign:"right"}}>{sum(fl,"cajas")}</td>
+                          <td style={{textAlign:"right",fontFamily:"'DM Mono',monospace"}}>{r2(sum(fl,"pesoLb"))}</td>
+                          <td style={{textAlign:"right",fontFamily:"'DM Mono',monospace"}}>{r2(sum(fl,"volLb"))}</td>
+                          <td style={{textAlign:"right",fontFamily:"'DM Mono',monospace"}}>{r2(sum(fl,"ft3"))}</td>
+                          <td style={{textAlign:"right",fontFamily:"'DM Mono',monospace"}}>{r2(sum(fl,"cantidad"))} {uni}</td>
+                          <td></td>
+                          <td style={{textAlign:"right",fontFamily:"'DM Mono',monospace"}}>{fmtMoney(sum(fl,"total"),f.moneda)}</td><td></td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </>}
+
+                {/* SERVICIOS Y GASTOS ADICIONALES */}
+                <div style={secT}>⚡ Servicios y gastos adicionales
+                  <select className="fs" value="" style={{fontSize:13,padding:"3px 6px",width:"auto"}} onChange={e=>{
+                    const c=catalogo.find(x=>x.nombre===e.target.value);
+                    if(c)addL({tipo:"adicional",wrId:(f.wrIds||[])[0]||"",descripcion:c.nombre,precio:c.precio});
+                  }}>
+                    <option value="">+ Agregar del catálogo…</option>
+                    {catalogo.map(c=><option key={c.g+c.nombre} value={c.nombre}>{c.g}: {c.nombre} — {fmtMoney(c.precio,f.moneda)}</option>)}
+                  </select>
+                </div>
+                {ad.length===0?<div style={{fontSize:13,color:"var(--t3)"}}>—</div>:
+                  <table className="ct" style={{width:"100%",fontSize:14}}>
+                    <thead><tr><th>N° WR</th><th>Concepto</th><th style={{textAlign:"right"}}>Cant.</th><th style={{textAlign:"right"}}>Precio</th><th style={{textAlign:"right"}}>Importe</th><th></th></tr></thead>
+                    <tbody>{ad.map(l=>(
+                      <tr key={l._i}>
+                        <td><select className="fs" value={l.wrId||""} onChange={e=>updL(l._i,"wrId",e.target.value)} style={{fontSize:13,padding:"3px 6px"}}>
+                          <option value="">—</option>{(f.wrIds||[]).map(id=><option key={id} value={id}>{id}</option>)}</select></td>
+                        <td><input className="fi" value={l.descripcion} onChange={e=>updL(l._i,"descripcion",e.target.value)}/></td>
+                        <td style={{textAlign:"right"}}>{numIn(l.cantidad,v=>updL(l._i,"cantidad",v),70)}</td>
+                        <td style={{textAlign:"right"}}>{numIn(l.precio,v=>updL(l._i,"precio",v))}</td>
+                        <td style={{textAlign:"right",fontFamily:"'DM Mono',monospace",fontWeight:700}}>{fmtMoney(l.total,f.moneda)}</td>
+                        <td>{del(l._i)}</td>
+                      </tr>))}</tbody>
+                  </table>}
+
+                {/* COBROS EXTRA */}
+                <div style={secT}>➕ Cobros extra
+                  <button className="btn-s" style={{fontSize:12,padding:"3px 10px"}} onClick={()=>addL({tipo:"extra"})}>+ Agregar</button>
+                </div>
+                {ex.length===0?<div style={{fontSize:13,color:"var(--t3)"}}>—</div>:
+                  <table className="ct" style={{width:"100%",fontSize:14}}>
+                    <thead><tr><th>Concepto</th><th style={{textAlign:"right"}}>Cant.</th><th style={{textAlign:"right"}}>Precio</th><th style={{textAlign:"right"}}>Importe</th><th></th></tr></thead>
+                    <tbody>{ex.map(l=>(
+                      <tr key={l._i}>
+                        <td><input className="fi" value={l.descripcion||""} onChange={e=>updL(l._i,"descripcion",e.target.value)} placeholder="Concepto"/></td>
+                        <td style={{textAlign:"right"}}>{numIn(l.cantidad,v=>updL(l._i,"cantidad",v),70)}</td>
+                        <td style={{textAlign:"right"}}>{numIn(l.precio,v=>updL(l._i,"precio",v))}</td>
+                        <td style={{textAlign:"right",fontFamily:"'DM Mono',monospace",fontWeight:700}}>{fmtMoney(l.total,f.moneda)}</td>
+                        <td>{del(l._i)}</td>
+                      </tr>))}</tbody>
+                  </table>}
+
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginTop:16}}>
                   <div>
                     <label className="fl">Notas</label>
-                    <textarea className="fi" rows={3} value={f.notas||""} onChange={e=>setFacModal(p=>({...p,notas:e.target.value}))} style={{resize:"vertical"}}/>
+                    <textarea className="fi" rows={3} value={f.notas||""} onChange={e=>setFacModal(p=>({...p,notas:e.target.value}))} style={{resize:"vertical",textTransform:"none"}}/>
                     <label className="fl" style={{marginTop:8}}>Condiciones</label>
-                    <textarea className="fi" rows={2} value={f.condiciones||""} onChange={e=>setFacModal(p=>({...p,condiciones:e.target.value}))} style={{resize:"vertical"}}/>
+                    <textarea className="fi" rows={2} value={f.condiciones||""} onChange={e=>setFacModal(p=>({...p,condiciones:e.target.value}))} style={{resize:"vertical",textTransform:"none"}}/>
                   </div>
-                  <div>
-                    <div style={{background:"var(--bg4)",padding:12,borderRadius:8,border:"1px solid var(--b1)"}}>
-                      <div style={{display:"flex",justifyContent:"space-between",marginBottom:6,fontSize:14}}>
-                        <span>Subtotal:</span><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700}}>{fmtMoney(f.subtotal||0,f.moneda)}</span>
-                      </div>
-                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6,fontSize:14}}>
-                        <span>Descuento:</span>
-                        <input className="fi" type="number" step="0.01" value={f.descuento||0} onChange={e=>setFacModal(p=>{
-                          const desc=parseFloat(e.target.value)||0;
-                          const total=Math.max(0,(parseFloat(p.subtotal)||0)-desc);
-                          const saldo=Math.max(0,total-(parseFloat(p.pagado)||0));
-                          return{...p,descuento:desc,total,saldo};
-                        })} style={{width:100,fontFamily:"'DM Mono',monospace",textAlign:"right"}}/>
-                      </div>
-                      <div style={{display:"flex",justifyContent:"space-between",paddingTop:8,borderTop:"2px solid var(--navy)",fontSize:17,fontWeight:800,color:"var(--navy)"}}>
-                        <span>TOTAL:</span><span style={{fontFamily:"'DM Mono',monospace"}}>{fmtMoney(f.total||0,f.moneda)}</span>
-                      </div>
-                      {(f.pagado||0)>0&&<>
-                        <div style={{display:"flex",justifyContent:"space-between",marginTop:6,fontSize:13,color:"var(--green)"}}>
-                          <span>Pagado:</span><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700}}>{fmtMoney(f.pagado,f.moneda)}</span>
-                        </div>
-                        <div style={{display:"flex",justifyContent:"space-between",fontSize:13,color:"var(--orange)",fontWeight:700}}>
-                          <span>Saldo:</span><span style={{fontFamily:"'DM Mono',monospace"}}>{fmtMoney(f.saldo,f.moneda)}</span>
-                        </div>
-                      </>}
+                  <div style={{background:"var(--bg4)",padding:12,borderRadius:8,border:"1px solid var(--b1)",fontSize:14}}>
+                    {[["Flete",sum(fl,"total")],["Ajuste a mínimo",sum(mn,"total")],["Servicios y gastos",sum(ad,"total")],["Cobros extra",sum(ex,"total")]].filter(([k,v])=>v!==0||k==="Flete").map(([k,v])=>(
+                      <div key={k} style={{display:"flex",justifyContent:"space-between",marginBottom:4}}><span>{k}:</span><span style={{fontFamily:"'DM Mono',monospace"}}>{fmtMoney(v,f.moneda)}</span></div>
+                    ))}
+                    <div style={{display:"flex",justifyContent:"space-between",margin:"6px 0",paddingTop:6,borderTop:"1px solid var(--b1)",fontWeight:700}}><span>Subtotal:</span><span style={{fontFamily:"'DM Mono',monospace"}}>{fmtMoney(f.subtotal||0,f.moneda)}</span></div>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:6,marginBottom:6}}>
+                      <span>Descuento:</span>
+                      <span style={{display:"flex",gap:4,alignItems:"center"}}>
+                        <select className="fs" value={f.descuentoTipo||"monto"} onChange={e=>setF(p=>({...p,descuentoTipo:e.target.value}))} style={{fontSize:13,padding:"3px 6px",width:"auto"}}>
+                          <option value="monto">Monto</option><option value="pct">%</option>
+                        </select>
+                        {numIn(f.descuentoValor??0,v=>setF(p=>({...p,descuentoValor:parseFloat(v)||0})),80)}
+                        <span style={{fontFamily:"'DM Mono',monospace",color:"var(--red)",minWidth:80,textAlign:"right"}}>−{fmtMoney(f.descuento||0,f.moneda)}</span>
+                      </span>
                     </div>
+                    <div style={{display:"flex",justifyContent:"space-between",paddingTop:8,borderTop:"2px solid var(--navy)",fontSize:18,fontWeight:800,color:"var(--navy)"}}>
+                      <span>TOTAL:</span><span style={{fontFamily:"'DM Mono',monospace"}}>{fmtMoney(f.total||0,f.moneda)}</span>
+                    </div>
+                    {(f.pagado||0)>0&&<>
+                      <div style={{display:"flex",justifyContent:"space-between",marginTop:6,fontSize:13,color:"var(--green)"}}><span>Pagado:</span><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700}}>{fmtMoney(f.pagado,f.moneda)}</span></div>
+                      <div style={{display:"flex",justifyContent:"space-between",fontSize:13,color:"var(--orange)",fontWeight:700}}><span>Saldo:</span><span style={{fontFamily:"'DM Mono',monospace"}}>{fmtMoney(f.saldo,f.moneda)}</span></div>
+                    </>}
                   </div>
                 </div>
               </div>
@@ -12305,113 +12515,11 @@ export default function ENEXSystem(){
                   {f.status==="anulada"&&<span style={{marginLeft:10,color:"var(--red)",fontWeight:800}}>ANULADA</span>}
                 </div>
                 <div style={{display:"flex",gap:6}}>
-                  {hasPerm("imp_factura")&&<button className="btn-p" style={{fontSize:13,padding:"4px 10px"}} onClick={()=>window.print()}>🖨️ Imprimir</button>}
+                  {hasPerm("imp_factura")&&<button className="btn-p" style={{fontSize:13,padding:"4px 10px"}} onClick={()=>printFactura(f)}>🖨️ Imprimir</button>}
                   <button className="mcl" onClick={()=>setFacPrint(null)}>✕</button>
                 </div>
               </div>
-              <div className="mb" style={{padding:24,overflow:"auto",background:"#fff",color:"#000"}}>
-                <div id="print-area" style={{fontFamily:"Arial,Helvetica,sans-serif",color:"#000",fontSize:14}}>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",borderBottom:"2px solid #000",paddingBottom:10,marginBottom:14}}>
-                    <div>
-                      <div style={{fontSize:26,fontWeight:900,letterSpacing:3}}>ENEX</div>
-                      <div style={{fontSize:13}}>{empresaNombre||"Int'l Courier"}</div>
-                      <div style={{fontSize:12,color:"#555"}}>Paquetería Internacional</div>
-                    </div>
-                    <div style={{textAlign:"right"}}>
-                      <div style={{fontSize:15,fontWeight:800}}>{f.tipo==="nota_credito"?"NOTA DE CRÉDITO":f.tipo==="proforma"?"PROFORMA":"FACTURA"}</div>
-                      <div style={{fontSize:16,fontWeight:900,fontFamily:"'DM Mono',monospace"}}>Nº {f.id}</div>
-                      <div style={{fontSize:12,marginTop:4}}>Fecha: {fmtDate(f.fecha)}</div>
-                      {f.fechaEmision&&<div style={{fontSize:12}}>Emisión: {fmtDate(f.fechaEmision)}</div>}
-                      <div style={{fontSize:12}}>Moneda: {f.moneda}</div>
-                      {f.ncFacturaOrigen&&<div style={{fontSize:12,color:"#7209b7"}}>Ref. factura: {f.ncFacturaOrigen}</div>}
-                    </div>
-                  </div>
-
-                  <div style={{border:"1px solid #999",padding:"8px 10px",marginBottom:12,background:"#FAFAFA"}}>
-                    <div style={{fontSize:12,fontWeight:700,color:"#555",marginBottom:4}}>RECEPTOR ({(REC_TYPES.find(r=>r.k===f.receptorTipo)||{l:f.receptorTipo}).l})</div>
-                    <div style={{fontSize:15,fontWeight:700}}>{f.receptorNombre||"—"}</div>
-                    <div style={{fontSize:12,display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginTop:4}}>
-                      {f.receptorDoc&&<div><b>ID Identificación:</b> {f.receptorDoc}</div>}
-                      {f.receptorCasillero&&<div><b>Casillero:</b> {f.receptorCasillero}</div>}
-                      {f.receptorTel&&<div><b>Teléfono:</b> {f.receptorTel}</div>}
-                      {f.receptorEmail&&<div><b>Email:</b> {f.receptorEmail}</div>}
-                      {f.receptorDir&&<div style={{gridColumn:"1 / span 2"}}><b>Dirección:</b> {f.receptorDir}</div>}
-                    </div>
-                  </div>
-
-                  <table style={{width:"100%",borderCollapse:"collapse",fontSize:13,marginBottom:10}}>
-                    <thead>
-                      <tr style={{background:"#EEE"}}>
-                        <th style={{border:"1px solid #999",padding:"5px 6px",textAlign:"left"}}>Descripción</th>
-                        <th style={{border:"1px solid #999",padding:"5px 6px",textAlign:"center",width:60}}>Cant</th>
-                        <th style={{border:"1px solid #999",padding:"5px 6px",textAlign:"right",width:90}}>Precio</th>
-                        <th style={{border:"1px solid #999",padding:"5px 6px",textAlign:"right",width:100}}>Total</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(f.lineas||[]).map((l,i)=>(
-                        <tr key={i}>
-                          <td style={{border:"1px solid #999",padding:"4px 6px"}}>{l.descripcion||"—"}</td>
-                          <td style={{border:"1px solid #999",padding:"4px 6px",textAlign:"center"}}>{l.cantidad}</td>
-                          <td style={{border:"1px solid #999",padding:"4px 6px",textAlign:"right",fontFamily:"monospace"}}>{fmtMoney(l.precio,f.moneda)}</td>
-                          <td style={{border:"1px solid #999",padding:"4px 6px",textAlign:"right",fontFamily:"monospace",fontWeight:700}}>{fmtMoney(l.total,f.moneda)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-
-                  <div style={{display:"flex",justifyContent:"flex-end",marginBottom:14}}>
-                    <table style={{fontSize:13,minWidth:280}}>
-                      <tbody>
-                        <tr><td style={{padding:"2px 8px"}}>Subtotal:</td><td style={{padding:"2px 8px",textAlign:"right",fontFamily:"monospace"}}>{fmtMoney(f.subtotal,f.moneda)}</td></tr>
-                        {(f.descuento||0)>0&&<tr><td style={{padding:"2px 8px"}}>Descuento:</td><td style={{padding:"2px 8px",textAlign:"right",fontFamily:"monospace"}}>−{fmtMoney(f.descuento,f.moneda)}</td></tr>}
-                        <tr style={{fontWeight:900,borderTop:"2px solid #000"}}><td style={{padding:"6px 8px",fontSize:15}}>TOTAL:</td><td style={{padding:"6px 8px",textAlign:"right",fontFamily:"monospace",fontSize:16}}>{fmtMoney(f.total,f.moneda)}</td></tr>
-                        {(f.pagado||0)>0&&<tr style={{color:"#0B6B2F"}}><td style={{padding:"2px 8px"}}>Pagado:</td><td style={{padding:"2px 8px",textAlign:"right",fontFamily:"monospace",fontWeight:700}}>{fmtMoney(f.pagado,f.moneda)}</td></tr>}
-                        {f.saldo>0.001&&<tr style={{color:"#C96703",fontWeight:800}}><td style={{padding:"2px 8px"}}>Saldo:</td><td style={{padding:"2px 8px",textAlign:"right",fontFamily:"monospace"}}>{fmtMoney(f.saldo,f.moneda)}</td></tr>}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {pagosAplic.length>0&&<div style={{marginBottom:14}}>
-                    <div style={{fontSize:13,fontWeight:700,marginBottom:4}}>Pagos aplicados ({pagosAplic.length})</div>
-                    <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
-                      <thead><tr style={{background:"#EEE"}}>
-                        <th style={{border:"1px solid #999",padding:"3px 6px",textAlign:"left"}}>Nº Pago</th>
-                        <th style={{border:"1px solid #999",padding:"3px 6px",textAlign:"left"}}>Fecha</th>
-                        <th style={{border:"1px solid #999",padding:"3px 6px",textAlign:"left"}}>Tipo</th>
-                        <th style={{border:"1px solid #999",padding:"3px 6px",textAlign:"left"}}>Ref.</th>
-                        <th style={{border:"1px solid #999",padding:"3px 6px",textAlign:"right"}}>Monto</th>
-                      </tr></thead>
-                      <tbody>
-                        {pagosAplic.map(p=>(
-                          <tr key={p.id}>
-                            <td style={{border:"1px solid #999",padding:"3px 6px",fontFamily:"monospace"}}>{p.id}</td>
-                            <td style={{border:"1px solid #999",padding:"3px 6px"}}>{fmtDate(p.fecha)}</td>
-                            <td style={{border:"1px solid #999",padding:"3px 6px"}}>{(PAY_METHODS.find(m=>m.k===p.tipoPago)||{l:p.tipoPago}).l}</td>
-                            <td style={{border:"1px solid #999",padding:"3px 6px"}}>{p.referencia||"—"}{p.notaReferencial?` · ${p.notaReferencial}`:""}</td>
-                            <td style={{border:"1px solid #999",padding:"3px 6px",textAlign:"right",fontFamily:"monospace",fontWeight:700}}>{fmtMoney(p.monto,p.moneda)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>}
-
-                  {f.notas&&<div style={{marginBottom:10,fontSize:12,whiteSpace:"pre-wrap"}}><b>Notas:</b> {f.notas}</div>}
-                  {f.condiciones&&<div style={{marginBottom:10,fontSize:12,whiteSpace:"pre-wrap",color:"#555"}}><b>Condiciones:</b> {f.condiciones}</div>}
-                  {f.status==="anulada"&&f.motivoAnulacion&&<div style={{marginBottom:10,fontSize:13,color:"#C62828",fontWeight:700}}>Motivo anulación: {f.motivoAnulacion}</div>}
-
-                  <div style={{display:"flex",justifyContent:"space-between",gap:40,marginTop:40}}>
-                    <div style={{flex:1,textAlign:"center"}}>
-                      <div style={{borderTop:"1px solid #000",paddingTop:4,fontSize:12,fontWeight:700}}>ENEX</div>
-                      <div style={{fontSize:11,color:"#555",marginTop:2}}>Firma y sello</div>
-                    </div>
-                    <div style={{flex:1,textAlign:"center"}}>
-                      <div style={{borderTop:"1px solid #000",paddingTop:4,fontSize:12,fontWeight:700}}>Cliente</div>
-                      <div style={{fontSize:11,color:"#555",marginTop:2}}>{f.receptorNombre||"—"}</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <iframe title="Factura" srcDoc={facturaHTML(f)} style={{width:"100%",height:"78vh",border:"none",background:"#fff"}}/>
             </div>
           </div>
         );
