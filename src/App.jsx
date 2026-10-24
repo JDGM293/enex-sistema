@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, Fragment } from "react";
 import { createPortal } from "react-dom";
-import { dbGetClientes, dbUpsertCliente, dbDeleteCliente, dbGetWR, dbUpsertWR, dbDeleteWR, dbGetAgentes, dbUpsertAgente, dbDeleteAgente, dbGetOficinas, dbUpsertOficina, dbDeleteOficina, dbGetTarifas, dbUpsertTarifa, dbDeleteTarifa, dbGetConsolidaciones, dbUpsertConsolidacion, dbDeleteConsolidacion, dbGetCargoReleases, dbUpsertCargoRelease, dbDeleteCargoRelease, dbGetDeliveryNotes, dbUpsertDeliveryNote, dbDeleteDeliveryNote, dbGetFacturas, dbUpsertFactura, dbDeleteFactura, dbGetPagos, dbUpsertPago, dbDeletePago, dbLogActividad, dbGetActividad, dbGetConfig, dbSetConfig, dbGetScanLog, dbInsertScan, dbSetScanRegistered, dbDeleteScanIds, storageUploadFoto, storageDeleteFoto, dbGetFotosByWR, dbInsertFoto, dbDeleteFoto, storageUploadFotoConsol, storageDeleteFotoConsol, dbGetFotosByConsol, dbInsertFotoConsol, dbDeleteFotoConsol } from "./supabase";
+import { supabase, resolverLogin, cuentaGuardar, cuentaEliminar, dbGetClientes, dbUpsertCliente, dbDeleteCliente, dbGetWR, dbUpsertWR, dbDeleteWR, dbGetAgentes, dbUpsertAgente, dbDeleteAgente, dbGetOficinas, dbUpsertOficina, dbDeleteOficina, dbGetTarifas, dbUpsertTarifa, dbDeleteTarifa, dbGetConsolidaciones, dbUpsertConsolidacion, dbDeleteConsolidacion, dbGetCargoReleases, dbUpsertCargoRelease, dbDeleteCargoRelease, dbGetDeliveryNotes, dbUpsertDeliveryNote, dbDeleteDeliveryNote, dbGetFacturas, dbUpsertFactura, dbDeleteFactura, dbGetPagos, dbUpsertPago, dbDeletePago, dbLogActividad, dbGetActividad, dbGetConfig, dbSetConfig, dbGetScanLog, dbInsertScan, dbSetScanRegistered, dbDeleteScanIds, storageUploadFoto, storageDeleteFoto, dbGetFotosByWR, dbInsertFoto, dbDeleteFoto, storageUploadFotoConsol, storageDeleteFotoConsol, dbGetFotosByConsol, dbInsertFotoConsol, dbDeleteFotoConsol } from "./supabase";
 
 // ─── TEMA CLARO PROFESIONAL ───────────────────────────────────────────────────
 const S = `
@@ -1619,10 +1619,10 @@ const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomo
         </div>
         {/* Password para todos los registros */}
         <div className="fgrid g2" style={{marginBottom:10}}>
-          <div className="fg"><div className="fl">Contraseña {f.tipo==="usuario"?"*":"(acceso al sistema)"}</div>
-            <input className="fi" type="password" value={f.password||""} onChange={e=>ff("password",e.target.value)} placeholder="Mínimo 6 caracteres"/>
+          <div className="fg"><div className="fl">{initial?.authId?"Nueva contraseña":"Contraseña (acceso al sistema)"}</div>
+            <input className="fi" type="password" autoComplete="new-password" value={f.password||""} onChange={e=>ff("password",e.target.value)} placeholder={initial?.authId?"Déjala en blanco para no cambiarla":"Mínimo 6 caracteres"}/>
           </div>
-          <div className="fg"><div className="fl" style={{fontSize:12,color:"var(--t3)"}}>{f.tipo==="usuario"?"El usuario podrá cambiarla al ingresar.":"Déjalo en blanco si el cliente no accede al sistema."}</div></div>
+          <div className="fg"><div className="fl" style={{fontSize:12,color:initial?.authId?"var(--green)":"var(--t3)"}}>{initial?.authId?"✓ Tiene acceso al sistema":"Sin acceso. Escribe una contraseña para dárselo."}</div></div>
         </div>
         <div className="sdiv">DIRECCIÓN COMPLETA</div>
         <div className="fgrid g2" style={{marginBottom:10}}>
@@ -1646,6 +1646,8 @@ const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomo
             const dup=allClients.find(c=>c.id!==f.id&&(c.email||"").trim().toLowerCase()===emailLower);
             if(dup){setEmailErr(`El email ya está registrado por ${dup.primerNombre} ${dup.primerApellido} (${dup.casillero||dup.id})`);return;}
           }
+          if(f.password&&f.password.length<6){setEmailErr("La contraseña debe tener al menos 6 caracteres.");return;}
+          if(f.password&&!(f.email||"").trim()&&!(f.login||"").trim()){setEmailErr(f.tipo==="usuario"?"Para dar acceso hace falta un email o un nombre de usuario.":"Para dar acceso al cliente hace falta su email.");return;}
           // Un usuario del sistema necesita un rol de trabajo (no "Cliente")
           if(f.tipo==="usuario"&&(!f.rol||["H","I"].includes(f.rol))){setEmailErr("Selecciona el rol del usuario.");return;}
           setEmailErr("");
@@ -1972,13 +1974,21 @@ function PhotoGalleryModal({ wrId, currentUser, onClose }){
 export default function ENEXSystem(){
   // ── LOGIN STATE ────────────────────────────────────────────────────────────
   const [currentUser,setCurrentUser]=useState(null);
-  // true mientras se cargan los datos y hay una sesión guardada que restaurar
-  // (evita que se vea el login un instante antes de entrar solo).
-  const [sessRestoring,setSessRestoring]=useState(()=>!!sessRead());
-  // Usuarios ya cargados desde la base de datos (el login solo acepta esos).
-  const [clientsDb,setClientsDb]=useState(false);
-  // Si la base de datos no responde, no quedarse en "Cargando…" para siempre.
-  useEffect(()=>{if(!sessRestoring)return;const t=setTimeout(()=>setSessRestoring(false),10000);return()=>clearTimeout(t);},[sessRestoring]);
+  // Sesión de Supabase Auth: contraseñas cifradas y login en el servidor
+  const [authUid,setAuthUid]=useState(null);
+  const [authReady,setAuthReady]=useState(false);
+  const [recovery,setRecovery]=useState(false);   // llegó del enlace "olvidé mi contraseña"
+  const [loginBusy,setLoginBusy]=useState(false);
+  const [loginInfo,setLoginInfo]=useState("");
+  const [pwModal,setPwModal]=useState(null);       // cambiar mi contraseña {a,b,err,ok}
+  useEffect(()=>{
+    supabase.auth.getSession().then(({data})=>{setAuthUid(data.session?.user?.id||null);setAuthReady(true);});
+    const {data:sub}=supabase.auth.onAuthStateChange((event,session)=>{
+      if(event==="PASSWORD_RECOVERY")setRecovery(true);
+      setAuthUid(session?.user?.id||null);
+    });
+    return()=>sub.subscription.unsubscribe();
+  },[]);
   const [loginEmail,setLoginEmail]=useState("");
   const [loginPass,setLoginPass]=useState("");
   const [loginErr,setLoginErr]=useState("");
@@ -2054,12 +2064,13 @@ export default function ENEXSystem(){
   const [roleDraft,setRoleDraft]=useState({}); // cambios sin guardar {rol:[perms]}
   const [roleSaving,setRoleSaving]=useState(false);
   useEffect(()=>{
+    if(!authUid)return;
     dbGetConfig('role_perms').then(v=>{
       if(v&&typeof v==="object"&&!Array.isArray(v)){
         setRolePerms({...DEFAULT_ROLE_PERMS,...Object.fromEntries(Object.entries(v).filter(([k,arr])=>DEFAULT_ROLE_PERMS[k]&&Array.isArray(arr)))});
       }
     }).catch(e=>console.error("role_perms:",e));
-  },[]);
+  },[authUid]);
   const [ecSearch,setEcSearch]=useState("");
   const [ecCliente,setEcCliente]=useState(null);
   const [ecResults,setEcResults]=useState([]);
@@ -2140,8 +2151,9 @@ export default function ENEXSystem(){
   const [notasLegales,setNotasLegales]=useState({});
   const [notaDraft,setNotaDraft]=useState(null); // {pais, texto} mientras se edita
   useEffect(()=>{
+    if(!authUid)return;
     dbGetConfig('notas_legales').then(v=>{if(v&&typeof v==="object"&&!Array.isArray(v))setNotasLegales(v);}).catch(e=>console.error("notas_legales:",e));
-  },[]);
+  },[authUid]);
   const [cfgNewCity,setCfgNewCity]=useState("");
   const [cfgNewPais,setCfgNewPais]=useState("");
   const [cfgNewCont,setCfgNewCont]=useState({code:"",name:"",dim:"",maxLb:""});
@@ -2226,8 +2238,9 @@ export default function ENEXSystem(){
     if(tab==="clients") setClFilter("");
   /* eslint-disable-next-line */
   },[tab]);
-  // ── SUPABASE: cargar datos al iniciar ────────────────────────────────────
+  // ── SUPABASE: cargar datos al iniciar sesión ─────────────────────────────
   useEffect(()=>{
+    if(!authUid)return;
     const load=async()=>{
       const [cls,wrs,ags,ofs,tfs,cons,acts,scans,crs,dns,facs,pgs,sendT,payT,chargesT,contT,countriesT,
              wrNumT,wrSecT,consolNumT,consolSecT,empSlugT,labelWRT,labelCsaT,facSecT]=await Promise.all([
@@ -2241,14 +2254,11 @@ export default function ENEXSystem(){
         dbGetConfig('empresa_slug'),dbGetConfig('label_wr_tipo'),dbGetConfig('label_csa_tipo'),
         dbGetConfig('factura_sec_next'),
       ]);
-      if(cls.length>0){setClients(cls);setClientsDb(true);}
-      // Restaurar la sesión guardada (si sigue vigente y el usuario existe en la BD)
-      {const ses=sessRead();
-       if(ses){
-         const u=cls.find(c=>c.id===ses.id);
-         if(u)setCurrentUser(u);else sessClear();
-       }
-       setSessRestoring(false);}
+      if(cls.length>0)setClients(cls);
+      // Usuario de la sesión: el registro enlazado a la cuenta
+      {const u=cls.find(c=>c.authId===authUid&&c.activo!==false);
+       if(u)setCurrentUser(u);
+       else{await supabase.auth.signOut();setLoginErr("Esta cuenta no tiene acceso al sistema.");setAuthUid(null);}}
       if(wrs.length>0){
         // Mapeo de códigos viejos → nuevos (migración automática al cargar)
         const OLD_MAP={"1":"1","2":"1","2.1":"2","2.2":"3","2.3":"3",
@@ -2303,30 +2313,57 @@ export default function ENEXSystem(){
       // Guía consolidada ahora solo tiene 2 tipos; normalizar si había 3 o 4 guardado
       if(labelCsaT){const n=parseInt(labelCsaT)||1;setLabelCSATipo(n>=2?2:1);}
     };
-    load();
-  },[]);
+    load().catch(async e=>{
+      console.error("load:",e);
+      setLoginErr("No se pudieron cargar los datos. Vuelve a entrar.");
+      try{await supabase.auth.signOut();}catch{}
+      setAuthUid(null);
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[authUid]);
 
   // ── LOGIN HANDLER ──────────────────────────────────────────────────────────
-  const doLogin=()=>{
-    const email=loginEmail.toLowerCase().trim();
-    // Solo usuarios de la base de datos. Antes también se aceptaba la lista de
-    // ejemplo del código (CLIENTS_INIT), que tiene admin@enex.com / admin123:
-    // cualquiera podía entrar como administrador.
-    if(!email||!loginPass){setLoginErr("Escribe tu correo y contraseña");return;}
-    if(!clientsDb){setLoginErr("Conectando con la base de datos… intenta de nuevo en unos segundos.");return;}
-    const u=clients.find(c=>(c.email||"").toLowerCase()===email&&c.password===loginPass);
-    if(u){setCurrentUser(u);setLoginErr("");sessSave(u.id);}
-    else setLoginErr("Correo o contraseña incorrectos");
+  const doLogin=async()=>{
+    const quien=loginEmail.trim();
+    if(!quien||!loginPass){setLoginErr("Escribe tu email o usuario y tu contraseña");return;}
+    setLoginBusy(true);setLoginErr("");setLoginInfo("");
+    try{
+      const email=await resolverLogin(quien);
+      if(!email){setLoginErr("Usuario o contraseña incorrectos");return;}
+      const {error}=await supabase.auth.signInWithPassword({email,password:loginPass});
+      if(error){setLoginErr(/confirm/i.test(error.message)?"La cuenta no está confirmada":"Usuario o contraseña incorrectos");return;}
+      setLoginPass("");
+    }catch{setLoginErr("No se pudo conectar. Inténtalo de nuevo.");}
+    finally{setLoginBusy(false);}
+  };
+  // Tras guardar un registro: crea o actualiza su cuenta de acceso (clave cifrada en Supabase Auth)
+  const sincronizarCuenta=async(rec,password,anterior=null)=>{
+    const tieneCuenta=!!anterior?.authId;
+    const cambioId=anterior&&((anterior.email||"")!==(rec.email||"")||(anterior.login||"")!==(rec.login||""));
+    if(!password&&!(tieneCuenta&&cambioId))return;
+    const r=await cuentaGuardar(rec.id,password||"");
+    if(r?.ok===false){window.alert(`Datos guardados, pero el acceso no se pudo ${tieneCuenta?"actualizar":"crear"}: ${r.error}`);return;}
+    if(r?.creada)setClients(p=>p.map(c=>c.id===rec.id?{...c,authId:"(nueva)"}:c));
+    logAction(tieneCuenta?(password?"Cambió contraseña de":"Actualizó acceso de"):"Creó acceso para",`${rec.id} — ${r?.email||""}`);
+  };
+  const doOlvide=async()=>{
+    const quien=loginEmail.trim();
+    if(!quien){setLoginErr("Escribe tu email o usuario y vuelve a pulsar «¿Olvidaste tu contraseña?»");return;}
+    setLoginErr("");setLoginInfo("");
+    const email=await resolverLogin(quien);
+    if(!email){setLoginInfo("Si la cuenta existe, recibirás un correo para crear una nueva contraseña.");return;}
+    if(email.endsWith("@usuarios.enex.app")){setLoginInfo("Tu usuario no tiene email: pide al administrador que te asigne una nueva contraseña.");return;}
+    await supabase.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin});
+    setLoginInfo("Si la cuenta existe, recibirás un correo para crear una nueva contraseña.");
+  };
+  const cambiarMiClave=async(nueva)=>{
+    const {error}=await supabase.auth.updateUser({password:nueva});
+    return error?(/same|different/i.test(error.message)?"La nueva contraseña debe ser distinta de la actual":"No se pudo cambiar la contraseña"):null;
   };
 
-  const doLogout=()=>{
-    sessClear();
-    // Si la vista estaba limitada a una oficina, recargar para no arrastrar el filtro
-    if(wrAllRef.current){window.location.reload();return;}
-    setCurrentUser(null);
-    setLoginEmail("");
-    setLoginPass("");
-    setLoginErr("");
+  const doLogout=async()=>{
+    try{await supabase.auth.signOut();}catch{}
+    window.location.reload();
   };
 
   // ── LOGIN GATE ─────────────────────────────────────────────────────────────
@@ -2343,7 +2380,25 @@ export default function ENEXSystem(){
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[currentUser?.id,wrLoadTick,deliveryNotes,clients,oficinas,COUNTRIES,rolePerms]);
 
-  if(!currentUser&&sessRestoring)return(
+  // Recuperación de contraseña (llegó desde el enlace del correo)
+  if(recovery)return(
+    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"var(--navy)"}}>
+      <style>{S}</style>
+      <div style={{background:"white",borderRadius:16,padding:40,width:360,boxShadow:"0 8px 40px rgba(0,0,0,.3)"}}>
+        <div style={{textAlign:"center",fontSize:20,fontWeight:800,color:"var(--navy)",marginBottom:16}}>Nueva contraseña</div>
+        <form onSubmit={async e=>{e.preventDefault();const a=e.target.a.value,b=e.target.b.value;
+          if(a.length<6){setLoginErr("Mínimo 6 caracteres");return;}if(a!==b){setLoginErr("Las contraseñas no coinciden");return;}
+          const err=await cambiarMiClave(a);if(err){setLoginErr(err);return;}setLoginErr("");setRecovery(false);}}
+          style={{display:"flex",flexDirection:"column",gap:12}}>
+          <input className="fi" name="a" type="password" placeholder="Nueva contraseña (mínimo 6)"/>
+          <input className="fi" name="b" type="password" placeholder="Repite la contraseña"/>
+          {loginErr&&<div style={{color:"var(--red)",fontSize:14,textAlign:"center"}}>{loginErr}</div>}
+          <button className="btn-p" type="submit">Guardar y entrar</button>
+        </form>
+      </div>
+    </div>
+  );
+  if(!currentUser&&(!authReady||authUid))return(
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"var(--navy)",color:"#fff",fontFamily:"Arial,Helvetica,sans-serif",fontSize:16}}>
       <style>{S}</style>
       Cargando…
@@ -2358,10 +2413,12 @@ export default function ENEXSystem(){
           <div style={{fontSize:15,color:"var(--t3)"}}>International Courier — Sistema</div>
         </div>
         <div style={{display:"flex",flexDirection:"column",gap:12}}>
-          <input className="fi" placeholder="Correo electrónico" value={loginEmail} onChange={e=>setLoginEmail(e.target.value)} onKeyDown={e=>e.key==="Enter"&&doLogin()}/>
-          <input className="fi" type="password" placeholder="Contraseña" value={loginPass} onChange={e=>setLoginPass(e.target.value)} onKeyDown={e=>e.key==="Enter"&&doLogin()}/>
+          <input className="fi" placeholder="Email o usuario" autoComplete="username" value={loginEmail} onChange={e=>setLoginEmail(e.target.value)} onKeyDown={e=>e.key==="Enter"&&doLogin()} style={{textTransform:"none"}}/>
+          <input className="fi" type="password" autoComplete="current-password" placeholder="Contraseña" value={loginPass} onChange={e=>setLoginPass(e.target.value)} onKeyDown={e=>e.key==="Enter"&&doLogin()}/>
           {loginErr&&<div style={{color:"var(--red)",fontSize:14,textAlign:"center"}}>{loginErr}</div>}
-          <button className="btn-p" onClick={doLogin} style={{marginTop:8}}>Ingresar</button>
+          {loginInfo&&<div style={{color:"var(--green)",fontSize:14,textAlign:"center"}}>{loginInfo}</div>}
+          <button className="btn-p" onClick={doLogin} disabled={loginBusy} style={{marginTop:8}}>{loginBusy?"Entrando…":"Ingresar"}</button>
+          <button type="button" onClick={doOlvide} style={{background:"none",border:"none",color:"var(--navy)",cursor:"pointer",fontSize:13,textDecoration:"underline"}}>¿Olvidaste tu contraseña?</button>
         </div>
       </div>
     </div>
@@ -3229,7 +3286,7 @@ export default function ENEXSystem(){
                   <td style={{fontSize:12,color:parentName&&parentName.startsWith("⚠️")?"var(--red)":ct==="matriz"?"var(--t3)":"var(--t1)",fontWeight:ct==="matriz"?400:600,whiteSpace:"nowrap"}}>{parentName}</td>
                   {(hasPerm("editar_cliente")||hasPerm("borrar_cliente"))&&<td><div style={{display:"flex",gap:3}}>
                     {hasPerm("editar_cliente")&&<span className="ic-b" onClick={()=>setShowEditCl(c)}>✏️</span>}
-                    {hasPerm("borrar_cliente")&&<span className="ic-b" style={{color:"var(--red)"}} onClick={()=>{if(window.confirm(`¿Borrar "${fullName(c)}"? Esta acción no se puede deshacer.`)){setClients(p=>p.filter(x=>x.id!==c.id));dbDeleteCliente(c.id);logAction("Borró registro",`${c.id} — ${fullName(c)}`);}}}>🗑</span>}
+                    {hasPerm("borrar_cliente")&&<span className="ic-b" style={{color:"var(--red)"}} onClick={()=>{if(window.confirm(`¿Borrar "${fullName(c)}"? Esta acción no se puede deshacer.`)){setClients(p=>p.filter(x=>x.id!==c.id));(async()=>{if(c.authId)await cuentaEliminar(c.id);await dbDeleteCliente(c.id);})();logAction("Borró registro",`${c.id} — ${fullName(c)}`);}}}>🗑</span>}
                   </div></td>}
                 </tr>
                 );
@@ -10460,7 +10517,8 @@ export default function ENEXSystem(){
             <div style={{flex:1,minWidth:0}}><div className="u-nm">{currentUser.primerNombre} {currentUser.primerApellido}</div><div className="u-rl">{currentUser.email}</div></div>
             <RoleBadge code={currentUser.rol}/>
           </div>
-          <button className="btn-d" style={{width:"100%",marginTop:8,fontSize:13,padding:"6px 10px"}} onClick={doLogout}>🚪 Cerrar sesión</button>
+          <button className="btn-s" style={{width:"100%",marginTop:8,fontSize:13,padding:"6px 10px"}} onClick={()=>setPwModal({a:"",b:"",err:"",ok:false})}>🔑 Cambiar contraseña</button>
+          <button className="btn-d" style={{width:"100%",marginTop:6,fontSize:13,padding:"6px 10px"}} onClick={doLogout}>🚪 Cerrar sesión</button>
         </div>
       </div>
 
@@ -11163,8 +11221,8 @@ export default function ENEXSystem(){
         );
       })()}
 
-      {showNewCl&&<ClientModal agentes={agentes} oficinas={oficinas} autonomos={clients.filter(c=>c.tipo==="usuario"&&c.rol==="F")} allClients={clients} title="➕ Nuevo Registro" initial={{tipo:"cliente",clienteTipo:"matriz",primerNombre:"",segundoNombre:"",primerApellido:"",segundoApellido:"",cedula:"",dir:"",municipio:"",estado:"",pais:"",cp:"",tel1:"",tel2:"",email:"",casillero:"",rol:"I",password:"",...presetDominio()}} onClose={()=>setShowNewCl(false)} onSave={f=>{const esUser=f.tipo==="usuario";const prefix=esUser?"U":"C";const nextNum=clients.filter(c=>c.tipo===(esUser?"usuario":"cliente")).length+1;const newId=`${prefix}-${String(nextNum).padStart(3,"0")}`;const casillero=(!esUser&&!f.casillero)?nextCasillero():f.casillero;const newRec={...f,id:newId,casillero,clienteTipo:f.clienteTipo||"matriz"};setClients(p=>[...p,newRec]);dbUpsertCliente(newRec);setShowNewCl(false);logAction("Creó registro",`${newId} — ${f.primerNombre} ${f.primerApellido}`);}}/>}
-      {showEditCl&&<ClientModal agentes={agentes} oficinas={oficinas} autonomos={clients.filter(c=>c.tipo==="usuario"&&c.rol==="F")} allClients={clients} title={`✏️ Editar — ${fullName(showEditCl)}`} initial={showEditCl} onClose={()=>setShowEditCl(null)} onSave={f=>{setClients(p=>p.map(c=>c.id===f.id?f:c));dbUpsertCliente({...f,clienteTipo:f.clienteTipo||"matriz"});logAction("Editó registro",`${f.id} — ${f.primerNombre} ${f.primerApellido}`);setShowEditCl(null);}}/>}
+      {showNewCl&&<ClientModal agentes={agentes} oficinas={oficinas} autonomos={clients.filter(c=>c.tipo==="usuario"&&c.rol==="F")} allClients={clients} title="➕ Nuevo Registro" initial={{tipo:"cliente",clienteTipo:"matriz",primerNombre:"",segundoNombre:"",primerApellido:"",segundoApellido:"",cedula:"",dir:"",municipio:"",estado:"",pais:"",cp:"",tel1:"",tel2:"",email:"",casillero:"",rol:"I",password:"",...presetDominio()}} onClose={()=>setShowNewCl(false)} onSave={f=>{const esUser=f.tipo==="usuario";const prefix=esUser?"U":"C";const nextNum=clients.filter(c=>c.tipo===(esUser?"usuario":"cliente")).length+1;const newId=`${prefix}-${String(nextNum).padStart(3,"0")}`;const casillero=(!esUser&&!f.casillero)?nextCasillero():f.casillero;const newRec={...f,id:newId,casillero,clienteTipo:f.clienteTipo||"matriz",password:""};setClients(p=>[...p,newRec]);setShowNewCl(false);logAction("Creó registro",`${newId} — ${f.primerNombre} ${f.primerApellido}`);(async()=>{await dbUpsertCliente(newRec);await sincronizarCuenta(newRec,f.password);})();}}/>}
+      {showEditCl&&<ClientModal agentes={agentes} oficinas={oficinas} autonomos={clients.filter(c=>c.tipo==="usuario"&&c.rol==="F")} allClients={clients} title={`✏️ Editar — ${fullName(showEditCl)}`} initial={showEditCl} onClose={()=>setShowEditCl(null)} onSave={f=>{const ant=showEditCl;const rec={...f,clienteTipo:f.clienteTipo||"matriz",password:""};setClients(p=>p.map(c=>c.id===f.id?rec:c));logAction("Editó registro",`${f.id} — ${f.primerNombre} ${f.primerApellido}`);setShowEditCl(null);(async()=>{await dbUpsertCliente(rec);await sincronizarCuenta(rec,f.password,ant);})();}}/>}
 
       {/* ── Cargo Release — MODAL FORMULARIO ───────────────────────────────── */}
       {crModal&&(()=>{
@@ -11360,6 +11418,32 @@ export default function ENEXSystem(){
       })()}
 
       {/* ── Delivery Note — MODAL FORMULARIO ────────────────────────────────── */}
+      {pwModal&&(
+        <div className="ov" onClick={()=>setPwModal(null)}>
+          <div className="modal" style={{maxWidth:400}} onClick={e=>e.stopPropagation()}>
+            <div className="mhd"><div className="mt">🔑 Cambiar mi contraseña</div><button className="mcl" onClick={()=>setPwModal(null)}>✕</button></div>
+            <div className="mbd" style={{display:"flex",flexDirection:"column",gap:10}}>
+              {pwModal.ok
+                ?<div style={{color:"var(--green)",fontWeight:700,textAlign:"center",padding:10}}>✓ Contraseña cambiada</div>
+                :<>
+                  <input className="fi" type="password" placeholder="Nueva contraseña (mínimo 6)" value={pwModal.a} onChange={e=>setPwModal(p=>({...p,a:e.target.value}))}/>
+                  <input className="fi" type="password" placeholder="Repite la contraseña" value={pwModal.b} onChange={e=>setPwModal(p=>({...p,b:e.target.value}))}/>
+                  {pwModal.err&&<div style={{color:"var(--red)",fontSize:14}}>{pwModal.err}</div>}
+                </>}
+            </div>
+            <div className="mft">
+              <button className="btn-s" onClick={()=>setPwModal(null)}>{pwModal.ok?"Cerrar":"Cancelar"}</button>
+              {!pwModal.ok&&<button className="btn-p" onClick={async()=>{
+                if(pwModal.a.length<6){setPwModal(p=>({...p,err:"Mínimo 6 caracteres"}));return;}
+                if(pwModal.a!==pwModal.b){setPwModal(p=>({...p,err:"Las contraseñas no coinciden"}));return;}
+                const err=await cambiarMiClave(pwModal.a);
+                setPwModal(p=>err?{...p,err}:{a:"",b:"",err:"",ok:true});
+                if(!err)logAction("Cambió su contraseña",currentUser.id);
+              }}>Guardar</button>}
+            </div>
+          </div>
+        </div>
+      )}
       {dnQuick&&(()=>{
         const f=dnQuick;
         const esDesp=f.tipo==="despacho";

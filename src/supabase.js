@@ -8,6 +8,26 @@ const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
+// ── CUENTAS DE ACCESO (Supabase Auth) ───────────────────────────
+// Las contraseñas ya no se guardan en la tabla: viven cifradas en Supabase Auth.
+export const resolverLogin = async (quien) => {
+  const { data, error } = await supabase.rpc('resolver_login', { p: quien })
+  if (error) { console.error('resolverLogin:', error); return null }
+  return data || null
+}
+const llamarCuentas = async (body) => {
+  const { data, error } = await supabase.functions.invoke('gestion-cuentas', { body })
+  if (error) {
+    let msg = error.message
+    try { const j = await error.context.json(); msg = j.error || msg } catch { /* sin detalle */ }
+    return { ok: false, error: msg }
+  }
+  return data || { ok: true }
+}
+// Crea la cuenta (si no existe) o actualiza email/usuario y, si se indica, la contraseña
+export const cuentaGuardar = (clienteId, password = '') => llamarCuentas({ accion: 'guardar', clienteId, password })
+export const cuentaEliminar = (clienteId) => llamarCuentas({ accion: 'eliminar', clienteId })
+
 // ── HELPERS DE CONVERSIÓN ────────────────────────────────────
 // Supabase usa snake_case, React usa camelCase
 
@@ -22,6 +42,7 @@ export const clienteFromDB = (r) => r ? ({
   password: r.password, clienteTipo: r.cliente_tipo || 'matriz',
   agenteId: r.agente_id, oficinaId: r.oficina_id,
   autonomoId: r.autonomo_id, vendedorId: r.vendedor_id || '', activo: r.activo,
+  authId: r.auth_id || null, password: '',
 }) : null
 
 export const clienteToDB = (c) => ({
@@ -32,7 +53,7 @@ export const clienteToDB = (c) => ({
   estado: c.estado, pais: c.pais, cp: c.cp,
   tel1: c.tel1, tel2: c.tel2, email: c.email,
   casillero: c.casillero, rol: c.rol, login: c.login,
-  password: c.password, cliente_tipo: c.clienteTipo || 'matriz',
+  password: '', cliente_tipo: c.clienteTipo || 'matriz',
   agente_id: c.agenteId, oficina_id: c.oficinaId,
   autonomo_id: c.autonomoId, vendedor_id: c.vendedorId || null, activo: c.activo ?? true,
 })
