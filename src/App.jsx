@@ -7766,13 +7766,11 @@ export default function ENEXSystem(){
       :facturasAll;
     const facIds=new Set(facturas.map(f=>f.id));
     const pagos=alcanceUsr?pagosAll.filter(p=>facIds.has(p.facturaId)):pagosAll;
-    const CTABS=[
-      {k:"porguia",l:"🚢 Por guía"},
-      {k:"facturas",l:"📄 Facturas"},
-      {k:"cxc",l:"💰 Por Cobrar"},
-      {k:"pagos",l:"✅ Pagos"},
-      {k:"reporte",l:"📊 Reporte"},
-    ];
+    // Facturación: Por guía / Facturas · Contabilidad: Por Cobrar / Pagos / Reporte
+    const enFacturacion=["porguia","facturas"].includes(contabTab);
+    const CTABS=enFacturacion
+      ?[{k:"porguia",l:"🚢 Por guía"},{k:"facturas",l:"📄 Facturas"}]
+      :[{k:"cxc",l:"💰 Por Cobrar"},{k:"pagos",l:"✅ Pagos"},{k:"reporte",l:"📊 Reporte"}];
     // Filtrar facturas (no incluye anuladas en stats principales)
     const facsActivas=facturas.filter(f=>f.status!=="anulada");
     // Stats por moneda (no se mezclan)
@@ -10779,7 +10777,7 @@ export default function ENEXSystem(){
     {label:"Administración",items:[
       {id:"facturacion",ic:"🧾",l:"Facturación",onClick:()=>{setTab("contabilidad");setContabTab("porguia");setFacGuiaSel(null);},activeWhen:()=>tab==="contabilidad"&&["porguia","facturas"].includes(contabTab)},
       {id:"entregasydespachos",ic:"📝",l:"Entregas y Despachos"},
-      {id:"contabilidad",ic:"💰",l:"Contabilidad"},
+      {id:"contabilidad",ic:"💰",l:"Contabilidad",onClick:()=>{setTab("contabilidad");setContabTab("cxc");},activeWhen:()=>tab==="contabilidad"&&!["porguia","facturas"].includes(contabTab)},
     ]},
     {label:"Gestión",items:[
       {id:"clients",ic:"👥",l:"Clientes & Usuarios"},
@@ -10887,7 +10885,7 @@ export default function ENEXSystem(){
       {/* MAIN */}
       <div className="main">
         <div className="topbar">
-          <div className="tb-ttl">{PAGE_TITLES[tab]||tab}</div>
+          <div className="tb-ttl">{tab==="contabilidad"&&["porguia","facturas"].includes(contabTab)?"Facturación":(PAGE_TITLES[tab]||tab)}</div>
           <div className="tb-srch">
             <span style={{color:"var(--t3)"}}>🔍</span>
             <input placeholder="Buscar en el sistema…" value={search} onChange={e=>{setSearch(e.target.value);setPage(1);}}/>
