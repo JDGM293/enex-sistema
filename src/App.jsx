@@ -7239,9 +7239,20 @@ export default function ENEXSystem(){
     if(!w)return null;
     const esPrepaid=(w.tipoPago||"").toLowerCase().includes("prepa");
     if(esPrepaid){
-      return {tipo:"cliente", id:"", snapshot:{
-        nombre:w.remitente||w.shipper||"",doc:"",dir:w.remitenteDir||"",tel:w.remitenteTel||"",email:w.remitenteEmail||"",casillero:"",
-      }};
+      // PREPAID paga el remitente. Si el remitente es la propia empresa (reempaque) o está vacío, paga el dueño de la carga.
+      const rem=String(w.remitente||w.shipper||"").trim();
+      const esEmpresa=!rem||[empresaNombre,"ENEX"].filter(Boolean).some(n=>sinAcentos(n)===sinAcentos(rem));
+      if(!esEmpresa){
+        const em=String(w.remitenteEmail||"").trim().toLowerCase();
+        const reg=clients.find(c=>em&&String(c.email||"").toLowerCase()===em)
+          ||clients.find(c=>sinAcentos(fullName(c))===sinAcentos(rem)||(c.empresa&&sinAcentos(c.empresa)===sinAcentos(rem)));
+        if(reg)return {tipo:"cliente",id:reg.id,snapshot:lookupReceptor("cliente",reg.id)};
+        return {tipo:"cliente", id:"", snapshot:{
+          nombre:rem,doc:"",dir:w.remitenteDir||"",tel:w.remitenteTel||"",email:w.remitenteEmail||"",casillero:"",
+        }};
+      }
+      const due=clients.find(c=>c.id===w.clienteId)||clients.find(c=>c.casillero===w.casillero);
+      return {tipo:"cliente",id:due?.id||"",snapshot:due?lookupReceptor("cliente",due.id):{nombre:w.consignee||"",doc:"",dir:"",tel:"",email:"",casillero:w.casillero||""}};
     }
     // COD: mapear según clienteTipo del consignatario
     const cli=clients.find(c=>c.id===w.clienteId)||clients.find(c=>c.casillero===w.casillero);
