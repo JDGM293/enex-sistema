@@ -8489,7 +8489,8 @@ export default function ENEXSystem(){
   // Un WR no puede facturarse si está Reempacado (2.3 — es fantasma, la mercancía
   // está en el WR hijo) ni si ya fue Egresado (25 — debió facturarse antes del despacho).
   // El resto de los estados sí pueden facturarse (PREPAID en origen, COD tras recepción).
-  const wrPuedeFacturarse=(w)=>!["2.3","25"].includes(w?.status?.code||"");
+  // No se facturan: reempacados, egresados ni faltantes (faltante, investigación, indemnizado, pérdida)
+  const wrPuedeFacturarse=(w)=>!["2.3","25","18","18.1","18.2","18.3"].includes(w?.status?.code||"");
   // Un WR puede consolidarse SOLO si está en estado 3 Confirmado. Reempacado (2.3) y
   // Egresado (25) salieron del flujo; estados pre-Confirmado no están listos.
   const wrPuedeConsolidarse=(w)=>w?.status?.code==="3";
