@@ -2247,7 +2247,8 @@ export default function ENEXSystem(){
   const [facturas,setFacturas]=useState([]);
   const facturasAll=facturas;
   const [pagos,setPagos]=useState([]);
-  const [cobroModal,setCobroModal]=useState(null); // cobro a un pagador sobre varias facturas
+  const [cobroModal,setCobroModal]=useState(null);
+  const [remCampo,setRemCampo]=useState(""); // campo del remitente que se está escribiendo (para sugerir clientes) // cobro a un pagador sobre varias facturas
   const pagosAll=pagos;
   // Facturación v2 (Lote 6)
   const [facModal,setFacModal]=useState(null);   // null | factura en edición
@@ -2787,7 +2788,7 @@ export default function ENEXSystem(){
     const ya=clients.find(c=>doc&&String(c.cedula||"").trim().toUpperCase()===doc)
       ||clients.find(c=>em&&String(c.email||"").toLowerCase()===em)
       ||clients.find(c=>sinAcentos(fullName(c))===sinAcentos(rem));
-    if(ya){setWrf(p=>({...p,remitenteId:ya.id}));window.alert(`Ya está registrado: ${fullName(ya)} · casillero ${ya.casillero}.`);return;}
+    if(ya){setWrf(p=>({...p,remitenteId:ya.id}));return;}
     const parts=parseNombreCompleto(rem);
     const cas=nextCasillero();
     const nc={
@@ -3615,19 +3616,38 @@ export default function ENEXSystem(){
           <div>
             <div className="sdiv">INFORMACIÓN DEL REMITENTE</div>
             <div className="fgrid" style={{gap:8}}>
-              <div className="fg fi-search"><div className="fl">Nombre / Empresa {wrf.remitenteId&&(()=>{const c=clients.find(x=>x.id===wrf.remitenteId);return c?<span style={{color:"var(--gold2)",fontFamily:"'DM Mono',monospace",fontWeight:700}}>#{c.casillero} <span onClick={()=>setWrf(p=>({...p,remitenteId:""}))} style={{cursor:"pointer",color:"var(--red)",marginLeft:4}}>✕</span></span>:null;})()}</div>
-                <input className="fi" value={wrf.remitente} onChange={e=>{sw("remitente",e.target.value);if(wrf.remitenteId)setWrf(p=>({...p,remitenteId:""}));}} placeholder="Nombre, casillero, ID o teléfono"/>
-                {(()=>{const bq=!wrf.remitenteId&&String(wrf.remitente||"").trim().length>=2?crearBuscador(wrf.remitente):null;
-                  const res=bq?clients.filter(c=>c.tipo!=="usuario"&&(bq.nombre(fullName(c))||bq.casillero(c.casillero)||bq.codigo(c.cedula||"")||bq.codigo(c.tel1||""))).slice(0,8):[];
+              {(()=>{
+                const elegir=c=>{setRemCampo("");setWrf(p=>({...p,remitenteId:c.id,remitente:fullName(c).toUpperCase(),remitenteDoc:c.cedula||p.remitenteDoc,remitenteTel:c.tel1||p.remitenteTel,remitenteEmail:c.email||p.remitenteEmail,remitenteDir:[c.dir,c.municipio,c.estado].filter(Boolean).join(", ").toUpperCase()||p.remitenteDir}));};
+                const dig=v=>String(v||"").replace(/\D/g,"");
+                const sugerir=campo=>{
+                  if(wrf.remitenteId||remCampo!==campo)return null;
+                  const v=String(wrf[campo]||"").trim(); let res=[];
+                  if(campo==="remitente"&&v.length>=2){const bq=crearBuscador(v);res=bq?clients.filter(c=>bq.nombre(fullName(c))||bq.casillero(c.casillero)):[];}
+                  if(campo==="remitenteTel"&&dig(v).length>=4)res=clients.filter(c=>[c.tel1,c.tel2].some(t=>dig(t).endsWith(dig(v))||dig(t).includes(dig(v))));
+                  if(campo==="remitenteEmail"&&v.length>=3)res=clients.filter(c=>String(c.email||"").toLowerCase().includes(v.toLowerCase()));
+                  if(campo==="remitenteDoc"&&v.length>=3)res=clients.filter(c=>sinAcentos(c.cedula||"").replace(/[^A-Z0-9]/g,"").includes(sinAcentos(v).replace(/[^A-Z0-9]/g,"")));
+                  res=res.filter(c=>c.tipo!=="usuario").slice(0,8);
                   return res.length>0&&<div className="fi-search-res">{res.map(c=>(
-                    <div key={c.id} className="fi-search-item" onClick={()=>setWrf(p=>({...p,remitenteId:c.id,remitente:fullName(c).toUpperCase(),remitenteDoc:c.cedula||p.remitenteDoc,remitenteTel:c.tel1||p.remitenteTel,remitenteEmail:c.email||p.remitenteEmail,remitenteDir:[c.dir,c.municipio,c.estado].filter(Boolean).join(", ").toUpperCase()||p.remitenteDir}))}>
-                      {fullName(c)}<span className="fi-search-cas">#{c.casillero}</span>{c.cedula&&<span style={{fontSize:12,color:"var(--t3)",marginLeft:8}}>ID {c.cedula}</span>}
-                    </div>))}</div>;})()}
-              </div>
-              <div className="fg"><div className="fl">ID Identificación</div><input className="fi" value={wrf.remitenteDoc} onChange={e=>sw("remitenteDoc",e.target.value)}/></div>
-              <div className="fg"><div className="fl">Dirección</div><input className="fi" value={wrf.remitenteDir} onChange={e=>sw("remitenteDir",e.target.value)}/></div>
-              <div className="fg"><div className="fl">Teléfono</div><input className="fi" value={wrf.remitenteTel} onChange={e=>sw("remitenteTel",e.target.value)} placeholder="+1 000 000 0000"/></div>
-              <div className="fg"><div className="fl">Email</div><input className="fi" value={wrf.remitenteEmail} onChange={e=>sw("remitenteEmail",e.target.value)}/></div>
+                    <div key={c.id} className="fi-search-item" onMouseDown={e=>{e.preventDefault();elegir(c);}}>
+                      {fullName(c)}<span className="fi-search-cas">#{c.casillero}</span>
+                      <span style={{fontSize:12,color:"var(--t3)",marginLeft:8}}>{[c.cedula&&`ID ${c.cedula}`,c.tel1,c.email].filter(Boolean).join(" · ")}</span>
+                    </div>))}</div>;
+                };
+                const campo=(k,lbl,extra={})=>(
+                  <div className="fg fi-search"><div className="fl">{lbl}</div>
+                    <input className="fi" value={wrf[k]} onFocus={()=>setRemCampo(k)} onBlur={()=>setTimeout(()=>setRemCampo(x=>x===k?"":x),150)}
+                      onChange={e=>{sw(k,e.target.value);setRemCampo(k);if(wrf.remitenteId&&k==="remitente")setWrf(p=>({...p,remitenteId:""}));}} {...extra}/>
+                    {sugerir(k)}
+                  </div>);
+                const enl=wrf.remitenteId&&clients.find(x=>x.id===wrf.remitenteId);
+                return <>
+                  {campo("remitente",<>Nombre / Empresa {enl&&<span style={{color:"var(--gold2)",fontFamily:"'DM Mono',monospace",fontWeight:700}}>#{enl.casillero} <span onClick={()=>setWrf(p=>({...p,remitenteId:""}))} style={{cursor:"pointer",color:"var(--red)",marginLeft:4}}>✕</span></span>}</>,{placeholder:"Nombre o casillero"})}
+                  {campo("remitenteDoc","ID Identificación")}
+                  <div className="fg"><div className="fl">Dirección</div><input className="fi" value={wrf.remitenteDir} onChange={e=>sw("remitenteDir",e.target.value)}/></div>
+                  {campo("remitenteTel","Teléfono",{placeholder:"+1 000 000 0000"})}
+                  {campo("remitenteEmail","Email")}
+                </>;
+              })()}
               {!wrf.remitenteId&&String(wrf.remitente||"").trim()&&hasPerm("crear_cliente")&&<div className="fg" style={{alignSelf:"end"}}>
                 <button type="button" className="btn-s" style={{fontSize:13,padding:"7px 12px",width:"100%",borderColor:"var(--green)",color:"var(--green)",fontWeight:700}} onClick={registrarRemitenteCliente}>➕ Registrar como cliente</button></div>}
             </div>
