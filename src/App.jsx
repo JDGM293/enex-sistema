@@ -10569,11 +10569,13 @@ export default function ENEXSystem(){
           const paraDespachar=todos.filter(w=>w.status?.code==="20");
           const enCamino=todos.filter(w=>w.status?.code==="20.1");
           const esMatriz=dom.tipo==="matriz";
-          const abierto=esMatriz||!!q||!!dnAbiertos[b.key];
+          // Abierto por defecto si hay carga en sucursal esperando entrega al cliente
+          const porDefecto=todos.some(w=>w.status?.code==="20.2");
+          const abierto=esMatriz||!!q||(dnAbiertos[b.key]??porDefecto);
           return (
             <div key={b.key} className="card" style={{padding:0,marginBottom:12,overflow:"hidden",borderLeft:`4px solid ${esMatriz?"var(--navy)":"#E65100"}`}}>
               <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",background:"var(--bg3)",flexWrap:"wrap",cursor:esMatriz?"default":"pointer"}}
-                onClick={()=>{if(!esMatriz)setDnAbiertos(p=>({...p,[b.key]:!p[b.key]}));}}>
+                onClick={()=>{if(!esMatriz)setDnAbiertos(p=>({...p,[b.key]:!(p[b.key]??porDefecto)}));}}>
                 <span style={{fontSize:20}}>{DN_DOM_IC[dom.tipo]||"•"}</span>
                 <div>
                   <div style={{fontWeight:800,fontSize:16,color:"var(--navy)"}}>{esMatriz?DN_DOM_LBL.matriz:dom.nombre}</div>
