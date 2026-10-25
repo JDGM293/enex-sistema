@@ -2258,6 +2258,10 @@ export default function ENEXSystem(){
   const [tarifas,setTarifas]=useState([]);
   const [showNewTarifa,setShowNewTarifa]=useState(false);
   const [editTarifa,setEditTarifa]=useState(null);
+  const [tafGrupo,setTafGrupo]=useState("");      // "" predeterminadas | "agente:<id>" | "autonomo:<id>" | "cliente:<id>"
+  const [tafGrupoQ,setTafGrupoQ]=useState("");
+  const [tafQ,setTafQ]=useState("");
+  const [tafTipoFil,setTafTipoFil]=useState("");
   const [tafForm,setTafForm]=useState({paisOrig:"",ciudadOrig:"",paisDest:"",ciudadDest:"",tipoEnvio:"",porLb:"",porFt3:"",min:"",moneda:"USD"});
   const [tarifaTipoTab,setTarifaTipoTab]=useState("aereo");
   const [showNewFactura,setShowNewFactura]=useState(false);
@@ -6386,7 +6390,7 @@ export default function ENEXSystem(){
                     <div key={u.id} style={{fontSize:13,padding:"4px 0",borderBottom:"1px solid var(--b1)"}}><b>{u.id}</b> · {fullName(u)} · {u.rol==="E"?"Agente":"Vendedor"}{u.email?` · ${u.email}`:""}{u.tel1?` · ${u.tel1}`:""}</div>))}</div>
                   <div className="sdiv">CLIENTES ({cls.length})</div>
                   <div style={{marginBottom:12,fontSize:13}}>{cls.length===0?<span style={{color:"var(--t3)"}}>—</span>:cls.map(c=><span key={c.id} style={{display:"inline-block",marginRight:10}}>#{c.casillero} {fullName(c)}</span>)}</div>
-                  <div className="sdiv">TARIFAS ESPECIALES ({tfs.length})</div>
+                  <div className="sdiv" style={{display:"flex",alignItems:"center"}}>TARIFAS ESPECIALES ({tfs.length})<span style={{marginLeft:"auto",cursor:"pointer",color:"var(--cyan)"}} onClick={()=>{const x=verAgente;setVerAgente(null);setTafGrupo(`agente:${x.id}`);setTafQ("");setCfgTab("tarifas");}}>💰 Ir a sus tarifas</span></div>
                   <div style={{fontSize:13,marginBottom:12}}>{tfs.length===0?<span style={{color:"var(--t3)"}}>—</span>:tfs.map(t=><div key={t.id}>{t.id} · {t.tipoEnvio} · {[t.ciudadOrig||t.paisOrig,t.ciudadDest||t.paisDest].map(x=>x||"Cualquiera").join(" → ")} · {cSym(t.moneda)}{/^a/i.test(t.tipoEnvio||"")?t.porLb:t.porFt3}/{t.unidad||(/^a/i.test(t.tipoEnvio||"")?"lb":"ft³")} · mín {cSym(t.moneda)}{t.min}</div>)}</div>
                   <div className="mft" style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
                     {hasPerm("editar_agente")&&<button className="btn-p" onClick={()=>{const x=verAgente;setVerAgente(null);abrirEditar(x);}}>✏️ Editar</button>}
@@ -6540,27 +6544,64 @@ export default function ENEXSystem(){
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
               <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:17,fontWeight:700,color:"var(--navy)",flex:1}}>💰 Tarifas por Ruta y Tipo de Envío</div>
               {hasPerm("crear_tarifa")&&<button className="btn-p" style={{fontSize:13}} onClick={()=>{
-                setTafForm(tafNuevo());
+                const [gt,gi]=tafGrupo?tafGrupo.split(":"):["",""];
+                setTafForm({...tafNuevo(),aplicaTipo:gt,aplicaId:gi||""});
                 setEditTarifa(null);setShowNewTarifa(true);
               }}>+ Nueva Tarifa</button>}
             </div>
-            <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,overflow:"hidden"}}>
+            {(()=>{
+              const gKey=t=>t.aplicaTipo?`${t.aplicaTipo}:${t.aplicaId}`:"";
+              const cuenta={};tarifas.forEach(t=>{const k=gKey(t);cuenta[k]=(cuenta[k]||0)+1;});
+              const IC={agente:"🤝",autonomo:"🧑‍💻",cliente:"👤"};
+              const grupos=[{k:"",l:"Predeterminadas",ic:"🌐"},
+                ...agentes.map(a=>({k:`agente:${a.id}`,l:a.nombre||a.codigo,sub:`Agente ${a.codigo||""}`,ic:IC.agente})),
+                ...clients.filter(c=>c.tipo==="usuario"&&c.rol==="F").map(c=>({k:`autonomo:${c.id}`,l:fullName(c),sub:`Autónomo ${c.id}`,ic:IC.autonomo})),
+                ...Object.keys(cuenta).filter(k=>k.startsWith("cliente:")).map(k=>{const c=clients.find(x=>x.id===k.split(":")[1]);return {k,l:c?fullName(c):"?",sub:`Cliente ${c?.casillero||""}`,ic:IC.cliente};}),
+              ];
+              const GQ=sinAcentos(tafGrupoQ.trim());
+              const gVis=grupos.filter(g=>!GQ||sinAcentos(`${g.l} ${g.sub||""}`).includes(GQ));
+              const gSel=grupos.find(g=>g.k===tafGrupo)||grupos[0];
+              const Q=sinAcentos(tafQ.trim());
+              const lista=tarifas.filter(t=>gKey(t)===gSel.k)
+                .filter(t=>!tafTipoFil||t.tipoEnvio===tafTipoFil)
+                .filter(t=>!Q||sinAcentos(`${t.paisOrig} ${t.ciudadOrig} ${t.paisDest} ${t.ciudadDest} ${t.tipoEnvio} ${t.id}`).includes(Q))
+                .sort((a,b)=>`${a.paisOrig}${a.ciudadOrig}${a.paisDest}${a.ciudadDest}${a.tipoEnvio}`.localeCompare(`${b.paisOrig}${b.ciudadOrig}${b.paisDest}${b.ciudadDest}${b.tipoEnvio}`));
+              return(
+            <div style={{display:"grid",gridTemplateColumns:"280px minmax(0,1fr)",gap:14,alignItems:"start"}}>
+              <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,overflow:"hidden"}}>
+                <div style={{padding:8,borderBottom:"1px solid var(--b1)",background:"var(--bg3)"}}>
+                  <input className="fi" style={{fontSize:13,padding:"6px 8px"}} placeholder="Buscar agente, autónomo o cliente…" value={tafGrupoQ} onChange={e=>setTafGrupoQ(e.target.value)}/>
+                </div>
+                <div style={{maxHeight:520,overflowY:"auto"}}>
+                  {gVis.map(g=>{const on=g.k===gSel.k;return(
+                    <div key={g.k||"_"} onClick={()=>{setTafGrupo(g.k);setTafQ("");}} style={{padding:"9px 12px",cursor:"pointer",borderBottom:"1px solid var(--b2)",display:"flex",alignItems:"center",gap:8,background:on?"var(--navy)":"transparent",color:on?"#fff":"var(--t1)"}}>
+                      <span>{g.ic}</span>
+                      <div style={{flex:1,minWidth:0}}><div style={{fontSize:14,fontWeight:on?700:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{g.l}</div>{g.sub&&<div style={{fontSize:11,opacity:.75}}>{g.sub}</div>}</div>
+                      <span style={{fontSize:12,fontWeight:700,padding:"1px 8px",borderRadius:10,background:on?"rgba(255,255,255,.2)":"var(--bg4)"}}>{cuenta[g.k]||0}</span>
+                    </div>);})}
+                  {gVis.length===0&&<div style={{padding:16,textAlign:"center",color:"var(--t3)",fontSize:13}}>Sin coincidencias.</div>}
+                </div>
+              </div>
+              <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,overflow:"hidden"}}>
+                <div style={{padding:"10px 12px",borderBottom:"1px solid var(--b1)",background:"var(--bg3)",display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+                  <span style={{fontSize:15,fontWeight:700,color:"var(--navy)"}}>{gSel.ic} {gSel.l}</span>
+                  <span style={{fontSize:13,color:"var(--t3)"}}>{lista.length} tarifa{lista.length===1?"":"s"}</span>
+                  <input className="fi" style={{marginLeft:"auto",width:220,fontSize:13,padding:"6px 8px"}} placeholder="Buscar origen o destino…" value={tafQ} onChange={e=>setTafQ(e.target.value)}/>
+                  <select className="fs" style={{width:160,fontSize:13}} value={tafTipoFil} onChange={e=>setTafTipoFil(e.target.value)}><option value="">Todos los envíos</option>{SEND_TYPES.map(t=><option key={t} value={t}>{t}</option>)}</select>
+                </div>
               <table className="ct">
                 <thead><tr>
-                  <th>Aplica a</th><th>Origen</th><th>Destino</th><th>Tipo Envío</th><th>Monto</th><th>Mínimo</th><th>Moneda</th><th>Estado</th><th>Acc.</th>
+                  <th>Origen</th><th>Destino</th><th>Tipo Envío</th><th>Monto</th><th>Mínimo</th><th>Moneda</th><th>Estado</th><th>Acc.</th>
                 </tr></thead>
                 <tbody>
-                  {tarifas.length===0&&<tr><td colSpan={9} style={{textAlign:"center",padding:30,color:"var(--t3)"}}>No hay tarifas registradas.</td></tr>}
-                  {[...tarifas].sort((a,b)=>(a.aplicaTipo?1:0)-(b.aplicaTipo?1:0)).map(t=>{
+                  {lista.length===0&&<tr><td colSpan={8} style={{textAlign:"center",padding:30,color:"var(--t3)"}}>{Q||tafTipoFil?"Sin coincidencias.":"Sin tarifas."}</td></tr>}
+                  {lista.map(t=>{
                     const esAereo=tipoEsAereo(t.tipoEnvio);
                     const esMaritimo=tipoEsMaritimo(t.tipoEnvio);
                     const sy=cSym(t.moneda);
                     const monto=esAereo?`${sy}${t.porLb}/${t.unidad==="kg"?"kg":"lb"}`:esMaritimo?`${sy}${t.porFt3}/${t.unidad==="m3"?"m³":"ft³"}`:`${sy}${t.porLb}/lb`;
                     return(
                     <tr key={t.id}>
-                      <td>{t.aplicaTipo
-                        ?<span style={{fontSize:12,fontWeight:700,padding:"2px 8px",borderRadius:4,background:"#FFF3E0",color:"#E65100",border:"1px solid #FFCC80"}}>⭐ {nombreAplica(t)}</span>
-                        :<span style={{fontSize:12,color:"var(--t3)",fontWeight:600}}>Predeterminada</span>}</td>
                       <td style={{fontWeight:600,fontSize:13}}>{[t.paisOrig,t.ciudadOrig].filter(Boolean).join("-")||"Cualquiera"}</td>
                       <td style={{fontWeight:600,fontSize:13}}>{[t.paisDest,t.ciudadDest].filter(Boolean).join("-")||"Cualquiera"}</td>
                       <td><TypeBadge t={t.tipoEnvio}/></td>
@@ -6578,7 +6619,9 @@ export default function ENEXSystem(){
                   })}
                 </tbody>
               </table>
-            </div>
+              </div>
+            </div>);
+            })()}
             {showNewTarifa&&(
               <div className="ov">
                 <div className="modal" style={{maxWidth:780}} onClick={e=>e.stopPropagation()}>
