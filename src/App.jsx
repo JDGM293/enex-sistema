@@ -2597,11 +2597,11 @@ export default function ENEXSystem(){
   // Client search
   const handleClientSearch=(q)=>{
     setClientSearch(q);
-    if(q.length<2){setClientResults([]);return;}
+    const t=q.trim(), bq=crearBuscador(t);
+    if(!bq||(t.length<2&&!/^\d$/.test(t))){setClientResults([]);return;}
     const res=clientesVisibles.filter(c=>c.tipo==="cliente"&&(
-      fullName(c).toLowerCase().includes(q.toLowerCase())||
-      c.casillero.toLowerCase().includes(q.toLowerCase())
-    ));
+      bq.casillero(c.casillero)||bq.nombre(fullName(c))||(t.length>=2&&fullName(c).toLowerCase().includes(t.toLowerCase()))
+    )).sort((a,b)=>(bq.casillero(b.casillero)?1:0)-(bq.casillero(a.casillero)?1:0));
     setClientResults(res);
   };
   const selectClient=(c)=>{
@@ -3623,7 +3623,7 @@ export default function ENEXSystem(){
                 const sugerir=campo=>{
                   if(wrf.remitenteId||remCampo!==campo)return null;
                   const v=String(wrf[campo]||"").trim(); let res=[];
-                  if(campo==="remitente"&&v.length>=2){const bq=crearBuscador(v);res=bq?clients.filter(c=>bq.nombre(fullName(c))||bq.casillero(c.casillero)):[];}
+                  if(campo==="remitente"&&(v.length>=2||/^\d$/.test(v))){const bq=crearBuscador(v);res=bq?clients.filter(c=>bq.nombre(fullName(c))||bq.casillero(c.casillero)):[];}
                   if(campo==="remitenteTel"&&dig(v).length>=4)res=clients.filter(c=>[c.tel1,c.tel2].some(t=>dig(t).endsWith(dig(v))||dig(t).includes(dig(v))));
                   if(campo==="remitenteEmail"&&v.length>=3)res=clients.filter(c=>String(c.email||"").toLowerCase().includes(v.toLowerCase()));
                   if(campo==="remitenteDoc"&&v.length>=3)res=clients.filter(c=>sinAcentos(c.cedula||"").replace(/[^A-Z0-9]/g,"").includes(sinAcentos(v).replace(/[^A-Z0-9]/g,"")));
@@ -4399,12 +4399,14 @@ export default function ENEXSystem(){
   const buscarCliente=(q)=>{
     setEcSearch(q);
     setEcCliente(null);
-    if(q.length<2){setEcResults([]);return;}
+    const t=q.trim(), bq=crearBuscador(t);
+    if(!bq||(t.length<2&&!/^\d$/.test(t))){setEcResults([]);return;}
     const res=clientesVisibles.filter(c=>c.tipo==="cliente"&&(
+      bq.casillero(c.casillero)||(t.length>=2&&(
       fullName(c).toLowerCase().includes(q.toLowerCase())||
       (c.casillero||"").toLowerCase().includes(q.toLowerCase())||
       (c.email||"").toLowerCase().includes(q.toLowerCase())||
-      (c.tel1||"").includes(q)||(c.tel2||"").includes(q)
+      (c.tel1||"").includes(q)||(c.tel2||"").includes(q)))
     ));
     setEcResults(res);
   };
