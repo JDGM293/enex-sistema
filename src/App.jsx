@@ -3315,7 +3315,6 @@ export default function ENEXSystem(){
         <div className="page-scroll">
           <div className="card" style={{textAlign:"center",padding:"40px 24px",marginBottom:14}}>
             <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:22,fontWeight:700,color:"var(--navy)",marginBottom:6}}>👥 Clientes & Usuarios</div>
-            <div style={{fontSize:14,color:"var(--t3)",maxWidth:520,margin:"0 auto"}}>Selecciona qué quieres ver para empezar.</div>
           </div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:14,maxWidth:1080,margin:"0 auto"}}>
             {cards.map(card=>(
@@ -3547,7 +3546,6 @@ export default function ENEXSystem(){
                           background:on?"#E8F8EE":"var(--bg4)",color:on?"var(--green)":"var(--t3)",border:`1px solid ${on?"#80D0A0":"var(--b2)"}`}}>
                           {chk(on,v=>toggle([p],v))}
                           {PERM_LBL[p]||p}
-                          {p==="saltar_bloqueos"&&<span title="Desde el detalle del WR: permite cambiar el tipo de envío después de Consolidado y facturar WR reempacados o egresados." style={{cursor:"help"}}>ⓘ</span>}
                         </label>
                       );
                     })}
@@ -3841,7 +3839,7 @@ export default function ENEXSystem(){
                     </div>
                     {(caja.fotos||[]).length===0 ? (
                       <div style={{padding:"12px",border:"2px dashed var(--b1)",borderRadius:8,background:"var(--bg4)",textAlign:"center",color:"var(--t3)",fontSize:13}}>
-                        Sin fotos — usa los botones de arriba para agregar fotos del paquete de esta caja
+                        Sin fotos
                       </div>
                     ) : (
                       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(110px, 1fr))",gap:8}}>
@@ -4010,7 +4008,7 @@ export default function ENEXSystem(){
             <div style={{flex:1,minWidth:200}}>
               <div style={{fontSize:13,fontWeight:700,color:"#7A5C00"}}>WR Reempacado — estado fijo</div>
               <div style={{fontSize:12,color:"#7A5C00"}}>
-                Este WR fue reempacado en <strong>{selWR.reempacadoEn||"otro WR"}</strong>. Queda inactivo en este estado: no se confirma, no factura y no avanza por la cadena.
+                Este WR fue reempacado en <strong>{selWR.reempacadoEn||"otro WR"}</strong>.
               </div>
             </div>
             {selWR.reempacadoEn&&(
@@ -5683,7 +5681,7 @@ export default function ENEXSystem(){
             <div className="sdiv">WR CONFIRMADOS DISPONIBLES{cf.tipoEnvio?` — ${cf.tipoEnvio} (clic para agregar al contenedor activo)`:" — selecciona primero el Tipo de Envío"}</div>
             <div style={{background:"var(--bg4)",border:"1px solid var(--b1)",borderRadius:8,padding:"8px 12px",marginBottom:14,maxHeight:"40vh",overflowY:"auto"}}>
               {!cf.tipoEnvio?(
-                <div style={{color:"var(--orange)",fontSize:13,padding:"8px 0",fontWeight:600}}>⚠️ Selecciona el Tipo de Envío en la sección de arriba para ver los WR confirmados disponibles.</div>
+                <div style={{color:"var(--orange)",fontSize:13,padding:"8px 0",fontWeight:600}}>⚠️ Selecciona el Tipo de Envío.</div>
               ):(()=>{
                 // WR ya metidos en OTRA guía (la que se edita no cuenta)
                 const enOtraGuia=new Set(consolList.filter(g=>g.id!==editConsolId).flatMap(g=>(g.containers||[]).flatMap(ct=>(ct.wr||[]).map(r=>r.id))));
@@ -5843,7 +5841,7 @@ export default function ENEXSystem(){
                         </div>
                         {(cont.fotos||[]).length===0 ? (
                           <div style={{padding:"12px",border:"2px dashed var(--b1)",borderRadius:8,background:"var(--bg4)",textAlign:"center",color:"var(--t3)",fontSize:13}}>
-                            Sin fotos — usa los botones de arriba para agregar fotos del contenedor
+                            Sin fotos
                           </div>
                         ) : (
                           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(110px, 1fr))",gap:8}}>
@@ -5913,7 +5911,6 @@ export default function ENEXSystem(){
     <div className="page-scroll">
       <div className="card" style={{maxWidth:etqMode==="entregas"?"100%":640,marginBottom:etqMode==="entregas"?14:0}}>
         <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:17,fontWeight:700,color:"var(--navy)",marginBottom:4}}>🖨️ Impresión</div>
-        <div style={{fontSize:13,color:"var(--t3)",marginBottom:10}}>Etiquetas de caja, guía consolidada y Notas de Entrega.</div>
         {/* Selector tipo de impresión */}
         <div style={{display:"flex",gap:6,marginBottom:12,flexWrap:"wrap"}}>
           <button className={`btn-${etqMode==="wr"?"p":"s"}`} style={{flex:"1 1 160px"}} onClick={()=>{_etqMode("wr");setEtqSearch("");}}>📦 Etiquetas WR</button>
@@ -5998,7 +5995,6 @@ export default function ENEXSystem(){
             {/* WR */}
             <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,padding:"16px"}}>
               <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:16,fontWeight:700,color:"var(--navy)",marginBottom:4}}>📦 Numeración de WR</div>
-              <div style={{fontSize:13,color:"var(--t3)",marginBottom:12}}>Selecciona el tipo y el número de inicio de secuencia.</div>
               {[
                 {v:1,l:"Tipo 1 — 7 dígitos secuenciales",ex:"0000001"},
                 {v:2,l:"Tipo 2 — Indicativo + Oficina Origen + Oficina Destino + Secuencia",ex:`${empresaSlug}01MIA01VLN0000001`},
@@ -6030,7 +6026,6 @@ export default function ENEXSystem(){
             {/* GUÍA CONSOLIDADA */}
             <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,padding:"16px"}}>
               <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:16,fontWeight:700,color:"var(--navy)",marginBottom:4}}>🗂️ Numeración de Guía Consolidada</div>
-              <div style={{fontSize:13,color:"var(--t3)",marginBottom:12}}>Selecciona el tipo y el número de inicio de secuencia.</div>
               {[
                 {v:1,l:"Tipo 1 — 7 dígitos secuenciales",ex:"0000001"},
                 {v:2,l:"Tipo 2 — Oficina Origen + Oficina Destino + Secuencia",ex:"01VLN01CCS0000001"},
@@ -6299,7 +6294,7 @@ export default function ENEXSystem(){
                   <th>Código</th><th>Nombre</th><th>Ciudad</th><th>País</th><th>Teléfono</th><th>Email</th><th>Contacto</th><th>Estado</th><th>Acc.</th>
                 </tr></thead>
                 <tbody>
-                  {agentes.length===0&&<tr><td colSpan={9} style={{textAlign:"center",padding:30,color:"var(--t3)"}}>No hay agentes registrados. El código 01 está reservado para la empresa matriz.</td></tr>}
+                  {agentes.length===0&&<tr><td colSpan={9} style={{textAlign:"center",padding:30,color:"var(--t3)"}}>No hay agentes registrados.</td></tr>}
                   {agentes.map(a=>(
                     <tr key={a.id}>
                       <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",background:"#EEF3FF",padding:"2px 8px",borderRadius:4,border:"1px solid #B8C8F0"}}>{a.codigo}</span></td>
@@ -7136,7 +7131,6 @@ export default function ENEXSystem(){
     <div className="page-scroll">
       <div style={{maxWidth:820,margin:"0 auto"}}>
         <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:22,fontWeight:700,color:"var(--navy)",marginBottom:4}}>🧮 Calculadora de Envío</div>
-        <div style={{fontSize:15,color:"var(--t3)",marginBottom:16}}>Ingresa las medidas y peso para obtener un estimado de costo.</div>
 
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
           {/* Ruta */}
@@ -7239,11 +7233,6 @@ export default function ENEXSystem(){
               </>
             )}
           </>
-        )}
-        {!calcResult&&(
-          <div style={{textAlign:"center",padding:"40px",color:"var(--t3)",fontSize:16}}>
-            Ingresa las medidas y peso para ver el estimado 👆
-          </div>
         )}
       </div>
     </div>
@@ -7802,8 +7791,6 @@ export default function ENEXSystem(){
     setFacturas(pr=>pr.map(f=>mp.get(f.id)||f));
     updF.forEach(f=>{dbUpsertFactura(f);syncWRStatusFromFactura(f,f.status==="pagada"?"pagada":"pagada_parcial");});
     logAction("Registró cobro",`${reciboId} · ${fmtMoney(c.recibido,m.moneda)} · ${m.pagador.nombre} · ${updF.length} factura(s)${c.excedente>0?` · a favor ${fmtMoney(c.excedente,m.moneda)}`:""}`);
-    const todos=[...nuevos,...pagos];
-    printRecibo(reciboId,todos,mp);
     if(m.archivo){
       storageUploadComprobante(m.archivo,reciboId).then(url=>{
         if(!url)return;
@@ -8380,7 +8367,7 @@ export default function ENEXSystem(){
                   </tbody>
                 </table>
               </div>
-              {prepaid.length>0&&<div style={{marginTop:10,fontSize:13,color:"var(--t2)"}}>💳 {prepaid.length} WR PREPAID en esta guía: se facturan aparte al remitente.</div>}
+              {prepaid.length>0&&<div style={{marginTop:10,fontSize:13,color:"var(--t2)"}}>💳 {prepaid.length} WR PREPAID en esta guía</div>}
             </div>
           );
         })()}
@@ -8851,7 +8838,6 @@ export default function ENEXSystem(){
         <div className="card" style={{marginBottom:14}}>
           <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",marginBottom:10}}>
             <div style={{fontSize:17,fontWeight:700,color:"var(--navy)"}}>🔁 Reempaque de WR</div>
-            <div style={{fontSize:13,color:"var(--t3)"}}>Selecciona los WR a reempacar y crea un WR nuevo que los agrupe.</div>
             <div style={{marginLeft:"auto",display:"flex",gap:8,alignItems:"center"}}>
               <input className="fi" placeholder="Buscar WR, consignatario, tracking…" value={rpqSearch} onChange={e=>setRpqSearch(e.target.value)} style={{fontSize:14,padding:"6px 10px",width:260}}/>
               <span style={{fontSize:13,color:"var(--t2)",fontWeight:600}}>Seleccionados: {rpqSel.length}</span>
@@ -8894,7 +8880,7 @@ export default function ENEXSystem(){
               {rpqHistOpen?"▼":"▶"} 📜 Histórico de Reempaques
             </button>
             <span style={{fontSize:12,color:"var(--t3)"}}>
-              {rpqHistOpen?`${yaReempacados.length} resultado${yaReempacados.length===1?"":"s"}`:"Click para abrir y buscar por cliente/fecha"}
+              {rpqHistOpen?`${yaReempacados.length} resultado${yaReempacados.length===1?"":"s"}`:""}
             </span>
             {rpqHistOpen&&(
               <div style={{marginLeft:"auto",display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
@@ -9756,7 +9742,7 @@ export default function ENEXSystem(){
 
       {guias.length===0?(
         <div className="card" style={{textAlign:"center",padding:50,color:"var(--t3)"}}>
-          {q?"Ninguna guía activa coincide con la búsqueda.":"No hay guías activas. Las guías archivadas (recepción cerrada) no aparecen aquí."}
+          {q?"Ninguna guía activa coincide con la búsqueda.":"No hay guías activas."}
         </div>
       ):guias.map(c=>{
         const st=getStatus(guiaCode(c))||getStatus("4");
@@ -10083,10 +10069,9 @@ export default function ENEXSystem(){
           <div className="card" style={{marginBottom:14,padding:0}}>
             <div style={{padding:"10px 14px",fontSize:15,fontWeight:700,color:"var(--navy)",borderBottom:"1px solid var(--b1)"}}>
               📬 Guías en recepción ({guiasRecep.length})
-              <span style={{fontSize:12,fontWeight:400,color:"var(--t3)",marginLeft:8}}>Click en una guía para abrir su checklist</span>
             </div>
             {guiasRecep.length===0?(
-              <div style={{textAlign:"center",padding:30,color:"var(--t3)",fontSize:13}}>No hay guías en Tránsito 2 o en destino. Aparecen aquí cuando en el Master se fija Tránsito 2.</div>
+              <div style={{textAlign:"center",padding:30,color:"var(--t3)",fontSize:13}}>No hay guías en Tránsito 2 o en destino.</div>
             ):(
               <table className="ct">
                 <thead><tr>
@@ -10233,7 +10218,6 @@ export default function ENEXSystem(){
             <div className="card" style={{marginBottom:14}}>
               <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:8}}>
                 <div style={{fontSize:15,fontWeight:700,color:"var(--navy)"}}>⏳ WR pendientes en tránsito destino ({candidatos.length})</div>
-                <div style={{fontSize:12,color:"var(--t3)"}}>Selecciona una guía arriba para ver el checklist completo.</div>
                 <input className="fi" placeholder="Buscar…" value={rdSearch} onChange={e=>setRdSearch(e.target.value)} style={{fontSize:14,padding:"6px 10px",width:220,marginLeft:"auto"}}/>
               </div>
               <div style={{maxHeight:"60vh",overflow:"auto",border:"1px solid var(--b1)",borderRadius:8}}>
@@ -10283,7 +10267,7 @@ export default function ENEXSystem(){
                               onClick={()=>setSelWR(w)} title="Abrir detalle del WR">👁 Ver</button>
                             {hasPerm("hacer_recepcion_dest")&&(
                               <button className="btn-s" style={{fontSize:11,padding:"3px 7px",background:"#E3F2FD",borderColor:"#64B5F6",color:"#1565C0",fontWeight:700}}
-                                title="Mover este WR a Por Entrega (20) — útil si la guía no cerró correctamente"
+                                title="Mover a Por Entrega (20)"
                                 onClick={()=>{
                                   if(!window.confirm(`¿Pasar el WR ${w.id} a Por Entrega (20)?\n\nEsto se usa cuando un WR quedó atrapado en Almacén porque la guía no se cerró bien.\nQueda asentado en el historial.`))return;
                                   const st20=getStatus("20");
@@ -10656,7 +10640,6 @@ export default function ENEXSystem(){
         <div className="card" style={{marginBottom:14}}>
           <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",marginBottom:10}}>
             <div style={{fontSize:17,fontWeight:700,color:"var(--navy)"}}>📦 WR elegibles para egresar</div>
-            <div style={{fontSize:13,color:"var(--t3)"}}>Marca uno o varios y crea un solo Cargo Release.</div>
             <div style={{marginLeft:"auto",display:"flex",gap:8,alignItems:"center"}}>
               <input className="fi" placeholder="Buscar WR, consignatario, tracking…" value={crSearch} onChange={e=>setCrSearch(e.target.value)} style={{fontSize:14,padding:"6px 10px",width:260}}/>
               <span style={{fontSize:13,color:"var(--t2)",fontWeight:600}}>Seleccionados: {crSel.length}</span>
@@ -10676,7 +10659,7 @@ export default function ENEXSystem(){
               </tr></thead>
               <tbody>
                 {candidatos.length===0
-                  ?<tr><td colSpan={9} style={{textAlign:"center",padding:40,color:"var(--t3)"}}>No hay WR elegibles para egreso (estados 1, 2, 2.3 o 3).</td></tr>
+                  ?<tr><td colSpan={9} style={{textAlign:"center",padding:40,color:"var(--t3)"}}>No hay WR elegibles para egreso.</td></tr>
                   :candidatos.map(w=>(
                     <tr key={w.id} className={crSel.includes(w.id)?"sel":""} onClick={()=>toggleSel(w.id)} style={{cursor:"pointer"}}>
                       <td style={{textAlign:"center"}}><input type="checkbox" checked={crSel.includes(w.id)} onChange={()=>toggleSel(w.id)}/></td>
@@ -10704,7 +10687,7 @@ export default function ENEXSystem(){
               {crHistOpen?"▼":"▶"} 📜 Histórico de Cargo Release
             </button>
             <span style={{fontSize:12,color:"var(--t3)"}}>
-              {crHistOpen?`${historico.length} resultado${historico.length===1?"":"s"}`:"Click para abrir y buscar por cliente/fecha"}
+              {crHistOpen?`${historico.length} resultado${historico.length===1?"":"s"}`:""}
             </span>
             {crHistOpen&&(
               <div style={{marginLeft:"auto",display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
@@ -11103,7 +11086,6 @@ export default function ENEXSystem(){
       <div style={{padding:60,textAlign:"center",color:"var(--t3)"}}>
         <div style={{fontSize:42}}>🔒</div>
         <div style={{fontSize:16,fontWeight:600,marginTop:8}}>Tu rol no tiene permiso para ver esta sección.</div>
-        <div style={{fontSize:13,marginTop:4}}>Un administrador puede activarlo en Roles & Permisos.</div>
       </div>
     );
     switch(tab){
@@ -11935,7 +11917,7 @@ export default function ENEXSystem(){
                 </div>
 
                 <div style={{marginBottom:6}}>
-                  <div style={{fontSize:13,fontWeight:700,color:"var(--t2)",marginBottom:4}}>➕ Agregar WR (elegibles hasta Confirmado: 1, 2, 2.3, 3)</div>
+                  <div style={{fontSize:13,fontWeight:700,color:"var(--t2)",marginBottom:4}}>➕ Agregar WR</div>
                   <input className="fi" placeholder="Buscar por WR, consignee, tracking…" value={qRef} onChange={e=>setCrModal(p=>({...p,_q:e.target.value}))} style={{marginBottom:6}}/>
                   <div style={{maxHeight:"40vh",overflow:"auto",border:"1px solid #E0E7EF",borderRadius:4}}>
                     {filtered.length===0?(
@@ -12641,9 +12623,6 @@ export default function ENEXSystem(){
 
                   <div style={{border:"1px solid #000",padding:"8px 10px",fontSize:12,background:"#FAFAFA",marginBottom:30}}>
                     <b>DECLARACIÓN DE RECEPCIÓN:</b> El receptor declara haber recibido conforme, en buen estado y en la cantidad indicada, la mercancía descrita en esta nota. Cualquier discrepancia o daño visible debe ser reportado al momento de la firma. Una vez firmada, ENEX queda liberado de toda responsabilidad sobre la custodia de la mercancía listada.
-                    {isAereo
-                      ?<div style={{marginTop:4,fontStyle:"italic",fontSize:11}}>Peso a facturar: el mayor entre el peso real y el peso volumétrico de cada WR (estándar de carga aérea).</div>
-                      :<div style={{marginTop:4,fontStyle:"italic",fontSize:11}}>Volumen a facturar: pies cúbicos / metros cúbicos del embarque marítimo.</div>}
                   </div>
 
                   <div style={{display:"flex",justifyContent:"space-between",gap:40,marginTop:40}}>
@@ -12811,7 +12790,7 @@ export default function ENEXSystem(){
 
                 {/* WR Y FLETE */}
                 {fl.length>0&&<>
-                  <div style={secT}>📦 WR y flete <span style={{fontSize:13,color:"var(--t3)",fontWeight:500}}>({esAereoF?"aéreo: el mayor entre peso real y volumétrico":`marítimo: ${uniC==="m3"?"metros cúbicos":"pies cúbicos"}`})</span></div>
+                  <div style={secT}>📦 WR y flete</div>
                   <div style={{overflowX:"auto",border:"1px solid var(--b1)",borderRadius:8}}>
                     <table className="ct" style={{width:"100%",fontSize:14}}>
                       <thead><tr>
@@ -13049,7 +13028,7 @@ export default function ENEXSystem(){
                   <input className="fi" value={p.referencia} onChange={e=>setPagoModal(x=>({...x,referencia:e.target.value}))} placeholder="Nº confirmación, últimos 4 dígitos, etc."/>
                 </div>
                 <div>
-                  <label className="fl">Nota referencial <span style={{color:"var(--t3)",fontWeight:400}}>(ej: "Recibido 100€ equivalente a $108 al cambio del día" o "Pago en Bs. 40,00 Bs/USD")</span></label>
+                  <label className="fl">Nota referencial</label>
                   <textarea className="fi" rows={2} value={p.notaReferencial} onChange={e=>setPagoModal(x=>({...x,notaReferencial:e.target.value}))} style={{resize:"vertical"}}/>
                 </div>
               </div>
