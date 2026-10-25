@@ -7254,6 +7254,7 @@ export default function ENEXSystem(){
     {k:"pos_eur",l:"💳 POS (EUR)"},
     {k:"otro",l:"➕ Otro"},
     {k:"saldo_favor",l:"⭐ Saldo a favor",interno:true},
+    {k:"nota_credito",l:"📝 Nota de crédito",interno:true},
   ];
   const REC_TYPES=[
     {k:"cliente",l:"Cliente (consignatario)"},
@@ -7621,7 +7622,9 @@ export default function ENEXSystem(){
   const facAnular=(f)=>{
     if(!hasPerm("anular_factura")&&!hasPerm("facturar")){window.alert("Tu rol no tiene permiso para anular facturas.");return;}
     if(f.status==="anulada"){window.alert("Ya está anulada.");return;}
+    if(f.tipo==="nota_credito"){const motivo=window.prompt(`Anular nota de crédito ${f.id}.\nMotivo:`);if(motivo)ncAnular(f,motivo);return;}
     if(f.pagado>0){window.alert("No puedes anular una factura con pagos. Anula los pagos primero o emite una nota de crédito.");return;}
+    if(facturas.some(x=>x.tipo==="nota_credito"&&x.status!=="anulada"&&x.ncFacturaOrigen===f.id)){window.alert("Esta factura tiene notas de crédito activas. Anúlalas primero.");return;}
     const motivo=window.prompt(`Anular factura ${f.id}.\nMotivo:`);
     if(!motivo)return;
     const upd={...f,status:"anulada",motivoAnulacion:motivo,fechaAnulacion:new Date()};
@@ -7682,6 +7685,7 @@ export default function ENEXSystem(){
   const pagoAnular=(pago)=>{
     if(!hasPerm("anular_pago")&&!hasPerm("cobrar")){window.alert("Tu rol no tiene permiso para anular pagos.");return;}
     if(pago.anulado){window.alert("Ya está anulado.");return;}
+    if(pago.tipoPago==="nota_credito"){window.alert(`Este saldo viene de la nota de crédito ${pago.referencia}. Anula la nota de crédito.`);return;}
     if(!pago.facturaId){const pg=pagadorDePago(pago);
       if(pg&&saldoFavorDe(pg,pago.moneda||"USD")+0.001<pago.monto){window.alert(`Ese saldo a favor ya se usó en otras facturas. Anula primero esos pagos.`);return;}}
     const motivo=window.prompt(`Anular pago ${pago.id}.\nMotivo:`);
@@ -7862,16 +7866,25 @@ export default function ENEXSystem(){
   };
 
   // ── Nota de crédito (crea una factura tipo "nota_credito" ligada a una origen) ─
-  const ncOpen=(facturaOrigen)=>{
+  const ncDisponible=(orig)=>r2((orig.total||0)-facturas.filter(f=>f.tipo==="nota_credito"&&f.status!=="anulada"&&f.ncFacturaOrigen===orig.id).reduce((t,f)=>t+Math.abs(f.total||0),0));
+  const ncOpen=(facturaOrigen,opts={})=>{
     if(!hasPerm("nota_credito")&&!hasPerm("facturar")){window.alert("Tu rol no tiene permiso.");return;}
     if(facturaOrigen.status==="anulada"){window.alert("La factura origen está anulada.");return;}
-    setNcModal({facturaOrigenId:facturaOrigen.id,monto:facturaOrigen.saldo||facturaOrigen.total,motivo:"",notas:""});
+    const disp=ncDisponible(facturaOrigen);
+    if(disp<=0.001){window.alert(`La factura ${facturaOrigen.id} ya tiene notas de crédito por su total.`);return;}
+    const monto=opts.monto!=null?Math.min(r2(opts.monto),disp):disp;
+    setNcModal({facturaOrigenId:facturaOrigen.id,monto,motivo:opts.motivo||"",notas:"",destino:"favor"});
   };
   const ncSubmit=()=>{
     const m=ncModal; if(!m)return;
     const orig=facturas.find(f=>f.id===m.facturaOrigenId); if(!orig)return;
-    const monto=parseFloat(m.monto); if(!monto||monto<=0){window.alert("Monto inválido.");return;}
-    if(monto>orig.total){window.alert("Monto excede el total de la factura origen.");return;}
+    const monto=r2(m.monto); if(!monto||monto<=0){window.alert("Monto inválido.");return;}
+    const disp=ncDisponible(orig);
+    if(monto>disp+0.001){window.alert(`El monto excede lo disponible para acreditar (${fmtMoney(disp,orig.moneda)}).`);return;}
+    // Primero rebaja lo pendiente de la factura; lo que ya estaba pagado se devuelve o queda a favor
+    const aplicado=Math.min(monto,r2(orig.saldo||0));
+    const excedente=r2(monto-aplicado);
+    const destino=excedente>0?(m.destino||"favor"):"";
     const nc={
       ...emptyFactura(),
       id:buildFacturaId(nextInvoiceNum),numero:nextInvoiceNum,
@@ -7881,23 +7894,50 @@ export default function ENEXSystem(){
       receptorTipo:orig.receptorTipo,receptorId:orig.receptorId,
       receptorNombre:orig.receptorNombre,receptorDoc:orig.receptorDoc,receptorDir:orig.receptorDir,
       receptorTel:orig.receptorTel,receptorEmail:orig.receptorEmail,receptorCasillero:orig.receptorCasillero,
-      lineas:[{descripcion:`Nota de crédito a factura ${orig.id}${m.motivo?` — ${m.motivo}`:""}`,cantidad:1,precio:-monto,total:-monto}],
+      lineas:[{descripcion:`Nota de crédito a factura ${orig.id}${m.motivo?` — ${m.motivo}`:""}`,cantidad:1,precio:-monto,total:-monto,aplicado,excedente,destino}],
       subtotal:-monto,total:-monto,pagado:0,saldo:0,
-      ncFacturaOrigen:orig.id,notas:m.notas||"",
+      ncFacturaOrigen:orig.id,notas:[m.notas||"",destino==="reembolso"?`Reembolsado ${fmtMoney(excedente,orig.moneda)}`:""].filter(Boolean).join(" · "),
       usuario:currentUser.id||currentUser.email||"",
     };
     setFacturas(p=>[nc,...p]);
     dbUpsertFactura(nc);
     setNextInvoiceNum(n=>{const nn=n+1;dbSetConfig('factura_sec_next',String(nn));return nn;});
-    // Ajustar saldo de la factura origen (reducir lo acreditado)
-    const nuevoPagado=(parseFloat(orig.pagado)||0)+monto; // se toma como "compensado"
-    const nuevoSaldo=Math.max(0,orig.total-nuevoPagado);
-    const nuevoStatus=nuevoSaldo<=0.001?"pagada":"pagada_parcial";
-    const updOrig={...orig,pagado:nuevoPagado,saldo:nuevoSaldo,status:nuevoStatus};
-    setFacturas(p=>p.map(f=>f.id===orig.id?updOrig:f));
-    dbUpsertFactura(updOrig);
-    logAction("Nota de crédito",`${nc.id} − ${fmtMoney(monto,nc.moneda)} → ${orig.id}`);
+    if(aplicado>0){
+      const pagado=r2((parseFloat(orig.pagado)||0)+aplicado), saldo=Math.max(0,r2(orig.total-pagado));
+      const updOrig={...orig,pagado,saldo,status:saldo<=0.001?"pagada":"pagada_parcial"};
+      setFacturas(p=>p.map(f=>f.id===orig.id?updOrig:f));
+      dbUpsertFactura(updOrig);
+    }
+    if(destino==="favor"){
+      const pago={id:pagoBuildId(),facturaId:"",fecha:new Date(),monto:excedente,moneda:orig.moneda,tipoPago:"nota_credito",
+        referencia:nc.id,notaReferencial:`NC ${nc.id} a factura ${orig.id}`,anulado:false,motivoAnulacion:"",
+        usuario:currentUser.id||currentUser.email||"",reciboId:"",
+        pagadorTipo:orig.receptorTipo||"cliente",pagadorId:orig.receptorId||"",pagadorNombre:orig.receptorNombre||"",comprobanteUrl:""};
+      setPagos(pr=>[pago,...pr]);
+      dbUpsertPago(pago);
+    }
+    logAction("Nota de crédito",`${nc.id} − ${fmtMoney(monto,nc.moneda)} → ${orig.id}${destino==="favor"?` · a favor ${fmtMoney(excedente,nc.moneda)}`:destino==="reembolso"?` · reembolso ${fmtMoney(excedente,nc.moneda)}`:""}`);
     setNcModal(null);
+  };
+  // Anular una NC: revierte lo rebajado en la factura origen y el saldo a favor que generó
+  const ncAnular=(nc,motivo)=>{
+    const ln=(nc.lineas||[])[0]||{};
+    const aplicado=r2(ln.aplicado??Math.abs(nc.total||0));
+    const pagoNC=pagos.find(p=>!p.anulado&&p.tipoPago==="nota_credito"&&p.referencia===nc.id);
+    if(pagoNC){const pg=pagadorDePago(pagoNC);
+      if(pg&&saldoFavorDe(pg,pagoNC.moneda||"USD")+0.001<pagoNC.monto){window.alert("El saldo a favor de esta nota de crédito ya se usó en otras facturas. Anula primero esos pagos.");return false;}
+      const updP={...pagoNC,anulado:true,motivoAnulacion:`NC ${nc.id} anulada`};
+      setPagos(pr=>pr.map(p=>p.id===pagoNC.id?updP:p));dbUpsertPago(updP);}
+    const orig=facturas.find(f=>f.id===nc.ncFacturaOrigen);
+    if(orig&&aplicado>0){
+      const pagado=Math.max(0,r2((parseFloat(orig.pagado)||0)-aplicado)), saldo=Math.max(0,r2(orig.total-pagado));
+      const updO={...orig,pagado,saldo,status:pagado<=0.001?"emitida":(saldo<=0.001?"pagada":"pagada_parcial")};
+      setFacturas(p=>p.map(f=>f.id===orig.id?updO:f));dbUpsertFactura(updO);
+    }
+    const upd={...nc,status:"anulada",motivoAnulacion:motivo,fechaAnulacion:new Date()};
+    setFacturas(p=>p.map(x=>x.id===nc.id?upd:x));dbUpsertFactura(upd);
+    logAction("Anuló nota de crédito",`${nc.id} — ${motivo}`);
+    return true;
   };
 
   // ── Generar factura desde una guía consolidada ─────────────────────────────
@@ -9050,6 +9090,14 @@ export default function ENEXSystem(){
     if(selWR&&selWR.id===w.id)setSelWR(upd);
     dbUpsertWR(upd);
     logAction(`Alerta: ${a.txt}`,`${w.id}${mC?` · cliente $${mC}`:""}${mT?` · transportista $${mT}`:""}`);
+    if(["indemnizado","perdida"].includes(accion)){
+      const fac=facturas.find(f=>f.tipo==="factura"&&!["anulada","borrador"].includes(f.status)&&(f.wrIds||[]).includes(w.id));
+      if(fac&&ncDisponible(fac)>0.001&&(hasPerm("nota_credito")||hasPerm("facturar"))&&window.confirm(`El WR ${w.id} está en la factura ${fac.id}. ¿Emitir nota de crédito?`)){
+        const lin=(fac.lineas||[]).filter(l=>l.wrId===w.id).reduce((t,l)=>t+(parseFloat(l.total)||0),0);
+        const monto=(fac.wrIds||[]).length<=1||!lin?fac.total:(fac.subtotal>0?lin*fac.total/fac.subtotal:lin);
+        ncOpen(fac,{monto,motivo:`WR ${w.id} ${accion==="indemnizado"?"indemnizado":"pérdida"}`});
+      }
+    }
     return true;
   };
   // Resuelve un SOBRANTE (19). destino: "20" (Por Entrega) o "4" (vuelve a Consolidado para próxima guía).
@@ -13060,8 +13108,15 @@ export default function ENEXSystem(){
                   <label className="fl">Monto a acreditar ({orig.moneda})</label>
                   <input className="fi" type="number" step="0.01" value={ncModal.monto} onChange={e=>setNcModal(x=>({...x,monto:e.target.value}))}/>
                 </div>
+                {(()=>{const exc=r2((parseFloat(ncModal.monto)||0)-Math.min(parseFloat(ncModal.monto)||0,orig.saldo||0));if(exc<=0)return null;
+                  return(<div style={{marginBottom:10}}>
+                    <label className="fl">Ya pagado: {fmtMoney(exc,orig.moneda)}</label>
+                    <div style={{display:"flex",gap:6}}>
+                      {[["favor","⭐ Saldo a favor"],["reembolso","💵 Reembolsado"]].map(([k,l])=><button key={k} className={ncModal.destino===k?"btn-p":"btn-s"} style={{fontSize:13,padding:"5px 12px"}} onClick={()=>setNcModal(x=>({...x,destino:k}))}>{l}</button>)}
+                    </div>
+                  </div>);})()}
                 <div style={{marginBottom:10}}>
-                  <label className="fl">Motivo (aparece en la línea)</label>
+                  <label className="fl">Motivo</label>
                   <input className="fi" value={ncModal.motivo} onChange={e=>setNcModal(x=>({...x,motivo:e.target.value}))} placeholder="Ej: Descuento por retraso, devolución parcial…"/>
                 </div>
                 <div>
