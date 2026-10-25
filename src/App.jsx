@@ -7558,7 +7558,7 @@ export default function ENEXSystem(){
     return{...f,lineas,subtotal,descuento,descuentoTipo:dTipo,descuentoValor:dValor,total,saldo};
   };
   // Documento de la factura (se muestra en pantalla y se imprime tal cual)
-  const facturaHTML=f=>{
+  const facturaHTML=(f,listaPagos=pagos)=>{
     const e=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
     const $=v=>fmtMoney(v,f.moneda);
     const n=v=>(Math.round((parseFloat(v)||0)*100)/100).toLocaleString("es",{minimumFractionDigits:0,maximumFractionDigits:2});
@@ -7571,7 +7571,7 @@ export default function ENEXSystem(){
     const cm=aereo?(uniC==="kg"?[["pesoKg","Kg."],["volKg","Kg. Vol"]]:[["pesoLb","Lb."],["volLb","Lb. Vol"]]):[["ft3","Ft³"],["m3","M³"]];
     const conCli=fl.some(l=>l.cliente);
     const titulo=f.tipo==="nota_credito"?"NOTA DE CRÉDITO":f.tipo==="proforma"?"PROFORMA":"FACTURA";
-    const pagosAplic=pagos.filter(p=>p.facturaId===f.id&&!p.anulado);
+    const pagosAplic=listaPagos.filter(p=>p.facturaId===f.id&&!p.anulado);
     const td='style="padding:5px 7px;border-bottom:1px solid #ddd"';
     const tdr='style="padding:5px 7px;border-bottom:1px solid #ddd;text-align:right;font-family:monospace"';
     const th=(t,r)=>`<th style="padding:6px 7px;background:#1A2B4A;color:#fff;font-size:11px;text-transform:uppercase;letter-spacing:.5px;text-align:${r?"right":"left"}">${t}</th>`;
@@ -7630,10 +7630,10 @@ export default function ENEXSystem(){
       ${f.condiciones?`<div class="pie"><b>Condiciones:</b> ${e(f.condiciones)}</div>`:""}
     </body></html>`;
   };
-  const printFactura=f=>{
+  const printFactura=(f,listaPagos=pagos)=>{
     const w=window.open("","_blank","width=900,height=1100");
     if(!w){window.alert("El navegador bloqueó la ventana de impresión.");return;}
-    w.document.write(facturaHTML(f));w.document.close();
+    w.document.write(facturaHTML(f,listaPagos));w.document.close();
     setTimeout(()=>{w.focus();w.print();},300);
   };
   // Tarifa que aplica a un WR según tipo de envío, origen y destino (Configuración › Tarifas)
@@ -7747,9 +7747,12 @@ export default function ENEXSystem(){
     if(fact.tipo==="nota_credito"||(fact.total||0)<=0)return;
     const ws=wrList.filter(w=>(fact.wrIds||[]).includes(w.id));
     if(!ws.length||!ws.every(w=>(w.tipoPago||"").toLowerCase().includes("prepa")))return;
-    if(!hasPerm("registrar_pago")&&!hasPerm("cobrar"))return;
+    if(!hasPerm("registrar_pago")&&!hasPerm("cobrar")){printFactura(fact);return;}
     cobroAbrir(pagadorDeFactura(fact),null,{...fact,saldo:fact.total-(parseFloat(fact.pagado)||0)});
+    setCobroModal(m=>m?{...m,imprimirFactura:fact}:m);
   };
+  // Cerrar el cobro; si venía de emitir un PREPAID, se imprime la factura igual (queda pendiente)
+  const cobroCerrar=()=>{const f=cobroModal?.imprimirFactura;setCobroModal(null);if(f)printFactura(f);};
   const facAnular=(f)=>{
     if(!hasPerm("anular_factura")&&!hasPerm("facturar")){window.alert("Tu rol no tiene permiso para anular facturas.");return;}
     if(f.status==="anulada"){window.alert("Ya está anulada.");return;}
@@ -7933,6 +7936,7 @@ export default function ENEXSystem(){
         nuevos.forEach(p=>dbUpsertPago({...p,comprobanteUrl:url}));
       });
     }
+    if(m.imprimirFactura){const f=m.imprimirFactura;printFactura(mp.get(f.id)||f,[...nuevos,...pagos]);}
     setCobroModal(null);
   };
   const reciboHTML=(reciboId,lista=pagos,facMap=null)=>{
@@ -13287,7 +13291,7 @@ export default function ENEXSystem(){
                   <div className="mt">💵 Registrar cobro</div>
                   {m.pagador&&<div style={{fontSize:14,color:"var(--t2)",fontWeight:600}}>{IC[m.pagador.tipo]||"•"} {m.pagador.nombre}</div>}
                 </div>
-                <button className="mcl" onClick={()=>setCobroModal(null)}>✕</button>
+                <button className="mcl" onClick={cobroCerrar}>✕</button>
               </div>
               <div>
                 {!m.pagador?(
@@ -13347,7 +13351,7 @@ export default function ENEXSystem(){
               </div>
               <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:16,paddingTop:12,borderTop:"1px solid var(--b1)"}}>
                 {m.pagador&&<button className="btn-s" style={{marginRight:"auto"}} onClick={()=>set({pagador:null})}>← Cambiar pagador</button>}
-                <button className="btn-s" onClick={()=>setCobroModal(null)}>Cancelar</button>
+                <button className="btn-s" onClick={cobroCerrar}>Cancelar</button>
                 {m.pagador&&<button className="btn-p" onClick={cobroSubmit}>💵 Registrar y emitir recibo</button>}
               </div>
             </div>
