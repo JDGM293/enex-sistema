@@ -1512,6 +1512,48 @@ const WRBarcode=({value,height=50,width=2})=>{
 const UNI_LBL={lb:"lb",kg:"kg",ft3:"ft³","ft³":"ft³",m3:"m³"};
 const unidadTarifa=(t,esAereo)=>{const u=t?.unidad;if(esAereo)return u==="kg"?"kg":"lb";return u==="m3"?"m3":"ft3";};
 // Campo de contraseña con botón para ver / ocultar lo que se escribe
+// Selección múltiple de lugares (país completo o ciudad) con buscador y casillas; pensado para cientos de opciones
+const SelectorLugares=({titulo,countries,value,onChange})=>{
+  const [q,setQ]=useState("");
+  const opciones=[];
+  (countries||[]).forEach(co=>{
+    opciones.push({pais:co.name,ciudad:"",l:`${co.name} — todo el país`,pais1:true});
+    (co.cities||[]).forEach(ci=>opciones.push({pais:co.name,ciudad:ci.name,l:`${ci.name}`,sub:co.name,code:ci.code||""}));
+  });
+  const k=x=>`${sinAcentos(x.pais)}|${sinAcentos(x.ciudad)}`;
+  const sel=new Set((value||[]).map(k));
+  const Q=sinAcentos(q.trim());
+  const vis=Q?opciones.filter(o=>sinAcentos(`${o.l} ${o.sub||""} ${o.code||""}`).includes(Q)):opciones;
+  const alternar=o=>onChange(sel.has(k(o))?(value||[]).filter(x=>k(x)!==k(o)):[...(value||[]),{pais:o.pais,ciudad:o.ciudad}]);
+  const todosVis=vis.length>0&&vis.every(o=>sel.has(k(o)));
+  const marcarVis=()=>{if(todosVis){const v=new Set(vis.map(k));onChange((value||[]).filter(x=>!v.has(k(x))));}
+    else{const nuevos=vis.filter(o=>!sel.has(k(o))).map(o=>({pais:o.pais,ciudad:o.ciudad}));onChange([...(value||[]),...nuevos]);}};
+  const elegidos=value||[];
+  return(
+    <div style={{flex:1,minWidth:260}}>
+      <div className="sdiv" style={{display:"flex",alignItems:"center",gap:8}}>{titulo}
+        <span style={{marginLeft:"auto",color:elegidos.length?"var(--navy)":"var(--t3)"}}>{elegidos.length} seleccionado{elegidos.length===1?"":"s"}</span>
+        {elegidos.length>0&&<span style={{cursor:"pointer",color:"var(--red)"}} onClick={()=>onChange([])}>Quitar todos</span>}
+      </div>
+      <div style={{border:"1px solid var(--b1)",borderRadius:8,overflow:"hidden"}}>
+        <div style={{display:"flex",gap:6,padding:6,borderBottom:"1px solid var(--b1)",background:"var(--bg3)"}}>
+          <input className="fi" style={{flex:1,fontSize:13,padding:"5px 8px"}} placeholder="Buscar país o ciudad…" value={q} onChange={e=>setQ(e.target.value)}/>
+          <label style={{display:"flex",alignItems:"center",gap:4,fontSize:12,fontWeight:600,whiteSpace:"nowrap",cursor:"pointer"}}>
+            <input type="checkbox" checked={todosVis} onChange={marcarVis}/>{Q?"Todos los filtrados":"Todos"}</label>
+        </div>
+        <div style={{maxHeight:240,overflowY:"auto"}}>
+          {vis.length===0&&<div style={{padding:12,textAlign:"center",color:"var(--t3)",fontSize:13}}>Sin coincidencias.</div>}
+          {vis.map(o=>(
+            <label key={k(o)} style={{display:"flex",alignItems:"center",gap:8,padding:"5px 10px",fontSize:13,cursor:"pointer",borderBottom:"1px solid var(--b1)",background:sel.has(k(o))?"#EEF3FF":"transparent",fontWeight:o.pais1?700:500}}>
+              <input type="checkbox" checked={sel.has(k(o))} onChange={()=>alternar(o)}/>
+              <span style={{flex:1}}>{o.l}</span>
+              {o.sub&&<span style={{fontSize:11,color:"var(--t3)"}}>{o.sub}{o.code?` · ${o.code}`:""}</span>}
+            </label>))}
+        </div>
+      </div>
+    </div>
+  );
+};
 const PwInput=({style,...props})=>{
   const [ver,setVer]=useState(false);
   return (
@@ -6564,25 +6606,7 @@ export default function ENEXSystem(){
                   {(()=>{
                     const F=tafForm, set=x=>setTafForm(p=>({...p,...x}));
                     const lugares=k=>F[k]||[];
-                    const tiene=(k,pais,ciudad)=>lugares(k).some(x=>sinAcentos(x.pais)===sinAcentos(pais)&&sinAcentos(x.ciudad)===sinAcentos(ciudad));
-                    const alternar=(k,pais,ciudad)=>set({[k]:tiene(k,pais,ciudad)?lugares(k).filter(x=>!(sinAcentos(x.pais)===sinAcentos(pais)&&sinAcentos(x.ciudad)===sinAcentos(ciudad))):[...lugares(k),{pais,ciudad}]});
-                    const selector=(k,titulo)=>(
-                      <div style={{flex:1,minWidth:220}}>
-                        <div className="sdiv">{titulo} {lugares(k).length>0&&<span style={{color:"var(--navy)"}}>({lugares(k).length})</span>}</div>
-                        <div style={{border:"1px solid var(--b1)",borderRadius:8,padding:8,maxHeight:220,overflowY:"auto"}}>
-                          {COUNTRIES.map(co=>(
-                            <div key={co.name} style={{marginBottom:6}}>
-                              <label style={{display:"flex",alignItems:"center",gap:6,fontWeight:700,fontSize:13,cursor:"pointer"}}>
-                                <input type="checkbox" checked={tiene(k,co.name,"")} onChange={()=>alternar(k,co.name,"")}/> {co.name} <span style={{fontWeight:400,color:"var(--t3)",fontSize:12}}>(todo el país)</span></label>
-                              <div style={{display:"flex",flexWrap:"wrap",gap:4,paddingLeft:22,marginTop:3}}>
-                                {(co.cities||[]).map(ci=>{const on=tiene(k,co.name,ci.name);return(
-                                  <span key={ci.code||ci.name} onClick={()=>alternar(k,co.name,ci.name)} style={{cursor:"pointer",fontSize:12,fontWeight:600,padding:"2px 9px",borderRadius:12,border:"1px solid",borderColor:on?"var(--navy)":"var(--b1)",background:on?"var(--navy)":"transparent",color:on?"#fff":"var(--t2)"}}>{ci.name}</span>);})}
-                              </div>
-                            </div>))}
-                          {lugares(k).filter(x=>!COUNTRIES.some(co=>sinAcentos(co.name)===sinAcentos(x.pais))).map((x,i)=>(
-                            <span key={"x"+i} onClick={()=>alternar(k,x.pais,x.ciudad)} style={{cursor:"pointer",fontSize:12,fontWeight:600,padding:"2px 9px",borderRadius:12,background:"var(--navy)",color:"#fff",marginRight:4}}>{[x.pais,x.ciudad].filter(Boolean).join("-")} ✕</span>))}
-                        </div>
-                      </div>);
+                    const selector=(k,titulo)=><SelectorLugares titulo={titulo} countries={COUNTRIES} value={lugares(k)} onChange={v=>set({[k]:v})}/>;
                     const setFila=(i,x)=>set({filas:F.filas.map((f,j)=>j===i?{...f,...x}:f)});
                     const combos=(lugares("orig").length?lugares("orig"):[{pais:"",ciudad:""}]).flatMap(o=>(lugares("dest").length?lugares("dest"):[{pais:"",ciudad:""}]).flatMap(d=>(F.filas||[]).map(f=>({o,d,f}))));
                     const guardar=()=>{
