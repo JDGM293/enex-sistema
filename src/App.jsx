@@ -2209,6 +2209,7 @@ export default function ENEXSystem(){
   const [showNewAgente,setShowNewAgente]=useState(false);
   const [showNewOficina,setShowNewOficina]=useState(false);
   const [editAgente,setEditAgente]=useState(null);
+  const [verAgente,setVerAgente]=useState(null);
   const [editOficina,setEditOficina]=useState(null);
   const [agForm,setAgForm]=useState({nombre:"",ciudad:"",pais:"",tel:"",email:"",contacto:"",notas:""});
   const [ofForm,setOfForm]=useState({nombre:"",ciudad:"",pais:"",tel:"",email:"",contacto:"",notas:""});
@@ -6287,7 +6288,13 @@ export default function ENEXSystem(){
 
         {/* ── REGISTRO DE ACTIVIDAD ── */}
         {/* ── AGENTES ── */}
-        {cfgTab==="agentes"&&(
+        {cfgTab==="agentes"&&(()=>{
+          const usuariosDe=a=>clients.filter(c=>c.tipo==="usuario"&&["E","E1"].includes(c.rol)&&c.agenteId===a.id);
+          const conDatos=a=>{const u=usuariosDe(a).find(c=>c.rol==="E")||usuariosDe(a)[0];if(!u)return a;
+            return {...a,ciudad:a.ciudad||[u.municipio,u.estado].filter(Boolean).join(", "),pais:a.pais||u.pais||"",tel:a.tel||u.tel1||"",
+              email:a.email||u.email||"",contacto:a.contacto||fullName(u)||""};};
+          const abrirEditar=a=>{const d=conDatos(a);setAgForm({nombre:"",ciudad:"",pais:"",tel:"",email:"",contacto:"",notas:"",...d});setEditAgente(a);setShowNewAgente(true);};
+          return(
           <div>
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
               <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:17,fontWeight:700,color:"var(--navy)",flex:1}}>🤝 Agentes registrados</div>
@@ -6300,8 +6307,8 @@ export default function ENEXSystem(){
                 </tr></thead>
                 <tbody>
                   {agentes.length===0&&<tr><td colSpan={9} style={{textAlign:"center",padding:30,color:"var(--t3)"}}>No hay agentes registrados.</td></tr>}
-                  {agentes.map(a=>(
-                    <tr key={a.id}>
+                  {agentes.map(a0=>{const a=conDatos(a0);return(
+                    <tr key={a.id} style={{cursor:"pointer"}} onClick={()=>setVerAgente(a0)}>
                       <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",background:"#EEF3FF",padding:"2px 8px",borderRadius:4,border:"1px solid #B8C8F0"}}>{a.codigo}</span></td>
                       <td style={{fontWeight:600}}>{a.nombre}</td>
                       <td style={{fontSize:13}}>{a.ciudad||"—"}</td>
@@ -6310,15 +6317,41 @@ export default function ENEXSystem(){
                       <td style={{fontSize:13,color:"var(--cyan)"}}>{a.email||"—"}</td>
                       <td style={{fontSize:13}}>{a.contacto||"—"}</td>
                       <td><span style={{fontSize:11,padding:"2px 8px",borderRadius:4,fontWeight:700,background:a.activo?"#E8F8EE":"#FEE8E8",color:a.activo?"var(--green)":"var(--red)",border:"1px solid",borderColor:a.activo?"#80D0A0":"#F0A0A0"}}>{a.activo?"✅ Activo":"❌ Inactivo"}</span></td>
-                      <td><div style={{display:"flex",gap:4}}>
-                        {hasPerm("editar_agente")&&<span className="ic-b" onClick={()=>{setAgForm(a);setEditAgente(a);setShowNewAgente(true);}}>✏️</span>}
+                      <td onClick={e=>e.stopPropagation()}><div style={{display:"flex",gap:4}}>
+                        <span className="ic-b" title="Ver" onClick={()=>setVerAgente(a0)}>👁️</span>
+                        {hasPerm("editar_agente")&&<span className="ic-b" onClick={()=>abrirEditar(a0)}>✏️</span>}
                         {hasPerm("borrar_agente")&&<span className="ic-b" style={{color:"var(--red)"}} onClick={()=>{if(!window.confirm(`¿Borrar agente ${a.codigo} — ${a.nombre}?`))return;setAgentes(p=>p.filter(x=>x.id!==a.id));dbDeleteAgente(a.id);logAction("Borró agente",`${a.codigo} — ${a.nombre}`);}}>🗑</span>}
                       </div></td>
                     </tr>
-                  ))}
+                  );})}
                 </tbody>
               </table>
             </div>
+            {verAgente&&(()=>{const a=conDatos(verAgente);const us=usuariosDe(verAgente);
+              const cls=clients.filter(c=>c.tipo==="cliente"&&["agente","vendedor_agente"].includes(c.clienteTipo)&&c.agenteId===verAgente.id);
+              const tfs=tarifas.filter(t=>t.aplicaTipo==="agente"&&t.aplicaId===verAgente.id);
+              const D=(l,v)=><div><div className="fl">{l}</div><div style={{fontSize:14,fontWeight:600}}>{v||"—"}</div></div>;
+              return(
+              <div className="ov" onClick={()=>setVerAgente(null)}>
+                <div className="modal" style={{maxWidth:620}} onClick={e=>e.stopPropagation()}>
+                  <div className="mhd"><div className="mt">🤝 {a.codigo} — {a.nombre}</div><button className="mcl" onClick={()=>setVerAgente(null)}>✕</button></div>
+                  <div className="fgrid g2" style={{gap:12,marginBottom:14}}>
+                    {D("Ciudad",a.ciudad)}{D("País",a.pais)}{D("Teléfono",a.tel)}{D("Email",a.email)}{D("Contacto",a.contacto)}{D("Estado",a.activo!==false?"✅ Activo":"❌ Inactivo")}
+                    {a.notas&&<div className="full">{D("Notas",a.notas)}</div>}
+                  </div>
+                  <div className="sdiv">USUARIOS ({us.length})</div>
+                  <div style={{marginBottom:12}}>{us.length===0?<div style={{color:"var(--t3)",fontSize:13}}>—</div>:us.map(u=>(
+                    <div key={u.id} style={{fontSize:13,padding:"4px 0",borderBottom:"1px solid var(--b1)"}}><b>{u.id}</b> · {fullName(u)} · {u.rol==="E"?"Agente":"Vendedor"}{u.email?` · ${u.email}`:""}{u.tel1?` · ${u.tel1}`:""}</div>))}</div>
+                  <div className="sdiv">CLIENTES ({cls.length})</div>
+                  <div style={{marginBottom:12,fontSize:13}}>{cls.length===0?<span style={{color:"var(--t3)"}}>—</span>:cls.map(c=><span key={c.id} style={{display:"inline-block",marginRight:10}}>#{c.casillero} {fullName(c)}</span>)}</div>
+                  <div className="sdiv">TARIFAS ESPECIALES ({tfs.length})</div>
+                  <div style={{fontSize:13,marginBottom:12}}>{tfs.length===0?<span style={{color:"var(--t3)"}}>—</span>:tfs.map(t=><div key={t.id}>{t.id} · {t.tipoEnvio} · {[t.ciudadOrig||t.paisOrig,t.ciudadDest||t.paisDest].map(x=>x||"Cualquiera").join(" → ")} · {cSym(t.moneda)}{/^a/i.test(t.tipoEnvio||"")?t.porLb:t.porFt3}/{t.unidad||(/^a/i.test(t.tipoEnvio||"")?"lb":"ft³")} · mín {cSym(t.moneda)}{t.min}</div>)}</div>
+                  <div className="mft" style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
+                    {hasPerm("editar_agente")&&<button className="btn-p" onClick={()=>{const x=verAgente;setVerAgente(null);abrirEditar(x);}}>✏️ Editar</button>}
+                    <button className="btn-s" onClick={()=>setVerAgente(null)}>Cerrar</button>
+                  </div>
+                </div>
+              </div>);})()}
             {showNewAgente&&(
               <div className="ov">
                 <div className="modal" style={{maxWidth:520}} onClick={e=>e.stopPropagation()}>
@@ -6356,8 +6389,8 @@ export default function ENEXSystem(){
                 </div>
               </div>
             )}
-          </div>
-        )}
+          </div>);
+        })()}
 
         {/* ── OFICINAS ── */}
         {cfgTab==="oficinas"&&(
