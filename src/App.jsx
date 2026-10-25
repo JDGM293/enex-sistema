@@ -6486,14 +6486,19 @@ export default function ENEXSystem(){
         {cfgTab==="tarifas"&&(()=>{
           const tipoEsAereo=(te)=>{const t=(te||"").toLowerCase().replace(/á/g,"a").replace(/é/g,"e");return t.includes("aereo")||t.includes("express")||t.includes("economico");};
           const tipoEsMaritimo=(te)=>{const t=(te||"").toLowerCase().replace(/í/g,"i");return t.includes("maritimo")||t.includes("fcl")||t.includes("lcl");};
-          const formEsAereo=tipoEsAereo(tafForm.tipoEnvio);
-          const formEsMaritimo=tipoEsMaritimo(tafForm.tipoEnvio);
+          const filaNueva=te=>({tipoEnvio:te||"",unidad:"",precio:"",min:"",moneda:"USD"});
+          const tafNuevo=()=>({aplicaTipo:"",aplicaId:"",orig:[],dest:[],filas:[filaNueva(SEND_TYPES.find(tipoEsAereo)),filaNueva(SEND_TYPES.find(tipoEsMaritimo))].filter(f=>f.tipoEnvio)});
+          const tafDeTarifa=t=>({aplicaTipo:t.aplicaTipo||"",aplicaId:t.aplicaId||"",
+            orig:(t.paisOrig||t.ciudadOrig)?[{pais:t.paisOrig||"",ciudad:t.ciudadOrig||""}]:[],
+            dest:(t.paisDest||t.ciudadDest)?[{pais:t.paisDest||"",ciudad:t.ciudadDest||""}]:[],
+            filas:[{tipoEnvio:t.tipoEnvio||"",unidad:t.unidad||"",precio:String((tipoEsMaritimo(t.tipoEnvio)?t.porFt3:t.porLb)??""),min:String(t.min??""),moneda:t.moneda||"USD"}]});
+          const MONEDAS=["USD","EUR","VES","COP","MXN","ARS","CLP","PEN","BRL","DOP","PAB"];
           return(
           <div>
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
               <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:17,fontWeight:700,color:"var(--navy)",flex:1}}>💰 Tarifas por Ruta y Tipo de Envío</div>
               {hasPerm("crear_tarifa")&&<button className="btn-p" style={{fontSize:13}} onClick={()=>{
-                setTafForm({paisOrig:"",ciudadOrig:"",paisDest:"",ciudadDest:"",tipoEnvio:SEND_TYPES[0]||"",porLb:"",porFt3:"",min:"",moneda:"USD",aplicaTipo:"",aplicaId:""});
+                setTafForm(tafNuevo());
                 setEditTarifa(null);setShowNewTarifa(true);
               }}>+ Nueva Tarifa</button>}
             </div>
@@ -6522,7 +6527,7 @@ export default function ENEXSystem(){
                       <td style={{fontSize:13}}>{t.moneda}</td>
                       <td><span style={{fontSize:11,padding:"2px 8px",borderRadius:4,fontWeight:700,background:t.activo?"#E8F8EE":"#FEE8E8",color:t.activo?"var(--green)":"var(--red)",border:"1px solid",borderColor:t.activo?"#80D0A0":"#F0A0A0"}}>{t.activo?"✅ Activa":"❌ Inactiva"}</span></td>
                       <td><div style={{display:"flex",gap:4}}>
-                        {hasPerm("editar_tarifa")&&<span className="ic-b" onClick={()=>{setTafForm(t);setEditTarifa(t);setShowNewTarifa(true);}}>✏️</span>}
+                        {hasPerm("editar_tarifa")&&<span className="ic-b" onClick={()=>{setTafForm(tafDeTarifa(t));setEditTarifa(t);setShowNewTarifa(true);}}>✏️</span>}
                         {hasPerm("editar_tarifa")&&<span className="ic-b" onClick={()=>{const upd={...t,activo:!t.activo};setTarifas(p=>p.map(x=>x.id===t.id?upd:x));dbUpsertTarifa(upd);logAction(upd.activo?"Activó tarifa":"Desactivó tarifa",`${t.paisOrig}-${t.ciudadOrig} → ${t.paisDest}-${t.ciudadDest}`);}}>{t.activo?"⏸":"▶️"}</span>}
                         {hasPerm("borrar_tarifa")&&<span className="ic-b" style={{color:"var(--red)"}} onClick={()=>{if(!window.confirm(`¿Borrar tarifa ${t.paisOrig}-${t.ciudadOrig} → ${t.paisDest}-${t.ciudadDest}?`))return;setTarifas(p=>p.filter(x=>x.id!==t.id));dbDeleteTarifa(t.id);logAction("Borró tarifa",`${t.paisOrig}-${t.ciudadOrig} → ${t.paisDest}-${t.ciudadDest} · ${t.tipoEnvio}`);}}>🗑</span>}
                       </div></td>
@@ -6534,8 +6539,8 @@ export default function ENEXSystem(){
             </div>
             {showNewTarifa&&(
               <div className="ov">
-                <div className="modal" style={{maxWidth:520}} onClick={e=>e.stopPropagation()}>
-                  <div className="mhd"><div className="mt">{editTarifa?"✏️ Editar Tarifa":"➕ Nueva Tarifa"}</div><button className="mcl" onClick={()=>setShowNewTarifa(false)}>✕</button></div>
+                <div className="modal" style={{maxWidth:780}} onClick={e=>e.stopPropagation()}>
+                  <div className="mhd"><div className="mt">{editTarifa?"✏️ Editar Tarifa":"➕ Nuevas Tarifas"}</div><button className="mcl" onClick={()=>setShowNewTarifa(false)}>✕</button></div>
                   <div className="sdiv">APLICA A</div>
                   <div className="fgrid g2" style={{marginBottom:10}}>
                     <div className="fg"><div className="fl">Tipo</div>
@@ -6556,65 +6561,84 @@ export default function ENEXSystem(){
                       </select>
                     </div>}
                   </div>
-                  <div className="sdiv">RUTA</div>
-                  <div className="fgrid g4" style={{marginBottom:10}}>
-                    <div className="fg"><div className="fl">País Origen</div><input className="fi" style={{fontFamily:"'DM Mono',monospace"}} value={tafForm.paisOrig} onChange={e=>setTafForm(p=>({...p,paisOrig:e.target.value.toUpperCase()}))} placeholder="Ej: 01"/></div>
-                    <div className="fg"><div className="fl">Ciudad Origen</div><input className="fi" style={{fontFamily:"'DM Mono',monospace"}} value={tafForm.ciudadOrig} onChange={e=>setTafForm(p=>({...p,ciudadOrig:e.target.value.toUpperCase()}))} placeholder="Ej: MIA"/></div>
-                    <div className="fg"><div className="fl">País Destino</div><input className="fi" style={{fontFamily:"'DM Mono',monospace"}} value={tafForm.paisDest} onChange={e=>setTafForm(p=>({...p,paisDest:e.target.value.toUpperCase()}))} placeholder="Ej: 58"/></div>
-                    <div className="fg"><div className="fl">Ciudad Destino</div><input className="fi" style={{fontFamily:"'DM Mono',monospace"}} value={tafForm.ciudadDest} onChange={e=>setTafForm(p=>({...p,ciudadDest:e.target.value.toUpperCase()}))} placeholder="Ej: CCS"/></div>
-                  </div>
-                  <div className="sdiv">TARIFA</div>
-                  <div className="fgrid g3" style={{marginBottom:10}}>
-                    <div className="fg"><div className="fl">Tipo de Envío</div>
-                      <select className="fs" value={tafForm.tipoEnvio} onChange={e=>setTafForm(p=>({...p,tipoEnvio:e.target.value,porLb:"",porFt3:""}))}>
-                        <option value="">— Seleccionar —</option>
-                        {SEND_TYPES.map(t=><option key={t} value={t}>{t}</option>)}
-                      </select>
-                    </div>
-                    {formEsAereo&&<div className="fg"><div className="fl">Se cobra por</div>
-                      <select className="fs" value={tafForm.unidad==="kg"?"kg":"lb"} onChange={e=>setTafForm(p=>({...p,unidad:e.target.value}))}>
-                        <option value="lb">Libra (lb)</option><option value="kg">Kilo (kg)</option>
-                      </select></div>}
-                    {formEsAereo&&<div className="fg"><div className="fl">Precio por {tafForm.unidad==="kg"?"kg":"lb"} ({cSym(tafForm.moneda)})</div><input className="fi" type="number" step="0.01" min="0" value={tafForm.porLb} onChange={e=>setTafForm(p=>({...p,porLb:e.target.value}))}/></div>}
-                    {formEsMaritimo&&<div className="fg"><div className="fl">Se cobra por</div>
-                      <select className="fs" value={tafForm.unidad==="m3"?"m3":"ft3"} onChange={e=>setTafForm(p=>({...p,unidad:e.target.value}))}>
-                        <option value="ft3">Pie cúbico (ft³)</option><option value="m3">Metro cúbico (m³)</option>
-                      </select></div>}
-                    {formEsMaritimo&&<div className="fg"><div className="fl">Precio por {tafForm.unidad==="m3"?"m³":"ft³"} ({cSym(tafForm.moneda)})</div><input className="fi" type="number" step="0.01" min="0" value={tafForm.porFt3} onChange={e=>setTafForm(p=>({...p,porFt3:e.target.value}))}/></div>}
-                    {!formEsAereo&&!formEsMaritimo&&tafForm.tipoEnvio&&<div className="fg"><div className="fl">Precio por lb ({cSym(tafForm.moneda)})</div><input className="fi" type="number" step="0.01" min="0" value={tafForm.porLb} onChange={e=>setTafForm(p=>({...p,porLb:e.target.value}))}/></div>}
-                    <div className="fg"><div className="fl">Cargo mínimo ({cSym(tafForm.moneda)})</div><input className="fi" type="number" step="0.01" min="0" value={tafForm.min} onChange={e=>setTafForm(p=>({...p,min:e.target.value}))}/></div>
-                    <div className="fg"><div className="fl">Moneda</div><select className="fs" value={tafForm.moneda} onChange={e=>setTafForm(p=>({...p,moneda:e.target.value}))}><option>USD</option><option>EUR</option><option>VES</option><option>COP</option><option>MXN</option><option>ARS</option><option>CLP</option><option>PEN</option><option>BRL</option><option>DOP</option><option>PAB</option></select></div>
-                  </div>
-                  <div className="mft">
-                    <button className="btn-s" onClick={()=>setShowNewTarifa(false)}>Cancelar</button>
-                    <button className="btn-p" onClick={()=>{
-                      if(!tafForm.tipoEnvio)return;
-                      if(tafForm.aplicaTipo&&!tafForm.aplicaId){window.alert("Elige a quién aplica la tarifa especial.");return;}
-                      const porLbF=parseFloat(tafForm.porLb)||0;
-                      const porFt3F=parseFloat(tafForm.porFt3)||0;
-                      const minF=parseFloat(tafForm.min)||0;
-                      if(editTarifa){
-                        const updated={...editTarifa,...tafForm,porLb:porLbF,porFt3:porFt3F,min:minF};
-                        setTarifas(p=>p.map(t=>t.id===editTarifa.id?updated:t));
-                        dbUpsertTarifa(updated);
-                        logAction("Actualizó tarifa",`${tafForm.paisOrig}-${tafForm.ciudadOrig} → ${tafForm.paisDest}-${tafForm.ciudadDest} · ${tafForm.tipoEnvio}`);
-                      } else {
-                        const existing=tarifas.find(t=>(t.aplicaTipo||"")===(tafForm.aplicaTipo||"")&&(t.aplicaId||"")===(tafForm.aplicaId||"")&&t.paisOrig===tafForm.paisOrig&&t.ciudadOrig===tafForm.ciudadOrig&&t.paisDest===tafForm.paisDest&&t.ciudadDest===tafForm.ciudadDest&&t.tipoEnvio===tafForm.tipoEnvio);
-                        if(existing){
-                          const updated={...existing,...tafForm,porLb:porLbF,porFt3:porFt3F,min:minF};
-                          setTarifas(p=>p.map(t=>t.id===existing.id?updated:t));
-                          dbUpsertTarifa(updated);
-                        } else {
-                          const nid=`T-${String(Math.max(0,...tarifas.map(t=>parseInt(String(t.id).replace(/\D/g,""))||0))+1).padStart(3,"0")}`;
-                          const nt={...tafForm,id:nid,porLb:porLbF,porFt3:porFt3F,min:minF,activo:true};
-                          setTarifas(p=>[...p,nt]);
-                          dbUpsertTarifa(nt);
-                          logAction("Creó tarifa",`${tafForm.paisOrig}-${tafForm.ciudadOrig} → ${tafForm.paisDest}-${tafForm.ciudadDest} · ${tafForm.tipoEnvio}`);
-                        }
-                      }
+                  {(()=>{
+                    const F=tafForm, set=x=>setTafForm(p=>({...p,...x}));
+                    const lugares=k=>F[k]||[];
+                    const tiene=(k,pais,ciudad)=>lugares(k).some(x=>sinAcentos(x.pais)===sinAcentos(pais)&&sinAcentos(x.ciudad)===sinAcentos(ciudad));
+                    const alternar=(k,pais,ciudad)=>set({[k]:tiene(k,pais,ciudad)?lugares(k).filter(x=>!(sinAcentos(x.pais)===sinAcentos(pais)&&sinAcentos(x.ciudad)===sinAcentos(ciudad))):[...lugares(k),{pais,ciudad}]});
+                    const selector=(k,titulo)=>(
+                      <div style={{flex:1,minWidth:220}}>
+                        <div className="sdiv">{titulo} {lugares(k).length>0&&<span style={{color:"var(--navy)"}}>({lugares(k).length})</span>}</div>
+                        <div style={{border:"1px solid var(--b1)",borderRadius:8,padding:8,maxHeight:220,overflowY:"auto"}}>
+                          {COUNTRIES.map(co=>(
+                            <div key={co.name} style={{marginBottom:6}}>
+                              <label style={{display:"flex",alignItems:"center",gap:6,fontWeight:700,fontSize:13,cursor:"pointer"}}>
+                                <input type="checkbox" checked={tiene(k,co.name,"")} onChange={()=>alternar(k,co.name,"")}/> {co.name} <span style={{fontWeight:400,color:"var(--t3)",fontSize:12}}>(todo el país)</span></label>
+                              <div style={{display:"flex",flexWrap:"wrap",gap:4,paddingLeft:22,marginTop:3}}>
+                                {(co.cities||[]).map(ci=>{const on=tiene(k,co.name,ci.name);return(
+                                  <span key={ci.code||ci.name} onClick={()=>alternar(k,co.name,ci.name)} style={{cursor:"pointer",fontSize:12,fontWeight:600,padding:"2px 9px",borderRadius:12,border:"1px solid",borderColor:on?"var(--navy)":"var(--b1)",background:on?"var(--navy)":"transparent",color:on?"#fff":"var(--t2)"}}>{ci.name}</span>);})}
+                              </div>
+                            </div>))}
+                          {lugares(k).filter(x=>!COUNTRIES.some(co=>sinAcentos(co.name)===sinAcentos(x.pais))).map((x,i)=>(
+                            <span key={"x"+i} onClick={()=>alternar(k,x.pais,x.ciudad)} style={{cursor:"pointer",fontSize:12,fontWeight:600,padding:"2px 9px",borderRadius:12,background:"var(--navy)",color:"#fff",marginRight:4}}>{[x.pais,x.ciudad].filter(Boolean).join("-")} ✕</span>))}
+                        </div>
+                      </div>);
+                    const setFila=(i,x)=>set({filas:F.filas.map((f,j)=>j===i?{...f,...x}:f)});
+                    const combos=(lugares("orig").length?lugares("orig"):[{pais:"",ciudad:""}]).flatMap(o=>(lugares("dest").length?lugares("dest"):[{pais:"",ciudad:""}]).flatMap(d=>(F.filas||[]).map(f=>({o,d,f}))));
+                    const guardar=()=>{
+                      if(F.aplicaTipo&&!F.aplicaId){window.alert("Elige a quién aplica la tarifa especial.");return;}
+                      if(!F.aplicaTipo&&(!lugares("orig").length||!lugares("dest").length)){window.alert("Elige al menos un origen y un destino.");return;}
+                      const filas=(F.filas||[]).filter(f=>f.tipoEnvio);
+                      if(!filas.length){window.alert("Agrega al menos una tarifa con su tipo de envío.");return;}
+                      if(filas.some(f=>!(parseFloat(f.precio)>0))){window.alert("Cada tarifa necesita su precio.");return;}
+                      if(new Set(filas.map(f=>f.tipoEnvio)).size<filas.length){window.alert("Hay dos filas con el mismo tipo de envío.");return;}
+                      let lista=[...tarifas];let maxN=Math.max(0,...lista.map(t=>parseInt(String(t.id).replace(/\D/g,""))||0));
+                      const cambios=[];
+                      const items=combos.filter(c=>c.f.tipoEnvio);
+                      items.forEach((c,idx)=>{
+                        const mar=tipoEsMaritimo(c.f.tipoEnvio),aer=tipoEsAereo(c.f.tipoEnvio);
+                        const datos={aplicaTipo:F.aplicaTipo||"",aplicaId:F.aplicaId||"",paisOrig:c.o.pais,ciudadOrig:c.o.ciudad,paisDest:c.d.pais,ciudadDest:c.d.ciudad,
+                          tipoEnvio:c.f.tipoEnvio,unidad:aer?(c.f.unidad==="kg"?"kg":"lb"):mar?(c.f.unidad==="m3"?"m3":"ft3"):"lb",
+                          porLb:mar?0:parseFloat(c.f.precio)||0,porFt3:mar?parseFloat(c.f.precio)||0:0,min:parseFloat(c.f.min)||0,moneda:c.f.moneda||"USD",activo:true};
+                        const key=t=>[t.aplicaTipo||"",t.aplicaId||"",sinAcentos(t.paisOrig||""),sinAcentos(t.ciudadOrig||""),sinAcentos(t.paisDest||""),sinAcentos(t.ciudadDest||""),sinAcentos(t.tipoEnvio||"")].join("|");
+                        let ex=lista.find(t=>key(t)===key(datos));
+                        if(!ex&&editTarifa&&items.length===1)ex=lista.find(t=>t.id===editTarifa.id);
+                        const rec=ex?{...ex,...datos,activo:ex.activo!==false}:{...datos,id:`T-${String(++maxN).padStart(3,"0")}`};
+                        lista=ex?lista.map(t=>t.id===ex.id?rec:t):[...lista,rec];
+                        cambios.push(rec);
+                      });
+                      setTarifas(lista);
+                      cambios.forEach(t=>dbUpsertTarifa(t));
+                      logAction(editTarifa?"Actualizó tarifas":"Creó tarifas",`${cambios.length} tarifa(s)${F.aplicaTipo?` · ${nombreAplica(F)}`:""}`);
                       setShowNewTarifa(false);setEditTarifa(null);
-                    }}>Guardar ✅</button>
-                  </div>
+                    };
+                    return(<>
+                      <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:10}}>
+                        {selector("orig","ORIGEN")}
+                        {selector("dest","DESTINO")}
+                      </div>
+                      <div className="sdiv">TARIFAS</div>
+                      <table className="ct" style={{marginBottom:8}}>
+                        <thead><tr><th>Tipo de envío</th><th>Se cobra por</th><th>Precio</th><th>Mínimo</th><th>Moneda</th><th></th></tr></thead>
+                        <tbody>{(F.filas||[]).map((f,i)=>{const mar=tipoEsMaritimo(f.tipoEnvio),aer=tipoEsAereo(f.tipoEnvio);return(
+                          <tr key={i}>
+                            <td><select className="fs" value={f.tipoEnvio} onChange={e=>setFila(i,{tipoEnvio:e.target.value,unidad:""})}><option value="">—</option>{SEND_TYPES.map(t=><option key={t} value={t}>{t}</option>)}</select></td>
+                            <td><select className="fs" value={aer?(f.unidad==="kg"?"kg":"lb"):mar?(f.unidad==="m3"?"m3":"ft3"):"lb"} onChange={e=>setFila(i,{unidad:e.target.value})} disabled={!aer&&!mar}>
+                              {mar?<><option value="ft3">ft³</option><option value="m3">m³</option></>:<><option value="lb">lb</option>{aer&&<option value="kg">kg</option>}</>}</select></td>
+                            <td><input className="fi" type="number" step="0.01" min="0" style={{width:90}} value={f.precio} onChange={e=>setFila(i,{precio:e.target.value})}/></td>
+                            <td><input className="fi" type="number" step="0.01" min="0" style={{width:90}} value={f.min} onChange={e=>setFila(i,{min:e.target.value})}/></td>
+                            <td><select className="fs" value={f.moneda} onChange={e=>setFila(i,{moneda:e.target.value})}>{MONEDAS.map(m=><option key={m}>{m}</option>)}</select></td>
+                            <td>{(F.filas||[]).length>1&&<span className="ic-b" style={{color:"var(--red)"}} onClick={()=>set({filas:F.filas.filter((_,j)=>j!==i)})}>🗑</span>}</td>
+                          </tr>);})}</tbody>
+                      </table>
+                      <button className="btn-s" style={{fontSize:13,marginBottom:10}} onClick={()=>set({filas:[...(F.filas||[]),filaNueva(SEND_TYPES.find(t=>!(F.filas||[]).some(f=>f.tipoEnvio===t)))]})}>+ Agregar tarifa</button>
+                      <div className="mft">
+                        <span style={{marginRight:"auto",fontSize:13,fontWeight:700,color:"var(--navy)"}}>{combos.filter(c=>c.f.tipoEnvio).length} tarifa(s)</span>
+                        <button className="btn-s" onClick={()=>setShowNewTarifa(false)}>Cancelar</button>
+                        <button className="btn-p" onClick={guardar}>Guardar ✅</button>
+                      </div>
+                    </>);
+                  })()}
                 </div>
               </div>
             )}
