@@ -1512,45 +1512,45 @@ const WRBarcode=({value,height=50,width=2})=>{
 const UNI_LBL={lb:"lb",kg:"kg",ft3:"ft³","ft³":"ft³",m3:"m³"};
 const unidadTarifa=(t,esAereo)=>{const u=t?.unidad;if(esAereo)return u==="kg"?"kg":"lb";return u==="m3"?"m3":"ft3";};
 // Campo de contraseña con botón para ver / ocultar lo que se escribe
-// Selección múltiple de lugares (país completo o ciudad) con buscador y casillas; pensado para cientos de opciones
+// Selección múltiple de lugares (país completo o ciudad) con buscador; pensado para cientos de opciones
 const SelectorLugares=({titulo,countries,value,onChange})=>{
   const [q,setQ]=useState("");
+  const [abierto,setAbierto]=useState(false);
   const opciones=[];
   (countries||[]).forEach(co=>{
-    opciones.push({pais:co.name,ciudad:"",l:`${co.name} — todo el país`,pais1:true});
-    (co.cities||[]).forEach(ci=>opciones.push({pais:co.name,ciudad:ci.name,l:`${ci.name}`,sub:co.name,code:ci.code||""}));
+    opciones.push({pais:co.name,ciudad:"",l:`${co.name} (todo el país)`});
+    (co.cities||[]).forEach(ci=>opciones.push({pais:co.name,ciudad:ci.name,l:ci.name,sub:co.name,code:ci.code||""}));
   });
   const k=x=>`${sinAcentos(x.pais)}|${sinAcentos(x.ciudad)}`;
-  const sel=new Set((value||[]).map(k));
-  const Q=sinAcentos(q.trim());
-  const vis=Q?opciones.filter(o=>sinAcentos(`${o.l} ${o.sub||""} ${o.code||""}`).includes(Q)):opciones;
-  const alternar=o=>onChange(sel.has(k(o))?(value||[]).filter(x=>k(x)!==k(o)):[...(value||[]),{pais:o.pais,ciudad:o.ciudad}]);
-  const todosVis=vis.length>0&&vis.every(o=>sel.has(k(o)));
-  const marcarVis=()=>{if(todosVis){const v=new Set(vis.map(k));onChange((value||[]).filter(x=>!v.has(k(x))));}
-    else{const nuevos=vis.filter(o=>!sel.has(k(o))).map(o=>({pais:o.pais,ciudad:o.ciudad}));onChange([...(value||[]),...nuevos]);}};
   const elegidos=value||[];
+  const sel=new Set(elegidos.map(k));
+  const Q=sinAcentos(q.trim());
+  const vis=opciones.filter(o=>!sel.has(k(o))&&(!Q||sinAcentos(`${o.l} ${o.sub||""} ${o.code||""}`).includes(Q))).slice(0,30);
+  const agregar=o=>{onChange([...elegidos,{pais:o.pais,ciudad:o.ciudad}]);setQ("");};
+  const etiqueta=x=>x.ciudad?`${x.ciudad} · ${x.pais}`:`${x.pais} (todo el país)`;
   return(
     <div style={{flex:1,minWidth:260}}>
-      <div className="sdiv" style={{display:"flex",alignItems:"center",gap:8}}>{titulo}
-        <span style={{marginLeft:"auto",color:elegidos.length?"var(--navy)":"var(--t3)"}}>{elegidos.length} seleccionado{elegidos.length===1?"":"s"}</span>
-        {elegidos.length>0&&<span style={{cursor:"pointer",color:"var(--red)"}} onClick={()=>onChange([])}>Quitar todos</span>}
+      <div className="sdiv">{titulo}</div>
+      <div className="fi-search" style={{position:"relative"}}>
+        <input className="fi" placeholder="Buscar país o ciudad…" value={q}
+          onFocus={()=>setAbierto(true)} onBlur={()=>setTimeout(()=>setAbierto(false),150)}
+          onChange={e=>{setQ(e.target.value);setAbierto(true);}}
+          onKeyDown={e=>{if(e.key==="Enter"&&vis[0]){e.preventDefault();agregar(vis[0]);}}}/>
+        {abierto&&vis.length>0&&(
+          <div className="fi-search-res">
+            {vis.map(o=>(
+              <div key={k(o)} className="fi-search-item" onMouseDown={e=>{e.preventDefault();agregar(o);}}>
+                {o.l}{o.sub&&<span style={{fontSize:12,color:"var(--t3)",marginLeft:8}}>{o.sub}{o.code?` · ${o.code}`:""}</span>}
+              </div>))}
+          </div>)}
       </div>
-      <div style={{border:"1px solid var(--b1)",borderRadius:8,overflow:"hidden"}}>
-        <div style={{display:"flex",gap:6,padding:6,borderBottom:"1px solid var(--b1)",background:"var(--bg3)"}}>
-          <input className="fi" style={{flex:1,fontSize:13,padding:"5px 8px"}} placeholder="Buscar país o ciudad…" value={q} onChange={e=>setQ(e.target.value)}/>
-          <label style={{display:"flex",alignItems:"center",gap:4,fontSize:12,fontWeight:600,whiteSpace:"nowrap",cursor:"pointer"}}>
-            <input type="checkbox" checked={todosVis} onChange={marcarVis}/>{Q?"Todos los filtrados":"Todos"}</label>
-        </div>
-        <div style={{maxHeight:240,overflowY:"auto"}}>
-          {vis.length===0&&<div style={{padding:12,textAlign:"center",color:"var(--t3)",fontSize:13}}>Sin coincidencias.</div>}
-          {vis.map(o=>(
-            <label key={k(o)} style={{display:"flex",alignItems:"center",gap:8,padding:"5px 10px",fontSize:13,cursor:"pointer",borderBottom:"1px solid var(--b1)",background:sel.has(k(o))?"#EEF3FF":"transparent",fontWeight:o.pais1?700:500}}>
-              <input type="checkbox" checked={sel.has(k(o))} onChange={()=>alternar(o)}/>
-              <span style={{flex:1}}>{o.l}</span>
-              {o.sub&&<span style={{fontSize:11,color:"var(--t3)"}}>{o.sub}{o.code?` · ${o.code}`:""}</span>}
-            </label>))}
-        </div>
-      </div>
+      {elegidos.length>0&&(
+        <div style={{display:"flex",flexWrap:"wrap",gap:4,marginTop:6}}>
+          {elegidos.map(x=>(
+            <span key={k(x)} style={{fontSize:12,fontWeight:600,padding:"3px 8px",borderRadius:12,background:"#EEF3FF",color:"var(--navy)",border:"1px solid #B8C8F0"}}>
+              {etiqueta(x)} <span style={{cursor:"pointer",color:"var(--red)",marginLeft:4}} onClick={()=>onChange(elegidos.filter(y=>k(y)!==k(x)))}>✕</span>
+            </span>))}
+        </div>)}
     </div>
   );
 };
