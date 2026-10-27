@@ -7385,6 +7385,7 @@ export default function ENEXSystem(){
     {k:"saldo_favor",l:"⭐ Saldo a favor",interno:true},
     {k:"nota_credito",l:"📝 Nota de crédito",interno:true},
     {k:"comision",l:"🤝 Comisión",interno:true},
+    {k:"comision_quitada",l:"🚫 Comisión quitada",interno:true},
     {k:"pago_agente",l:"💸 Pago a agente",interno:true},
   ];
   const REC_TYPES=[
@@ -8027,12 +8028,12 @@ export default function ENEXSystem(){
   // flete cobrado − flete a la tarifa del agente/autónomo (con su mínimo).
   const comisionesPrepaid=()=>{
     const acreditadas=new Set(pagos.filter(p=>!p.anulado&&p.tipoPago==="comision").map(p=>p.referencia));
+    const quitadas=new Set(pagos.filter(p=>!p.anulado&&p.tipoPago==="comision_quitada").map(p=>p.referencia));
     const out=[];
     facturas.filter(f=>f.tipo==="factura"&&f.status==="pagada").forEach(f=>{
       const ws=(f.wrIds||[]).map(id=>wrList.find(w=>w.id===id)).filter(Boolean);
       ws.forEach(w=>{
         if(!(w.tipoPago||"").toLowerCase().includes("prepa"))return;
-        if(["18","18.1","18.2","18.3"].includes(w.status?.code||""))return;
         const rem=w.remitenteId?clients.find(c=>c.id===w.remitenteId):null;
         const dom=[dnDominioDeCliente(cliDeWR(w)),dnDominioDeCliente(rem)].find(d=>d&&["agente","autonomo"].includes(d.tipo));
         if(!dom)return;
@@ -8048,10 +8049,25 @@ export default function ENEXSystem(){
         const costo=tf?Math.max(r2(pf.valor*(parseFloat(isAereo?tf.porLb:tf.porFt3)||0)),parseFloat(tf.min)||0):0;
         const monedaOk=!!tf&&(tf.moneda||"USD")===(f.moneda||"USD");
         const ref=`${f.id}/${w.id}`;
-        out.push({ref,f,w,dom,cobrado,costo:r2(costo),comision:monedaOk?Math.max(0,r2(cobrado-costo)):0,tf,monedaOk,moneda:f.moneda||"USD",acreditada:acreditadas.has(ref)});
+        out.push({ref,f,w,dom,cobrado,costo:r2(costo),comision:monedaOk?Math.max(0,r2(cobrado-costo)):0,tf,monedaOk,moneda:f.moneda||"USD",acreditada:acreditadas.has(ref),
+          faltante:["18","18.1"].includes(w.status?.code||""),perdido:["18.2","18.3"].includes(w.status?.code||"")});
       });
     });
-    return out;
+    return out.filter(x=>!quitadas.has(x.ref));
+  };
+  // Quitar la comisión de un WR perdido (indemnizado o pérdida cerrada). Si ya estaba acreditada, se revierte.
+  const cuadreQuitarComision=(pg,x)=>{
+    if(!hasPerm("registrar_pago")&&!hasPerm("cobrar")){window.alert("Tu rol no tiene permiso.");return;}
+    if(!x.perdido){window.alert("Solo se quita la comisión de un WR cerrado como indemnizado o pérdida.");return;}
+    const pc=pagos.find(p=>!p.anulado&&p.tipoPago==="comision"&&p.referencia===x.ref);
+    if(pc&&saldoFavorDe(pg,pc.moneda||"USD")+0.001<pc.monto){window.alert("Esa comisión ya se usó en otras facturas o se pagó. Anula primero esos movimientos.");return;}
+    if(!window.confirm(`Quitar la comisión de ${fmtMoney(x.comision,x.moneda)} del WR ${x.w.id} a ${pg.nombre}?`))return;
+    if(pc){const u={...pc,anulado:true,motivoAnulacion:`WR ${x.w.id} perdido`};setPagos(pr=>pr.map(p=>p.id===pc.id?u:p));dbUpsertPago(u);}
+    const marca={id:pagoBuildId(),facturaId:"",fecha:new Date(),monto:0,moneda:x.moneda,tipoPago:"comision_quitada",
+      referencia:x.ref,notaReferencial:`Comisión quitada · WR ${x.w.id} perdido`,anulado:false,motivoAnulacion:"",
+      usuario:currentUser.id||currentUser.email||"",reciboId:"",pagadorTipo:pg.tipo,pagadorId:pg.id,pagadorNombre:pg.nombre,comprobanteUrl:""};
+    setPagos(pr=>[marca,...pr]);dbUpsertPago(marca);
+    logAction("Quitó comisión",`${pg.nombre} · WR ${x.w.id} · ${fmtMoney(x.comision,x.moneda)}`);
   };
   const cuadreAcreditar=(pg,lista)=>{
     if(!hasPerm("registrar_pago")&&!hasPerm("cobrar")){window.alert("Tu rol no tiene permiso.");return;}
@@ -8541,7 +8557,10 @@ export default function ENEXSystem(){
                       <td style={{fontSize:12,fontFamily:"'DM Mono',monospace"}}>{x.tf?`${x.tf.id}${x.tf._especial?" ⭐":""}`:"⚠️ Sin tarifa"}{x.tf&&!x.monedaOk?" ⚠️ "+x.tf.moneda:""}</td>
                       <td style={{fontFamily:"'DM Mono',monospace"}}>{x.tf?fmtMoney(x.costo,x.tf.moneda||x.moneda):"—"}</td>
                       <td style={{fontFamily:"'DM Mono',monospace",fontWeight:800,color:"var(--cyan)"}}>{fmtMoney(x.comision,x.moneda)}</td>
-                      <td>{x.acreditada?<span className="st s3"><span className="st-dot"/>Acreditada</span>:<span className="st s1"><span className="st-dot"/>Pendiente</span>}</td>
+                      <td style={{whiteSpace:"nowrap"}}>{x.acreditada?<span className="st s3"><span className="st-dot"/>Acreditada</span>:<span className="st s1"><span className="st-dot"/>Pendiente</span>}
+                        {x.faltante&&<span style={{marginLeft:6,fontSize:12,fontWeight:700,color:"var(--orange)"}}>⚠️ Faltante</span>}
+                        {x.perdido&&<><span style={{marginLeft:6,fontSize:12,fontWeight:700,color:"var(--red)"}}>❌ {x.w.status?.label}</span>
+                          {puede&&<button className="btn-s" style={{fontSize:12,padding:"2px 8px",marginLeft:6,color:"var(--red)",borderColor:"var(--red)"}} onClick={()=>cuadreQuitarComision(pg,x)}>Quitar comisión</button>}</>}</td>
                     </tr>);})}</tbody>
                 </table>)}
               </div>
@@ -8586,7 +8605,7 @@ export default function ENEXSystem(){
                   <tbody>{[...movs.map(p=>({p,v:p.monto})),...usos.map(p=>({p,v:-p.monto}))].sort((a,b)=>new Date(b.p.fecha)-new Date(a.p.fecha)).map(({p,v})=>(
                     <tr key={p.id}>
                       <td style={{fontFamily:"'DM Mono',monospace",fontSize:13}}>{fmtDate(p.fecha)}</td>
-                      <td style={{fontSize:13,fontWeight:600}}>{p.tipoPago==="saldo_favor"?`Aplicado a factura ${p.facturaId}`:p.tipoPago==="comision"?"🤝 Comisión":p.tipoPago==="pago_agente"?"💸 Pago":p.tipoPago==="nota_credito"?"📝 Nota de crédito":"⭐ Excedente de cobro"}</td>
+                      <td style={{fontSize:13,fontWeight:600}}>{p.tipoPago==="saldo_favor"?`Aplicado a factura ${p.facturaId}`:p.tipoPago==="comision"?"🤝 Comisión":p.tipoPago==="pago_agente"?"💸 Pago":p.tipoPago==="nota_credito"?"📝 Nota de crédito":p.tipoPago==="comision_quitada"?"🚫 Comisión quitada":"⭐ Excedente de cobro"}</td>
                       <td style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--t2)"}}>{[p.referencia,p.notaReferencial].filter(Boolean).join(" · ")||"—"}</td>
                       <td style={{fontFamily:"'DM Mono',monospace",fontWeight:800,color:v<0?"var(--red)":"var(--green)"}}>{fmtMoney(v,p.moneda)}</td>
                     </tr>))}</tbody>
