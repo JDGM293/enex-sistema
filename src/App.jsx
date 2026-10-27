@@ -2288,7 +2288,17 @@ export default function ENEXSystem(){
   const CALC_FORM_EMPTY={largo:"",ancho:"",alto:"",pesoLb:"",unitDim:"in",origPais:"",origCiudad:"",destPais:"",destCiudad:"",tipoEnvio:""};
   const [calcForm,setCalcForm]=useState(CALC_FORM_EMPTY);
   const [contabTab,setContabTab]=useState("porguia");
-  const [cuadreSel,setCuadreSel]=useState(null);   // {tipo,id,nombre} agente/autónomo
+  const [cuadreSel,setCuadreSel]=useState(null);   // cuenta abierta {tipo,id,nombre}
+  const [ctaQ,setCtaQ]=useState("");
+  const [ctaFil,setCtaFil]=useState("");           // "" | cliente | agente | autonomo
+  const [ctaSoloSaldo,setCtaSoloSaldo]=useState(true);
+  const [ctaMon,setCtaMon]=useState("USD");
+  const [ctaDesde,setCtaDesde]=useState("");
+  const [ctaHasta,setCtaHasta]=useState("");
+  const hoyISO=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;};
+  const [cajaDesde,setCajaDesde]=useState(hoyISO());
+  const [cajaHasta,setCajaHasta]=useState(hoyISO());
+  const [cajaUsr,setCajaUsr]=useState("");
   const [cuadreMarca,setCuadreMarca]=useState({}); // comisiones marcadas para acreditar
   const [cuadrePago,setCuadrePago]=useState(null); // {monto,moneda,tipoPago,referencia}
   const [facGuiaSel,setFacGuiaSel]=useState(null);   // guía abierta en Facturación › Por guía
@@ -7836,6 +7846,8 @@ export default function ENEXSystem(){
     logAction("Registró pago",`${pago.id} · ${fmtMoney(monto,pago.moneda)} → ${fact.id}`);
     // Sync: WRs vinculados pasan a 23 (Cobrado) o 22 (Por Cobrar) según total/parcial
     syncWRStatusFromFactura(upd,nuevoStatus==="pagada"?"pagada":"pagada_parcial");
+    if(nuevoStatus==="pagada"){const coms=autoComisiones(facturas.map(f=>f.id===upd.id?upd:f),[pago,...pagos],new Set([upd.id]),1);
+      if(coms.length){setPagos(pr=>[...coms,...pr]);coms.forEach(x=>dbUpsertPago(x));}}
     setPagoModal(null);
   };
   const pagoAnular=(pago)=>{
@@ -7950,6 +7962,9 @@ export default function ENEXSystem(){
     const mp=new Map(updF.map(f=>[f.id,f]));
     setFacturas(pr=>pr.map(f=>mp.get(f.id)||f));
     updF.forEach(f=>{dbUpsertFactura(f);syncWRStatusFromFactura(f,f.status==="pagada"?"pagada":"pagada_parcial");});
+    {const pagadas=new Set(updF.filter(f=>f.status==="pagada").map(f=>f.id));
+     if(pagadas.size){const coms=autoComisiones(facturas.map(f=>mp.get(f.id)||f),[...nuevos,...pagos],pagadas,n);
+       if(coms.length){setPagos(pr=>[...coms,...pr]);coms.forEach(p=>dbUpsertPago(p));nuevos.push(...coms);}}}
     logAction("Registró cobro",`${reciboId} · ${fmtMoney(c.recibido,m.moneda)} · ${m.pagador.nombre} · ${updF.length} factura(s)${c.excedente>0?` · a favor ${fmtMoney(c.excedente,m.moneda)}`:""}`);
     if(m.archivo){
       storageUploadComprobante(m.archivo,reciboId).then(url=>{
@@ -8026,11 +8041,11 @@ export default function ENEXSystem(){
   // ── Cuadre con agentes y autónomos ──────────────────────────────────────────
   // Comisión de un WR PREPAID de un cliente de agente/autónomo que la empresa cobró:
   // flete cobrado − flete a la tarifa del agente/autónomo (con su mínimo).
-  const comisionesPrepaid=()=>{
-    const acreditadas=new Set(pagos.filter(p=>!p.anulado&&p.tipoPago==="comision").map(p=>p.referencia));
-    const quitadas=new Set(pagos.filter(p=>!p.anulado&&p.tipoPago==="comision_quitada").map(p=>p.referencia));
+  const comisionesPrepaid=(facs=facturas,pgs=pagos)=>{
+    const acreditadas=new Set(pgs.filter(p=>!p.anulado&&p.tipoPago==="comision").map(p=>p.referencia));
+    const quitadas=new Set(pgs.filter(p=>!p.anulado&&p.tipoPago==="comision_quitada").map(p=>p.referencia));
     const out=[];
-    facturas.filter(f=>f.tipo==="factura"&&f.status==="pagada").forEach(f=>{
+    facs.filter(f=>f.tipo==="factura"&&f.status==="pagada").forEach(f=>{
       const ws=(f.wrIds||[]).map(id=>wrList.find(w=>w.id===id)).filter(Boolean);
       ws.forEach(w=>{
         if(!(w.tipoPago||"").toLowerCase().includes("prepa"))return;
@@ -8054,6 +8069,85 @@ export default function ENEXSystem(){
       });
     });
     return out.filter(x=>!quitadas.has(x.ref));
+  };
+  // Comisiones que se cargan solas cuando una factura PREPAID queda pagada
+  const autoComisiones=(facs,pgs,facIds,offset=0)=>{
+    const items=comisionesPrepaid(facs,pgs).filter(x=>!x.acreditada&&x.comision>0&&facIds.has(x.f.id));
+    return items.map((x,i)=>({id:pagoBuildId(offset+i),facturaId:"",fecha:new Date(),monto:x.comision,moneda:x.moneda,tipoPago:"comision",
+      referencia:x.ref,notaReferencial:`Comisión WR ${x.w.id} · factura ${x.f.id}`,anulado:false,motivoAnulacion:"",
+      usuario:currentUser.id||currentUser.email||"",reciboId:"",pagadorTipo:x.dom.tipo,pagadorId:x.dom.id,pagadorNombre:x.dom.nombre,comprobanteUrl:""}));
+  };
+  // ── Cuentas: dinero real vs. movimientos internos
+  const PAGO_INTERNO=["saldo_favor","nota_credito","comision","comision_quitada"];
+  const esDinero=p=>!PAGO_INTERNO.includes(p.tipoPago);
+  const metodoLbl=k=>((PAY_METHODS.find(x=>x.k===k)||{l:k||""}).l);
+  // Movimientos de una cuenta en una moneda: debe (nos debe) / haber (a su favor); saldo>0 nos debe, <0 le debemos
+  const movimientosCuenta=(pg,mon)=>{
+    const k=pagKey(pg);const out=[];
+    facturas.forEach(f=>{
+      if(["anulada","borrador"].includes(f.status)||(f.moneda||"USD")!==mon||pagKey(pagadorDeFactura(f))!==k)return;
+      if(f.tipo==="factura")out.push({fecha:new Date(f.fechaEmision||f.fecha),doc:`Factura ${f.id}`,det:(f.wrIds||[]).length?`WR ${(f.wrIds||[]).join(", ")}`:"",debe:f.total||0,haber:0,factura:f});
+      else if(f.tipo==="nota_credito")out.push({fecha:new Date(f.fechaEmision||f.fecha),doc:`Nota de crédito ${f.id}`,det:`a factura ${f.ncFacturaOrigen}`,debe:0,haber:Math.abs(f.total||0),nc:f});
+    });
+    const grupos=new Map();
+    pagos.forEach(p=>{
+      if(p.anulado||(p.moneda||"USD")!==mon)return;
+      const pp=pagadorDePago(p);if(!pp||pagKey(pp)!==k)return;
+      if(["saldo_favor","nota_credito","comision_quitada"].includes(p.tipoPago))return;
+      if(p.tipoPago==="comision"){out.push({fecha:new Date(p.fecha),doc:"🤝 Comisión",det:p.notaReferencial,debe:0,haber:p.monto,pagos:[p]});return;}
+      if(p.monto<0){out.push({fecha:new Date(p.fecha),doc:String(p.notaReferencial||"").startsWith("Reembolso")?"💵 Reembolso":"💸 Pago",det:[metodoLbl(p.tipoPago).replace(/^\S+\s/,""),p.referencia].filter(Boolean).join(" · "),debe:-p.monto,haber:0,pagos:[p]});return;}
+      const g=p.reciboId||p.id;
+      if(!grupos.has(g))grupos.set(g,{fecha:new Date(p.fecha),doc:`Cobro ${p.reciboId||p.id}`,det:"",debe:0,haber:0,pagos:[],facs:new Set(),metodo:metodoLbl(p.tipoPago).replace(/^\S+\s/,""),ref:p.referencia});
+      const x=grupos.get(g);x.haber+=p.monto;x.pagos.push(p);if(p.facturaId)x.facs.add(p.facturaId);
+    });
+    grupos.forEach(x=>{x.det=[x.metodo,x.ref,x.facs.size?`fact. ${[...x.facs].join(", ")}`:"a favor"].filter(Boolean).join(" · ");out.push(x);});
+    // Lo aplicado desde el saldo a favor no mueve el saldo, pero se muestra en el cobro
+    pagos.forEach(p=>{if(p.anulado||p.tipoPago!=="saldo_favor"||(p.moneda||"USD")!==mon)return;const pp=pagadorDePago(p);if(!pp||pagKey(pp)!==k)return;
+      const g=grupos.get(p.reciboId);if(g){g.pagos.push(p);g.usoFavor=(g.usoFavor||0)+p.monto;}});
+    out.sort((a,b)=>a.fecha-b.fecha);
+    return out;
+  };
+  // Resumen de todas las cuentas: nos debe / le debemos por moneda
+  const resumenCuentas=()=>{
+    const m=new Map();
+    const tocar=(pg)=>{const k=pagKey(pg);if(!m.has(k))m.set(k,{pg,debe:{},favor:{}});return m.get(k);};
+    agentes.forEach(a=>tocar({tipo:"agente",id:a.id,nombre:a.nombre||a.codigo||"Agente"}));
+    clients.filter(c=>c.tipo==="usuario"&&c.rol==="F").forEach(c=>tocar({tipo:"autonomo",id:c.id,nombre:fullName(c)||"Autónomo"}));
+    facturas.forEach(f=>{if(["anulada","borrador"].includes(f.status))return;const r=tocar(pagadorDeFactura(f));
+      if(f.tipo==="factura"&&(f.saldo||0)>0.001){const mn=f.moneda||"USD";r.debe[mn]=r2((r.debe[mn]||0)+f.saldo);}});
+    pagos.forEach(p=>{if(p.anulado)return;const pg=pagadorDePago(p);if(!pg)return;const r=tocar(pg);const mn=p.moneda||"USD";
+      if(!p.facturaId)r.favor[mn]=r2((r.favor[mn]||0)+(p.monto||0));else if(p.tipoPago==="saldo_favor")r.favor[mn]=r2((r.favor[mn]||0)-(p.monto||0));});
+    return [...m.values()].map(r=>{Object.keys(r.favor).forEach(mn=>{if(r.favor[mn]<0.005)delete r.favor[mn];});
+      if(r.pg.tipo==="agente"){const a=agentes.find(x=>x.id===r.pg.id);if(a)r.pg={...r.pg,nombre:a.nombre||a.codigo};}
+      else{const c=clients.find(x=>x.id===r.pg.id);if(c)r.pg={...r.pg,nombre:fullName(c)||r.pg.nombre,casillero:c.casillero||""};}
+      return r;});
+  };
+  // Anular un cobro completo (todas sus líneas) o un pago suelto
+  const pagoAnularGrupo=(ps,motivoPre=null)=>{
+    if(!hasPerm("anular_pago")&&!hasPerm("cobrar")){window.alert("Tu rol no tiene permiso para anular pagos.");return;}
+    ps=ps.filter(p=>!p.anulado);if(!ps.length)return;
+    if(ps.some(p=>p.tipoPago==="nota_credito"||(p.monto<0&&facturas.some(f=>f.id===p.referencia&&f.tipo==="nota_credito")))){window.alert("Ese movimiento viene de una nota de crédito. Anula la nota de crédito.");return;}
+    const pg=pagadorDePago(ps[0]);
+    const libera=ps.filter(p=>p.tipoPago==="saldo_favor").reduce((t,p)=>t+p.monto,0);
+    const quita=ps.filter(p=>!p.facturaId).reduce((t,p)=>t+p.monto,0);
+    if(pg&&quita>0&&saldoFavorDe(pg,ps[0].moneda||"USD")+libera+0.001<quita){window.alert("Ese saldo a favor ya se usó en otras facturas. Anula primero esos cobros.");return;}
+    const motivo=motivoPre||window.prompt(`Anular ${ps[0].reciboId||ps[0].id}.\nMotivo:`);if(!motivo)return;
+    const ids=new Set(ps.map(p=>p.id));
+    let nuevosPagos=pagos.map(p=>ids.has(p.id)?{...p,anulado:true,motivoAnulacion:motivo}:p);
+    ps.forEach(p=>dbUpsertPago({...p,anulado:true,motivoAnulacion:motivo}));
+    const porFac={};ps.forEach(p=>{if(p.facturaId)porFac[p.facturaId]=(porFac[p.facturaId]||0)+p.monto;});
+    const updF=Object.entries(porFac).map(([fid,monto])=>{const f=facturas.find(x=>x.id===fid);if(!f)return null;
+      const pagado=Math.max(0,r2((parseFloat(f.pagado)||0)-monto)),saldo=Math.max(0,r2(f.total-pagado));
+      return {...f,pagado,saldo,status:pagado<=0.001?"emitida":(saldo<=0.001?"pagada":"pagada_parcial")};}).filter(Boolean);
+    // Si la factura deja de estar pagada, se revierten sus comisiones automáticas
+    updF.filter(f=>f.status!=="pagada").forEach(f=>{
+      nuevosPagos=nuevosPagos.map(p=>{if(p.anulado||p.tipoPago!=="comision"||!String(p.referencia).startsWith(f.id+"/"))return p;
+        const u={...p,anulado:true,motivoAnulacion:`Cobro de factura ${f.id} anulado`};dbUpsertPago(u);return u;});});
+    setPagos(nuevosPagos);
+    const mp=new Map(updF.map(f=>[f.id,f]));
+    setFacturas(pr=>pr.map(f=>mp.get(f.id)||f));
+    updF.forEach(f=>{dbUpsertFactura(f);syncWRStatusFromFactura(f,f.pagado<=0.001?"pago_anulado":"pagada_parcial");});
+    logAction("Anuló cobro",`${ps[0].reciboId||ps[0].id} — ${motivo}`);
   };
   // Quitar la comisión de un WR perdido (indemnizado o pérdida cerrada). Si ya estaba acreditada, se revierte.
   const cuadreQuitarComision=(pg,x)=>{
@@ -8088,8 +8182,8 @@ export default function ENEXSystem(){
     const monto=r2(m.monto);if(!monto||monto<=0){window.alert("Monto inválido.");return;}
     const disp=saldoFavorDe(pg,m.moneda);
     if(monto>disp+0.001){window.alert(`El saldo a favor de ${pg.nombre} es ${fmtMoney(disp,m.moneda)}.`);return;}
-    const pago={id:pagoBuildId(),facturaId:"",fecha:new Date(),monto:-monto,moneda:m.moneda,tipoPago:"pago_agente",
-      referencia:(m.referencia||"").trim(),notaReferencial:`Pago a ${pg.nombre} · ${(PAY_METHODS.find(x=>x.k===m.tipoPago)||{l:m.tipoPago}).l.replace(/^\S+\s/,"")}`,anulado:false,motivoAnulacion:"",
+    const pago={id:pagoBuildId(),facturaId:"",fecha:new Date(),monto:-monto,moneda:m.moneda,tipoPago:m.tipoPago||"efectivo",
+      referencia:(m.referencia||"").trim(),notaReferencial:`Pago a ${pg.nombre}`,anulado:false,motivoAnulacion:"",
       usuario:currentUser.id||currentUser.email||"",reciboId:"",pagadorTipo:pg.tipo,pagadorId:pg.id,pagadorNombre:pg.nombre,comprobanteUrl:""};
     setPagos(pr=>[pago,...pr]);dbUpsertPago(pago);
     setCuadrePago(null);
@@ -8137,13 +8231,14 @@ export default function ENEXSystem(){
       setFacturas(p=>p.map(f=>f.id===orig.id?updOrig:f));
       dbUpsertFactura(updOrig);
     }
-    if(destino==="favor"){
-      const pago={id:pagoBuildId(),facturaId:"",fecha:new Date(),monto:excedente,moneda:orig.moneda,tipoPago:"nota_credito",
-        referencia:nc.id,notaReferencial:`NC ${nc.id} a factura ${orig.id}`,anulado:false,motivoAnulacion:"",
+    if(excedente>0){
+      const base={facturaId:"",fecha:new Date(),moneda:orig.moneda,anulado:false,motivoAnulacion:"",
         usuario:currentUser.id||currentUser.email||"",reciboId:"",
         pagadorTipo:orig.receptorTipo||"cliente",pagadorId:orig.receptorId||"",pagadorNombre:orig.receptorNombre||"",comprobanteUrl:""};
-      setPagos(pr=>[pago,...pr]);
-      dbUpsertPago(pago);
+      const nuevosP=[{...base,id:pagoBuildId(0),monto:excedente,tipoPago:"nota_credito",referencia:nc.id,notaReferencial:`NC ${nc.id} a factura ${orig.id}`}];
+      if(destino==="reembolso")nuevosP.push({...base,id:pagoBuildId(1),monto:-excedente,tipoPago:m.metodoReemb||"efectivo",referencia:nc.id,notaReferencial:`Reembolso NC ${nc.id}`});
+      setPagos(pr=>[...nuevosP,...pr]);
+      nuevosP.forEach(x=>dbUpsertPago(x));
     }
     logAction("Nota de crédito",`${nc.id} − ${fmtMoney(monto,nc.moneda)} → ${orig.id}${destino==="favor"?` · a favor ${fmtMoney(excedente,nc.moneda)}`:destino==="reembolso"?` · reembolso ${fmtMoney(excedente,nc.moneda)}`:""}`);
     setNcModal(null);
@@ -8153,10 +8248,12 @@ export default function ENEXSystem(){
     const ln=(nc.lineas||[])[0]||{};
     const aplicado=r2(ln.aplicado??Math.abs(nc.total||0));
     const pagoNC=pagos.find(p=>!p.anulado&&p.tipoPago==="nota_credito"&&p.referencia===nc.id);
+    const reemb=pagos.find(p=>!p.anulado&&p.monto<0&&p.referencia===nc.id);
     if(pagoNC){const pg=pagadorDePago(pagoNC);
-      if(pg&&saldoFavorDe(pg,pagoNC.moneda||"USD")+0.001<pagoNC.monto){window.alert("El saldo a favor de esta nota de crédito ya se usó en otras facturas. Anula primero esos pagos.");return false;}
-      const updP={...pagoNC,anulado:true,motivoAnulacion:`NC ${nc.id} anulada`};
-      setPagos(pr=>pr.map(p=>p.id===pagoNC.id?updP:p));dbUpsertPago(updP);}
+      if(pg&&saldoFavorDe(pg,pagoNC.moneda||"USD")+(reemb?-reemb.monto:0)+0.001<pagoNC.monto){window.alert("El saldo a favor de esta nota de crédito ya se usó en otras facturas. Anula primero esos pagos.");return false;}
+      const anul=[pagoNC,reemb].filter(Boolean).map(p=>({...p,anulado:true,motivoAnulacion:`NC ${nc.id} anulada`}));
+      const ids=new Set(anul.map(p=>p.id));
+      setPagos(pr=>pr.map(p=>ids.has(p.id)?anul.find(x=>x.id===p.id):p));anul.forEach(p=>dbUpsertPago(p));}
     const orig=facturas.find(f=>f.id===nc.ncFacturaOrigen);
     if(orig&&aplicado>0){
       const pagado=Math.max(0,r2((parseFloat(orig.pagado)||0)-aplicado)), saldo=Math.max(0,r2(orig.total-pagado));
@@ -8296,7 +8393,7 @@ export default function ENEXSystem(){
     const enFacturacion=["porguia","facturas"].includes(contabTab);
     const CTABS=enFacturacion
       ?[{k:"porguia",l:"🚢 Por guía"},{k:"facturas",l:"📄 Facturas"}]
-      :[{k:"cxc",l:"💰 Por Cobrar"},{k:"pagos",l:"✅ Pagos"},{k:"cuadre",l:"🤝 Cuadre agentes"},{k:"reporte",l:"📊 Reporte"}];
+      :[{k:"cuentas",l:"👥 Cuentas"},{k:"caja",l:"💵 Caja"},{k:"reporte",l:"📊 Reporte"}];
     // Filtrar facturas (no incluye anuladas en stats principales)
     const facsActivas=facturas.filter(f=>f.status!=="anulada");
     // Stats por moneda (no se mezclan)
@@ -8333,12 +8430,24 @@ export default function ENEXSystem(){
 
         {/* Mini stats */}
         <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:16}}>
-          {[
+          {(enFacturacion?[
             ["📄","Total Facturas",facturas.length,"var(--navy)"],
             ["💰","Por Cobrar",fmtMonyBoth(totalPorCobrar),"var(--orange)"],
             ["✅","Pagado",fmtMonyBoth(totalPagado),"var(--green)"],
             ["📊","Facturado",fmtMonyBoth(totalFacturado),"var(--cyan)"],
-          ].map(([ic,l,v,c])=>(
+          ]:(()=>{
+            const kv=alcanceUsr?new Set(facturas.map(f=>pagKey(pagadorDeFactura(f)))):null;
+            const rs=resumenCuentas().filter(r=>!kv||kv.has(pagKey(r.pg)));
+            const suma=c=>{const o={USD:0,EUR:0};rs.forEach(r=>Object.entries(r[c]).forEach(([m,v])=>{o[m]=(o[m]||0)+v;}));return o;};
+            const h0=new Date();h0.setHours(0,0,0,0);
+            const hoyE={USD:0,EUR:0};pagos.forEach(p=>{if(!p.anulado&&esDinero(p)&&p.monto>0&&new Date(p.fecha)>=h0){const m=p.moneda||"USD";hoyE[m]=(hoyE[m]||0)+p.monto;}});
+            const sinAcred=comisionesPrepaid().filter(x=>!x.acreditada&&x.comision>0&&(!kv||kv.has(pagKey(x.dom)))).length;
+            return [
+              ["💰","Nos deben",fmtMonyBoth(suma("debe")),"var(--orange)"],
+              ["⭐","Les debemos",fmtMonyBoth(suma("favor")),"var(--green)"],
+              ["💵","Entró hoy",fmtMonyBoth(hoyE),"var(--cyan)"],
+              ["🤝","Comisiones sin acreditar",sinAcred,"var(--navy)"],
+            ];})()).map(([ic,l,v,c])=>(
             <div key={l} style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,padding:"14px",boxShadow:"var(--shadow)"}}>
               <div style={{fontSize:20,marginBottom:6}}>{ic}</div>
               <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:22,fontWeight:800,color:c}}>{v}</div>
@@ -8434,222 +8543,272 @@ export default function ENEXSystem(){
           </>
         )}
 
-        {/* ── CUENTAS POR COBRAR ── */}
-        {contabTab==="cxc"&&(()=>{
-          const cxc=facturas.filter(f=>(f.status==="emitida"||f.status==="pagada_parcial")&&f.tipo!=="nota_credito")
-            .map(f=>({...f,_dias:Math.floor((new Date()-new Date(f.fechaEmision||f.fecha))/(1000*60*60*24))}))
-            .sort((a,b)=>b._dias-a._dias);
-          return(
-            <div>
-              {(()=>{const favs=[];pagadoresConMovimiento().forEach(pg=>{["USD","EUR"].forEach(mn=>{const v=saldoFavorDe(pg,mn);if(v>0)favs.push({pg,mn,v});});});
-                return favs.length>0&&<div className="card" style={{marginBottom:10,display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
-                  <b style={{fontSize:14,color:"var(--green)"}}>⭐ Saldos a favor:</b>
-                  {favs.map(x=><span key={pagKey(x.pg)+x.mn} onClick={()=>cobroAbrir(x.pg)} style={{cursor:"pointer",fontSize:13,fontWeight:700,padding:"3px 10px",borderRadius:12,background:"#E8F5E9",color:"#2E7D32",border:"1px solid #A5D6A7"}}>{x.pg.nombre} · {fmtMoney(x.v,x.mn)}</span>)}
-                </div>;})()}
-              {cxc.length===0?<div className="card" style={{textAlign:"center",padding:40,color:"var(--t3)"}}>No hay cuentas pendientes. ✅</div>:(
-                <div className="card" style={{padding:0}}>
-                  <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
-                    <span style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:16,fontWeight:700,color:"var(--navy)"}}>💰 Cuentas por Cobrar</span>
-                    <span style={{fontSize:14,color:"var(--orange)",fontWeight:700,marginLeft:"auto"}}>Total pendiente: {fmtMonyBoth(totalPorCobrar)}</span>
-                    {(hasPerm("registrar_pago")||hasPerm("cobrar"))&&<button className="btn-p" style={{fontSize:13,padding:"6px 12px"}} onClick={()=>cobroAbrir(null)}>💵 Recibir pago</button>}
-                  </div>
-                  <table className="ct">
-                    <thead><tr><th>Factura</th><th>Receptor</th><th>Emitida</th><th>Mon</th><th>Total</th><th>Pagado</th><th>Saldo</th><th>Días</th><th>Acc.</th></tr></thead>
-                    <tbody>
-                      {cxc.map(f=>{
-                        const dias=f._dias;
-                        return (
-                          <tr key={f.id}>
-                            <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,fontSize:14,color:"var(--navy)"}}>{f.id}</span></td>
-                            <td style={{fontWeight:600}}>{f.receptorNombre||"—"}<div style={{fontSize:12,color:"var(--gold2)",fontFamily:"'DM Mono',monospace"}}>{f.receptorCasillero||f.receptorDoc||""}</div></td>
-                            <td style={{fontFamily:"'DM Mono',monospace",fontSize:13}}>{fmtDate(f.fechaEmision||f.fecha)}</td>
-                            <td style={{textAlign:"center",fontWeight:700}}>{f.moneda}</td>
-                            <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)"}}>{fmtMoney(f.total,f.moneda)}</td>
-                            <td style={{fontFamily:"'DM Mono',monospace",fontWeight:600,color:"var(--green)"}}>{fmtMoney(f.pagado,f.moneda)}</td>
-                            <td style={{fontFamily:"'DM Mono',monospace",fontWeight:800,color:"var(--orange)"}}>{fmtMoney(f.saldo,f.moneda)}</td>
-                            <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:dias>30?"var(--red)":dias>15?"var(--orange)":"var(--t1)"}}>{dias}d</span></td>
-                            <td>
-                              <button className="btn-s" style={{fontSize:12,padding:"3px 6px",marginRight:4}} onClick={()=>setFacPrint(f)}>🖨️</button>
-                              {(hasPerm("registrar_pago")||hasPerm("cobrar"))&&<button className="btn-p" style={{fontSize:12,padding:"3px 8px"}} onClick={()=>pagoOpen(f)}>💵 Cobrar</button>}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          );
-        })()}
-
-        {/* ── CUADRE AGENTES / AUTÓNOMOS ── */}
-        {contabTab==="cuadre"&&(()=>{
-          const coms=comisionesPrepaid();
+        {/* ── CUENTAS ── */}
+        {contabTab==="cuentas"&&(()=>{
           const puede=hasPerm("registrar_pago")||hasPerm("cobrar");
-          const lista=[
-            ...agentes.filter(a=>a.activo!==false).map(a=>({tipo:"agente",id:a.id,nombre:a.nombre||a.codigo||"Agente",sub:a.codigo||""})),
-            ...clients.filter(c=>c.tipo==="usuario"&&c.rol==="F").map(c=>({tipo:"autonomo",id:c.id,nombre:fullName(c)||"Autónomo",sub:c.id})),
-          ];
-          const MONS=["USD","EUR"];
-          const resumen=pg=>{const k=pagKey(pg);
-            const abiertas=facturasAll.filter(f=>["emitida","pagada_parcial"].includes(f.status)&&f.tipo!=="nota_credito"&&(f.saldo||0)>0.001&&pagKey(pagadorDeFactura(f))===k);
-            const cm=coms.filter(x=>x.dom.tipo===pg.tipo&&x.dom.id===pg.id);
-            const r={};MONS.forEach(m=>{
-              const debe=r2(abiertas.filter(f=>(f.moneda||"USD")===m).reduce((t,f)=>t+(f.saldo||0),0));
-              const porAcred=r2(cm.filter(x=>!x.acreditada&&x.moneda===m).reduce((t,x)=>t+x.comision,0));
-              const favor=saldoFavorDe(pg,m);
-              r[m]={debe,porAcred,favor,neto:r2(favor+porAcred-debe)};});
-            return {abiertas,cm,r};};
-          const $m=(o,campo)=>{const v=MONS.filter(m=>Math.abs(o[m][campo])>0.001).map(m=>fmtMoney(o[m][campo],m));return v.length?v.join(" / "):"—";};
-          const IC={agente:"🤝",autonomo:"🧑‍💻"};
+          const puedeNC=hasPerm("nota_credito")||hasPerm("facturar");
+          const IC={cliente:"👤",agente:"🤝",autonomo:"🧑‍💻"},TL={cliente:"Cliente",agente:"Agente",autonomo:"Autónomo"};
+          const keysVis=alcanceUsr?new Set(facturas.map(f=>pagKey(pagadorDeFactura(f)))):null;
+          const coms=comisionesPrepaid();
+          const pendCom=k=>coms.filter(x=>!x.acreditada&&x.comision>0&&pagKey(x.dom)===k);
+          const fm=o=>Object.entries(o||{}).filter(([,v])=>Math.abs(v)>0.004).map(([mn,v])=>fmtMoney(v,mn));
+          const mono={fontFamily:"'DM Mono',monospace"};
           if(!cuadreSel){
-            const filas=lista.map(pg=>({pg,...resumen(pg)}));
+            const Q=sinAcentos(ctaQ.trim());
+            const todas=resumenCuentas().filter(r=>!keysVis||keysVis.has(pagKey(r.pg)));
+            const filas=todas.filter(r=>!ctaFil||r.pg.tipo===ctaFil)
+              .filter(r=>!Q||sinAcentos(`${r.pg.nombre} ${r.pg.casillero||""}`).includes(Q))
+              .map(r=>({...r,pc:pendCom(pagKey(r.pg))}))
+              .filter(r=>!ctaSoloSaldo||Q||fm(r.debe).length||fm(r.favor).length||r.pc.length)
+              .sort((a,b)=>Object.values(b.debe).reduce((t,v)=>t+v,0)-Object.values(a.debe).reduce((t,v)=>t+v,0)||Object.values(b.favor).reduce((t,v)=>t+v,0)-Object.values(a.favor).reduce((t,v)=>t+v,0)||String(a.pg.nombre).localeCompare(String(b.pg.nombre)));
+            const tot=(campo)=>{const o={};filas.forEach(r=>Object.entries(r[campo]).forEach(([mn,v])=>{o[mn]=r2((o[mn]||0)+v);}));return fm(o).join(" / ")||"—";};
+            const MAX=300;
             return(
               <div className="card" style={{padding:0}}>
-                {filas.length===0?<div style={{textAlign:"center",padding:40,color:"var(--t3)"}}>No hay agentes ni autónomos registrados.</div>:(
+                <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+                  <input className="fi" style={{width:280,fontSize:14,padding:"6px 10px"}} placeholder="Buscar nombre o casillero…" value={ctaQ} onChange={e=>setCtaQ(e.target.value)}/>
+                  {[["","Todas"],["cliente","👤 Clientes"],["agente","🤝 Agentes"],["autonomo","🧑‍💻 Autónomos"]].map(([k,l])=>
+                    <button key={k||"t"} className={ctaFil===k?"btn-p":"btn-s"} style={{fontSize:13,padding:"5px 12px"}} onClick={()=>setCtaFil(k)}>{l}</button>)}
+                  <button className={ctaSoloSaldo?"btn-p":"btn-s"} style={{fontSize:13,padding:"5px 12px"}} onClick={()=>setCtaSoloSaldo(v=>!v)}>{ctaSoloSaldo?"Con saldo":"Todas, con y sin saldo"}</button>
+                  {puede&&<button className="btn-p" style={{fontSize:13,padding:"6px 12px",marginLeft:"auto"}} onClick={()=>cobroAbrir(null)}>💵 Recibir pago</button>}
+                </div>
+                {filas.length===0?<div style={{textAlign:"center",padding:40,color:"var(--t3)"}}>{Q?"Sin coincidencias.":"No hay cuentas con saldo. ✅"}</div>:(
                 <table className="ct">
-                  <thead><tr><th>Agente / Autónomo</th><th>Nos debe</th><th>Comisiones por acreditar</th><th>Saldo a favor</th><th>Neto</th></tr></thead>
-                  <tbody>{filas.map(({pg,r})=>(
-                    <tr key={pagKey(pg)} style={{cursor:"pointer"}} onClick={()=>{setCuadreSel(pg);setCuadreMarca({});setCuadrePago(null);}}>
-                      <td style={{fontWeight:700}}>{IC[pg.tipo]} {pg.nombre}<div style={{fontSize:12,color:"var(--t3)",fontFamily:"'DM Mono',monospace"}}>{pg.tipo==="agente"?"Agente":"Autónomo"} {pg.sub}</div></td>
-                      <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--orange)"}}>{$m(r,"debe")}</td>
-                      <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--cyan)"}}>{$m(r,"porAcred")}</td>
-                      <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--green)"}}>{$m(r,"favor")}</td>
-                      <td style={{fontFamily:"'DM Mono',monospace",fontWeight:800}}>{MONS.filter(m=>Math.abs(r[m].neto)>0.001).map(m=><div key={m} style={{color:r[m].neto<0?"var(--red)":"var(--green)"}}>{r[m].neto<0?"Nos debe ":"Le debemos "}{fmtMoney(Math.abs(r[m].neto),m)}</div>)}{MONS.every(m=>Math.abs(r[m].neto)<=0.001)&&"✅"}</td>
-                    </tr>))}</tbody>
+                  <thead><tr><th>Cuenta</th><th style={{textAlign:"right"}}>Nos debe</th><th style={{textAlign:"right"}}>Le debemos</th><th></th></tr></thead>
+                  <tbody>
+                    {filas.slice(0,MAX).map(r=>(
+                      <tr key={pagKey(r.pg)} style={{cursor:"pointer"}} onClick={()=>{setCuadreSel(r.pg);setCuadrePago(null);setCtaDesde("");setCtaHasta("");}}>
+                        <td><span style={{fontWeight:700}}>{IC[r.pg.tipo]||"👤"} {r.pg.nombre||"—"}</span>
+                          <div style={{fontSize:12,color:"var(--t3)"}}>{TL[r.pg.tipo]||"Cliente"}{r.pg.casillero?` · #${r.pg.casillero}`:""}</div></td>
+                        <td style={{...mono,textAlign:"right",fontWeight:800,color:"var(--orange)"}}>{fm(r.debe).map(x=><div key={x}>{x}</div>)}{!fm(r.debe).length&&<span style={{color:"var(--t3)"}}>—</span>}</td>
+                        <td style={{...mono,textAlign:"right",fontWeight:800,color:"var(--green)"}}>{fm(r.favor).map(x=><div key={x}>{x}</div>)}{!fm(r.favor).length&&<span style={{color:"var(--t3)"}}>—</span>}</td>
+                        <td style={{fontSize:12,color:"var(--cyan)",fontWeight:700,whiteSpace:"nowrap"}}>{r.pc.length>0&&`🤝 ${r.pc.length} comisión${r.pc.length===1?"":"es"} sin acreditar`}</td>
+                      </tr>))}
+                    <tr style={{background:"var(--bg3)"}}>
+                      <td style={{fontWeight:800}}>Total ({filas.length})</td>
+                      <td style={{...mono,textAlign:"right",fontWeight:800,color:"var(--orange)"}}>{tot("debe")}</td>
+                      <td style={{...mono,textAlign:"right",fontWeight:800,color:"var(--green)"}}>{tot("favor")}</td><td></td>
+                    </tr>
+                  </tbody>
                 </table>)}
+                {filas.length>MAX&&<div style={{padding:10,textAlign:"center",fontSize:13,color:"var(--t3)"}}>Se muestran {MAX} de {filas.length}. Usa el buscador.</div>}
               </div>
             );
           }
-          const pg=cuadreSel;const {abiertas,cm,r}=resumen(pg);
-          const pend=cm.filter(x=>!x.acreditada);
-          const marcadas=pend.filter(x=>cuadreMarca[x.ref]!==false&&x.comision>0);
-          const movs=pagos.filter(p=>!p.anulado&&!p.facturaId).filter(p=>{const pp=pagadorDePago(p);return pp&&pagKey(pp)===pagKey(pg);});
-          const usos=pagos.filter(p=>!p.anulado&&p.tipoPago==="saldo_favor"&&(()=>{const pp=pagadorDePago(p);return pp&&pagKey(pp)===pagKey(pg);})());
+          // ── Estado de cuenta de una cuenta
+          const pg=cuadreSel;const k=pagKey(pg);
+          const monsCon=["USD","EUR"].filter(mn=>movimientosCuenta(pg,mn).length>0);
+          const mon=monsCon.includes(ctaMon)?ctaMon:(monsCon[0]||"USD");
+          const movs=movimientosCuenta(pg,mon);
+          const d0=ctaDesde?new Date(ctaDesde+"T00:00:00"):null, d1=ctaHasta?new Date(ctaHasta+"T23:59:59.999"):null;
+          const anterior=r2(movs.filter(x=>d0&&x.fecha<d0).reduce((t,x)=>t+x.debe-x.haber,0));
+          let run=anterior;
+          const vis=movs.filter(x=>(!d0||x.fecha>=d0)&&(!d1||x.fecha<=d1)).map(x=>{run=r2(run+x.debe-x.haber);return {...x,saldo:run};});
+          const saldoFin=r2(movs.reduce((t,x)=>t+x.debe-x.haber,0));
+          const deuda=r2(facAbiertasDe(pg).filter(f=>(f.moneda||"USD")===mon).reduce((t,f)=>t+(f.saldo||0),0));
+          const favor=saldoFavorDe(pg,mon);
+          const cm=coms.filter(x=>pagKey(x.dom)===k);
+          const pend=cm.filter(x=>!x.acreditada&&x.comision>0);
+          const saldoTxt=v=>v>0.004?<span style={{color:"var(--orange)"}}>{fmtMoney(v,mon)}</span>:v<-0.004?<span style={{color:"var(--green)"}}>{fmtMoney(-v,mon)} a favor</span>:<span style={{color:"var(--t3)"}}>0</span>;
+          const imprimir=()=>{
+            const e=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
+            const st=v=>v>0.004?fmtMoney(v,mon):v<-0.004?`${fmtMoney(-v,mon)} a favor`:"0";
+            const w=window.open("","_blank","width=900,height=1100");if(!w){window.alert("El navegador bloqueó la ventana de impresión.");return;}
+            w.document.write(`<html><head><title>Estado de cuenta ${e(pg.nombre)}</title><style>body{font-family:Arial,Helvetica,sans-serif;font-size:12px;padding:24px;color:#111}h1{font-size:18px;margin:0}table{width:100%;border-collapse:collapse;margin-top:12px}th,td{border-bottom:1px solid #ddd;padding:5px 6px;text-align:left}th{background:#1A2B4A;color:#fff}.r{text-align:right}.hd{border-bottom:3px solid #1A2B4A;padding-bottom:8px;display:flex;justify-content:space-between}</style></head><body>
+              <div class="hd"><div><h1>${e(empresaNombre||"ENEX")}</h1><div>Estado de cuenta · ${mon}</div></div><div class="r"><b>${e(pg.nombre)}</b><br>${e(TL[pg.tipo]||"Cliente")}${pg.casillero?` · #${e(pg.casillero)}`:""}<br>${fmtDate(new Date())}${ctaDesde||ctaHasta?`<br>Periodo: ${e(ctaDesde||"inicio")} a ${e(ctaHasta||"hoy")}`:""}</div></div>
+              <table><thead><tr><th>Fecha</th><th>Documento</th><th>Detalle</th><th class="r">Debe</th><th class="r">Haber</th><th class="r">Saldo</th></tr></thead><tbody>
+              ${d0?`<tr><td></td><td colspan="4"><b>Saldo anterior</b></td><td class="r">${st(anterior)}</td></tr>`:""}
+              ${vis.map(x=>`<tr><td>${fmtDate(x.fecha)}</td><td>${e(x.doc)}</td><td>${e(x.det)}</td><td class="r">${x.debe?fmtMoney(x.debe,mon):""}</td><td class="r">${x.haber?fmtMoney(x.haber,mon):""}</td><td class="r">${st(x.saldo)}</td></tr>`).join("")}
+              </tbody></table><p class="r" style="font-size:14px"><b>Saldo: ${st(saldoFin)}</b></p>
+              <script>window.addEventListener('load',()=>setTimeout(()=>window.print(),250));</script></body></html>`);
+            w.document.close();
+          };
           return(
             <div>
               <div className="card" style={{marginBottom:10,display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
-                <button className="btn-s" style={{fontSize:13}} onClick={()=>setCuadreSel(null)}>← Volver</button>
-                <div style={{fontSize:17,fontWeight:700,color:"var(--navy)"}}>{IC[pg.tipo]} {pg.nombre}</div>
-                <div style={{marginLeft:"auto",display:"flex",gap:16,flexWrap:"wrap",fontSize:14}}>
-                  <span>Nos debe: <b style={{color:"var(--orange)",fontFamily:"'DM Mono',monospace"}}>{$m(r,"debe")}</b></span>
-                  <span>Por acreditar: <b style={{color:"var(--cyan)",fontFamily:"'DM Mono',monospace"}}>{$m(r,"porAcred")}</b></span>
-                  <span>A favor: <b style={{color:"var(--green)",fontFamily:"'DM Mono',monospace"}}>{$m(r,"favor")}</b></span>
+                <button className="btn-s" style={{fontSize:13}} onClick={()=>setCuadreSel(null)}>← Cuentas</button>
+                <div><div style={{fontSize:18,fontWeight:700,color:"var(--navy)"}}>{IC[pg.tipo]||"👤"} {pg.nombre}</div>
+                  <div style={{fontSize:12,color:"var(--t3)"}}>{TL[pg.tipo]||"Cliente"}{pg.casillero?` · #${pg.casillero}`:""}</div></div>
+                <div style={{display:"flex",gap:18,marginLeft:"auto",flexWrap:"wrap",alignItems:"center"}}>
+                  <div style={{textAlign:"right"}}><div style={{fontSize:12,color:"var(--t3)"}}>Nos debe</div><div style={{...mono,fontSize:18,fontWeight:800,color:"var(--orange)"}}>{fmtMoney(deuda,mon)}</div></div>
+                  <div style={{textAlign:"right"}}><div style={{fontSize:12,color:"var(--t3)"}}>Le debemos</div><div style={{...mono,fontSize:18,fontWeight:800,color:"var(--green)"}}>{fmtMoney(favor,mon)}</div></div>
+                  {puede&&<button className="btn-p" style={{fontSize:13}} onClick={()=>cobroAbrir(pg)}>💵 Cobrar</button>}
+                  {puede&&favor>0&&!cuadrePago&&<button className="btn-s" style={{fontSize:13}} onClick={()=>setCuadrePago({monto:String(favor),moneda:mon,tipoPago:"efectivo",referencia:""})}>💸 Pagarle</button>}
+                  <button className="btn-s" style={{fontSize:13}} onClick={imprimir}>🖨️ Imprimir</button>
                 </div>
               </div>
+              {cuadrePago&&(
+                <div className="card" style={{marginBottom:10,display:"flex",gap:8,alignItems:"flex-end",flexWrap:"wrap"}}>
+                  <b style={{alignSelf:"center",marginRight:8}}>💸 Pagar a {pg.nombre}</b>
+                  <div><label className="fl">Monto</label><input className="fi" type="number" step="0.01" style={{width:130}} value={cuadrePago.monto} onChange={e=>setCuadrePago(x=>({...x,monto:e.target.value}))}/></div>
+                  <div><label className="fl">Moneda</label><select className="fi" value={cuadrePago.moneda} onChange={e=>setCuadrePago(x=>({...x,moneda:e.target.value,monto:String(saldoFavorDe(pg,e.target.value)||"")}))}>{["USD","EUR"].map(m=><option key={m}>{m}</option>)}</select></div>
+                  <div><label className="fl">Forma de pago</label><select className="fi" value={cuadrePago.tipoPago} onChange={e=>setCuadrePago(x=>({...x,tipoPago:e.target.value}))}>{PAY_METHODS.filter(x=>!x.interno).map(x=><option key={x.k} value={x.k}>{x.l}</option>)}</select></div>
+                  <div><label className="fl">Referencia</label><input className="fi" style={{width:160}} value={cuadrePago.referencia} onChange={e=>setCuadrePago(x=>({...x,referencia:e.target.value}))}/></div>
+                  <button className="btn-p" style={{fontSize:13}} onClick={()=>cuadrePagar(pg)}>💸 Registrar pago</button>
+                  <button className="btn-s" style={{fontSize:13}} onClick={()=>setCuadrePago(null)}>Cancelar</button>
+                </div>)}
 
               <div className="card" style={{padding:0,marginBottom:10}}>
+                <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+                  <span style={{fontSize:15,fontWeight:700,color:"var(--navy)"}}>📒 Movimientos</span>
+                  {monsCon.length>1&&monsCon.map(mn=><button key={mn} className={mon===mn?"btn-p":"btn-s"} style={{fontSize:12,padding:"3px 10px"}} onClick={()=>setCtaMon(mn)}>{mn}</button>)}
+                  <span style={{marginLeft:"auto",fontSize:13,color:"var(--t2)"}}>Desde</span><input className="fi" type="date" style={{width:150,fontSize:13,padding:"4px 6px"}} value={ctaDesde} onChange={e=>setCtaDesde(e.target.value)}/>
+                  <span style={{fontSize:13,color:"var(--t2)"}}>Hasta</span><input className="fi" type="date" style={{width:150,fontSize:13,padding:"4px 6px"}} value={ctaHasta} onChange={e=>setCtaHasta(e.target.value)}/>
+                  {(ctaDesde||ctaHasta)&&<button className="btn-s" style={{fontSize:12,padding:"3px 10px"}} onClick={()=>{setCtaDesde("");setCtaHasta("");}}>Todo</button>}
+                </div>
+                {movs.length===0?<div style={{textAlign:"center",padding:30,color:"var(--t3)"}}>Sin movimientos.</div>:(
+                <table className="ct">
+                  <thead><tr><th>Fecha</th><th>Documento</th><th>Detalle</th><th style={{textAlign:"right"}}>Debe</th><th style={{textAlign:"right"}}>Haber</th><th style={{textAlign:"right"}}>Saldo</th><th></th></tr></thead>
+                  <tbody>
+                    {d0&&<tr style={{background:"var(--bg3)"}}><td></td><td colSpan={4} style={{fontWeight:700}}>Saldo anterior</td><td style={{...mono,textAlign:"right",fontWeight:800}}>{saldoTxt(anterior)}</td><td></td></tr>}
+                    {vis.map((x,i)=>{const rid=x.pagos?.[0]?.reciboId;const comp=x.pagos?.find(p=>p.comprobanteUrl)?.comprobanteUrl;return(
+                      <tr key={i}>
+                        <td style={{...mono,fontSize:13,whiteSpace:"nowrap"}}>{fmtDate(x.fecha)}</td>
+                        <td style={{fontWeight:700,fontSize:13,whiteSpace:"nowrap"}}>{x.doc}{x.factura&&x.factura.status==="pagada"&&<span style={{marginLeft:6,fontSize:11,color:"var(--green)"}}>✓ pagada</span>}</td>
+                        <td style={{fontSize:12,color:"var(--t2)",maxWidth:320,whiteSpace:"normal"}}>{x.det}{x.usoFavor>0&&<div style={{color:"var(--green)"}}>⭐ Usó {fmtMoney(x.usoFavor,mon)} de saldo a favor</div>}</td>
+                        <td style={{...mono,textAlign:"right",fontWeight:700,color:"var(--orange)"}}>{x.debe?fmtMoney(x.debe,mon):""}</td>
+                        <td style={{...mono,textAlign:"right",fontWeight:700,color:"var(--green)"}}>{x.haber?fmtMoney(x.haber,mon):""}</td>
+                        <td style={{...mono,textAlign:"right",fontWeight:800}}>{saldoTxt(x.saldo)}</td>
+                        <td style={{whiteSpace:"nowrap"}}>
+                          {x.factura&&<button className="btn-s" style={{fontSize:12,padding:"2px 6px",marginRight:4}} title="Ver factura" onClick={()=>setFacPrint(x.factura)}>🖨️</button>}
+                          {x.factura&&puedeNC&&<button className="btn-s" style={{fontSize:12,padding:"2px 6px",color:"var(--purple)",borderColor:"var(--purple)"}} title="Nota de crédito" onClick={()=>ncOpen(x.factura)}>📝</button>}
+                          {x.nc&&puedeNC&&<button className="btn-s" style={{fontSize:12,padding:"2px 6px",color:"var(--red)",borderColor:"var(--red)"}} title="Anular nota de crédito" onClick={()=>facAnular(x.nc)}>✕</button>}
+                          {rid&&<button className="btn-s" style={{fontSize:12,padding:"2px 6px",marginRight:4}} title="Recibo" onClick={()=>printRecibo(rid)}>🧾</button>}
+                          {comp&&<a href={comp} target="_blank" rel="noreferrer" className="btn-s" style={{fontSize:12,padding:"2px 6px",marginRight:4,textDecoration:"none"}} title="Comprobante">📎</a>}
+                          {x.pagos&&x.doc!=="🤝 Comisión"&&x.doc!=="💵 Reembolso"&&(hasPerm("anular_pago")||hasPerm("cobrar"))&&<button className="btn-s" style={{fontSize:12,padding:"2px 6px",color:"var(--red)",borderColor:"var(--red)"}} title="Anular" onClick={()=>pagoAnularGrupo(x.pagos)}>✕</button>}
+                        </td>
+                      </tr>);})}
+                  </tbody>
+                </table>)}
+              </div>
+
+              {["agente","autonomo"].includes(pg.tipo)&&(
+              <div className="card" style={{padding:0}}>
                 <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",display:"flex",alignItems:"center",gap:10}}>
                   <span style={{fontSize:15,fontWeight:700,color:"var(--navy)"}}>🤝 Comisiones PREPAID</span>
-                  {puede&&marcadas.length>0&&<button className="btn-p" style={{fontSize:13,padding:"5px 12px",marginLeft:"auto"}} onClick={()=>cuadreAcreditar(pg,marcadas)}>⭐ Acreditar {MONS.map(m=>{const v=r2(marcadas.filter(x=>x.moneda===m).reduce((t,x)=>t+x.comision,0));return v>0?fmtMoney(v,m):"";}).filter(Boolean).join(" + ")}</button>}
+                  {puede&&pend.length>0&&<button className="btn-p" style={{fontSize:13,padding:"5px 12px",marginLeft:"auto"}} onClick={()=>cuadreAcreditar(pg,pend)}>⭐ Acreditar todas ({pend.length})</button>}
                 </div>
                 {cm.length===0?<div style={{textAlign:"center",padding:24,color:"var(--t3)"}}>Sin WR PREPAID cobrados de sus clientes.</div>:(
                 <table className="ct">
-                  <thead><tr><th></th><th>WR</th><th>Factura</th><th>Cliente</th><th>Cobrado</th><th>Tarifa agente</th><th>Costo</th><th>Comisión</th><th>Estado</th></tr></thead>
+                  <thead><tr><th>WR</th><th>Factura</th><th>Cliente</th><th style={{textAlign:"right"}}>Cobrado</th><th>Su tarifa</th><th style={{textAlign:"right"}}>Costo</th><th style={{textAlign:"right"}}>Comisión</th><th>Estado</th></tr></thead>
                   <tbody>{cm.map(x=>{const cl=cliDeWR(x.w);return(
-                    <tr key={x.ref} style={x.acreditada?{opacity:.6}:{}}>
-                      <td>{!x.acreditada&&x.comision>0&&<input type="checkbox" checked={cuadreMarca[x.ref]!==false} onChange={e=>setCuadreMarca(p=>({...p,[x.ref]:e.target.checked}))}/>}</td>
-                      <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700}}>{x.w.id}</td>
-                      <td style={{fontFamily:"'DM Mono',monospace"}}>{x.f.id}</td>
+                    <tr key={x.ref}>
+                      <td style={{...mono,fontWeight:700}}>{x.w.id}</td>
+                      <td style={mono}>{x.f.id}</td>
                       <td style={{fontSize:13}}>{cl?fullName(cl):(x.w.consignee||"—")}</td>
-                      <td style={{fontFamily:"'DM Mono',monospace"}}>{fmtMoney(x.cobrado,x.moneda)}</td>
-                      <td style={{fontSize:12,fontFamily:"'DM Mono',monospace"}}>{x.tf?`${x.tf.id}${x.tf._especial?" ⭐":""}`:"⚠️ Sin tarifa"}{x.tf&&!x.monedaOk?" ⚠️ "+x.tf.moneda:""}</td>
-                      <td style={{fontFamily:"'DM Mono',monospace"}}>{x.tf?fmtMoney(x.costo,x.tf.moneda||x.moneda):"—"}</td>
-                      <td style={{fontFamily:"'DM Mono',monospace",fontWeight:800,color:"var(--cyan)"}}>{fmtMoney(x.comision,x.moneda)}</td>
-                      <td style={{whiteSpace:"nowrap"}}>{x.acreditada?<span className="st s3"><span className="st-dot"/>Acreditada</span>:<span className="st s1"><span className="st-dot"/>Pendiente</span>}
+                      <td style={{...mono,textAlign:"right"}}>{fmtMoney(x.cobrado,x.moneda)}</td>
+                      <td style={{...mono,fontSize:12}}>{x.tf?`${x.tf.id}${x.tf._especial?" ⭐":""}`:"⚠️ Sin tarifa"}{x.tf&&!x.monedaOk?" ⚠️ "+x.tf.moneda:""}</td>
+                      <td style={{...mono,textAlign:"right"}}>{x.tf?fmtMoney(x.costo,x.tf.moneda||x.moneda):"—"}</td>
+                      <td style={{...mono,textAlign:"right",fontWeight:800,color:"var(--cyan)"}}>{fmtMoney(x.comision,x.moneda)}</td>
+                      <td style={{whiteSpace:"nowrap"}}>
+                        {x.acreditada?<span className="st s3"><span className="st-dot"/>Acreditada</span>
+                          :x.comision>0&&puede?<button className="btn-s" style={{fontSize:12,padding:"2px 8px"}} onClick={()=>cuadreAcreditar(pg,[x])}>⭐ Acreditar</button>
+                          :<span style={{fontSize:12,color:"var(--t3)"}}>—</span>}
                         {x.faltante&&<span style={{marginLeft:6,fontSize:12,fontWeight:700,color:"var(--orange)"}}>⚠️ Faltante</span>}
                         {x.perdido&&<><span style={{marginLeft:6,fontSize:12,fontWeight:700,color:"var(--red)"}}>❌ {x.w.status?.label}</span>
-                          {puede&&<button className="btn-s" style={{fontSize:12,padding:"2px 8px",marginLeft:6,color:"var(--red)",borderColor:"var(--red)"}} onClick={()=>cuadreQuitarComision(pg,x)}>Quitar comisión</button>}</>}</td>
+                          {puede&&<button className="btn-s" style={{fontSize:12,padding:"2px 8px",marginLeft:6,color:"var(--red)",borderColor:"var(--red)"}} onClick={()=>cuadreQuitarComision(pg,x)}>Quitar comisión</button>}</>}
+                      </td>
                     </tr>);})}</tbody>
                 </table>)}
-              </div>
-
-              <div className="card" style={{padding:0,marginBottom:10}}>
-                <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",display:"flex",alignItems:"center",gap:10}}>
-                  <span style={{fontSize:15,fontWeight:700,color:"var(--navy)"}}>💰 Facturas pendientes</span>
-                  {puede&&abiertas.length>0&&<button className="btn-p" style={{fontSize:13,padding:"5px 12px",marginLeft:"auto"}} onClick={()=>cobroAbrir(pg)}>💵 Cobrar{MONS.some(m=>r[m].favor>0)?" / cruzar saldo":""}</button>}
-                </div>
-                {abiertas.length===0?<div style={{textAlign:"center",padding:24,color:"var(--t3)"}}>Sin facturas pendientes. ✅</div>:(
-                <table className="ct">
-                  <thead><tr><th>Factura</th><th>Emitida</th><th>Total</th><th>Pagado</th><th>Saldo</th></tr></thead>
-                  <tbody>{abiertas.map(f=>(
-                    <tr key={f.id}>
-                      <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700}}>{f.id}</td>
-                      <td style={{fontFamily:"'DM Mono',monospace",fontSize:13}}>{fmtDate(f.fechaEmision||f.fecha)}</td>
-                      <td style={{fontFamily:"'DM Mono',monospace"}}>{fmtMoney(f.total,f.moneda)}</td>
-                      <td style={{fontFamily:"'DM Mono',monospace",color:"var(--green)"}}>{fmtMoney(f.pagado,f.moneda)}</td>
-                      <td style={{fontFamily:"'DM Mono',monospace",fontWeight:800,color:"var(--orange)"}}>{fmtMoney(f.saldo,f.moneda)}</td>
-                    </tr>))}</tbody>
-                </table>)}
-              </div>
-
-              <div className="card" style={{padding:0}}>
-                <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
-                  <span style={{fontSize:15,fontWeight:700,color:"var(--navy)"}}>⭐ Saldo a favor</span>
-                  {puede&&MONS.some(m=>r[m].favor>0)&&!cuadrePago&&<button className="btn-s" style={{fontSize:13,padding:"5px 12px",marginLeft:"auto"}} onClick={()=>{const m=MONS.find(x=>r[x].favor>0)||"USD";setCuadrePago({monto:String(r[m].favor),moneda:m,tipoPago:"efectivo",referencia:""});}}>💸 Pagar a {pg.tipo==="agente"?"agente":"autónomo"}</button>}
-                </div>
-                {cuadrePago&&(
-                  <div style={{padding:12,display:"flex",gap:8,alignItems:"flex-end",flexWrap:"wrap",borderBottom:"1px solid var(--b1)"}}>
-                    <div><label className="fl">Monto</label><input className="fi" type="number" step="0.01" style={{width:130}} value={cuadrePago.monto} onChange={e=>setCuadrePago(x=>({...x,monto:e.target.value}))}/></div>
-                    <div><label className="fl">Moneda</label><select className="fi" value={cuadrePago.moneda} onChange={e=>setCuadrePago(x=>({...x,moneda:e.target.value,monto:String(r[e.target.value]?.favor||"")}))}>{MONS.map(m=><option key={m}>{m}</option>)}</select></div>
-                    <div><label className="fl">Forma de pago</label><select className="fi" value={cuadrePago.tipoPago} onChange={e=>setCuadrePago(x=>({...x,tipoPago:e.target.value}))}>{PAY_METHODS.filter(x=>!x.interno).map(x=><option key={x.k} value={x.k}>{x.l}</option>)}</select></div>
-                    <div><label className="fl">Referencia</label><input className="fi" style={{width:160}} value={cuadrePago.referencia} onChange={e=>setCuadrePago(x=>({...x,referencia:e.target.value}))}/></div>
-                    <button className="btn-p" style={{fontSize:13}} onClick={()=>cuadrePagar(pg)}>💸 Registrar pago</button>
-                    <button className="btn-s" style={{fontSize:13}} onClick={()=>setCuadrePago(null)}>Cancelar</button>
-                  </div>
-                )}
-                {movs.length+usos.length===0?<div style={{textAlign:"center",padding:24,color:"var(--t3)"}}>Sin movimientos.</div>:(
-                <table className="ct">
-                  <thead><tr><th>Fecha</th><th>Movimiento</th><th>Referencia</th><th>Monto</th></tr></thead>
-                  <tbody>{[...movs.map(p=>({p,v:p.monto})),...usos.map(p=>({p,v:-p.monto}))].sort((a,b)=>new Date(b.p.fecha)-new Date(a.p.fecha)).map(({p,v})=>(
-                    <tr key={p.id}>
-                      <td style={{fontFamily:"'DM Mono',monospace",fontSize:13}}>{fmtDate(p.fecha)}</td>
-                      <td style={{fontSize:13,fontWeight:600}}>{p.tipoPago==="saldo_favor"?`Aplicado a factura ${p.facturaId}`:p.tipoPago==="comision"?"🤝 Comisión":p.tipoPago==="pago_agente"?"💸 Pago":p.tipoPago==="nota_credito"?"📝 Nota de crédito":p.tipoPago==="comision_quitada"?"🚫 Comisión quitada":"⭐ Excedente de cobro"}</td>
-                      <td style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--t2)"}}>{[p.referencia,p.notaReferencial].filter(Boolean).join(" · ")||"—"}</td>
-                      <td style={{fontFamily:"'DM Mono',monospace",fontWeight:800,color:v<0?"var(--red)":"var(--green)"}}>{fmtMoney(v,p.moneda)}</td>
-                    </tr>))}</tbody>
-                </table>)}
-              </div>
+              </div>)}
             </div>
           );
         })()}
 
-        {/* ── PAGOS REGISTRADOS ── */}
-        {contabTab==="pagos"&&(
-          <div className="card" style={{padding:0}}>
-            {pagos.length===0?<div style={{textAlign:"center",padding:40,color:"var(--t3)"}}>No hay pagos registrados aún.</div>:(
-              <table className="ct">
-                <thead><tr><th>N° Pago</th><th>Recibo</th><th>Pagador</th><th>Factura</th><th>Mon</th><th>Monto</th><th>Tipo Pago</th><th>Referencia</th><th>Nota</th><th>Fecha</th><th>Estado</th><th>Acc.</th></tr></thead>
-                <tbody>
-                  {pagos.map(p=>{
-                    const tipoLbl=(PAY_METHODS.find(m=>m.k===p.tipoPago)||{l:p.tipoPago||"—"}).l;
-                    return(
-                      <tr key={p.id} style={p.anulado?{opacity:.55,textDecoration:"line-through"}:{}}>
-                        <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700,fontSize:14,color:"var(--navy)"}}>{p.id}</td>
-                        <td style={{fontFamily:"'DM Mono',monospace",fontSize:12}}>{p.reciboId||"—"}</td>
-                        <td style={{fontSize:13,fontWeight:600}}>{p.pagadorNombre||pagadorDePago(p)?.nombre||"—"}</td>
-                        <td style={{fontFamily:"'DM Mono',monospace",fontSize:13}}>{p.facturaId||<span style={{color:"var(--green)",fontWeight:700,fontFamily:"Arial"}}>⭐ A favor</span>}</td>
-                        <td style={{textAlign:"center",fontWeight:700}}>{p.moneda||"USD"}</td>
-                        <td style={{fontFamily:"'DM Mono',monospace",fontWeight:800,color:p.monto<0?"var(--red)":"var(--green)",fontSize:15}}>{fmtMoney(p.monto,p.moneda)}</td>
-                        <td style={{fontWeight:600,fontSize:13}}>{tipoLbl}</td>
-                        <td style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--t2)"}}>{p.referencia||"—"}</td>
-                        <td style={{fontSize:12,color:"var(--t2)",maxWidth:180,whiteSpace:"normal"}}>{p.notaReferencial||"—"}</td>
-                        <td style={{fontFamily:"'DM Mono',monospace",fontSize:13}}>{fmtDate(p.fecha)} {fmtTime(p.fecha)}</td>
-                        <td>{p.anulado?<span className="st s1"><span className="st-dot"/>Anulado</span>:<span className="st s3"><span className="st-dot"/>Activo</span>}</td>
-                        <td style={{whiteSpace:"nowrap"}}>
-                          {p.reciboId&&<button className="btn-s" style={{fontSize:12,padding:"3px 6px",marginRight:4}} title="Recibo" onClick={()=>printRecibo(p.reciboId)}>🖨️</button>}
-                          {p.comprobanteUrl&&<a href={p.comprobanteUrl} target="_blank" rel="noreferrer" className="btn-s" style={{fontSize:12,padding:"3px 6px",marginRight:4,textDecoration:"none"}} title="Comprobante">📎</a>}
-                          {!p.anulado&&(hasPerm("anular_pago")||hasPerm("cobrar"))&&<button className="btn-s" style={{fontSize:12,padding:"3px 6px",color:"var(--red)",borderColor:"var(--red)"}} onClick={()=>pagoAnular(p)}>✕ Anular</button>}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )}
-          </div>
-        )}
+        {/* ── CAJA ── */}
+        {contabTab==="caja"&&(()=>{
+          const mono={fontFamily:"'DM Mono',monospace"};
+          const d0=new Date((cajaDesde||hoyISO())+"T00:00:00"), d1=new Date((cajaHasta||cajaDesde||hoyISO())+"T23:59:59.999");
+          const enRango=pagos.filter(p=>!p.anulado&&esDinero(p)&&new Date(p.fecha)>=d0&&new Date(p.fecha)<=d1);
+          const usuarios=[...new Set(enRango.map(p=>p.usuario).filter(Boolean))];
+          const nombreUsr=u=>{const c=clients.find(x=>x.id===u||x.email===u);return c?fullName(c):u;};
+          const movs=enRango.filter(p=>!cajaUsr||p.usuario===cajaUsr);
+          const resumen={};movs.forEach(p=>{const kk=`${p.tipoPago}|${p.moneda||"USD"}`;if(!resumen[kk])resumen[kk]={metodo:p.tipoPago,moneda:p.moneda||"USD",entra:0,sale:0};
+            if(p.monto>0)resumen[kk].entra=r2(resumen[kk].entra+p.monto);else resumen[kk].sale=r2(resumen[kk].sale-p.monto);});
+          const filasR=Object.values(resumen).sort((a,b)=>(a.moneda+a.metodo).localeCompare(b.moneda+b.metodo));
+          const porMon={};filasR.forEach(r=>{if(!porMon[r.moneda])porMon[r.moneda]={entra:0,sale:0};porMon[r.moneda].entra=r2(porMon[r.moneda].entra+r.entra);porMon[r.moneda].sale=r2(porMon[r.moneda].sale+r.sale);});
+          const grupos=[];const gm=new Map();
+          movs.forEach(p=>{const g=p.monto>0&&p.reciboId?p.reciboId:p.id;if(!gm.has(g)){const x={id:g,fecha:new Date(p.fecha),quien:(pagadorDePago(p)||{}).nombre||p.pagadorNombre||"—",metodo:p.tipoPago,ref:p.referencia,monto:0,moneda:p.moneda||"USD",usuario:p.usuario,pagos:[],comp:""};gm.set(g,x);grupos.push(x);}
+            const x=gm.get(g);x.monto=r2(x.monto+p.monto);x.pagos.push(p);if(p.comprobanteUrl)x.comp=p.comprobanteUrl;});
+          grupos.sort((a,b)=>b.fecha-a.fecha);
+          const setRango=(a,b)=>{setCajaDesde(a);setCajaHasta(b);};
+          const iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+          const hoy=new Date();const ayer=new Date(hoy);ayer.setDate(hoy.getDate()-1);
+          const lunes=new Date(hoy);lunes.setDate(hoy.getDate()-((hoy.getDay()+6)%7));
+          const mes1=new Date(hoy.getFullYear(),hoy.getMonth(),1);
+          const ml=k=>metodoLbl(k);
+          const imprimir=()=>{
+            const e=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
+            const w=window.open("","_blank","width=900,height=1100");if(!w){window.alert("El navegador bloqueó la ventana de impresión.");return;}
+            w.document.write(`<html><head><title>Cierre de caja</title><style>body{font-family:Arial,Helvetica,sans-serif;font-size:12px;padding:24px;color:#111}h1{font-size:18px;margin:0}table{width:100%;border-collapse:collapse;margin-top:12px}th,td{border-bottom:1px solid #ddd;padding:5px 6px;text-align:left}th{background:#1A2B4A;color:#fff}.r{text-align:right}</style></head><body>
+              <h1>${e(empresaNombre||"ENEX")} · Cierre de caja</h1><div>${e(cajaDesde)}${cajaHasta&&cajaHasta!==cajaDesde?` a ${e(cajaHasta)}`:""}${cajaUsr?` · ${e(nombreUsr(cajaUsr))}`:""}</div>
+              <table><thead><tr><th>Forma de pago</th><th>Moneda</th><th class="r">Entró</th><th class="r">Salió</th><th class="r">Neto</th></tr></thead><tbody>
+              ${filasR.map(r=>`<tr><td>${e(ml(r.metodo))}</td><td>${r.moneda}</td><td class="r">${fmtMoney(r.entra,r.moneda)}</td><td class="r">${fmtMoney(r.sale,r.moneda)}</td><td class="r"><b>${fmtMoney(r.entra-r.sale,r.moneda)}</b></td></tr>`).join("")}
+              ${Object.entries(porMon).map(([mn,v])=>`<tr><td><b>TOTAL</b></td><td>${mn}</td><td class="r"><b>${fmtMoney(v.entra,mn)}</b></td><td class="r"><b>${fmtMoney(v.sale,mn)}</b></td><td class="r"><b>${fmtMoney(v.entra-v.sale,mn)}</b></td></tr>`).join("")}
+              </tbody></table>
+              <table><thead><tr><th>Fecha</th><th>Documento</th><th>Quién</th><th>Forma</th><th>Ref.</th><th class="r">Monto</th></tr></thead><tbody>
+              ${grupos.map(g=>`<tr><td>${fmtDate(g.fecha)} ${fmtTime(g.fecha)}</td><td>${e(g.id)}</td><td>${e(g.quien)}</td><td>${e(ml(g.metodo))}</td><td>${e(g.ref||"")}</td><td class="r">${fmtMoney(g.monto,g.moneda)}</td></tr>`).join("")}
+              </tbody></table><script>window.addEventListener('load',()=>setTimeout(()=>window.print(),250));</script></body></html>`);
+            w.document.close();
+          };
+          return(
+            <div>
+              <div className="card" style={{marginBottom:10,display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+                {[["Hoy",iso(hoy),iso(hoy)],["Ayer",iso(ayer),iso(ayer)],["Esta semana",iso(lunes),iso(hoy)],["Este mes",iso(mes1),iso(hoy)]].map(([l,a,b])=>
+                  <button key={l} className={cajaDesde===a&&cajaHasta===b?"btn-p":"btn-s"} style={{fontSize:13,padding:"5px 12px"}} onClick={()=>setRango(a,b)}>{l}</button>)}
+                <span style={{fontSize:13,color:"var(--t2)",marginLeft:8}}>Desde</span><input className="fi" type="date" style={{width:150,fontSize:13,padding:"4px 6px"}} value={cajaDesde} onChange={e=>setCajaDesde(e.target.value)}/>
+                <span style={{fontSize:13,color:"var(--t2)"}}>Hasta</span><input className="fi" type="date" style={{width:150,fontSize:13,padding:"4px 6px"}} value={cajaHasta} onChange={e=>setCajaHasta(e.target.value)}/>
+                <select className="fs" style={{width:200,fontSize:13}} value={cajaUsr} onChange={e=>setCajaUsr(e.target.value)}>
+                  <option value="">Todos los usuarios</option>{usuarios.map(u=><option key={u} value={u}>{nombreUsr(u)}</option>)}</select>
+                <button className="btn-s" style={{fontSize:13,marginLeft:"auto"}} onClick={imprimir}>🖨️ Cierre de caja</button>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:10,marginBottom:10}}>
+                {Object.keys(porMon).length===0&&<div className="card" style={{textAlign:"center",color:"var(--t3)"}}>Sin movimientos en este periodo.</div>}
+                {Object.entries(porMon).map(([mn,v])=>(
+                  <div key={mn} className="card">
+                    <div style={{fontSize:13,color:"var(--t3)",fontWeight:700}}>{mn}</div>
+                    <div style={{display:"flex",justifyContent:"space-between",fontSize:14,marginTop:4}}><span>Entró</span><b style={{...mono,color:"var(--green)"}}>{fmtMoney(v.entra,mn)}</b></div>
+                    <div style={{display:"flex",justifyContent:"space-between",fontSize:14}}><span>Salió</span><b style={{...mono,color:"var(--red)"}}>{fmtMoney(v.sale,mn)}</b></div>
+                    <div style={{display:"flex",justifyContent:"space-between",fontSize:16,borderTop:"1px solid var(--b1)",marginTop:4,paddingTop:4}}><span style={{fontWeight:700}}>Neto</span><b style={{...mono,color:"var(--navy)"}}>{fmtMoney(v.entra-v.sale,mn)}</b></div>
+                  </div>))}
+              </div>
+              {filasR.length>0&&(
+              <div className="card" style={{padding:0,marginBottom:10}}>
+                <table className="ct">
+                  <thead><tr><th>Forma de pago</th><th>Moneda</th><th style={{textAlign:"right"}}>Entró</th><th style={{textAlign:"right"}}>Salió</th><th style={{textAlign:"right"}}>Neto</th></tr></thead>
+                  <tbody>{filasR.map(r=>(
+                    <tr key={r.metodo+r.moneda}>
+                      <td style={{fontWeight:600}}>{ml(r.metodo)}</td><td>{r.moneda}</td>
+                      <td style={{...mono,textAlign:"right",color:"var(--green)"}}>{fmtMoney(r.entra,r.moneda)}</td>
+                      <td style={{...mono,textAlign:"right",color:"var(--red)"}}>{fmtMoney(r.sale,r.moneda)}</td>
+                      <td style={{...mono,textAlign:"right",fontWeight:800}}>{fmtMoney(r.entra-r.sale,r.moneda)}</td>
+                    </tr>))}</tbody>
+                </table>
+              </div>)}
+              {grupos.length>0&&(
+              <div className="card" style={{padding:0}}>
+                <table className="ct">
+                  <thead><tr><th>Fecha</th><th>Documento</th><th>Quién</th><th>Forma</th><th>Referencia</th><th style={{textAlign:"right"}}>Monto</th><th>Usuario</th><th></th></tr></thead>
+                  <tbody>{grupos.map(g=>(
+                    <tr key={g.id}>
+                      <td style={{...mono,fontSize:13,whiteSpace:"nowrap"}}>{fmtDate(g.fecha)} {fmtTime(g.fecha)}</td>
+                      <td style={{...mono,fontSize:13}}>{g.id}</td>
+                      <td style={{fontWeight:600,fontSize:13}}>{g.quien}</td>
+                      <td style={{fontSize:13}}>{ml(g.metodo)}</td>
+                      <td style={{...mono,fontSize:12,color:"var(--t2)"}}>{g.ref||"—"}</td>
+                      <td style={{...mono,textAlign:"right",fontWeight:800,color:g.monto<0?"var(--red)":"var(--green)"}}>{fmtMoney(g.monto,g.moneda)}</td>
+                      <td style={{fontSize:12}}>{nombreUsr(g.usuario)}</td>
+                      <td style={{whiteSpace:"nowrap"}}>
+                        {g.pagos[0].reciboId&&<button className="btn-s" style={{fontSize:12,padding:"2px 6px",marginRight:4}} title="Recibo" onClick={()=>printRecibo(g.pagos[0].reciboId)}>🧾</button>}
+                        {g.comp&&<a href={g.comp} target="_blank" rel="noreferrer" className="btn-s" style={{fontSize:12,padding:"2px 6px",marginRight:4,textDecoration:"none"}}>📎</a>}
+                        {(hasPerm("anular_pago")||hasPerm("cobrar"))&&<button className="btn-s" style={{fontSize:12,padding:"2px 6px",color:"var(--red)",borderColor:"var(--red)"}} title="Anular" onClick={()=>pagoAnularGrupo(pagos.filter(p=>!p.anulado&&(g.pagos[0].reciboId?p.reciboId===g.pagos[0].reciboId:p.id===g.id)))}>✕</button>}
+                      </td>
+                    </tr>))}</tbody>
+                </table>
+              </div>)}
+            </div>
+          );
+        })()}
 
         {/* ── POR GUÍA ── */}
         {contabTab==="porguia"&&(()=>{
@@ -11452,7 +11611,7 @@ export default function ENEXSystem(){
     {label:"Administración",items:[
       {id:"facturacion",ic:"🧾",l:"Facturación",onClick:()=>{setTab("contabilidad");setContabTab("porguia");setFacGuiaSel(null);},activeWhen:()=>tab==="contabilidad"&&["porguia","facturas"].includes(contabTab)},
       {id:"entregasydespachos",ic:"📝",l:"Entregas y Despachos"},
-      {id:"contabilidad",ic:"💰",l:"Contabilidad",onClick:()=>{setTab("contabilidad");setContabTab("cxc");},activeWhen:()=>tab==="contabilidad"&&!["porguia","facturas"].includes(contabTab)},
+      {id:"contabilidad",ic:"💰",l:"Contabilidad",onClick:()=>{setTab("contabilidad");setContabTab("cuentas");setCuadreSel(null);},activeWhen:()=>tab==="contabilidad"&&!["porguia","facturas"].includes(contabTab)},
     ]},
     {label:"Gestión",items:[
       {id:"clients",ic:"👥",l:"Clientes & Usuarios"},
@@ -13474,6 +13633,7 @@ export default function ENEXSystem(){
                     <label className="fl">Ya pagado: {fmtMoney(exc,orig.moneda)}</label>
                     <div style={{display:"flex",gap:6}}>
                       {[["favor","⭐ Saldo a favor"],["reembolso","💵 Reembolsado"]].map(([k,l])=><button key={k} className={ncModal.destino===k?"btn-p":"btn-s"} style={{fontSize:13,padding:"5px 12px"}} onClick={()=>setNcModal(x=>({...x,destino:k}))}>{l}</button>)}
+                      {ncModal.destino==="reembolso"&&<select className="fs" style={{width:170}} value={ncModal.metodoReemb||"efectivo"} onChange={e=>setNcModal(x=>({...x,metodoReemb:e.target.value}))}>{PAY_METHODS.filter(x=>!x.interno).map(x=><option key={x.k} value={x.k}>{x.l}</option>)}</select>}
                     </div>
                   </div>);})()}
                 <div style={{marginBottom:10}}>
