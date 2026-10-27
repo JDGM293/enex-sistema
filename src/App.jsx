@@ -7644,17 +7644,38 @@ export default function ENEXSystem(){
     const c=clients.find(x=>x.id===t.aplicaId);
     return `${t.aplicaTipo==="autonomo"?"Autónomo":"Cliente"} ${c?fullName(c):"?"}${t.aplicaTipo==="cliente"&&c?.casillero?` (${c.casillero})`:""}`;
   };
+  // País y ciudad a su forma única (nombre, código de ciudad, código telefónico o abreviatura del WR)
+  const soloLetras=v=>sinAcentos(v).replace(/[^A-Z]/g,"");
+  const paisCanon=v=>{
+    const raw=String(v||"").trim();if(!raw)return "";
+    const L=soloLetras(raw), D=raw.replace(/\D/g,"");
+    for(const co of COUNTRIES){const n=soloLetras(co.name);
+      if(L&&(n===L||n.startsWith(L)||L.startsWith(n)))return n;
+      if(!L&&D&&co.dial&&parseInt(D,10)===parseInt(String(co.dial).replace(/\D/g,""),10))return n;}
+    return L||D;
+  };
+  const ciudadCanon=(v,pais)=>{
+    const V=soloLetras(v);if(!V)return "";
+    const P=paisCanon(pais);
+    const cos=COUNTRIES.filter(co=>!P||soloLetras(co.name)===P);
+    const lista=(cos.length?cos:COUNTRIES).flatMap(co=>co.cities||[]);
+    const f=lista.find(ci=>soloLetras(ci.code)===V||soloLetras(ci.name)===V)
+      ||(V.length>=2?lista.find(ci=>soloLetras(ci.code).startsWith(V)||soloLetras(ci.name).startsWith(V)):null);
+    return f?soloLetras(f.name):V;
+  };
   const tarifaParaWR=(w,tipoEnvio,receptor=null)=>{
     const te=sinAcentos(tipoEnvio).replace(/[^A-Z]/g,"");
-    const oc=nombreCiudadCon(w?.origCity,COUNTRIES), dc=nombreCiudadCon(w?.destCity,COUNTRIES);
+    const oc=ciudadCanon(w?.origCity,w?.origCountry), dc=ciudadCanon(w?.destCity,w?.destCountry);
+    const op=paisCanon(w?.origCountry), dp=paisCanon(w?.destCountry);
+    const mismoPais=(a,b)=>!!paisCanon(a)&&paisCanon(a)===b;
     const cands=tarifas.filter(t=>t.activo!==false&&sinAcentos(t.tipoEnvio).replace(/[^A-Z]/g,"")===te);
     const campo=(v,ok)=>!String(v||"").trim()?1:(ok?4:-100);   // vacío = comodín
-    const ptsEsp=t=>campo(t.ciudadOrig,sinAcentos(t.ciudadOrig)===oc)+campo(t.ciudadDest,sinAcentos(t.ciudadDest)===dc)+campo(t.paisOrig,mismoPais(t.paisOrig,w?.origCountry))+campo(t.paisDest,mismoPais(t.paisDest,w?.destCountry));
+    const ptsEsp=t=>campo(t.ciudadOrig,ciudadCanon(t.ciudadOrig,t.paisOrig)===oc)+campo(t.ciudadDest,ciudadCanon(t.ciudadDest,t.paisDest)===dc)+campo(t.paisOrig,mismoPais(t.paisOrig,op))+campo(t.paisDest,mismoPais(t.paisDest,dp));
     if(receptor?.tipo&&receptor?.id){
       const esp=cands.filter(t=>t.aplicaTipo===receptor.tipo&&t.aplicaId===receptor.id).sort((a,b)=>ptsEsp(b)-ptsEsp(a))[0];
       if(esp&&ptsEsp(esp)>0)return {...esp,_especial:true};
     }
-    const pts=t=>(sinAcentos(t.ciudadOrig)===oc?4:0)+(sinAcentos(t.ciudadDest)===dc?4:0)+(mismoPais(t.paisOrig,w?.origCountry)?2:0)+(mismoPais(t.paisDest,w?.destCountry)?2:0);
+    const pts=t=>(ciudadCanon(t.ciudadOrig,t.paisOrig)===oc&&oc?4:0)+(ciudadCanon(t.ciudadDest,t.paisDest)===dc&&dc?4:0)+(mismoPais(t.paisOrig,op)?2:0)+(mismoPais(t.paisDest,dp)?2:0);
     const best=cands.filter(t=>!t.aplicaTipo).sort((a,b)=>pts(b)-pts(a))[0];
     return best&&pts(best)>=2?best:null;
   };
@@ -8011,6 +8032,7 @@ export default function ENEXSystem(){
       const ws=(f.wrIds||[]).map(id=>wrList.find(w=>w.id===id)).filter(Boolean);
       ws.forEach(w=>{
         if(!(w.tipoPago||"").toLowerCase().includes("prepa"))return;
+        if(["18","18.1","18.2","18.3"].includes(w.status?.code||""))return;
         const rem=w.remitenteId?clients.find(c=>c.id===w.remitenteId):null;
         const dom=[dnDominioDeCliente(cliDeWR(w)),dnDominioDeCliente(rem)].find(d=>d&&["agente","autonomo"].includes(d.tipo));
         if(!dom)return;
