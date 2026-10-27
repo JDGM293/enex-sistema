@@ -5242,6 +5242,9 @@ export default function ENEXSystem(){
                 );})()}
               </div>
             </div>
+            {(()=>{const pgEC=ecCliente?{tipo:"cliente",id:ecCliente.id,nombre:fullName(ecCliente),casillero:ecCliente.casillero||""}
+              :(ecGrupo&&["agente","autonomo"].includes(ecGrupo.tipo))?{tipo:ecGrupo.tipo,id:ecGrupo.id,nombre:ecGrupo.nombre}:null;
+              return pgEC&&<div style={{marginTop:14}}>{bloqueCuenta(pgEC)}</div>;})()}
           </>
         )}
 
@@ -8382,6 +8385,134 @@ export default function ENEXSystem(){
     logAction("Emitió facturas",`${emitidas.length} · ${emitidas.map(f=>f.id).join(", ")}`);
   };
 
+  // Estado de cuenta de dinero (debe / haber / saldo) de un cliente, agente o autónomo.
+  // Se usa en Contabilidad › Cuentas y en Estado de Cuenta.
+  const bloqueCuenta=(pg,{onVolver=null}={})=>{
+          const puede=hasPerm("registrar_pago")||hasPerm("cobrar");
+          const puedeNC=hasPerm("nota_credito")||hasPerm("facturar");
+          const IC={cliente:"👤",agente:"🤝",autonomo:"🧑‍💻"},TL={cliente:"Cliente",agente:"Agente",autonomo:"Autónomo"};
+          const coms=comisionesPrepaid();
+          const mono={fontFamily:"'DM Mono',monospace"};
+          const k=pagKey(pg);
+          const monsCon=["USD","EUR"].filter(mn=>movimientosCuenta(pg,mn).length>0);
+          const mon=monsCon.includes(ctaMon)?ctaMon:(monsCon[0]||"USD");
+          const movs=movimientosCuenta(pg,mon);
+          const d0=ctaDesde?new Date(ctaDesde+"T00:00:00"):null, d1=ctaHasta?new Date(ctaHasta+"T23:59:59.999"):null;
+          const anterior=r2(movs.filter(x=>d0&&x.fecha<d0).reduce((t,x)=>t+x.debe-x.haber,0));
+          let run=anterior;
+          const vis=movs.filter(x=>(!d0||x.fecha>=d0)&&(!d1||x.fecha<=d1)).map(x=>{run=r2(run+x.debe-x.haber);return {...x,saldo:run};});
+          const saldoFin=r2(movs.reduce((t,x)=>t+x.debe-x.haber,0));
+          const deuda=r2(facAbiertasDe(pg).filter(f=>(f.moneda||"USD")===mon).reduce((t,f)=>t+(f.saldo||0),0));
+          const favor=saldoFavorDe(pg,mon);
+          const cm=coms.filter(x=>pagKey(x.dom)===k);
+          const pend=cm.filter(x=>!x.acreditada&&x.comision>0);
+          const saldoTxt=v=>v>0.004?<span style={{color:"var(--orange)"}}>{fmtMoney(v,mon)}</span>:v<-0.004?<span style={{color:"var(--green)"}}>{fmtMoney(-v,mon)} a favor</span>:<span style={{color:"var(--t3)"}}>0</span>;
+          const imprimir=()=>{
+            const e=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
+            const st=v=>v>0.004?fmtMoney(v,mon):v<-0.004?`${fmtMoney(-v,mon)} a favor`:"0";
+            const w=window.open("","_blank","width=900,height=1100");if(!w){window.alert("El navegador bloqueó la ventana de impresión.");return;}
+            w.document.write(`<html><head><title>Estado de cuenta ${e(pg.nombre)}</title><style>body{font-family:Arial,Helvetica,sans-serif;font-size:12px;padding:24px;color:#111}h1{font-size:18px;margin:0}table{width:100%;border-collapse:collapse;margin-top:12px}th,td{border-bottom:1px solid #ddd;padding:5px 6px;text-align:left}th{background:#1A2B4A;color:#fff}.r{text-align:right}.hd{border-bottom:3px solid #1A2B4A;padding-bottom:8px;display:flex;justify-content:space-between}</style></head><body>
+              <div class="hd"><div><h1>${e(empresaNombre||"ENEX")}</h1><div>Estado de cuenta · ${mon}</div></div><div class="r"><b>${e(pg.nombre)}</b><br>${e(TL[pg.tipo]||"Cliente")}${pg.casillero?` · #${e(pg.casillero)}`:""}<br>${fmtDate(new Date())}${ctaDesde||ctaHasta?`<br>Periodo: ${e(ctaDesde||"inicio")} a ${e(ctaHasta||"hoy")}`:""}</div></div>
+              <table><thead><tr><th>Fecha</th><th>Documento</th><th>Detalle</th><th class="r">Debe</th><th class="r">Haber</th><th class="r">Saldo</th></tr></thead><tbody>
+              ${d0?`<tr><td></td><td colspan="4"><b>Saldo anterior</b></td><td class="r">${st(anterior)}</td></tr>`:""}
+              ${vis.map(x=>`<tr><td>${fmtDate(x.fecha)}</td><td>${e(x.doc)}</td><td>${e(x.det)}</td><td class="r">${x.debe?fmtMoney(x.debe,mon):""}</td><td class="r">${x.haber?fmtMoney(x.haber,mon):""}</td><td class="r">${st(x.saldo)}</td></tr>`).join("")}
+              </tbody></table><p class="r" style="font-size:14px"><b>Saldo: ${st(saldoFin)}</b></p>
+              <script>window.addEventListener('load',()=>setTimeout(()=>window.print(),250));</script></body></html>`);
+            w.document.close();
+          };
+          return(
+            <div>
+              <div className="card" style={{marginBottom:10,display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+                {onVolver&&<button className="btn-s" style={{fontSize:13}} onClick={onVolver}>← Cuentas</button>}
+                {onVolver?<div><div style={{fontSize:18,fontWeight:700,color:"var(--navy)"}}>{IC[pg.tipo]||"👤"} {pg.nombre}</div>
+                  <div style={{fontSize:12,color:"var(--t3)"}}>{TL[pg.tipo]||"Cliente"}{pg.casillero?` · #${pg.casillero}`:""}</div></div>
+                  :<div style={{fontSize:16,fontWeight:700,color:"var(--navy)"}}>💰 Cuenta</div>}
+                <div style={{display:"flex",gap:18,marginLeft:"auto",flexWrap:"wrap",alignItems:"center"}}>
+                  <div style={{textAlign:"right"}}><div style={{fontSize:12,color:"var(--t3)"}}>Nos debe</div><div style={{...mono,fontSize:18,fontWeight:800,color:"var(--orange)"}}>{fmtMoney(deuda,mon)}</div></div>
+                  <div style={{textAlign:"right"}}><div style={{fontSize:12,color:"var(--t3)"}}>Le debemos</div><div style={{...mono,fontSize:18,fontWeight:800,color:"var(--green)"}}>{fmtMoney(favor,mon)}</div></div>
+                  {puede&&<button className="btn-p" style={{fontSize:13}} onClick={()=>cobroAbrir(pg)}>💵 Cobrar</button>}
+                  {puede&&favor>0&&!cuadrePago&&<button className="btn-s" style={{fontSize:13}} onClick={()=>setCuadrePago({monto:String(favor),moneda:mon,tipoPago:"efectivo",referencia:""})}>💸 Pagarle</button>}
+                  <button className="btn-s" style={{fontSize:13}} onClick={imprimir}>🖨️ Imprimir</button>
+                </div>
+              </div>
+              {cuadrePago&&(
+                <div className="card" style={{marginBottom:10,display:"flex",gap:8,alignItems:"flex-end",flexWrap:"wrap"}}>
+                  <b style={{alignSelf:"center",marginRight:8}}>💸 Pagar a {pg.nombre}</b>
+                  <div><label className="fl">Monto</label><input className="fi" type="number" step="0.01" style={{width:130}} value={cuadrePago.monto} onChange={e=>setCuadrePago(x=>({...x,monto:e.target.value}))}/></div>
+                  <div><label className="fl">Moneda</label><select className="fi" value={cuadrePago.moneda} onChange={e=>setCuadrePago(x=>({...x,moneda:e.target.value,monto:String(saldoFavorDe(pg,e.target.value)||"")}))}>{["USD","EUR"].map(m=><option key={m}>{m}</option>)}</select></div>
+                  <div><label className="fl">Forma de pago</label><select className="fi" value={cuadrePago.tipoPago} onChange={e=>setCuadrePago(x=>({...x,tipoPago:e.target.value}))}>{PAY_METHODS.filter(x=>!x.interno).map(x=><option key={x.k} value={x.k}>{x.l}</option>)}</select></div>
+                  <div><label className="fl">Referencia</label><input className="fi" style={{width:160}} value={cuadrePago.referencia} onChange={e=>setCuadrePago(x=>({...x,referencia:e.target.value}))}/></div>
+                  <button className="btn-p" style={{fontSize:13}} onClick={()=>cuadrePagar(pg)}>💸 Registrar pago</button>
+                  <button className="btn-s" style={{fontSize:13}} onClick={()=>setCuadrePago(null)}>Cancelar</button>
+                </div>)}
+
+              <div className="card" style={{padding:0,marginBottom:10}}>
+                <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+                  <span style={{fontSize:15,fontWeight:700,color:"var(--navy)"}}>📒 Movimientos</span>
+                  {monsCon.length>1&&monsCon.map(mn=><button key={mn} className={mon===mn?"btn-p":"btn-s"} style={{fontSize:12,padding:"3px 10px"}} onClick={()=>setCtaMon(mn)}>{mn}</button>)}
+                  <span style={{marginLeft:"auto",fontSize:13,color:"var(--t2)"}}>Desde</span><input className="fi" type="date" style={{width:150,fontSize:13,padding:"4px 6px"}} value={ctaDesde} onChange={e=>setCtaDesde(e.target.value)}/>
+                  <span style={{fontSize:13,color:"var(--t2)"}}>Hasta</span><input className="fi" type="date" style={{width:150,fontSize:13,padding:"4px 6px"}} value={ctaHasta} onChange={e=>setCtaHasta(e.target.value)}/>
+                  {(ctaDesde||ctaHasta)&&<button className="btn-s" style={{fontSize:12,padding:"3px 10px"}} onClick={()=>{setCtaDesde("");setCtaHasta("");}}>Todo</button>}
+                </div>
+                {movs.length===0?<div style={{textAlign:"center",padding:30,color:"var(--t3)"}}>Sin movimientos.</div>:(
+                <table className="ct">
+                  <thead><tr><th>Fecha</th><th>Documento</th><th>Detalle</th><th style={{textAlign:"right"}}>Debe</th><th style={{textAlign:"right"}}>Haber</th><th style={{textAlign:"right"}}>Saldo</th><th></th></tr></thead>
+                  <tbody>
+                    {d0&&<tr style={{background:"var(--bg3)"}}><td></td><td colSpan={4} style={{fontWeight:700}}>Saldo anterior</td><td style={{...mono,textAlign:"right",fontWeight:800}}>{saldoTxt(anterior)}</td><td></td></tr>}
+                    {vis.map((x,i)=>{const rid=x.pagos?.[0]?.reciboId;const comp=x.pagos?.find(p=>p.comprobanteUrl)?.comprobanteUrl;return(
+                      <tr key={i}>
+                        <td style={{...mono,fontSize:13,whiteSpace:"nowrap"}}>{fmtDate(x.fecha)}</td>
+                        <td style={{fontWeight:700,fontSize:13,whiteSpace:"nowrap"}}>{x.doc}{x.factura&&x.factura.status==="pagada"&&<span style={{marginLeft:6,fontSize:11,color:"var(--green)"}}>✓ pagada</span>}</td>
+                        <td style={{fontSize:12,color:"var(--t2)",maxWidth:320,whiteSpace:"normal"}}>{x.det}{x.usoFavor>0&&<div style={{color:"var(--green)"}}>⭐ Usó {fmtMoney(x.usoFavor,mon)} de saldo a favor</div>}</td>
+                        <td style={{...mono,textAlign:"right",fontWeight:700,color:"var(--orange)"}}>{x.debe?fmtMoney(x.debe,mon):""}</td>
+                        <td style={{...mono,textAlign:"right",fontWeight:700,color:"var(--green)"}}>{x.haber?fmtMoney(x.haber,mon):""}</td>
+                        <td style={{...mono,textAlign:"right",fontWeight:800}}>{saldoTxt(x.saldo)}</td>
+                        <td style={{whiteSpace:"nowrap"}}>
+                          {x.factura&&<button className="btn-s" style={{fontSize:12,padding:"2px 6px",marginRight:4}} title="Ver factura" onClick={()=>setFacPrint(x.factura)}>🖨️</button>}
+                          {x.factura&&puedeNC&&<button className="btn-s" style={{fontSize:12,padding:"2px 6px",color:"var(--purple)",borderColor:"var(--purple)"}} title="Nota de crédito" onClick={()=>ncOpen(x.factura)}>📝</button>}
+                          {x.nc&&puedeNC&&<button className="btn-s" style={{fontSize:12,padding:"2px 6px",color:"var(--red)",borderColor:"var(--red)"}} title="Anular nota de crédito" onClick={()=>facAnular(x.nc)}>✕</button>}
+                          {rid&&<button className="btn-s" style={{fontSize:12,padding:"2px 6px",marginRight:4}} title="Recibo" onClick={()=>printRecibo(rid)}>🧾</button>}
+                          {comp&&<a href={comp} target="_blank" rel="noreferrer" className="btn-s" style={{fontSize:12,padding:"2px 6px",marginRight:4,textDecoration:"none"}} title="Comprobante">📎</a>}
+                          {x.pagos&&x.doc!=="🤝 Comisión"&&x.doc!=="💵 Reembolso"&&(hasPerm("anular_pago")||hasPerm("cobrar"))&&<button className="btn-s" style={{fontSize:12,padding:"2px 6px",color:"var(--red)",borderColor:"var(--red)"}} title="Anular" onClick={()=>pagoAnularGrupo(x.pagos)}>✕</button>}
+                        </td>
+                      </tr>);})}
+                  </tbody>
+                </table>)}
+              </div>
+
+              {["agente","autonomo"].includes(pg.tipo)&&(
+              <div className="card" style={{padding:0}}>
+                <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",display:"flex",alignItems:"center",gap:10}}>
+                  <span style={{fontSize:15,fontWeight:700,color:"var(--navy)"}}>🤝 Comisiones PREPAID</span>
+                  {puede&&pend.length>0&&<button className="btn-p" style={{fontSize:13,padding:"5px 12px",marginLeft:"auto"}} onClick={()=>cuadreAcreditar(pg,pend)}>⭐ Acreditar todas ({pend.length})</button>}
+                </div>
+                {cm.length===0?<div style={{textAlign:"center",padding:24,color:"var(--t3)"}}>Sin WR PREPAID cobrados de sus clientes.</div>:(
+                <table className="ct">
+                  <thead><tr><th>WR</th><th>Factura</th><th>Cliente</th><th style={{textAlign:"right"}}>Cobrado</th><th>Su tarifa</th><th style={{textAlign:"right"}}>Costo</th><th style={{textAlign:"right"}}>Comisión</th><th>Estado</th></tr></thead>
+                  <tbody>{cm.map(x=>{const cl=cliDeWR(x.w);return(
+                    <tr key={x.ref}>
+                      <td style={{...mono,fontWeight:700}}>{x.w.id}</td>
+                      <td style={mono}>{x.f.id}</td>
+                      <td style={{fontSize:13}}>{cl?fullName(cl):(x.w.consignee||"—")}</td>
+                      <td style={{...mono,textAlign:"right"}}>{fmtMoney(x.cobrado,x.moneda)}</td>
+                      <td style={{...mono,fontSize:12}}>{x.tf?`${x.tf.id}${x.tf._especial?" ⭐":""}`:"⚠️ Sin tarifa"}{x.tf&&!x.monedaOk?" ⚠️ "+x.tf.moneda:""}</td>
+                      <td style={{...mono,textAlign:"right"}}>{x.tf?fmtMoney(x.costo,x.tf.moneda||x.moneda):"—"}</td>
+                      <td style={{...mono,textAlign:"right",fontWeight:800,color:"var(--cyan)"}}>{fmtMoney(x.comision,x.moneda)}</td>
+                      <td style={{whiteSpace:"nowrap"}}>
+                        {x.acreditada?<span className="st s3"><span className="st-dot"/>Acreditada</span>
+                          :x.comision>0&&puede?<button className="btn-s" style={{fontSize:12,padding:"2px 8px"}} onClick={()=>cuadreAcreditar(pg,[x])}>⭐ Acreditar</button>
+                          :<span style={{fontSize:12,color:"var(--t3)"}}>—</span>}
+                        {x.faltante&&<span style={{marginLeft:6,fontSize:12,fontWeight:700,color:"var(--orange)"}}>⚠️ Faltante</span>}
+                        {x.perdido&&<><span style={{marginLeft:6,fontSize:12,fontWeight:700,color:"var(--red)"}}>❌ {x.w.status?.label}</span>
+                          {puede&&<button className="btn-s" style={{fontSize:12,padding:"2px 8px",marginLeft:6,color:"var(--red)",borderColor:"var(--red)"}} onClick={()=>cuadreQuitarComision(pg,x)}>Quitar comisión</button>}</>}
+                      </td>
+                    </tr>);})}</tbody>
+                </table>)}
+              </div>)}
+            </div>
+          );
+  };
+
   const renderContabilidad=()=>{
     const idsVis=new Set(wrList.map(w=>w.id));
     const facturas=alcanceUsr
@@ -8546,7 +8677,6 @@ export default function ENEXSystem(){
         {/* ── CUENTAS ── */}
         {contabTab==="cuentas"&&(()=>{
           const puede=hasPerm("registrar_pago")||hasPerm("cobrar");
-          const puedeNC=hasPerm("nota_credito")||hasPerm("facturar");
           const IC={cliente:"👤",agente:"🤝",autonomo:"🧑‍💻"},TL={cliente:"Cliente",agente:"Agente",autonomo:"Autónomo"};
           const keysVis=alcanceUsr?new Set(facturas.map(f=>pagKey(pagadorDeFactura(f)))):null;
           const coms=comisionesPrepaid();
@@ -8595,124 +8725,7 @@ export default function ENEXSystem(){
               </div>
             );
           }
-          // ── Estado de cuenta de una cuenta
-          const pg=cuadreSel;const k=pagKey(pg);
-          const monsCon=["USD","EUR"].filter(mn=>movimientosCuenta(pg,mn).length>0);
-          const mon=monsCon.includes(ctaMon)?ctaMon:(monsCon[0]||"USD");
-          const movs=movimientosCuenta(pg,mon);
-          const d0=ctaDesde?new Date(ctaDesde+"T00:00:00"):null, d1=ctaHasta?new Date(ctaHasta+"T23:59:59.999"):null;
-          const anterior=r2(movs.filter(x=>d0&&x.fecha<d0).reduce((t,x)=>t+x.debe-x.haber,0));
-          let run=anterior;
-          const vis=movs.filter(x=>(!d0||x.fecha>=d0)&&(!d1||x.fecha<=d1)).map(x=>{run=r2(run+x.debe-x.haber);return {...x,saldo:run};});
-          const saldoFin=r2(movs.reduce((t,x)=>t+x.debe-x.haber,0));
-          const deuda=r2(facAbiertasDe(pg).filter(f=>(f.moneda||"USD")===mon).reduce((t,f)=>t+(f.saldo||0),0));
-          const favor=saldoFavorDe(pg,mon);
-          const cm=coms.filter(x=>pagKey(x.dom)===k);
-          const pend=cm.filter(x=>!x.acreditada&&x.comision>0);
-          const saldoTxt=v=>v>0.004?<span style={{color:"var(--orange)"}}>{fmtMoney(v,mon)}</span>:v<-0.004?<span style={{color:"var(--green)"}}>{fmtMoney(-v,mon)} a favor</span>:<span style={{color:"var(--t3)"}}>0</span>;
-          const imprimir=()=>{
-            const e=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
-            const st=v=>v>0.004?fmtMoney(v,mon):v<-0.004?`${fmtMoney(-v,mon)} a favor`:"0";
-            const w=window.open("","_blank","width=900,height=1100");if(!w){window.alert("El navegador bloqueó la ventana de impresión.");return;}
-            w.document.write(`<html><head><title>Estado de cuenta ${e(pg.nombre)}</title><style>body{font-family:Arial,Helvetica,sans-serif;font-size:12px;padding:24px;color:#111}h1{font-size:18px;margin:0}table{width:100%;border-collapse:collapse;margin-top:12px}th,td{border-bottom:1px solid #ddd;padding:5px 6px;text-align:left}th{background:#1A2B4A;color:#fff}.r{text-align:right}.hd{border-bottom:3px solid #1A2B4A;padding-bottom:8px;display:flex;justify-content:space-between}</style></head><body>
-              <div class="hd"><div><h1>${e(empresaNombre||"ENEX")}</h1><div>Estado de cuenta · ${mon}</div></div><div class="r"><b>${e(pg.nombre)}</b><br>${e(TL[pg.tipo]||"Cliente")}${pg.casillero?` · #${e(pg.casillero)}`:""}<br>${fmtDate(new Date())}${ctaDesde||ctaHasta?`<br>Periodo: ${e(ctaDesde||"inicio")} a ${e(ctaHasta||"hoy")}`:""}</div></div>
-              <table><thead><tr><th>Fecha</th><th>Documento</th><th>Detalle</th><th class="r">Debe</th><th class="r">Haber</th><th class="r">Saldo</th></tr></thead><tbody>
-              ${d0?`<tr><td></td><td colspan="4"><b>Saldo anterior</b></td><td class="r">${st(anterior)}</td></tr>`:""}
-              ${vis.map(x=>`<tr><td>${fmtDate(x.fecha)}</td><td>${e(x.doc)}</td><td>${e(x.det)}</td><td class="r">${x.debe?fmtMoney(x.debe,mon):""}</td><td class="r">${x.haber?fmtMoney(x.haber,mon):""}</td><td class="r">${st(x.saldo)}</td></tr>`).join("")}
-              </tbody></table><p class="r" style="font-size:14px"><b>Saldo: ${st(saldoFin)}</b></p>
-              <script>window.addEventListener('load',()=>setTimeout(()=>window.print(),250));</script></body></html>`);
-            w.document.close();
-          };
-          return(
-            <div>
-              <div className="card" style={{marginBottom:10,display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
-                <button className="btn-s" style={{fontSize:13}} onClick={()=>setCuadreSel(null)}>← Cuentas</button>
-                <div><div style={{fontSize:18,fontWeight:700,color:"var(--navy)"}}>{IC[pg.tipo]||"👤"} {pg.nombre}</div>
-                  <div style={{fontSize:12,color:"var(--t3)"}}>{TL[pg.tipo]||"Cliente"}{pg.casillero?` · #${pg.casillero}`:""}</div></div>
-                <div style={{display:"flex",gap:18,marginLeft:"auto",flexWrap:"wrap",alignItems:"center"}}>
-                  <div style={{textAlign:"right"}}><div style={{fontSize:12,color:"var(--t3)"}}>Nos debe</div><div style={{...mono,fontSize:18,fontWeight:800,color:"var(--orange)"}}>{fmtMoney(deuda,mon)}</div></div>
-                  <div style={{textAlign:"right"}}><div style={{fontSize:12,color:"var(--t3)"}}>Le debemos</div><div style={{...mono,fontSize:18,fontWeight:800,color:"var(--green)"}}>{fmtMoney(favor,mon)}</div></div>
-                  {puede&&<button className="btn-p" style={{fontSize:13}} onClick={()=>cobroAbrir(pg)}>💵 Cobrar</button>}
-                  {puede&&favor>0&&!cuadrePago&&<button className="btn-s" style={{fontSize:13}} onClick={()=>setCuadrePago({monto:String(favor),moneda:mon,tipoPago:"efectivo",referencia:""})}>💸 Pagarle</button>}
-                  <button className="btn-s" style={{fontSize:13}} onClick={imprimir}>🖨️ Imprimir</button>
-                </div>
-              </div>
-              {cuadrePago&&(
-                <div className="card" style={{marginBottom:10,display:"flex",gap:8,alignItems:"flex-end",flexWrap:"wrap"}}>
-                  <b style={{alignSelf:"center",marginRight:8}}>💸 Pagar a {pg.nombre}</b>
-                  <div><label className="fl">Monto</label><input className="fi" type="number" step="0.01" style={{width:130}} value={cuadrePago.monto} onChange={e=>setCuadrePago(x=>({...x,monto:e.target.value}))}/></div>
-                  <div><label className="fl">Moneda</label><select className="fi" value={cuadrePago.moneda} onChange={e=>setCuadrePago(x=>({...x,moneda:e.target.value,monto:String(saldoFavorDe(pg,e.target.value)||"")}))}>{["USD","EUR"].map(m=><option key={m}>{m}</option>)}</select></div>
-                  <div><label className="fl">Forma de pago</label><select className="fi" value={cuadrePago.tipoPago} onChange={e=>setCuadrePago(x=>({...x,tipoPago:e.target.value}))}>{PAY_METHODS.filter(x=>!x.interno).map(x=><option key={x.k} value={x.k}>{x.l}</option>)}</select></div>
-                  <div><label className="fl">Referencia</label><input className="fi" style={{width:160}} value={cuadrePago.referencia} onChange={e=>setCuadrePago(x=>({...x,referencia:e.target.value}))}/></div>
-                  <button className="btn-p" style={{fontSize:13}} onClick={()=>cuadrePagar(pg)}>💸 Registrar pago</button>
-                  <button className="btn-s" style={{fontSize:13}} onClick={()=>setCuadrePago(null)}>Cancelar</button>
-                </div>)}
-
-              <div className="card" style={{padding:0,marginBottom:10}}>
-                <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-                  <span style={{fontSize:15,fontWeight:700,color:"var(--navy)"}}>📒 Movimientos</span>
-                  {monsCon.length>1&&monsCon.map(mn=><button key={mn} className={mon===mn?"btn-p":"btn-s"} style={{fontSize:12,padding:"3px 10px"}} onClick={()=>setCtaMon(mn)}>{mn}</button>)}
-                  <span style={{marginLeft:"auto",fontSize:13,color:"var(--t2)"}}>Desde</span><input className="fi" type="date" style={{width:150,fontSize:13,padding:"4px 6px"}} value={ctaDesde} onChange={e=>setCtaDesde(e.target.value)}/>
-                  <span style={{fontSize:13,color:"var(--t2)"}}>Hasta</span><input className="fi" type="date" style={{width:150,fontSize:13,padding:"4px 6px"}} value={ctaHasta} onChange={e=>setCtaHasta(e.target.value)}/>
-                  {(ctaDesde||ctaHasta)&&<button className="btn-s" style={{fontSize:12,padding:"3px 10px"}} onClick={()=>{setCtaDesde("");setCtaHasta("");}}>Todo</button>}
-                </div>
-                {movs.length===0?<div style={{textAlign:"center",padding:30,color:"var(--t3)"}}>Sin movimientos.</div>:(
-                <table className="ct">
-                  <thead><tr><th>Fecha</th><th>Documento</th><th>Detalle</th><th style={{textAlign:"right"}}>Debe</th><th style={{textAlign:"right"}}>Haber</th><th style={{textAlign:"right"}}>Saldo</th><th></th></tr></thead>
-                  <tbody>
-                    {d0&&<tr style={{background:"var(--bg3)"}}><td></td><td colSpan={4} style={{fontWeight:700}}>Saldo anterior</td><td style={{...mono,textAlign:"right",fontWeight:800}}>{saldoTxt(anterior)}</td><td></td></tr>}
-                    {vis.map((x,i)=>{const rid=x.pagos?.[0]?.reciboId;const comp=x.pagos?.find(p=>p.comprobanteUrl)?.comprobanteUrl;return(
-                      <tr key={i}>
-                        <td style={{...mono,fontSize:13,whiteSpace:"nowrap"}}>{fmtDate(x.fecha)}</td>
-                        <td style={{fontWeight:700,fontSize:13,whiteSpace:"nowrap"}}>{x.doc}{x.factura&&x.factura.status==="pagada"&&<span style={{marginLeft:6,fontSize:11,color:"var(--green)"}}>✓ pagada</span>}</td>
-                        <td style={{fontSize:12,color:"var(--t2)",maxWidth:320,whiteSpace:"normal"}}>{x.det}{x.usoFavor>0&&<div style={{color:"var(--green)"}}>⭐ Usó {fmtMoney(x.usoFavor,mon)} de saldo a favor</div>}</td>
-                        <td style={{...mono,textAlign:"right",fontWeight:700,color:"var(--orange)"}}>{x.debe?fmtMoney(x.debe,mon):""}</td>
-                        <td style={{...mono,textAlign:"right",fontWeight:700,color:"var(--green)"}}>{x.haber?fmtMoney(x.haber,mon):""}</td>
-                        <td style={{...mono,textAlign:"right",fontWeight:800}}>{saldoTxt(x.saldo)}</td>
-                        <td style={{whiteSpace:"nowrap"}}>
-                          {x.factura&&<button className="btn-s" style={{fontSize:12,padding:"2px 6px",marginRight:4}} title="Ver factura" onClick={()=>setFacPrint(x.factura)}>🖨️</button>}
-                          {x.factura&&puedeNC&&<button className="btn-s" style={{fontSize:12,padding:"2px 6px",color:"var(--purple)",borderColor:"var(--purple)"}} title="Nota de crédito" onClick={()=>ncOpen(x.factura)}>📝</button>}
-                          {x.nc&&puedeNC&&<button className="btn-s" style={{fontSize:12,padding:"2px 6px",color:"var(--red)",borderColor:"var(--red)"}} title="Anular nota de crédito" onClick={()=>facAnular(x.nc)}>✕</button>}
-                          {rid&&<button className="btn-s" style={{fontSize:12,padding:"2px 6px",marginRight:4}} title="Recibo" onClick={()=>printRecibo(rid)}>🧾</button>}
-                          {comp&&<a href={comp} target="_blank" rel="noreferrer" className="btn-s" style={{fontSize:12,padding:"2px 6px",marginRight:4,textDecoration:"none"}} title="Comprobante">📎</a>}
-                          {x.pagos&&x.doc!=="🤝 Comisión"&&x.doc!=="💵 Reembolso"&&(hasPerm("anular_pago")||hasPerm("cobrar"))&&<button className="btn-s" style={{fontSize:12,padding:"2px 6px",color:"var(--red)",borderColor:"var(--red)"}} title="Anular" onClick={()=>pagoAnularGrupo(x.pagos)}>✕</button>}
-                        </td>
-                      </tr>);})}
-                  </tbody>
-                </table>)}
-              </div>
-
-              {["agente","autonomo"].includes(pg.tipo)&&(
-              <div className="card" style={{padding:0}}>
-                <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",display:"flex",alignItems:"center",gap:10}}>
-                  <span style={{fontSize:15,fontWeight:700,color:"var(--navy)"}}>🤝 Comisiones PREPAID</span>
-                  {puede&&pend.length>0&&<button className="btn-p" style={{fontSize:13,padding:"5px 12px",marginLeft:"auto"}} onClick={()=>cuadreAcreditar(pg,pend)}>⭐ Acreditar todas ({pend.length})</button>}
-                </div>
-                {cm.length===0?<div style={{textAlign:"center",padding:24,color:"var(--t3)"}}>Sin WR PREPAID cobrados de sus clientes.</div>:(
-                <table className="ct">
-                  <thead><tr><th>WR</th><th>Factura</th><th>Cliente</th><th style={{textAlign:"right"}}>Cobrado</th><th>Su tarifa</th><th style={{textAlign:"right"}}>Costo</th><th style={{textAlign:"right"}}>Comisión</th><th>Estado</th></tr></thead>
-                  <tbody>{cm.map(x=>{const cl=cliDeWR(x.w);return(
-                    <tr key={x.ref}>
-                      <td style={{...mono,fontWeight:700}}>{x.w.id}</td>
-                      <td style={mono}>{x.f.id}</td>
-                      <td style={{fontSize:13}}>{cl?fullName(cl):(x.w.consignee||"—")}</td>
-                      <td style={{...mono,textAlign:"right"}}>{fmtMoney(x.cobrado,x.moneda)}</td>
-                      <td style={{...mono,fontSize:12}}>{x.tf?`${x.tf.id}${x.tf._especial?" ⭐":""}`:"⚠️ Sin tarifa"}{x.tf&&!x.monedaOk?" ⚠️ "+x.tf.moneda:""}</td>
-                      <td style={{...mono,textAlign:"right"}}>{x.tf?fmtMoney(x.costo,x.tf.moneda||x.moneda):"—"}</td>
-                      <td style={{...mono,textAlign:"right",fontWeight:800,color:"var(--cyan)"}}>{fmtMoney(x.comision,x.moneda)}</td>
-                      <td style={{whiteSpace:"nowrap"}}>
-                        {x.acreditada?<span className="st s3"><span className="st-dot"/>Acreditada</span>
-                          :x.comision>0&&puede?<button className="btn-s" style={{fontSize:12,padding:"2px 8px"}} onClick={()=>cuadreAcreditar(pg,[x])}>⭐ Acreditar</button>
-                          :<span style={{fontSize:12,color:"var(--t3)"}}>—</span>}
-                        {x.faltante&&<span style={{marginLeft:6,fontSize:12,fontWeight:700,color:"var(--orange)"}}>⚠️ Faltante</span>}
-                        {x.perdido&&<><span style={{marginLeft:6,fontSize:12,fontWeight:700,color:"var(--red)"}}>❌ {x.w.status?.label}</span>
-                          {puede&&<button className="btn-s" style={{fontSize:12,padding:"2px 8px",marginLeft:6,color:"var(--red)",borderColor:"var(--red)"}} onClick={()=>cuadreQuitarComision(pg,x)}>Quitar comisión</button>}</>}
-                      </td>
-                    </tr>);})}</tbody>
-                </table>)}
-              </div>)}
-            </div>
-          );
+          return bloqueCuenta(cuadreSel,{onVolver:()=>setCuadreSel(null)});
         })()}
 
         {/* ── CAJA ── */}
