@@ -2315,7 +2315,8 @@ export default function ENEXSystem(){
   const [facPrint,setFacPrint]=useState(null);   // factura a imprimir
   const [pagoModal,setPagoModal]=useState(null); // null | {facturaId, ...}
   const [ncModal,setNcModal]=useState(null);     // null | {facturaOrigen, monto, motivo}
-  const [facFilter,setFacFilter]=useState({q:"",status:"",tipo:"",moneda:"",receptorTipo:""});
+  const [facFilter,setFacFilter]=useState({q:"",status:"",tipo:"",moneda:"",receptorTipo:"",receptorKey:"",receptorNom:"",recQ:""});
+  const [facRecAbierto,setFacRecAbierto]=useState(false);
   const [nextInvoiceNum,setNextInvoiceNum]=useState(1); // secuencial 7 dígitos
   const [cf,setCf]=useState(emptyConsol());
   const [puf,setPuf]=useState(emptyPickup());
@@ -8285,8 +8286,9 @@ export default function ENEXSystem(){
     const ids=new Set([...(Array.isArray(guia?.wrIds)?guia.wrIds:[]),...(guia?.containers||[]).flatMap(c=>(c.wr||[]).map(w=>w.id))]);
     const wrs=wrList.filter(w=>ids.has(w.id));
     const activas=facturas.filter(f=>f.status!=="anulada"&&f.tipo!=="nota_credito"&&Array.isArray(f.wrIds));
-    const prepaid=[],grupos={};
+    const prepaid=[],grupos={},faltantes=[];
     wrs.forEach(w=>{
+      if(["18","18.1","18.2","18.3"].includes(w.status?.code||""))faltantes.push(w);
       if(!wrPuedeFacturarse(w))return;
       if((w.tipoPago||"").toLowerCase().includes("prepa")){prepaid.push(w);return;}
       const r=facReceptorParaWR(w);
@@ -8300,7 +8302,9 @@ export default function ENEXSystem(){
       const cubiertos=new Set(facs.flatMap(f=>f.wrIds));
       return {...g,facturas:facs,pendientes:g.wrs.filter(w=>!cubiertos.has(w.id))};
     }).sort((x,y)=>({cliente:0,agente:1,autonomo:2}[x.receptor.tipo]??9)-({cliente:0,agente:1,autonomo:2}[y.receptor.tipo]??9)||String(x.receptor.snapshot?.nombre||"").localeCompare(String(y.receptor.snapshot?.nombre||"")));
-    return {grupos:lista,prepaid};
+    const facPrepaid=[...new Map(activas.filter(f=>f.wrIds.some(id=>prepaid.some(w=>w.id===id))).map(f=>[f.id,f])).values()];
+    const prepaidSin=prepaid.filter(w=>!facPrepaid.some(f=>f.wrIds.includes(w.id)));
+    return {grupos:lista,prepaid,facPrepaid,prepaidSin,faltantes};
   };
   // Arma la factura (borrador) de un receptor con sus WR de la guía
   const facConstruir=(guia,r,wrs,seq=0)=>{
@@ -8549,6 +8553,7 @@ export default function ENEXSystem(){
       if(facFilter.tipo&&f.tipo!==facFilter.tipo)return false;
       if(facFilter.moneda&&f.moneda!==facFilter.moneda)return false;
       if(facFilter.receptorTipo&&f.receptorTipo!==facFilter.receptorTipo)return false;
+      if(facFilter.receptorKey&&pagKey(pagadorDeFactura(f))!==facFilter.receptorKey)return false;
       if(facFilter.q){
         const q=facFilter.q.toLowerCase();
         if(!`${f.id} ${f.receptorNombre||""} ${f.receptorDoc||""} ${f.receptorCasillero||""}`.toLowerCase().includes(q))return false;
@@ -8616,14 +8621,33 @@ export default function ENEXSystem(){
                 <option value="USD">USD</option>
                 <option value="EUR">EUR</option>
               </select>
-              <select className="fi" value={facFilter.receptorTipo} onChange={e=>setFacFilter(p=>({...p,receptorTipo:e.target.value}))} style={{fontSize:14,padding:"6px 10px"}}>
+              <select className="fi" value={facFilter.receptorTipo} onChange={e=>setFacFilter(p=>({...p,receptorTipo:e.target.value,receptorKey:"",receptorNom:"",recQ:""}))} style={{fontSize:14,padding:"6px 10px"}}>
                 <option value="">Todos los receptores</option>
                 {REC_TYPES.map(r=><option key={r.k} value={r.k}>{r.l}</option>)}
               </select>
+              {facFilter.receptorTipo&&(()=>{
+                const tl=(REC_TYPES.find(r=>r.k===facFilter.receptorTipo)||{l:""}).l;
+                const m=new Map();facturas.filter(f=>f.receptorTipo===facFilter.receptorTipo).forEach(f=>{const pg=pagadorDeFactura(f);const k=pagKey(pg);if(!m.has(k))m.set(k,{k,nombre:f.receptorNombre||"—",cas:f.receptorCasillero||"",n:0});m.get(k).n++;});
+                const Q=sinAcentos((facFilter.recQ||"").trim());
+                const ops=[...m.values()].filter(o=>!Q||sinAcentos(`${o.nombre} ${o.cas}`).includes(Q)).sort((a,b)=>a.nombre.localeCompare(b.nombre)).slice(0,30);
+                return facFilter.receptorKey
+                  ?<span style={{fontSize:13,fontWeight:700,padding:"5px 10px",borderRadius:14,background:"#EEF3FF",color:"var(--navy)",border:"1px solid #B8C8F0",whiteSpace:"nowrap"}}>{facFilter.receptorNom}
+                    <span style={{cursor:"pointer",color:"var(--red)",marginLeft:6}} onClick={()=>setFacFilter(p=>({...p,receptorKey:"",receptorNom:"",recQ:""}))}>✕</span></span>
+                  :<div className="fi-search" style={{position:"relative",minWidth:240}}>
+                    <input className="fi" autoFocus placeholder={`Nombre del ${tl.toLowerCase().split(" ")[0]}…`} value={facFilter.recQ||""} style={{fontSize:14,padding:"6px 10px"}}
+                      onFocus={()=>setFacRecAbierto(true)} onBlur={()=>setTimeout(()=>setFacRecAbierto(false),150)}
+                      onChange={e=>{setFacFilter(p=>({...p,recQ:e.target.value}));setFacRecAbierto(true);}}
+                      onKeyDown={e=>{if(e.key==="Enter"&&ops[0]){e.preventDefault();setFacFilter(p=>({...p,receptorKey:ops[0].k,receptorNom:ops[0].nombre}));}}}/>
+                    {facRecAbierto&&ops.length>0&&<div className="fi-search-res">{ops.map(o=>(
+                      <div key={o.k} className="fi-search-item" onMouseDown={e=>{e.preventDefault();setFacFilter(p=>({...p,receptorKey:o.k,receptorNom:o.nombre}));}}>
+                        {o.nombre}{o.cas&&<span className="fi-search-cas">#{o.cas}</span>}<span style={{fontSize:12,color:"var(--t3)",marginLeft:8}}>{o.n} fact.</span>
+                      </div>))}</div>}
+                  </div>;
+              })()}
               {(hasPerm("crear_factura")||hasPerm("facturar"))&&<button className="btn-p" onClick={()=>facOpenNew()}>+ Nueva Factura</button>}
             </div>
             <div className="card" style={{padding:0}}>
-              {facFilt.length===0?<div style={{textAlign:"center",padding:40,color:"var(--t3)"}}>No hay facturas con esos filtros. {(hasPerm("crear_factura")||hasPerm("facturar"))&&<>Crea la primera con <b>+ Nueva Factura</b> o desde <b>Generar de Guía</b>.</>}</div>:(
+              {facFilt.length===0?<div style={{textAlign:"center",padding:40,color:"var(--t3)"}}>No hay facturas con esos filtros.</div>:(
                 <table className="ct">
                   <thead><tr>
                     <th>N° Factura</th><th>Tipo</th><th>Fecha</th><th>Receptor</th>
@@ -8832,7 +8856,7 @@ export default function ENEXSystem(){
             const q=(facGuiaBuscar||"").trim().toUpperCase();
             const tarjetas=consolList.map(g=>{const {grupos,prepaid}=facGruposGuia(g);return {g,grupos,prepaid};})
               .filter(x=>x.grupos.length>0||x.prepaid.length>0)
-              .map(x=>({...x,completa:x.grupos.every(gr=>gr.pendientes.length===0&&!gr.facturas.some(f=>f.status==="borrador"))}));
+              .map(x=>{const r=facGruposGuia(x.g);return {...x,...r,completa:x.grupos.every(gr=>gr.pendientes.length===0&&!gr.facturas.some(f=>f.status==="borrador"))&&r.prepaidSin.length===0&&!r.facPrepaid.some(f=>f.status==="borrador")};});
             const nPend=tarjetas.filter(x=>!x.completa).length, nHist=tarjetas.length-nPend;
             const visibles=tarjetas.filter(x=>facGuiaVista==="historial"?x.completa:!x.completa)
               .filter(x=>!q||String(x.g.id).toUpperCase().includes(q)||x.grupos.some(gr=>String(gr.receptor.snapshot?.nombre||"").toUpperCase().includes(q)))
@@ -8851,13 +8875,14 @@ export default function ENEXSystem(){
                 </div>
                 {visibles.length===0?<div className="card" style={{textAlign:"center",padding:50,color:"var(--t3)"}}>{facGuiaVista==="historial"?"No hay guías completamente facturadas.":"No hay guías con carga por facturar."}</div>:
                 <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(290px,1fr))",gap:12}}>
-                  {visibles.map(({g,grupos})=>{
-                    const tot=grupos.length, hechos=grupos.filter(x=>x.pendientes.length===0).length;
-                    const facs=[...new Map(grupos.flatMap(x=>x.facturas).map(f=>[f.id,f])).values()];
+                  {visibles.map(({g,grupos,prepaid,facPrepaid,prepaidSin,faltantes})=>{
+                    const wrsTot=grupos.reduce((t,x)=>t+x.wrs.length,0)+prepaid.length;
+                    const tot=wrsTot, hechos=wrsTot-grupos.reduce((t,x)=>t+x.pendientes.length,0)-prepaidSin.length;
+                    const facs=[...new Map([...grupos.flatMap(x=>x.facturas),...facPrepaid].map(f=>[f.id,f])).values()];
                     const porMon={};facs.forEach(f=>{porMon[f.moneda||"USD"]=(porMon[f.moneda||"USD"]||0)+(f.total||0);});
                     const pct=tot?Math.round(hechos*100/tot):0;
                     const nBor=facs.filter(f=>f.status==="borrador").length;
-                    const nSin=grupos.reduce((t,x)=>t+x.pendientes.length,0);
+                    const nSin=grupos.reduce((t,x)=>t+x.pendientes.length,0)+prepaidSin.length;
                     return (
                       <div key={g.id} className="card" onClick={()=>{setFacGuiaSel(g.id);setFacGuiaBuscar("");}} style={{cursor:"pointer",padding:14,border:"1px solid var(--b1)"}}>
                         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
@@ -8866,10 +8891,12 @@ export default function ENEXSystem(){
                         <div style={{fontSize:14,color:"var(--t2)",marginBottom:8}}>📍 {g.destino||"—"} · {fmtDate(g.fecha)}</div>
                         <div style={{height:8,background:"var(--bg4)",borderRadius:4,overflow:"hidden",marginBottom:8}}><div style={{width:`${pct}%`,height:"100%",background:"var(--green)"}}/></div>
                         <div style={{display:"flex",justifyContent:"space-between",fontSize:13,flexWrap:"wrap",gap:6}}>
-                          <span><b style={{color:hechos===tot?"var(--green)":"var(--orange)"}}>{hechos}</b> / {tot} facturados</span>
+                          <span><b style={{color:hechos===tot?"var(--green)":"var(--orange)"}}>{hechos}</b> / {tot} WR facturados</span>
                           <span style={{fontFamily:"'DM Mono',monospace",fontWeight:700}}>{Object.entries(porMon).map(([m,v])=>fmtMoney(v,m)).join(" · ")||"—"}</span>
                         </div>
-                        {(nSin>0||nBor>0)&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:8}}>
+                        {(nSin>0||nBor>0||faltantes.length>0||prepaid.length>0)&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:8}}>
+                          {prepaid.length>0&&<span style={{fontSize:12,fontWeight:700,padding:"2px 8px",borderRadius:10,color:"var(--navy)",background:"#EEF3FF",border:"1px solid #B8C8F0"}}>💳 {prepaid.length} PREPAID</span>}
+                          {faltantes.length>0&&<span style={{fontSize:12,fontWeight:700,padding:"2px 8px",borderRadius:10,color:"var(--red)",background:"#FEE8E8",border:"1px solid #F0A0A0"}}>⚠️ {faltantes.length} faltante{faltantes.length===1?"":"s"}</span>}
                           {nSin>0&&<span style={{fontSize:12,fontWeight:700,padding:"2px 8px",borderRadius:10,color:"#E65100",background:"#FFF3E0",border:"1px solid #FFCC80"}}>🧾 {nSin} WR sin facturar</span>}
                           {nBor>0&&<span style={{fontSize:12,fontWeight:700,padding:"2px 8px",borderRadius:10,color:"#7A5C00",background:"#FFF8E1",border:"1px solid #FFE082"}}>📤 {nBor} por emitir</span>}
                         </div>}
@@ -8882,7 +8909,7 @@ export default function ENEXSystem(){
           }
           const g=consolList.find(c=>c.id===facGuiaSel);
           if(!g)return <div className="card" style={{padding:30,textAlign:"center"}}><button className="btn-s" onClick={()=>setFacGuiaSel(null)}>← Guías</button></div>;
-          const {grupos,prepaid}=facGruposGuia(g);
+          const {grupos,prepaid,facPrepaid}=facGruposGuia(g);
           const isAereoG=dnGuiaEsAerea(g);
           const pendTot=grupos.filter(x=>x.pendientes.length>0);
           const puedeFac=hasPerm("crear_factura")||hasPerm("facturar");
@@ -8940,7 +8967,24 @@ export default function ENEXSystem(){
                   </tbody>
                 </table>
               </div>
-              {prepaid.length>0&&<div style={{marginTop:10,fontSize:13,color:"var(--t2)"}}>💳 {prepaid.length} WR PREPAID en esta guía</div>}
+              {prepaid.length>0&&(
+                <div className="card" style={{padding:0,overflow:"hidden",marginTop:12}}>
+                  <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",fontSize:15,fontWeight:700,color:"var(--navy)"}}>💳 PREPAID ({prepaid.length})</div>
+                  <table className="ct">
+                    <thead><tr><th>WR</th><th>Consignatario</th><th>Paga</th><th>Factura</th><th>Total</th><th>Estado</th><th></th></tr></thead>
+                    <tbody>{prepaid.map(w=>{const f=facPrepaid.find(x=>x.wrIds.includes(w.id));return(
+                      <tr key={w.id}>
+                        <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700}}>{w.id}</td>
+                        <td style={{fontSize:13}}>{w.consignee||"—"}{w.casillero?<span style={{color:"var(--gold2)",marginLeft:6,fontFamily:"'DM Mono',monospace"}}>#{w.casillero}</span>:null}</td>
+                        <td style={{fontSize:13}}>{f?.receptorNombre||w.shipper||"—"}</td>
+                        <td style={{fontFamily:"'DM Mono',monospace"}}>{f?.id||"—"}</td>
+                        <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700}}>{f?fmtMoney(f.total,f.moneda):"—"}</td>
+                        <td>{f?chipF(f):<span style={{fontSize:12,fontWeight:700,color:"#E65100"}}>Sin facturar</span>}</td>
+                        <td style={{whiteSpace:"nowrap"}}>{f?<button className="btn-s" style={{fontSize:12,padding:"3px 6px"}} onClick={()=>setFacPrint(f)}>🖨️</button>
+                          :puedeFac&&<button className="btn-p" style={{fontSize:12,padding:"3px 8px"}} onClick={()=>{if(!w.tipoEnvio){window.alert("Asigna primero el tipo de envío del WR.");return;}facOpenNew(facConstruirWR(w));}}>💰 Facturar</button>}</td>
+                      </tr>);})}</tbody>
+                  </table>
+                </div>)}
             </div>
           );
         })()}
