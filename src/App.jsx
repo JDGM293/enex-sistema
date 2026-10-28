@@ -2934,7 +2934,7 @@ export default function ENEXSystem(){
         dims,
         pesoKg:totalPesoKg,pesoLb:totalPesoLb,
         volKg:totalVolKg,volLb:totalVolLb,ft3:totalFt3,m3:totalM3,
-        notas:wrf.notas,tipoEnvio:wrf.tipoEnvio,tipoPago:wrf.tipoPago,
+        notas:wrf.notas,tipoEnvio:(wrTipoFijo(editWR)||(!hasPerm("saltar_bloqueos")&&!wrEsModificable(editWR)))?editWR.tipoEnvio:wrf.tipoEnvio,tipoPago:wrf.tipoPago,
         shipper:wrf.remitente,remitenteDir:wrf.remitenteDir||"",remitenteTel:wrf.remitenteTel||"",remitenteEmail:(wrf.remitenteEmail||"").trim(),remitenteDoc:(wrf.remitenteDoc||"").trim(),remitenteId:_remitenteId,cargos:wrf.cargos,
         sucursalEntrega:wrf.sucursalEntrega||"",
       };
@@ -3746,7 +3746,8 @@ export default function ENEXSystem(){
         <div className="fgrid g3" style={{marginBottom:14}}>
           <div className="fg">
             <div className="fl">Tipo de Envío</div>
-            <select className="fs" value={wrf.tipoEnvio} onChange={e=>sw("tipoEnvio",e.target.value)}>
+            <select className="fs" value={wrf.tipoEnvio} onChange={e=>sw("tipoEnvio",e.target.value)}
+              disabled={!!editWR&&(wrTipoFijo(editWR)||(!hasPerm("saltar_bloqueos")&&!wrEsModificable(editWR)))}>
               <option value="">— Sin confirmar —</option>
               {SEND_TYPES.map(t=><option key={t}>{t}</option>)}
             </select>
@@ -9096,7 +9097,7 @@ export default function ENEXSystem(){
   const wrEsModificable=(w)=>["1","2","3"].includes(w?.status?.code||"");
   // Tipo de envío fijo para todos (incluso con "saltar bloqueos"): ya en entrega, entregado, cobrado,
   // egresado, faltante o con factura activa
-  const wrTipoFijo=(w)=>["18","18.1","18.2","18.3","20","20.1","20.2","21","22","23","25"].includes(w?.status?.code||"")
+  const wrTipoFijo=(w)=>["2.3","18","18.1","18.2","18.3","20","20.1","20.2","21","22","23","25"].includes(w?.status?.code||"")
     ||facturas.some(f=>f.status!=="anulada"&&f.tipo!=="nota_credito"&&Array.isArray(f.wrIds)&&f.wrIds.includes(w?.id));
   // Un WR no puede facturarse si está Reempacado (2.3 — es fantasma, la mercancía
   // está en el WR hijo) ni si ya fue Egresado (25 — debió facturarse antes del despacho).
