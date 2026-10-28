@@ -5973,51 +5973,73 @@ export default function ENEXSystem(){
 
   // ── PÁGINA IMPRIMIR ETIQUETAS ───────────────────────────────────────────────
   const renderEtiquetasPage=()=>{
-    const [etqMode,_etqMode]=[etqTipo,setEtqTipo];
+    const tipo=etqTipo||"wr";
+    const Q=sinAcentos(etqSearch.trim());
+    const hay=txt=>!Q||sinAcentos(txt).includes(Q);
+    const porFecha=(a,b)=>new Date(b.fecha||0)-new Date(a.fecha||0);
+    const MAX=30;
+    const btn=(l,fn,extra={})=><button className="btn-s" style={{fontSize:13,padding:"5px 12px",whiteSpace:"nowrap",...extra}} onClick={fn}>{l}</button>;
+    const mono={fontFamily:"'DM Mono',monospace",fontWeight:700};
+    const imprimirWR=w=>{setSelWR(w);setTimeout(()=>window.print(),600);};
+    // Usuarios externos: solo documentos de su carga
+    const idsVis=new Set(wrList.map(w=>w.id));
+    const tocaVis=ids=>!alcanceUsr||(ids||[]).some(id=>idsVis.has(id));
+    const facsVis=alcanceUsr?facturas.filter(f=>tocaVis(f.wrIds)||(f.receptorId&&[currentUser.id,currentUser.agenteId].includes(f.receptorId))):facturas;
+    const facIdsVis=new Set(facsVis.map(f=>f.id));
+    const pagosVis=alcanceUsr?pagos.filter(p=>facIdsVis.has(p.facturaId)):pagos;
+    const guiasVis=alcanceUsr?consolList.filter(g=>tocaVis((g.containers||[]).flatMap(c=>(c.wr||[]).map(w=>w.id)))):consolList;
+    const TIPOS=[["wr","📦 WR"],["guia","🗂️ Guía"],["entrega","📝 Nota de entrega"],["egreso","🚚 Cargo Release"],["factura","🧾 Factura"],["recibo","💵 Recibo"]];
+    let filas=[];
+    if(tipo==="wr")filas=wrList.filter(w=>hay(`${w.id} ${w.consignee||""} ${w.casillero||""} ${w.shipper||""} ${(w.dims||[]).map(d=>d.tracking).join(" ")} ${w.tracking||""}`))
+      .sort((a,b)=>String(b.id).localeCompare(String(a.id))).slice(0,MAX).map(w=>({k:w.id,
+        izq:<><span style={{...mono,color:"var(--navy)"}}>{w.id}</span><div style={{fontSize:13,color:"var(--t3)"}}>{w.consignee||"—"}{w.casillero?` · #${w.casillero}`:""} · {w.cajas||1} caja{(w.cajas||1)===1?"":"s"}</div></>,
+        estado:<StBadge st={w.status}/>,
+        acc:<>{btn("📄 WR",()=>imprimirWR(w))}{btn("🏷️ Etiquetas",()=>setShowLabels({wr:w,dims:w.dims||[],remitente:w.shipper||"",tipoEnvio:w.tipoEnvio||""}))}</>}));
+    if(tipo==="guia")filas=guiasVis.filter(g=>hay(`${g.id} ${g.destino||""} ${g.tipoEnvio||""} ${g.awb||""} ${g.bl||""}`))
+      .sort((a,b)=>String(b.id).localeCompare(String(a.id))).slice(0,MAX).map(g=>({k:g.id,
+        izq:<><span style={{...mono,color:"var(--purple)"}}>{g.id}</span><div style={{fontSize:13,color:"var(--t3)"}}>{g.destino||"—"} · {g.tipoEnvio||"—"} · {(g.containers||[]).length} cont. · {g.totalWR||0} WR</div></>,
+        estado:<span style={{fontSize:12,color:"var(--t2)",fontWeight:600}}>{g.status||"—"}</span>,
+        acc:<>{btn("📄 Guía",()=>printGuiaArchivada(g))}{btn("🏷️ Etiquetas",()=>setShowConsolLabels({guia:g,containers:g.containers||[],remitente:empresaNombre||"ENEX"}))}</>}));
+    if(tipo==="entrega")filas=deliveryNotes.filter(n=>tocaVis(n.wrIds)&&hay(`${n.id} ${n.receptorNombre||""} ${n.consignatario||""} ${n.guiaId||""} ${(n.wrIds||[]).join(" ")}`))
+      .sort(porFecha).slice(0,MAX).map(n=>({k:n.id,
+        izq:<><span style={{...mono,color:"var(--navy)"}}>{n.id}</span><div style={{fontSize:13,color:"var(--t3)"}}>{fmtDate(n.fecha)} · {n.receptorEntidad?.nombre||n.receptorNombre||n.consignatario||"—"} · {(n.wrIds||[]).length} WR{n.guiaId?` · guía ${n.guiaId}`:""}</div></>,
+        estado:n.anulado?<span style={{fontSize:12,fontWeight:700,color:"var(--red)"}}>Anulada</span>:<span style={{fontSize:12,fontWeight:700,color:"var(--green)"}}>{n.tipo==="despacho"?"Despacho":"Entrega"}</span>,
+        acc:btn("🖨️ Imprimir",()=>setDnPrint(n))}));
+    if(tipo==="egreso")filas=cargoReleases.filter(c=>tocaVis(c.wrIds)&&hay(`${c.id} ${c.agenteCarga||""} ${c.contacto||""} ${(c.wrIds||[]).join(" ")}`))
+      .sort(porFecha).slice(0,MAX).map(c=>({k:c.id,
+        izq:<><span style={{...mono,color:"var(--navy)"}}>{c.id}</span><div style={{fontSize:13,color:"var(--t3)"}}>{fmtDate(c.fecha)} · {c.agenteCarga||c.contacto||"—"} · {(c.wrIds||[]).length} WR</div></>,
+        estado:c.anulado?<span style={{fontSize:12,fontWeight:700,color:"var(--red)"}}>Anulado</span>:null,
+        acc:btn("🖨️ Imprimir",()=>setCrPrint(c))}));
+    if(tipo==="factura")filas=facsVis.filter(f=>f.status!=="borrador"&&hay(`${f.id} ${f.receptorNombre||""} ${f.receptorCasillero||""} ${f.receptorDoc||""} ${(f.wrIds||[]).join(" ")}`))
+      .sort((a,b)=>(b.numero||0)-(a.numero||0)).slice(0,MAX).map(f=>({k:f.id,
+        izq:<><span style={{...mono,color:"var(--navy)"}}>{f.tipo==="nota_credito"?"NC ":""}{f.id}</span><div style={{fontSize:13,color:"var(--t3)"}}>{fmtDate(f.fechaEmision||f.fecha)} · {f.receptorNombre||"—"} · {fmtMoney(f.total,f.moneda)}</div></>,
+        estado:<span className={`st ${FAC_STATUS_CLS[f.status]||"s5"}`}><span className="st-dot"/>{(FAC_STATUS_LABEL[f.status]||f.status).replace(/^\S+\s/,"")}</span>,
+        acc:<>{btn("👁️ Ver",()=>setFacPrint(f))}{btn("🖨️ Imprimir",()=>printFactura(f))}</>}));
+    if(tipo==="recibo"){const m=new Map();pagosVis.forEach(p=>{if(!p.reciboId)return;if(!m.has(p.reciboId))m.set(p.reciboId,{id:p.reciboId,fecha:p.fecha,quien:p.pagadorNombre||(pagadorDePago(p)||{}).nombre||"—",monto:0,moneda:p.moneda||"USD",anulado:true,facs:new Set()});
+        const r=m.get(p.reciboId);if(!p.anulado){r.anulado=false;if(p.tipoPago!=="saldo_favor")r.monto+=p.monto;}if(p.facturaId)r.facs.add(p.facturaId);});
+      filas=[...m.values()].filter(r=>hay(`${r.id} ${r.quien} ${[...r.facs].join(" ")}`)).sort(porFecha).slice(0,MAX).map(r=>({k:r.id,
+        izq:<><span style={{...mono,color:"var(--navy)"}}>{r.id}</span><div style={{fontSize:13,color:"var(--t3)"}}>{fmtDate(r.fecha)} · {r.quien} · {fmtMoney(r.monto,r.moneda)}{r.facs.size?` · fact. ${[...r.facs].join(", ")}`:""}</div></>,
+        estado:r.anulado?<span style={{fontSize:12,fontWeight:700,color:"var(--red)"}}>Anulado</span>:null,
+        acc:btn("🖨️ Imprimir",()=>printRecibo(r.id))}));}
+    const ph={wr:"Buscar WR, nombre, casillero o tracking…",guia:"Buscar guía, destino, AWB o BL…",entrega:"Buscar nota, receptor, guía o WR…",egreso:"Buscar cargo release, agente de carga o WR…",factura:"Buscar factura, cliente, casillero o WR…",recibo:"Buscar recibo, cliente o factura…"}[tipo];
     return (
     <div className="page-scroll">
-      <div className="card" style={{maxWidth:etqMode==="entregas"?"100%":640,marginBottom:etqMode==="entregas"?14:0}}>
-        <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:17,fontWeight:700,color:"var(--navy)",marginBottom:4}}>🖨️ Impresión</div>
-        {/* Selector tipo de impresión */}
-        <div style={{display:"flex",gap:6,marginBottom:12,flexWrap:"wrap"}}>
-          <button className={`btn-${etqMode==="wr"?"p":"s"}`} style={{flex:"1 1 160px"}} onClick={()=>{_etqMode("wr");setEtqSearch("");}}>📦 Etiquetas WR</button>
-          <button className={`btn-${etqMode==="guia"?"p":"s"}`} style={{flex:"1 1 160px"}} onClick={()=>{_etqMode("guia");setEtqSearch("");}}>🗂️ Etiquetas Guía</button>
-          <button className={`btn-${etqMode==="entregas"?"p":"s"}`} style={{flex:"1 1 160px"}} onClick={()=>{_etqMode("entregas");setEtqSearch("");}}>📝 Notas de Entrega</button>
-          <button className="btn-s" style={{flex:"1 1 160px",opacity:.5,cursor:"not-allowed"}} disabled title="Disponible próximamente">🪪 Egreso WR</button>
-          <button className="btn-s" style={{flex:"1 1 160px",opacity:.5,cursor:"not-allowed"}} disabled title="Disponible próximamente">💵 Recibo de Pago</button>
+      <div className="card" style={{marginBottom:12}}>
+        <div style={{display:"flex",gap:3,background:"var(--bg4)",borderRadius:8,padding:3,border:"1px solid var(--b1)",flexWrap:"wrap",marginBottom:12}}>
+          {TIPOS.map(([k,l])=><button key={k} onClick={()=>{setEtqTipo(k);setEtqSearch("");}} style={{flex:"1 1 130px",padding:"8px 10px",borderRadius:6,border:"none",cursor:"pointer",fontSize:14,fontWeight:600,background:tipo===k?"var(--navy)":"transparent",color:tipo===k?"#fff":"var(--t2)"}}>{l}</button>)}
         </div>
-        {etqMode!=="entregas"&&<input className="fi" style={{marginBottom:12}} value={etqSearch} onChange={e=>setEtqSearch(e.target.value)}
-          placeholder={etqMode==="guia"?"Buscar guía por número, destino o tipo…":"Buscar WR por número, nombre o casillero…"}/>}
-        {etqMode==="wr"&&etqSearch.length>1&&(wrList||[]).filter(w=>w.id.toLowerCase().includes(etqSearch.toLowerCase())||(w.consignee||"").toLowerCase().includes(etqSearch.toLowerCase())).slice(0,20).map(w=>(
-          <div key={w.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:8,border:"1px solid var(--b1)",marginBottom:6,cursor:"pointer",background:"var(--bg3)"}}
-            onClick={()=>setShowLabels({wr:w,dims:w.dims||[],remitente:w.shipper||"",tipoEnvio:w.tipoEnvio||""})}>
-            <div style={{fontFamily:"'DM Mono',monospace",fontWeight:700,fontSize:14,color:"var(--navy)"}}>{w.id}</div>
-            <div style={{flex:1}}><div style={{fontWeight:600,fontSize:15}}>{w.consignee}</div><div style={{fontSize:13,color:"var(--t3)"}}>{w.casillero} · {w.cajas} cajas</div></div>
-            <StBadge st={w.status}/>
-            <span style={{color:"var(--cyan)",fontSize:14,fontWeight:600}}>🏷️ Imprimir</span>
-          </div>
-        ))}
-        {etqMode==="guia"&&etqSearch.length>1&&(consolList||[]).filter(g=>{
-          const q=etqSearch.toLowerCase();
-          return String(g.id||"").toLowerCase().includes(q)||String(g.destino||"").toLowerCase().includes(q)||String(g.tipoEnvio||"").toLowerCase().includes(q);
-        }).slice(0,20).map(g=>(
-          <div key={g.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:8,border:"1px solid var(--b1)",marginBottom:6,cursor:"pointer",background:"var(--bg3)"}}
-            onClick={()=>setShowConsolLabels({guia:g,containers:g.containers||[],remitente:empresaNombre||"ENEX"})}>
-            <div style={{fontFamily:"'DM Mono',monospace",fontWeight:700,fontSize:14,color:"var(--purple)"}}>{g.id}</div>
-            <div style={{flex:1}}>
-              <div style={{fontWeight:600,fontSize:15}}>{g.destino||"—"} · {g.tipoEnvio||"—"}</div>
-              <div style={{fontSize:13,color:"var(--t3)"}}>{(g.containers||[]).length} cont. · {g.totalWR||0} WR · {g.totalCajas||0} cajas</div>
-            </div>
-            <span style={{fontSize:12,color:"var(--t2)",fontWeight:600,background:"var(--bg4)",padding:"3px 7px",borderRadius:4,border:"1px solid var(--b1)"}}>{g.status||"—"}</span>
-            <span style={{color:"var(--cyan)",fontSize:14,fontWeight:600}}>🏷️ Imprimir</span>
-          </div>
-        ))}
-        {etqMode!=="entregas"&&etqSearch.length<=1&&<div style={{color:"var(--t3)",fontSize:14,textAlign:"center",padding:20}}>Escribe al menos 2 caracteres para buscar</div>}
-        {etqSearch.length>1&&etqMode==="wr"&&(wrList||[]).filter(w=>w.id.toLowerCase().includes(etqSearch.toLowerCase())||(w.consignee||"").toLowerCase().includes(etqSearch.toLowerCase())).length===0&&<div style={{color:"var(--t3)",fontSize:14,textAlign:"center",padding:20}}>No se encontraron WR.</div>}
-        {etqSearch.length>1&&etqMode==="guia"&&(consolList||[]).filter(g=>{const q=etqSearch.toLowerCase();return String(g.id||"").toLowerCase().includes(q)||String(g.destino||"").toLowerCase().includes(q)||String(g.tipoEnvio||"").toLowerCase().includes(q);}).length===0&&<div style={{color:"var(--t3)",fontSize:14,textAlign:"center",padding:20}}>No se encontraron guías consolidadas.</div>}
+        <input className="fi" autoFocus style={{fontSize:15,padding:"9px 12px"}} value={etqSearch} onChange={e=>setEtqSearch(e.target.value)} placeholder={ph}/>
       </div>
-      {/* SUB-MÓDULO Notas de Entrega — embebido en Impresión */}
-      {etqMode==="entregas"&&renderDeliveryNotes()}
+      <div className="card" style={{padding:0}}>
+        {filas.length===0?<div style={{textAlign:"center",padding:40,color:"var(--t3)"}}>{Q?"Sin coincidencias.":"No hay documentos."}</div>:
+        filas.map(f=>(
+          <div key={f.k} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 14px",borderBottom:"1px solid var(--b1)",flexWrap:"wrap"}}>
+            <div style={{flex:1,minWidth:220}}>{f.izq}</div>
+            {f.estado}
+            <div style={{display:"flex",gap:6}}>{f.acc}</div>
+          </div>))}
+        {!Q&&filas.length===MAX&&<div style={{padding:10,textAlign:"center",fontSize:13,color:"var(--t3)"}}>Últimos {MAX}. Usa el buscador para encontrar otros.</div>}
+      </div>
     </div>
     );
   };
