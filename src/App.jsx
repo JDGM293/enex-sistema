@@ -2934,7 +2934,7 @@ export default function ENEXSystem(){
         dims,
         pesoKg:totalPesoKg,pesoLb:totalPesoLb,
         volKg:totalVolKg,volLb:totalVolLb,ft3:totalFt3,m3:totalM3,
-        notas:wrf.notas,tipoEnvio:(wrTipoFijo(editWR)||(!hasPerm("saltar_bloqueos")&&!wrEsModificable(editWR)))?editWR.tipoEnvio:wrf.tipoEnvio,tipoPago:wrf.tipoPago,
+        notas:wrf.notas,tipoEnvio:wrf.tipoEnvio,tipoPago:wrf.tipoPago,
         shipper:wrf.remitente,remitenteDir:wrf.remitenteDir||"",remitenteTel:wrf.remitenteTel||"",remitenteEmail:(wrf.remitenteEmail||"").trim(),remitenteDoc:(wrf.remitenteDoc||"").trim(),remitenteId:_remitenteId,cargos:wrf.cargos,
         sucursalEntrega:wrf.sucursalEntrega||"",
       };
@@ -3746,8 +3746,7 @@ export default function ENEXSystem(){
         <div className="fgrid g3" style={{marginBottom:14}}>
           <div className="fg">
             <div className="fl">Tipo de Envío</div>
-            <select className="fs" value={wrf.tipoEnvio} onChange={e=>sw("tipoEnvio",e.target.value)}
-              disabled={!!editWR&&(wrTipoFijo(editWR)||(!hasPerm("saltar_bloqueos")&&!wrEsModificable(editWR)))}>
+            <select className="fs" value={wrf.tipoEnvio} onChange={e=>sw("tipoEnvio",e.target.value)}>
               <option value="">— Sin confirmar —</option>
               {SEND_TYPES.map(t=><option key={t}>{t}</option>)}
             </select>
