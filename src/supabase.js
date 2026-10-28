@@ -518,7 +518,7 @@ const pickupFromDB = (r) => ({
   solicitanteTipo: r.solicitante_tipo || '', solicitanteId: r.solicitante_id || '', solicitanteNombre: r.solicitante_nombre || '',
   direccion: r.direccion || '', contacto: r.contacto || '', telefono: r.telefono || '',
   fechaDeseada: r.fecha_deseada || '', franja: r.franja || '', paquetes: r.paquetes || [], notas: r.notas || '',
-  status: r.status || 'solicitado', fechaProgramada: r.fecha_programada || '', chofer: r.chofer || '',
+  status: r.status || 'solicitado', fechaProgramada: r.fecha_programada || '', chofer: r.chofer || '', transportista: r.transportista || '',
   monto: parseFloat(r.monto) || 0, moneda: r.moneda || 'USD', wrId: r.wr_id || '',
   historial: r.historial || [], motivoCancelacion: r.motivo_cancelacion || '',
 })
@@ -534,7 +534,7 @@ export const dbUpsertPickup = async (p) => {
     solicitante_tipo: p.solicitanteTipo || '', solicitante_id: p.solicitanteId || '', solicitante_nombre: p.solicitanteNombre || '',
     direccion: p.direccion || '', contacto: p.contacto || '', telefono: p.telefono || '',
     fecha_deseada: p.fechaDeseada || null, franja: p.franja || '', paquetes: p.paquetes || [], notas: p.notas || '',
-    status: p.status || 'solicitado', fecha_programada: p.fechaProgramada || null, chofer: p.chofer || '',
+    status: p.status || 'solicitado', fecha_programada: p.fechaProgramada || null, chofer: p.chofer || '', transportista: p.transportista || '',
     monto: p.monto || 0, moneda: p.moneda || 'USD', wr_id: p.wrId || '',
     historial: p.historial || [], motivo_cancelacion: p.motivoCancelacion || '',
   })

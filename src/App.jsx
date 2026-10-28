@@ -2288,7 +2288,7 @@ export default function ENEXSystem(){
   const [puPrint,setPuPrint]=useState(null);   // comprobante de pick-up en vista previa
   const [pickupFil,setPickupFil]=useState("activos");
   const [pickupQ,setPickupQ]=useState("");
-  const [puConf,setPuConf]=useState({fecha:"",chofer:"",monto:"",moneda:"USD"});
+  const [puConf,setPuConf]=useState({fecha:"",transportista:"",chofer:"",monto:"",moneda:"USD"});
   const [pickupClientSearch,setPickupClientSearch]=useState("");
   const [pickupClientResults,setPickupClientResults]=useState([]);
   const CALC_FORM_EMPTY={largo:"",ancho:"",alto:"",pesoLb:"",unitDim:"in",origPais:"",origCiudad:"",destPais:"",destCiudad:"",tipoEnvio:""};
@@ -7097,6 +7097,11 @@ export default function ENEXSystem(){
   const puGestiona=esEmpleadoPU&&hasPerm("editar_pickup");
   const spuf=(k,v)=>setPuf(p=>({...p,[k]:v}));
   const puBultos=p=>(p.paquetes||[]).reduce((t,x)=>t+(parseInt(x.cantidad)||1),0);
+  // Totales aproximados: peso y volumen de cada fila multiplicados por su cantidad
+  const puTot=p=>{let lb=0,ft3=0;(p.paquetes||[]).forEach(x=>{const q=parseInt(x.cantidad)||1;lb+=(parseFloat(x.pesoLb)||0)*q;
+    const l=parseFloat(x.largo)||0,a=parseFloat(x.ancho)||0,h=parseFloat(x.alto)||0;ft3+=(l&&a&&h?l*a*h/1728:0)*q;});
+    return {bultos:puBultos(p),lb:Math.round(lb*100)/100,ft3:Math.round(ft3*1000)/1000};};
+  const puRecoge=p=>[p.transportista,p.chofer].filter(Boolean).join(" · ");
   // Clientes para los que puede pedir quien está conectado
   const puClientesPosibles=()=>{
     if(currentUser.rol==="I")return clients.filter(c=>c.id===currentUser.id);
@@ -7152,7 +7157,7 @@ export default function ENEXSystem(){
     const grupoDe=p=>["recibido","cancelado"].includes(p.status)?p.status:"activos";
     const cuenta={activos:0,recibido:0,cancelado:0};visibles.forEach(p=>{cuenta[grupoDe(p)]++;});
     const lista=visibles.filter(p=>pickupFil==="todos"||grupoDe(p)===pickupFil)
-      .filter(p=>!Q||sinAcentos(`${p.id} ${p.clienteNombre} ${p.casillero} ${p.direccion} ${p.contacto} ${p.solicitanteNombre} ${p.chofer} ${p.wrId}`).includes(Q))
+      .filter(p=>!Q||sinAcentos(`${p.id} ${p.clienteNombre} ${p.casillero} ${p.direccion} ${p.contacto} ${p.solicitanteNombre} ${p.chofer} ${p.transportista} ${p.wrId}`).includes(Q))
       .sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
     const sel=pickupSel?pickupList.find(x=>x.id===pickupSel.id)||pickupSel:null;
     const mono={fontFamily:"'DM Mono',monospace"};
@@ -7171,15 +7176,15 @@ export default function ENEXSystem(){
       <div className="card" style={{padding:0}}>
         {lista.length===0?<div style={{textAlign:"center",padding:40,color:"var(--t3)"}}>{Q?"Sin coincidencias.":"No hay solicitudes."}</div>:(
         <table className="ct">
-          <thead><tr><th>N°</th><th>Para</th><th>Dirección</th><th>Fecha</th><th>Bultos</th><th>Chofer</th>{esEmpleadoPU&&<th>Pidió</th>}<th>Estado</th></tr></thead>
+          <thead><tr><th>N°</th><th>Para</th><th>Dirección</th><th>Fecha</th><th>Bultos</th><th>Recoge</th>{esEmpleadoPU&&<th>Pidió</th>}<th>Estado</th></tr></thead>
           <tbody>{lista.map(p=>(
-            <tr key={p.id} style={{cursor:"pointer"}} onClick={()=>{setPickupSel(p);setPuConf({fecha:p.fechaProgramada||p.fechaDeseada||"",chofer:p.chofer||"",monto:p.monto?String(p.monto):"",moneda:p.moneda||"USD"});}}>
+            <tr key={p.id} style={{cursor:"pointer"}} onClick={()=>{setPickupSel(p);setPuConf({fecha:p.fechaProgramada||p.fechaDeseada||"",transportista:p.transportista||"",chofer:p.chofer||"",monto:p.monto?String(p.monto):"",moneda:p.moneda||"USD"});}}>
               <td style={{...mono,fontWeight:700,color:"var(--navy)"}}>{p.id}</td>
               <td style={{fontWeight:600}}>{p.clienteNombre||"—"}{p.casillero&&<span style={{...mono,color:"var(--gold2)",marginLeft:6,fontSize:12}}>#{p.casillero}</span>}</td>
               <td style={{fontSize:13,color:"var(--t2)",maxWidth:260,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{p.direccion||"—"}</td>
               <td style={{...mono,fontSize:13}}>{p.fechaProgramada||p.fechaDeseada||"—"}{p.franja&&<div style={{fontSize:11,color:"var(--t3)"}}>{p.franja}</div>}</td>
               <td style={{textAlign:"center",fontWeight:700}}>{puBultos(p)}</td>
-              <td style={{fontSize:13}}>{p.chofer||"—"}</td>
+              <td style={{fontSize:13}}>{puRecoge(p)||"—"}</td>
               {esEmpleadoPU&&<td style={{fontSize:12,color:"var(--t2)"}}>{p.solicitanteNombre||"—"}</td>}
               <td>{puChip(p.status)}{p.wrId&&<div style={{...mono,fontSize:11,color:"var(--t3)",marginTop:2}}>WR {p.wrId}</div>}</td>
             </tr>))}</tbody>
@@ -7195,27 +7200,29 @@ export default function ENEXSystem(){
               <div className="fgrid g2" style={{gap:12,marginBottom:12}}>
                 {[["Para",`${sel.clienteNombre}${sel.casillero?` · #${sel.casillero}`:""}`],["Contacto",`${sel.contacto||"—"} · ${sel.telefono||"—"}`],
                   ["Dirección de recogida",sel.direccion],["Fecha preferida",`${sel.fechaDeseada||"—"}${sel.franja?` · ${sel.franja}`:""}`],
-                  ...(sel.status!=="solicitado"&&sel.status!=="cancelado"?[["Fecha programada",sel.fechaProgramada||"—"],["Chofer",sel.chofer||"—"]]:[]),
+                  ...(sel.status!=="solicitado"&&sel.status!=="cancelado"?[["Fecha programada",sel.fechaProgramada||"—"],["Empresa / carrier",sel.transportista||"—"],["Chofer",sel.chofer||"—"]]:[]),
                   ...(esEmpleadoPU?[["Pidió",sel.solicitanteNombre||"—"],["Cargo pick-up",sel.monto?fmtMoney(sel.monto,sel.moneda):"—"]]:[]),
                   ...(sel.wrId?[["WR",sel.wrId]]:[]),...(sel.notas?[["Notas",sel.notas]]:[]),...(sel.motivoCancelacion?[["Motivo de cancelación",sel.motivoCancelacion]]:[])
                 ].map(([l,v])=><div key={l}><div className="fl">{l}</div><div style={{fontSize:14,fontWeight:600}}>{v||"—"}</div></div>)}
               </div>
               <div className="sdiv">BULTOS ({puBultos(sel)})</div>
               <table className="ct" style={{marginBottom:12}}>
-                <thead><tr><th>Cant.</th><th>Contenido aprox.</th><th>Peso aprox.</th><th>Medidas aprox. (in)</th></tr></thead>
-                <tbody>{(sel.paquetes||[]).map((x,i)=><tr key={i}><td style={{fontWeight:700}}>{x.cantidad||1}</td><td>{x.descripcion||"—"}</td><td style={mono}>{x.pesoLb?`${x.pesoLb} lb`:"—"}</td><td style={mono}>{x.largo&&x.ancho&&x.alto?`${x.largo}×${x.ancho}×${x.alto}`:"—"}</td></tr>)}</tbody>
+                <thead><tr><th>Cant.</th><th>Contenido aprox.</th><th>Peso c/u</th><th>Medidas c/u (in)</th><th>Peso total</th></tr></thead>
+                <tbody>{(sel.paquetes||[]).map((x,i)=><tr key={i}><td style={{fontWeight:700}}>{x.cantidad||1}</td><td>{x.descripcion||"—"}</td><td style={mono}>{x.pesoLb?`${x.pesoLb} lb`:"—"}</td><td style={mono}>{x.largo&&x.ancho&&x.alto?`${x.largo}×${x.ancho}×${x.alto}`:"—"}</td><td style={{...mono,fontWeight:700}}>{x.pesoLb?`${Math.round((parseFloat(x.pesoLb)||0)*(parseInt(x.cantidad)||1)*100)/100} lb`:"—"}</td></tr>)}
+                  {(()=>{const t=puTot(sel);return <tr style={{background:"var(--bg3)"}}><td style={{fontWeight:800}}>{t.bultos}</td><td style={{fontWeight:800}}>Total aprox.</td><td/><td style={{...mono,fontWeight:700}}>{t.ft3?`${t.ft3} ft³`:""}</td><td style={{...mono,fontWeight:800}}>{t.lb?`${t.lb} lb`:"—"}</td></tr>;})()}</tbody>
               </table>
               {puGestiona&&sel.status==="solicitado"&&(
                 <div className="card" style={{background:"var(--bg4)",marginBottom:12}}>
                   <div className="sdiv" style={{marginTop:0}}>CONFIRMAR</div>
-                  <div className="fgrid g4" style={{gap:8,alignItems:"end"}}>
+                  <div className="fgrid" style={{gap:8,alignItems:"end",gridTemplateColumns:"150px 1fr 1fr 110px 90px"}}>
                     <div className="fg"><div className="fl">Fecha programada</div><input className="fi" type="date" value={puConf.fecha} onChange={e=>setPuConf(x=>({...x,fecha:e.target.value}))}/></div>
+                    <div className="fg"><div className="fl">Empresa / carrier</div><input className="fi" value={puConf.transportista} placeholder="Propio o subcontratado" onChange={e=>setPuConf(x=>({...x,transportista:e.target.value.toUpperCase()}))}/></div>
                     <div className="fg"><div className="fl">Chofer</div><input className="fi" value={puConf.chofer} onChange={e=>setPuConf(x=>({...x,chofer:e.target.value.toUpperCase()}))}/></div>
                     <div className="fg"><div className="fl">Cargo pick-up</div><input className="fi" type="number" step="0.01" min="0" value={puConf.monto} onChange={e=>setPuConf(x=>({...x,monto:e.target.value}))}/></div>
                     <div className="fg"><div className="fl">Moneda</div><select className="fs" value={puConf.moneda} onChange={e=>setPuConf(x=>({...x,moneda:e.target.value}))}><option>USD</option><option>EUR</option></select></div>
                   </div>
                   <button className="btn-p" style={{marginTop:10}} onClick={()=>{if(!puConf.fecha){window.alert("Pon la fecha programada.");return;}
-                    puCambiar(sel,"confirmado",{fechaProgramada:puConf.fecha,chofer:puConf.chofer,monto:parseFloat(puConf.monto)||0,moneda:puConf.moneda},`Programado ${puConf.fecha}${puConf.chofer?` · ${puConf.chofer}`:""}`);}}>✅ Confirmar pick-up</button>
+                    puCambiar(sel,"confirmado",{fechaProgramada:puConf.fecha,transportista:puConf.transportista,chofer:puConf.chofer,monto:parseFloat(puConf.monto)||0,moneda:puConf.moneda},`Programado ${puConf.fecha}${puRecoge(puConf)?` · ${puRecoge(puConf)}`:""}`);}}>✅ Confirmar pick-up</button>
                 </div>)}
               <div className="sdiv">HISTORIAL</div>
               {(sel.historial||[]).map((h,i)=><div key={i} style={{fontSize:13,padding:"3px 0",borderBottom:"1px solid var(--b2)"}}><span style={mono}>{fmtDate(h.fecha)} {fmtTime(h.fecha)}</span> · <b>{PU_ST[h.status]?.l||h.status}</b>{h.nota&&h.nota!==PU_ST[h.status]?.l?` · ${h.nota}`:""}{esEmpleadoPU&&h.user?<span style={{color:"var(--t3)"}}> · {h.user}</span>:null}</div>)}
@@ -7273,13 +7280,16 @@ export default function ENEXSystem(){
               <div key={i} style={{display:"grid",gridTemplateColumns:"70px 1fr 90px 70px 70px 70px auto",gap:8,marginBottom:8,alignItems:"flex-end"}}>
                 <div className="fg"><div className="fl">Cant.</div><input className="fi" type="number" min="1" value={pkg.cantidad} onChange={e=>setP("cantidad",e.target.value)}/></div>
                 <div className="fg"><div className="fl">Contenido aprox.</div><input className="fi" value={pkg.descripcion} onChange={e=>setP("descripcion",e.target.value.toUpperCase())}/></div>
-                <div className="fg"><div className="fl">Peso aprox. (lb)</div><input className="fi" type="number" value={pkg.pesoLb} onChange={e=>setP("pesoLb",e.target.value)}/></div>
+                <div className="fg"><div className="fl">Peso c/u (lb)</div><input className="fi" type="number" value={pkg.pesoLb} onChange={e=>setP("pesoLb",e.target.value)}/></div>
                 <div className="fg"><div className="fl">L (in)</div><input className="fi" type="number" value={pkg.largo} onChange={e=>setP("largo",e.target.value)}/></div>
                 <div className="fg"><div className="fl">A (in)</div><input className="fi" type="number" value={pkg.ancho} onChange={e=>setP("ancho",e.target.value)}/></div>
                 <div className="fg"><div className="fl">H (in)</div><input className="fi" type="number" value={pkg.alto} onChange={e=>setP("alto",e.target.value)}/></div>
                 {puf.paquetes.length>1?<button className="btn-d" style={{padding:"7px 10px"}} onClick={()=>setPuf(p=>({...p,paquetes:p.paquetes.filter((_,j)=>j!==i)}))}>🗑</button>:<span/>}
               </div>);})}
-            <button className="btn-s" style={{marginBottom:14}} onClick={()=>setPuf(p=>({...p,paquetes:[...p.paquetes,{descripcion:"",largo:"",ancho:"",alto:"",pesoLb:"",cantidad:1}]}))}>+ Agregar paquete</button>
+            <div style={{display:"flex",alignItems:"center",gap:16,marginBottom:14,flexWrap:"wrap"}}>
+              <button className="btn-s" onClick={()=>setPuf(p=>({...p,paquetes:[...p.paquetes,{descripcion:"",largo:"",ancho:"",alto:"",pesoLb:"",cantidad:1}]}))}>+ Agregar paquete</button>
+              {(()=>{const t=puTot(puf);return <span style={{fontSize:14,fontWeight:700,color:"var(--navy)"}}>Total aprox.: {t.bultos} bulto{t.bultos===1?"":"s"}{t.lb?` · ${t.lb} lb`:""}{t.ft3?` · ${t.ft3} ft³`:""}</span>;})()}
+            </div>
             <div className="mft">
               <button className="btn-s" onClick={()=>setShowNewPickup(false)}>Cancelar</button>
               <button className="btn-p" onClick={submitPickup}>{puf.id?"💾 Guardar":"🚐 Solicitar"}</button>
@@ -13845,18 +13855,19 @@ export default function ENEXSystem(){
                   <div><b>Para:</b> {p.clienteNombre}{p.casillero?` · Casillero ${p.casillero}`:""}<br/><b>Contacto:</b> {p.contacto||"—"} · {p.telefono||"—"}<br/><b>Dirección de recogida:</b> {p.direccion}</div>
                   <div><b>Fecha preferida:</b> {p.fechaDeseada||"—"}{p.franja?` · ${p.franja}`:""}
                     {p.fechaProgramada&&<><br/><b>Fecha programada:</b> {p.fechaProgramada}</>}
+                    {p.transportista&&<><br/><b>Empresa / carrier:</b> {p.transportista}</>}
                     {p.chofer&&<><br/><b>Chofer:</b> {p.chofer}</>}
                     {p.wrId&&<><br/><b>WR:</b> {p.wrId}</>}</div>
                 </div>
                 <table style={{width:"100%",borderCollapse:"collapse",marginBottom:12}}>
-                  <thead><tr>{["Cant.","Contenido aprox.","Peso aprox.","Medidas aprox. (in)"].map(h=><th key={h} style={{...td,background:"#eee",textAlign:"left"}}>{h}</th>)}</tr></thead>
-                  <tbody>{(p.paquetes||[]).map((x,i)=><tr key={i}><td style={td}>{x.cantidad||1}</td><td style={td}>{x.descripcion||"—"}</td><td style={td}>{x.pesoLb?`${x.pesoLb} lb`:"—"}</td><td style={td}>{x.largo&&x.ancho&&x.alto?`${x.largo}×${x.ancho}×${x.alto}`:"—"}</td></tr>)}
-                    <tr><td style={{...td,fontWeight:800}}>{puBultos(p)}</td><td style={{...td,fontWeight:800}} colSpan={3}>Total bultos</td></tr></tbody>
+                  <thead><tr>{["Cant.","Contenido aprox.","Peso c/u","Medidas c/u (in)","Peso total"].map(h=><th key={h} style={{...td,background:"#eee",textAlign:"left"}}>{h}</th>)}</tr></thead>
+                  <tbody>{(p.paquetes||[]).map((x,i)=><tr key={i}><td style={td}>{x.cantidad||1}</td><td style={td}>{x.descripcion||"—"}</td><td style={td}>{x.pesoLb?`${x.pesoLb} lb`:"—"}</td><td style={td}>{x.largo&&x.ancho&&x.alto?`${x.largo}×${x.ancho}×${x.alto}`:"—"}</td><td style={td}>{x.pesoLb?`${Math.round((parseFloat(x.pesoLb)||0)*(parseInt(x.cantidad)||1)*100)/100} lb`:"—"}</td></tr>)}
+                    {(()=>{const t=puTot(p);return <tr><td style={{...td,fontWeight:800}}>{t.bultos}</td><td style={{...td,fontWeight:800}}>Total aprox.</td><td style={td}/><td style={{...td,fontWeight:700}}>{t.ft3?`${t.ft3} ft³`:""}</td><td style={{...td,fontWeight:800}}>{t.lb?`${t.lb} lb`:"—"}</td></tr>;})()}</tbody>
                 </table>
                 {p.notas&&<div style={{marginBottom:12}}><b>Notas:</b> {p.notas}</div>}
                 <div style={{fontSize:12,marginBottom:28}}>Contenido, peso, medidas, fecha y horario son aproximados o preferidos. Los datos definitivos se registran al recibir la mercancía en el almacén.</div>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:40}}>
-                  {["Entrega (nombre, ID y firma)","Recibe chofer (nombre y firma)"].map(l=><div key={l} style={{borderTop:"1px solid #000",paddingTop:4,fontSize:12,textAlign:"center"}}>{l}<br/>Fecha: ____/____/______</div>)}
+                  {["Entrega (nombre, ID y firma)","Recibe chofer / empresa (nombre y firma)"].map(l=><div key={l} style={{borderTop:"1px solid #000",paddingTop:4,fontSize:12,textAlign:"center"}}>{l}<br/>Fecha: ____/____/______</div>)}
                 </div>
               </div>
             </div>

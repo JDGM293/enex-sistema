@@ -16,3 +16,4 @@ alter table public.pickup add column if not exists moneda text default 'USD';
 alter table public.pickup add column if not exists wr_id text default '';
 alter table public.pickup add column if not exists historial jsonb default '[]'::jsonb;
 alter table public.pickup add column if not exists motivo_cancelacion text default '';
+alter table public.pickup add column if not exists transportista text default '';
