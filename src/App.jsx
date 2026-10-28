@@ -8789,8 +8789,9 @@ export default function ENEXSystem(){
           const setRango=(a,b)=>{setCajaDesde(a);setCajaHasta(b);};
           const iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
           const hoy=new Date();const ayer=new Date(hoy);ayer.setDate(hoy.getDate()-1);
-          const lunes=new Date(hoy);lunes.setDate(hoy.getDate()-((hoy.getDay()+6)%7));
+          const hace7=new Date(hoy);hace7.setDate(hoy.getDate()-6);
           const mes1=new Date(hoy.getFullYear(),hoy.getMonth(),1);
+          const mesAnt1=new Date(hoy.getFullYear(),hoy.getMonth()-1,1), mesAntF=new Date(hoy.getFullYear(),hoy.getMonth(),0);
           const ml=k=>metodoLbl(k);
           const imprimir=()=>{
             const e=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
@@ -8809,7 +8810,7 @@ export default function ENEXSystem(){
           return(
             <div>
               <div className="card" style={{marginBottom:10,display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-                {[["Hoy",iso(hoy),iso(hoy)],["Ayer",iso(ayer),iso(ayer)],["Esta semana",iso(lunes),iso(hoy)],["Este mes",iso(mes1),iso(hoy)]].map(([l,a,b])=>
+                {[["Hoy",iso(hoy),iso(hoy)],["Ayer",iso(ayer),iso(ayer)],["Últimos 7 días",iso(hace7),iso(hoy)],["Este mes",iso(mes1),iso(hoy)],["Mes anterior",iso(mesAnt1),iso(mesAntF)]].map(([l,a,b])=>
                   <button key={l} className={cajaDesde===a&&cajaHasta===b?"btn-p":"btn-s"} style={{fontSize:13,padding:"5px 12px"}} onClick={()=>setRango(a,b)}>{l}</button>)}
                 <span style={{fontSize:13,color:"var(--t2)",marginLeft:8}}>Desde</span><input className="fi" type="date" style={{width:150,fontSize:13,padding:"4px 6px"}} value={cajaDesde} onChange={e=>setCajaDesde(e.target.value)}/>
                 <span style={{fontSize:13,color:"var(--t2)"}}>Hasta</span><input className="fi" type="date" style={{width:150,fontSize:13,padding:"4px 6px"}} value={cajaHasta} onChange={e=>setCajaHasta(e.target.value)}/>
