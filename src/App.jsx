@@ -2285,6 +2285,7 @@ export default function ENEXSystem(){
   const [pickupList,setPickupList]=useState([]);
   const [showNewPickup,setShowNewPickup]=useState(false);
   const [pickupSel,setPickupSel]=useState(null);
+  const [puPrint,setPuPrint]=useState(null);   // comprobante de pick-up en vista previa
   const [pickupFil,setPickupFil]=useState("activos");
   const [pickupQ,setPickupQ]=useState("");
   const [puConf,setPuConf]=useState({fecha:"",chofer:"",monto:"",moneda:"USD"});
@@ -2640,7 +2641,8 @@ export default function ENEXSystem(){
     if(!trk)return;
     const already=scanLog.find(s=>normTrk(s.tracking)===trk);
     if(!already){
-      const entry={id:crypto.randomUUID(),tracking:trk,carrier:scanCarrier||"—",ts:new Date(),registered:false};
+      const esPU=pickupList.some(x=>normTrk(x.id)===trk);
+      const entry={id:crypto.randomUUID(),tracking:trk,carrier:esPU?"PICK-UP":(scanCarrier||"—"),ts:new Date(),registered:false};
       setScanLog(p=>[entry,...p]);
       dbInsertScan(entry);
     }
@@ -3011,7 +3013,9 @@ export default function ENEXSystem(){
       setWrList(p=>[n,...p.map(w=>padresUpd.find(pa=>pa.id===w.id)||w)]);
       padresUpd.forEach(dbUpsertWR);
       setShowNewWR(false);
-      if(wrf.pickupId){const pu=pickupList.find(x=>x.id===wrf.pickupId);n._pickupId=wrf.pickupId;if(pu)puCambiar(pu,"recibido",{wrId:n.id},`WR ${n.id}`);}
+      {const trks=new Set(wrf.cajas.flatMap(c=>[c.tracking,c.tracking2,c.tracking3]).map(normTrk).filter(Boolean));
+       const pu=pickupList.find(x=>x.status!=="cancelado"&&!x.wrId&&(x.id===wrf.pickupId||trks.has(normTrk(x.id))));
+       if(pu){n._pickupId=pu.id;puCambiar(pu,"recibido",{wrId:n.id},`WR ${n.id}`);}}
       setWrf(emptyWRF(PAY_TYPES[0]));setClientSearch("");
       if(esReempaque){logAction("Creó Reempaque",`${n.id} ← [${reempaqueIds.join(", ")}]`);setRpqSel([]);}
       logAction("Creó WR",wrNumPrev);
@@ -3319,7 +3323,9 @@ export default function ENEXSystem(){
                   <td style={{color:"var(--t1)",fontWeight:700,fontSize:13}}>{s.carrier||"—"}</td>
                   <td style={{fontFamily:"'DM Mono',monospace",color:"var(--cyan)",fontSize:13,fontWeight:600}}>{s.tracking}</td>
                   <td style={{fontFamily:"'DM Mono',monospace",fontSize:12}}>{fmtTime(s.ts)}</td>
-                  <td>{hasPerm("crear_wr")?<button className="btn-p" style={{fontSize:12,padding:"3px 8px"}} onClick={()=>{setWrf(p=>({...p,cajas:[{...p.cajas[0],carrier:s.carrier||"",tracking:s.tracking},...p.cajas.slice(1)]}));setShowNewWR(true);}}>WR →</button>:<span style={{fontSize:12,color:"var(--t4)"}}>—</span>}</td>
+                  <td>{hasPerm("crear_wr")?<button className="btn-p" style={{fontSize:12,padding:"3px 8px"}} onClick={()=>{const pu=pickupList.find(x=>normTrk(x.id)===normTrk(s.tracking));
+                    if(pu){puCrearWR(pu);return;}
+                    setWrf(p=>({...p,cajas:[{...p.cajas[0],carrier:s.carrier||"",tracking:s.tracking},...p.cajas.slice(1)]}));setShowNewWR(true);}}>WR →</button>:<span style={{fontSize:12,color:"var(--t4)"}}>—</span>}</td>
                 </tr>
               ))}</tbody>
             </table>
@@ -5997,7 +6003,7 @@ export default function ENEXSystem(){
     const facIdsVis=new Set(facsVis.map(f=>f.id));
     const pagosVis=alcanceUsr?pagos.filter(p=>facIdsVis.has(p.facturaId)):pagos;
     const guiasVis=alcanceUsr?consolList.filter(g=>tocaVis((g.containers||[]).flatMap(c=>(c.wr||[]).map(w=>w.id)))):consolList;
-    const TIPOS=[["wr","📦 WR"],["guia","🗂️ Guía"],["entrega","📝 Nota de entrega"],["egreso","🚚 Cargo Release"],["factura","🧾 Factura"],["recibo","💵 Recibo"]];
+    const TIPOS=[["wr","📦 WR"],["guia","🗂️ Guía"],["entrega","📝 Nota de entrega"],["egreso","🚚 Cargo Release"],["factura","🧾 Factura"],["recibo","💵 Recibo"],["pickup","🚐 Pick-up"]];
     let filas=[];
     if(tipo==="wr")filas=wrList.filter(w=>hay(`${w.id} ${w.consignee||""} ${w.casillero||""} ${w.shipper||""} ${(w.dims||[]).map(d=>d.tracking).join(" ")} ${w.tracking||""}`))
       .sort((a,b)=>String(b.id).localeCompare(String(a.id))).slice(0,MAX).map(w=>({k:w.id,
@@ -6030,7 +6036,13 @@ export default function ENEXSystem(){
         izq:<><span style={{...mono,color:"var(--navy)"}}>{r.id}</span><div style={{fontSize:13,color:"var(--t3)"}}>{fmtDate(r.fecha)} · {r.quien} · {fmtMoney(r.monto,r.moneda)}{r.facs.size?` · fact. ${[...r.facs].join(", ")}`:""}</div></>,
         estado:r.anulado?<span style={{fontSize:12,fontWeight:700,color:"var(--red)"}}>Anulado</span>:null,
         acc:verImp(()=>verRecibo(r.id),()=>printRecibo(r.id))}));}
-    const ph={wr:"Buscar WR, nombre, casillero o tracking…",guia:"Buscar guía, destino, AWB o BL…",entrega:"Buscar nota, receptor, guía o WR…",egreso:"Buscar cargo release, agente de carga o WR…",factura:"Buscar factura, cliente, casillero o WR…",recibo:"Buscar recibo, cliente o factura…"}[tipo];
+    if(tipo==="pickup")filas=pickupList.filter(p=>(!alcanceUsr||p.solicitanteId===currentUser.id||alcanceUsr.clienteOk(clients.find(c=>c.id===p.clienteId)))
+        &&hay(`${p.id} ${p.clienteNombre} ${p.casillero} ${p.direccion} ${p.contacto} ${p.wrId}`))
+      .sort((a,b)=>new Date(b.fecha)-new Date(a.fecha)).slice(0,MAX).map(p=>({k:p.id,
+        izq:<><span style={{...mono,color:"var(--navy)"}}>{p.id}</span><div style={{fontSize:13,color:"var(--t3)"}}>{fmtDate(p.fecha)} · {p.clienteNombre||"—"} · {puBultos(p)} bulto{puBultos(p)===1?"":"s"}{p.wrId?` · WR ${p.wrId}`:""}</div></>,
+        estado:puChip(p.status),
+        acc:verImp(()=>setPuPrint(p),()=>{setPuPrint(p);setTimeout(()=>window.print(),600);})}));
+    const ph={pickup:"Buscar pick-up, cliente, dirección o WR…",wr:"Buscar WR, nombre, casillero o tracking…",guia:"Buscar guía, destino, AWB o BL…",entrega:"Buscar nota, receptor, guía o WR…",egreso:"Buscar cargo release, agente de carga o WR…",factura:"Buscar factura, cliente, casillero o WR…",recibo:"Buscar recibo, cliente o factura…"}[tipo];
     return (
     <div className="page-scroll">
       <div className="card" style={{marginBottom:12}}>
@@ -7093,8 +7105,7 @@ export default function ENEXSystem(){
   const puNuevo=()=>{
     if(!hasPerm("solicitar_pickup")&&!puGestiona){window.alert("Tu rol no tiene permiso para solicitar pick-up.");return;}
     const yo=currentUser.rol==="I"?clients.find(c=>c.id===currentUser.id):null;
-    setPuf({...emptyPickup(),...(yo?{clienteId:yo.id,clienteNombre:fullName(yo),casillero:yo.casillero||"",
-      direccion:[yo.dir,yo.municipio,yo.estado].filter(Boolean).join(", "),contacto:fullName(yo),telefono:yo.tel1||""}:{})});
+    setPuf({...emptyPickup(),...(yo?{clienteId:yo.id,clienteNombre:fullName(yo),casillero:yo.casillero||"",contacto:fullName(yo),telefono:yo.tel1||""}:{})});
     setPickupClientSearch("");setPickupClientResults([]);setShowNewPickup(true);
   };
   const puLog=(p,status,nota)=>({...p,status,historial:[...(p.historial||[]),{status,fecha:new Date(),user:currentUser.id,nota:nota||""}]});
@@ -7104,14 +7115,23 @@ export default function ENEXSystem(){
     if(!f.clienteNombre.trim()){window.alert("Indica para quién es el pick-up.");return;}
     if(!f.direccion.trim()){window.alert("Escribe la dirección de recogida.");return;}
     if(!f.telefono.trim()){window.alert("Escribe un teléfono de contacto.");return;}
-    if(!f.paquetes.some(x=>(x.descripcion||"").trim())){window.alert("Describe al menos un paquete.");return;}
+    if(puBultos(f)<1){window.alert("Indica cuántos bultos son.");return;}
     if(f.id){const ant=pickupList.find(x=>x.id===f.id);await puGuardar({...ant,...f});logAction("Editó pick-up",f.id);setShowNewPickup(false);return;}
     const n=Math.max(0,...pickupList.map(x=>parseInt(String(x.id).replace(/\D/g,""))||0))+1;
     const tipoSol=alcanceUsr?({E:"agente",E1:"vendedor",F:"autonomo",G:"oficina",I:"cliente"}[currentUser.rol]||"cliente"):"empleado";
     const nuevo=puLog({...f,id:`PU-${String(n).padStart(4,"0")}`,fecha:new Date(),solicitanteTipo:tipoSol,solicitanteId:currentUser.id,solicitanteNombre:fullName(currentUser)||currentUser.email||"",historial:[],monto:0,moneda:"USD"},"solicitado","Solicitado");
-    if(await puGuardar(nuevo)){logAction("Solicitó pick-up",`${nuevo.id} · ${nuevo.clienteNombre}`);setShowNewPickup(false);setPuf(emptyPickup());}
+    if(await puGuardar(nuevo)){logAction("Solicitó pick-up",`${nuevo.id} · ${nuevo.clienteNombre}`);setShowNewPickup(false);setPuf(emptyPickup());setPuPrint(nuevo);}
   };
   const puCambiar=async(p,status,extra={},nota="")=>{const u=puLog({...p,...extra},status,nota);if(await puGuardar(u)){logAction(`Pick-up ${PU_ST[status]?.l||status}`,`${p.id}${nota?` · ${nota}`:""}`);if(pickupSel?.id===p.id)setPickupSel(u);}};
+  // Al recogerse, el número del pick-up entra solo en Recepción en Puerta (pendiente de WR)
+  const puRecogido=async p=>{
+    await puCambiar(p,"recogido",{},"Recogido · pasa a Recepción en Puerta");
+    const trk=normTrk(p.id);
+    if(!scanLog.some(x=>normTrk(x.tracking)===trk)){
+      const entry={id:crypto.randomUUID(),tracking:trk,carrier:"PICK-UP",ts:new Date(),registered:false};
+      setScanLog(x=>[entry,...x]);dbInsertScan(entry);
+    }
+  };
   const puCancelar=p=>{const m=window.prompt(`Cancelar el pick-up ${p.id}.\nMotivo:`);if(!m)return;puCambiar(p,"cancelado",{motivoCancelacion:m},m);};
   // Crear el WR desde el pick-up recogido (abre el Nuevo WR con los datos puestos)
   const puCrearWR=p=>{
@@ -7119,8 +7139,9 @@ export default function ENEXSystem(){
     const c=clients.find(x=>x.id===p.clienteId);
     const cajas=(p.paquetes||[]).flatMap(x=>Array.from({length:Math.max(1,parseInt(x.cantidad)||1)},()=>({...emptyCaja(),descripcion:String(x.descripcion||"").toUpperCase(),
       pesoLb:x.pesoLb||"",largo:x.largo||"",ancho:x.ancho||"",alto:x.alto||""})));
+    const cj=cajas.length?cajas:[emptyCaja()];cj[0]={...cj[0],carrier:"PICK-UP",tracking:p.id};
     setWrf({...emptyWRF(PAY_TYPES[0]),consignee:c?fullName(c):p.clienteNombre,casillero:c?.casillero||p.casillero||"",casilleroSearch:c?.casillero||p.casillero||"",
-      clienteId:c?.id||"",sucursalEntrega:c?.oficinaId||"",cajas:cajas.length?cajas:[emptyCaja()],notas:`PICK-UP ${p.id}`,pickupId:p.id});
+      clienteId:c?.id||"",sucursalEntrega:c?.oficinaId||"",cajas:cj,notas:`PICK-UP ${p.id}`,pickupId:p.id});
     setClientSearch(c?fullName(c):p.clienteNombre);
     setPickupSel(null);setEditWR(null);setShowNewWR(true);
   };
@@ -7173,15 +7194,15 @@ export default function ENEXSystem(){
             <div className="mbd" style={{maxHeight:"74vh",overflow:"auto"}}>
               <div className="fgrid g2" style={{gap:12,marginBottom:12}}>
                 {[["Para",`${sel.clienteNombre}${sel.casillero?` · #${sel.casillero}`:""}`],["Contacto",`${sel.contacto||"—"} · ${sel.telefono||"—"}`],
-                  ["Dirección de recogida",sel.direccion],["Fecha deseada",`${sel.fechaDeseada||"—"}${sel.franja?` · ${sel.franja}`:""}`],
+                  ["Dirección de recogida",sel.direccion],["Fecha preferida",`${sel.fechaDeseada||"—"}${sel.franja?` · ${sel.franja}`:""}`],
                   ...(sel.status!=="solicitado"&&sel.status!=="cancelado"?[["Fecha programada",sel.fechaProgramada||"—"],["Chofer",sel.chofer||"—"]]:[]),
                   ...(esEmpleadoPU?[["Pidió",sel.solicitanteNombre||"—"],["Cargo pick-up",sel.monto?fmtMoney(sel.monto,sel.moneda):"—"]]:[]),
                   ...(sel.wrId?[["WR",sel.wrId]]:[]),...(sel.notas?[["Notas",sel.notas]]:[]),...(sel.motivoCancelacion?[["Motivo de cancelación",sel.motivoCancelacion]]:[])
                 ].map(([l,v])=><div key={l}><div className="fl">{l}</div><div style={{fontSize:14,fontWeight:600}}>{v||"—"}</div></div>)}
               </div>
-              <div className="sdiv">PAQUETES ({puBultos(sel)})</div>
+              <div className="sdiv">BULTOS ({puBultos(sel)})</div>
               <table className="ct" style={{marginBottom:12}}>
-                <thead><tr><th>Cant.</th><th>Descripción</th><th>Peso aprox.</th><th>Medidas (in)</th></tr></thead>
+                <thead><tr><th>Cant.</th><th>Contenido aprox.</th><th>Peso aprox.</th><th>Medidas aprox. (in)</th></tr></thead>
                 <tbody>{(sel.paquetes||[]).map((x,i)=><tr key={i}><td style={{fontWeight:700}}>{x.cantidad||1}</td><td>{x.descripcion||"—"}</td><td style={mono}>{x.pesoLb?`${x.pesoLb} lb`:"—"}</td><td style={mono}>{x.largo&&x.ancho&&x.alto?`${x.largo}×${x.ancho}×${x.alto}`:"—"}</td></tr>)}</tbody>
               </table>
               {puGestiona&&sel.status==="solicitado"&&(
@@ -7203,8 +7224,9 @@ export default function ENEXSystem(){
               {sel.status==="solicitado"&&(puGestiona||sel.solicitanteId===currentUser.id)&&<button className="btn-s" onClick={()=>{setPuf({...sel});setPickupClientSearch(sel.clienteNombre);setPickupSel(null);setShowNewPickup(true);}}>✏️ Editar</button>}
               {!["recibido","cancelado"].includes(sel.status)&&(puGestiona||(sel.status==="solicitado"&&sel.solicitanteId===currentUser.id))&&<button className="btn-s" style={{color:"var(--red)",borderColor:"var(--red)"}} onClick={()=>puCancelar(sel)}>✕ Cancelar</button>}
               <span style={{flex:1}}/>
-              {puGestiona&&sel.status==="confirmado"&&<button className="btn-p" onClick={()=>puCambiar(sel,"recogido",{},"Recogido")}>📦 Marcar recogido</button>}
-              {puGestiona&&sel.status==="recogido"&&<button className="btn-p" onClick={()=>puCrearWR(sel)}>📋 Recibir y crear WR</button>}
+              <button className="btn-s" onClick={()=>setPuPrint(sel)}>🖨️ Comprobante</button>
+              {puGestiona&&sel.status==="confirmado"&&<button className="btn-p" onClick={()=>puRecogido(sel)}>📦 Marcar recogido</button>}
+              {sel.status==="recogido"&&<span style={{fontSize:13,fontWeight:700,color:"#E65100",alignSelf:"center"}}>📡 En Recepción en Puerta, pendiente de WR</span>}
               <button className="btn-s" onClick={()=>setPickupSel(null)}>Cerrar</button>
             </div>
           </div>
@@ -7226,7 +7248,7 @@ export default function ENEXSystem(){
                     setPickupClientResults(bq&&(v.trim().length>=2||/^\d$/.test(v.trim()))?puClientesPosibles().filter(c=>bq.casillero(c.casillero)||bq.nombre(fullName(c))).slice(0,20):[]);}}/>
                   {pickupClientResults.length>0&&<div className="fi-search-res">{pickupClientResults.map(c=>(
                     <div key={c.id} className="fi-search-item" onMouseDown={e=>{e.preventDefault();
-                      setPuf(p=>({...p,clienteId:c.id,clienteNombre:fullName(c),casillero:c.casillero||"",direccion:p.direccion||[c.dir,c.municipio,c.estado].filter(Boolean).join(", "),contacto:p.contacto||fullName(c),telefono:p.telefono||c.tel1||""}));
+                      setPuf(p=>({...p,clienteId:c.id,clienteNombre:fullName(c),casillero:c.casillero||""}));
                       setPickupClientSearch(fullName(c));setPickupClientResults([]);}}>
                       {fullName(c)} <span className="fi-search-cas">#{c.casillero}</span></div>))}</div>}
                 </div>)}
@@ -7237,21 +7259,21 @@ export default function ENEXSystem(){
                 </div>
               </div>
               <div>
-                <div className="sdiv">CUÁNDO</div>
+                <div className="sdiv">CUÁNDO (PREFERENCIA)</div>
                 <div className="fgrid g2" style={{gap:8}}>
-                  <div className="fg"><div className="fl">Fecha deseada</div><input className="fi" type="date" value={puf.fechaDeseada} onChange={e=>spuf("fechaDeseada",e.target.value)}/></div>
-                  <div className="fg"><div className="fl">Horario</div><select className="fs" value={puf.franja} onChange={e=>spuf("franja",e.target.value)}>
+                  <div className="fg"><div className="fl">Fecha preferida</div><input className="fi" type="date" value={puf.fechaDeseada} onChange={e=>spuf("fechaDeseada",e.target.value)}/></div>
+                  <div className="fg"><div className="fl">Horario preferido</div><select className="fs" value={puf.franja} onChange={e=>spuf("franja",e.target.value)}>
                     <option value="">Cualquier hora</option><option value="Mañana">Mañana</option><option value="Tarde">Tarde</option></select></div>
                   <div className="fg full"><div className="fl">Notas</div><textarea className="fi" rows={3} value={puf.notas} onChange={e=>spuf("notas",e.target.value)} style={{resize:"vertical"}}/></div>
                 </div>
               </div>
             </div>
-            <div className="sdiv">PAQUETES</div>
+            <div className="sdiv">BULTOS (APROXIMADO)</div>
             {puf.paquetes.map((pkg,i)=>{const setP=(k,v)=>setPuf(p=>({...p,paquetes:p.paquetes.map((x,j)=>j===i?{...x,[k]:v}:x)}));return(
               <div key={i} style={{display:"grid",gridTemplateColumns:"70px 1fr 90px 70px 70px 70px auto",gap:8,marginBottom:8,alignItems:"flex-end"}}>
                 <div className="fg"><div className="fl">Cant.</div><input className="fi" type="number" min="1" value={pkg.cantidad} onChange={e=>setP("cantidad",e.target.value)}/></div>
-                <div className="fg"><div className="fl">Descripción</div><input className="fi" value={pkg.descripcion} onChange={e=>setP("descripcion",e.target.value.toUpperCase())}/></div>
-                <div className="fg"><div className="fl">Peso (lb)</div><input className="fi" type="number" value={pkg.pesoLb} onChange={e=>setP("pesoLb",e.target.value)}/></div>
+                <div className="fg"><div className="fl">Contenido aprox.</div><input className="fi" value={pkg.descripcion} onChange={e=>setP("descripcion",e.target.value.toUpperCase())}/></div>
+                <div className="fg"><div className="fl">Peso aprox. (lb)</div><input className="fi" type="number" value={pkg.pesoLb} onChange={e=>setP("pesoLb",e.target.value)}/></div>
                 <div className="fg"><div className="fl">L (in)</div><input className="fi" type="number" value={pkg.largo} onChange={e=>setP("largo",e.target.value)}/></div>
                 <div className="fg"><div className="fl">A (in)</div><input className="fi" type="number" value={pkg.ancho} onChange={e=>setP("ancho",e.target.value)}/></div>
                 <div className="fg"><div className="fl">H (in)</div><input className="fi" type="number" value={pkg.alto} onChange={e=>setP("alto",e.target.value)}/></div>
@@ -13800,6 +13822,46 @@ export default function ENEXSystem(){
       })()}
 
       {/* ── Factura Print Modal ── */}
+      {puPrint&&(()=>{const p=puPrint;const td={border:"1px solid #999",padding:"5px 8px",fontSize:13};return(
+        <div className="ov">
+          <div className="modal mlg" style={{maxWidth:900,width:"96%"}}>
+            <div className="mhd no-print">
+              <div className="mt">🖨️ Solicitud de Pick-up — {p.id}</div>
+              <div style={{display:"flex",gap:6}}>
+                <button className="btn-p" style={{fontSize:13,padding:"4px 12px"}} onClick={()=>window.print()}>🖨️ Imprimir</button>
+                <button className="mcl" onClick={()=>setPuPrint(null)}>✕</button>
+              </div>
+            </div>
+            <div className="mbd" style={{maxHeight:"78vh",overflow:"auto"}}>
+              <div style={{background:"#fff",color:"#000",padding:"24px 28px",fontFamily:"Arial,Helvetica,sans-serif",fontSize:14}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",borderBottom:"2px solid #000",paddingBottom:10,marginBottom:14}}>
+                  <div><div style={{fontSize:22,fontWeight:800}}>{empresaNombre||"ENEX"}</div><div style={{fontSize:16,fontWeight:700,marginTop:4}}>SOLICITUD DE PICK-UP</div>
+                    <div style={{fontSize:12,marginTop:4}}>Solicitado: {fmtDate(p.fecha)} {fmtTime(p.fecha)}{p.solicitanteNombre?` · por ${p.solicitanteNombre}`:""}</div></div>
+                  <div style={{textAlign:"right"}}><div style={{fontSize:24,fontWeight:800,fontFamily:"'DM Mono',monospace"}}>{p.id}</div>
+                    <div style={{display:"flex",justifyContent:"flex-end",marginTop:4}}><WRBarcode value={p.id} height={42} width={1.8}/></div>
+                    <div style={{fontSize:12,marginTop:4,fontWeight:700}}>{(PU_ST[p.status]||PU_ST.solicitado).l.toUpperCase()}</div></div>
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:14}}>
+                  <div><b>Para:</b> {p.clienteNombre}{p.casillero?` · Casillero ${p.casillero}`:""}<br/><b>Contacto:</b> {p.contacto||"—"} · {p.telefono||"—"}<br/><b>Dirección de recogida:</b> {p.direccion}</div>
+                  <div><b>Fecha preferida:</b> {p.fechaDeseada||"—"}{p.franja?` · ${p.franja}`:""}
+                    {p.fechaProgramada&&<><br/><b>Fecha programada:</b> {p.fechaProgramada}</>}
+                    {p.chofer&&<><br/><b>Chofer:</b> {p.chofer}</>}
+                    {p.wrId&&<><br/><b>WR:</b> {p.wrId}</>}</div>
+                </div>
+                <table style={{width:"100%",borderCollapse:"collapse",marginBottom:12}}>
+                  <thead><tr>{["Cant.","Contenido aprox.","Peso aprox.","Medidas aprox. (in)"].map(h=><th key={h} style={{...td,background:"#eee",textAlign:"left"}}>{h}</th>)}</tr></thead>
+                  <tbody>{(p.paquetes||[]).map((x,i)=><tr key={i}><td style={td}>{x.cantidad||1}</td><td style={td}>{x.descripcion||"—"}</td><td style={td}>{x.pesoLb?`${x.pesoLb} lb`:"—"}</td><td style={td}>{x.largo&&x.ancho&&x.alto?`${x.largo}×${x.ancho}×${x.alto}`:"—"}</td></tr>)}
+                    <tr><td style={{...td,fontWeight:800}}>{puBultos(p)}</td><td style={{...td,fontWeight:800}} colSpan={3}>Total bultos</td></tr></tbody>
+                </table>
+                {p.notas&&<div style={{marginBottom:12}}><b>Notas:</b> {p.notas}</div>}
+                <div style={{fontSize:12,marginBottom:28}}>Contenido, peso, medidas, fecha y horario son aproximados o preferidos. Los datos definitivos se registran al recibir la mercancía en el almacén.</div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:40}}>
+                  {["Entrega (nombre, ID y firma)","Recibe chofer (nombre y firma)"].map(l=><div key={l} style={{borderTop:"1px solid #000",paddingTop:4,fontSize:12,textAlign:"center"}}>{l}<br/>Fecha: ____/____/______</div>)}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>);})()}
       {reciboVer&&(
         <div className="ov">
           <div className="modal mlg" style={{maxWidth:900,width:"96%"}}>
