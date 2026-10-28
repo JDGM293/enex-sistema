@@ -8195,6 +8195,18 @@ export default function ENEXSystem(){
     setCuadrePago(null);
     logAction("Pagó a agente/autónomo",`${pg.nombre} · ${fmtMoney(monto,m.moneda)}`);
   };
+  // Cargo adicional sobre una factura ya cobrada: factura nueva ligada a la original, mismo receptor y WR
+  const facCargoAdicional=orig=>{
+    if(!hasPerm("crear_factura")&&!hasPerm("facturar")){window.alert("Tu rol no tiene permiso para crear facturas.");return;}
+    setFacModal(recalcFactura({...emptyFactura(),
+      moneda:orig.moneda,tipoEnvio:orig.tipoEnvio||"",
+      receptorTipo:orig.receptorTipo,receptorId:orig.receptorId,receptorNombre:orig.receptorNombre,receptorDoc:orig.receptorDoc,
+      receptorDir:orig.receptorDir,receptorTel:orig.receptorTel,receptorEmail:orig.receptorEmail,receptorCasillero:orig.receptorCasillero,
+      lineas:[{tipo:"extra",descripcion:"",cantidad:1,precio:0,total:0}],
+      wrIds:[...(orig.wrIds||[])],guiaIds:[...(orig.guiaIds||[])],ncFacturaOrigen:orig.id,
+      notas:`Cargo adicional a factura ${orig.id}`,
+    }));
+  };
   const ncDisponible=(orig)=>r2((orig.total||0)-facturas.filter(f=>f.tipo==="nota_credito"&&f.status!=="anulada"&&f.ncFacturaOrigen===orig.id).reduce((t,f)=>t+Math.abs(f.total||0),0));
   const ncOpen=(facturaOrigen,opts={})=>{
     if(!hasPerm("nota_credito")&&!hasPerm("facturar")){window.alert("Tu rol no tiene permiso.");return;}
@@ -8476,6 +8488,7 @@ export default function ENEXSystem(){
                         <td style={{whiteSpace:"nowrap"}}>
                           {x.factura&&<button className="btn-s" style={{fontSize:12,padding:"2px 6px",marginRight:4}} title="Ver factura" onClick={()=>setFacPrint(x.factura)}>🖨️</button>}
                           {x.factura&&puedeNC&&<button className="btn-s" style={{fontSize:12,padding:"2px 6px",color:"var(--purple)",borderColor:"var(--purple)"}} title="Nota de crédito" onClick={()=>ncOpen(x.factura)}>📝</button>}
+                          {x.factura&&["pagada","pagada_parcial"].includes(x.factura.status)&&(hasPerm("crear_factura")||hasPerm("facturar"))&&<button className="btn-s" style={{fontSize:12,padding:"2px 6px",marginLeft:4,color:"var(--cyan)",borderColor:"var(--cyan)"}} title="Cargo adicional" onClick={()=>facCargoAdicional(x.factura)}>➕</button>}
                           {x.nc&&puedeNC&&<button className="btn-s" style={{fontSize:12,padding:"2px 6px",color:"var(--red)",borderColor:"var(--red)"}} title="Anular nota de crédito" onClick={()=>facAnular(x.nc)}>✕</button>}
                           {rid&&<button className="btn-s" style={{fontSize:12,padding:"2px 6px",marginRight:4}} title="Recibo" onClick={()=>printRecibo(rid)}>🧾</button>}
                           {comp&&<a href={comp} target="_blank" rel="noreferrer" className="btn-s" style={{fontSize:12,padding:"2px 6px",marginRight:4,textDecoration:"none"}} title="Comprobante">📎</a>}
@@ -8687,6 +8700,7 @@ export default function ENEXSystem(){
                             {(f.status==="borrador"||f.status==="emitida")&&(hasPerm("editar_factura")||hasPerm("facturar"))&&<button className="btn-s" style={{fontSize:12,padding:"3px 6px",marginRight:4}} title="Editar" onClick={()=>facOpenEdit(f)}>✏️</button>}
                             {(f.status==="emitida"||f.status==="pagada_parcial")&&(hasPerm("registrar_pago")||hasPerm("cobrar"))&&<button className="btn-p" style={{fontSize:12,padding:"3px 8px",marginRight:4}} title="Registrar pago" onClick={()=>pagoOpen(f)}>💵 Cobrar</button>}
                             {f.status!=="borrador"&&f.tipo==="factura"&&(hasPerm("nota_credito")||hasPerm("facturar"))&&<button className="btn-s" style={{fontSize:12,padding:"3px 6px",marginRight:4,color:"var(--purple)",borderColor:"var(--purple)"}} title="Nota de crédito" onClick={()=>ncOpen(f)}>📝 NC</button>}
+                            {["pagada","pagada_parcial"].includes(f.status)&&f.tipo==="factura"&&(hasPerm("crear_factura")||hasPerm("facturar"))&&<button className="btn-s" style={{fontSize:12,padding:"3px 6px",marginRight:4,color:"var(--cyan)",borderColor:"var(--cyan)"}} title="Cargo adicional" onClick={()=>facCargoAdicional(f)}>➕ Cargo</button>}
                             {f.status!=="anulada"&&f.status!=="borrador"&&(hasPerm("anular_factura")||hasPerm("facturar"))&&<button className="btn-s" style={{fontSize:12,padding:"3px 6px",marginRight:4,color:"var(--red)",borderColor:"var(--red)"}} title="Anular" onClick={()=>facAnular(f)}>✕</button>}
                             {f.status==="borrador"&&hasPerm("borrar_factura")&&<button className="btn-s" style={{fontSize:12,padding:"3px 6px",color:"var(--red)",borderColor:"var(--red)"}} title="Borrar borrador" onClick={()=>facDelete(f)}>🗑️</button>}
                           </td>
