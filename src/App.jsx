@@ -5981,6 +5981,8 @@ export default function ENEXSystem(){
     const btn=(l,fn,extra={})=><button className="btn-s" style={{fontSize:13,padding:"5px 12px",whiteSpace:"nowrap",...extra}} onClick={fn}>{l}</button>;
     const mono={fontFamily:"'DM Mono',monospace",fontWeight:700};
     const imprimirWR=w=>{setSelWR(w);setTimeout(()=>window.print(),600);};
+    const verImp=(ver,imp)=><>{btn("👁️ Ver",ver)}{btn("🖨️ Imprimir",imp)}</>;
+    const verRecibo=rid=>{const html=reciboHTML(rid);if(!html)return;const w=window.open("","_blank","width=900,height=1100");if(!w){window.alert("El navegador bloqueó la ventana.");return;}w.document.write(html);w.document.close();};
     // Usuarios externos: solo documentos de su carga
     const idsVis=new Set(wrList.map(w=>w.id));
     const tocaVis=ids=>!alcanceUsr||(ids||[]).some(id=>idsVis.has(id));
@@ -6004,23 +6006,23 @@ export default function ENEXSystem(){
       .sort(porFecha).slice(0,MAX).map(n=>({k:n.id,
         izq:<><span style={{...mono,color:"var(--navy)"}}>{n.id}</span><div style={{fontSize:13,color:"var(--t3)"}}>{fmtDate(n.fecha)} · {n.receptorEntidad?.nombre||n.receptorNombre||n.consignatario||"—"} · {(n.wrIds||[]).length} WR{n.guiaId?` · guía ${n.guiaId}`:""}</div></>,
         estado:n.anulado?<span style={{fontSize:12,fontWeight:700,color:"var(--red)"}}>Anulada</span>:<span style={{fontSize:12,fontWeight:700,color:"var(--green)"}}>{n.tipo==="despacho"?"Despacho":"Entrega"}</span>,
-        acc:btn("🖨️ Imprimir",()=>setDnPrint(n))}));
+        acc:verImp(()=>setDnPrint(n),()=>{setDnPrint(n);setTimeout(()=>window.print(),600);})}));
     if(tipo==="egreso")filas=cargoReleases.filter(c=>tocaVis(c.wrIds)&&hay(`${c.id} ${c.agenteCarga||""} ${c.contacto||""} ${(c.wrIds||[]).join(" ")}`))
       .sort(porFecha).slice(0,MAX).map(c=>({k:c.id,
         izq:<><span style={{...mono,color:"var(--navy)"}}>{c.id}</span><div style={{fontSize:13,color:"var(--t3)"}}>{fmtDate(c.fecha)} · {c.agenteCarga||c.contacto||"—"} · {(c.wrIds||[]).length} WR</div></>,
         estado:c.anulado?<span style={{fontSize:12,fontWeight:700,color:"var(--red)"}}>Anulado</span>:null,
-        acc:btn("🖨️ Imprimir",()=>setCrPrint(c))}));
+        acc:verImp(()=>setCrPrint(c),()=>{setCrPrint(c);setTimeout(()=>window.print(),600);})}));
     if(tipo==="factura")filas=facsVis.filter(f=>f.status!=="borrador"&&hay(`${f.id} ${f.receptorNombre||""} ${f.receptorCasillero||""} ${f.receptorDoc||""} ${(f.wrIds||[]).join(" ")}`))
       .sort((a,b)=>(b.numero||0)-(a.numero||0)).slice(0,MAX).map(f=>({k:f.id,
         izq:<><span style={{...mono,color:"var(--navy)"}}>{f.tipo==="nota_credito"?"NC ":""}{f.id}</span><div style={{fontSize:13,color:"var(--t3)"}}>{fmtDate(f.fechaEmision||f.fecha)} · {f.receptorNombre||"—"} · {fmtMoney(f.total,f.moneda)}</div></>,
         estado:<span className={`st ${FAC_STATUS_CLS[f.status]||"s5"}`}><span className="st-dot"/>{(FAC_STATUS_LABEL[f.status]||f.status).replace(/^\S+\s/,"")}</span>,
-        acc:<>{btn("👁️ Ver",()=>setFacPrint(f))}{btn("🖨️ Imprimir",()=>printFactura(f))}</>}));
+        acc:verImp(()=>setFacPrint(f),()=>printFactura(f))}));
     if(tipo==="recibo"){const m=new Map();pagosVis.forEach(p=>{if(!p.reciboId)return;if(!m.has(p.reciboId))m.set(p.reciboId,{id:p.reciboId,fecha:p.fecha,quien:p.pagadorNombre||(pagadorDePago(p)||{}).nombre||"—",monto:0,moneda:p.moneda||"USD",anulado:true,facs:new Set()});
         const r=m.get(p.reciboId);if(!p.anulado){r.anulado=false;if(p.tipoPago!=="saldo_favor")r.monto+=p.monto;}if(p.facturaId)r.facs.add(p.facturaId);});
       filas=[...m.values()].filter(r=>hay(`${r.id} ${r.quien} ${[...r.facs].join(" ")}`)).sort(porFecha).slice(0,MAX).map(r=>({k:r.id,
         izq:<><span style={{...mono,color:"var(--navy)"}}>{r.id}</span><div style={{fontSize:13,color:"var(--t3)"}}>{fmtDate(r.fecha)} · {r.quien} · {fmtMoney(r.monto,r.moneda)}{r.facs.size?` · fact. ${[...r.facs].join(", ")}`:""}</div></>,
         estado:r.anulado?<span style={{fontSize:12,fontWeight:700,color:"var(--red)"}}>Anulado</span>:null,
-        acc:btn("🖨️ Imprimir",()=>printRecibo(r.id))}));}
+        acc:verImp(()=>verRecibo(r.id),()=>printRecibo(r.id))}));}
     const ph={wr:"Buscar WR, nombre, casillero o tracking…",guia:"Buscar guía, destino, AWB o BL…",entrega:"Buscar nota, receptor, guía o WR…",egreso:"Buscar cargo release, agente de carga o WR…",factura:"Buscar factura, cliente, casillero o WR…",recibo:"Buscar recibo, cliente o factura…"}[tipo];
     return (
     <div className="page-scroll">
