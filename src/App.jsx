@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, Fragment } from "react";
 import { createPortal } from "react-dom";
+import { dbGetPickups, dbUpsertPickup } from './supabase'
 import { supabase, resolverLogin, cuentaGuardar, cuentaEliminar, dbGetClientes, dbUpsertCliente, dbDeleteCliente, dbGetWR, dbUpsertWR, dbDeleteWR, dbGetAgentes, dbUpsertAgente, dbDeleteAgente, dbGetOficinas, dbUpsertOficina, dbDeleteOficina, dbGetTarifas, dbUpsertTarifa, dbDeleteTarifa, dbGetConsolidaciones, dbUpsertConsolidacion, dbDeleteConsolidacion, dbGetCargoReleases, dbUpsertCargoRelease, dbDeleteCargoRelease, dbGetDeliveryNotes, dbUpsertDeliveryNote, dbDeleteDeliveryNote, dbGetFacturas, dbUpsertFactura, dbDeleteFactura, dbGetPagos, dbUpsertPago, dbDeletePago, storageUploadComprobante, dbLogActividad, dbGetActividad, dbGetConfig, dbSetConfig, dbGetScanLog, dbInsertScan, dbSetScanRegistered, dbDeleteScanIds, storageUploadFoto, storageDeleteFoto, dbGetFotosByWR, dbInsertFoto, dbDeleteFoto, storageUploadFotoConsol, storageDeleteFotoConsol, dbGetFotosByConsol, dbInsertFotoConsol, dbDeleteFotoConsol } from "./supabase";
 
 // ─── TEMA CLARO PROFESIONAL ───────────────────────────────────────────────────
@@ -1827,10 +1828,9 @@ const parseContainerDim=(dimStr)=>{
 };
 
 const emptyPickup=()=>({
-  clienteId:"",clienteNombre:"",clienteDir:"",clienteTel:"",
-  fecha:"",hora:"",chofer:"",notas:"",
+  clienteId:"",clienteNombre:"",casillero:"",direccion:"",contacto:"",telefono:"",
+  fechaDeseada:"",franja:"",notas:"",
   paquetes:[{descripcion:"",largo:"",ancho:"",alto:"",pesoLb:"",cantidad:1}],
-  status:"Pendiente",cotizacion:null,
 });
 
 // ─── WEBCAM CAPTURE MODAL ────────────────────────────────────────────────────
@@ -2284,6 +2284,10 @@ export default function ENEXSystem(){
   const [chatMsgs,setChatMsgs]=useState({general:[],operaciones:[],ventas:[]});
   const [pickupList,setPickupList]=useState([]);
   const [showNewPickup,setShowNewPickup]=useState(false);
+  const [pickupSel,setPickupSel]=useState(null);
+  const [pickupFil,setPickupFil]=useState("activos");
+  const [pickupQ,setPickupQ]=useState("");
+  const [puConf,setPuConf]=useState({fecha:"",chofer:"",monto:"",moneda:"USD"});
   const [pickupClientSearch,setPickupClientSearch]=useState("");
   const [pickupClientResults,setPickupClientResults]=useState([]);
   const CALC_FORM_EMPTY={largo:"",ancho:"",alto:"",pesoLb:"",unitDim:"in",origPais:"",origCiudad:"",destPais:"",destCiudad:"",tipoEnvio:""};
@@ -2370,6 +2374,7 @@ export default function ENEXSystem(){
         dbGetConfig('factura_sec_next'),
       ]);
       if(cls.length>0)setClients(cls);
+      dbGetPickups().then(setPickupList);
       // Usuario de la sesión: el registro enlazado a la cuenta
       {const u=cls.find(c=>c.authId===authUid&&c.activo!==false);
        if(u)setCurrentUser(u);
@@ -3006,6 +3011,7 @@ export default function ENEXSystem(){
       setWrList(p=>[n,...p.map(w=>padresUpd.find(pa=>pa.id===w.id)||w)]);
       padresUpd.forEach(dbUpsertWR);
       setShowNewWR(false);
+      if(wrf.pickupId){const pu=pickupList.find(x=>x.id===wrf.pickupId);n._pickupId=wrf.pickupId;if(pu)puCambiar(pu,"recibido",{wrId:n.id},`WR ${n.id}`);}
       setWrf(emptyWRF(PAY_TYPES[0]));setClientSearch("");
       if(esReempaque){logAction("Creó Reempaque",`${n.id} ← [${reempaqueIds.join(", ")}]`);setRpqSel([]);}
       logAction("Creó WR",wrNumPrev);
@@ -7071,164 +7077,196 @@ export default function ENEXSystem(){
   const TARIFAS_BASE={"Aéreo Express":{porLb:1.8,porFt3:28,min:25},"Aéreo Económico":{porLb:1.4,porFt3:22,min:20},"Marítimo FCL":{porLb:0.6,porFt3:10,min:50},"Marítimo LCL":{porLb:0.8,porFt3:14,min:40},"Terrestre":{porLb:0.5,porFt3:8,min:30}};
 
   // ── PICK-UP ───────────────────────────────────────────────────────────────────
+  // Lo piden clientes, agentes, autónomos o empleados. La empresa lo confirma (chofer, fecha y cargo),
+  // lo marca recogido y al recibirlo crea el WR. Quien lo pide no ve precios.
+  const PU_ST={solicitado:{l:"Solicitado",c:"#1565C0",bg:"#E3F2FD"},confirmado:{l:"Confirmado",c:"#6A1B9A",bg:"#F3E5F5"},recogido:{l:"Recogido",c:"#E65100",bg:"#FFF3E0"},recibido:{l:"Recibido",c:"#2E7D32",bg:"#E8F5E9"},cancelado:{l:"Cancelado",c:"#C62828",bg:"#FFEBEE"}};
+  const puChip=st=>{const x=PU_ST[st]||PU_ST.solicitado;return <span style={{fontSize:12,fontWeight:700,padding:"2px 9px",borderRadius:10,color:x.c,background:x.bg,whiteSpace:"nowrap"}}>{x.l}</span>;};
+  const esEmpleadoPU=!alcanceUsr;
+  const puGestiona=esEmpleadoPU&&hasPerm("editar_pickup");
   const spuf=(k,v)=>setPuf(p=>({...p,[k]:v}));
-
-  const calcPickupCotizacion=(paquetes)=>{
-    let totalLb=0,totalFt3=0;
-    paquetes.forEach(p=>{
-      const l=parseFloat(p.largo)||0,a=parseFloat(p.ancho)||0,h=parseFloat(p.alto)||0;
-      const lb=parseFloat(p.pesoLb)||0;
-      const qty=parseInt(p.cantidad)||1;
-      const ft3=l&&a&&h?parseFloat(((l*a*h)/1728).toFixed(3)):0;
-      totalLb+=lb*qty;
-      totalFt3+=ft3*qty;
-    });
-    const base=15; // tarifa mínima
-    const porPeso=Math.max(base,totalLb*0.8);
-    const porVol=Math.max(base,totalFt3*12);
-    return {totalLb:parseFloat(totalLb.toFixed(1)),totalFt3:parseFloat(totalFt3.toFixed(3)),estimado:parseFloat(Math.max(porPeso,porVol).toFixed(2))};
+  const puBultos=p=>(p.paquetes||[]).reduce((t,x)=>t+(parseInt(x.cantidad)||1),0);
+  // Clientes para los que puede pedir quien está conectado
+  const puClientesPosibles=()=>{
+    if(currentUser.rol==="I")return clients.filter(c=>c.id===currentUser.id);
+    return clientesVisibles.filter(c=>c.tipo==="cliente");
+  };
+  const puNuevo=()=>{
+    if(!hasPerm("solicitar_pickup")&&!puGestiona){window.alert("Tu rol no tiene permiso para solicitar pick-up.");return;}
+    const yo=currentUser.rol==="I"?clients.find(c=>c.id===currentUser.id):null;
+    setPuf({...emptyPickup(),...(yo?{clienteId:yo.id,clienteNombre:fullName(yo),casillero:yo.casillero||"",
+      direccion:[yo.dir,yo.municipio,yo.estado].filter(Boolean).join(", "),contacto:fullName(yo),telefono:yo.tel1||""}:{})});
+    setPickupClientSearch("");setPickupClientResults([]);setShowNewPickup(true);
+  };
+  const puLog=(p,status,nota)=>({...p,status,historial:[...(p.historial||[]),{status,fecha:new Date(),user:currentUser.id,nota:nota||""}]});
+  const puGuardar=async(p)=>{setPickupList(l=>l.some(x=>x.id===p.id)?l.map(x=>x.id===p.id?p:x):[p,...l]);const ok=await dbUpsertPickup(p);if(!ok)window.alert("No se pudo guardar el pick-up. Inténtalo de nuevo.");return ok;};
+  const submitPickup=async()=>{
+    const f=puf;
+    if(!f.clienteNombre.trim()){window.alert("Indica para quién es el pick-up.");return;}
+    if(!f.direccion.trim()){window.alert("Escribe la dirección de recogida.");return;}
+    if(!f.telefono.trim()){window.alert("Escribe un teléfono de contacto.");return;}
+    if(!f.paquetes.some(x=>(x.descripcion||"").trim())){window.alert("Describe al menos un paquete.");return;}
+    if(f.id){const ant=pickupList.find(x=>x.id===f.id);await puGuardar({...ant,...f});logAction("Editó pick-up",f.id);setShowNewPickup(false);return;}
+    const n=Math.max(0,...pickupList.map(x=>parseInt(String(x.id).replace(/\D/g,""))||0))+1;
+    const tipoSol=alcanceUsr?({E:"agente",E1:"vendedor",F:"autonomo",G:"oficina",I:"cliente"}[currentUser.rol]||"cliente"):"empleado";
+    const nuevo=puLog({...f,id:`PU-${String(n).padStart(4,"0")}`,fecha:new Date(),solicitanteTipo:tipoSol,solicitanteId:currentUser.id,solicitanteNombre:fullName(currentUser)||currentUser.email||"",historial:[],monto:0,moneda:"USD"},"solicitado","Solicitado");
+    if(await puGuardar(nuevo)){logAction("Solicitó pick-up",`${nuevo.id} · ${nuevo.clienteNombre}`);setShowNewPickup(false);setPuf(emptyPickup());}
+  };
+  const puCambiar=async(p,status,extra={},nota="")=>{const u=puLog({...p,...extra},status,nota);if(await puGuardar(u)){logAction(`Pick-up ${PU_ST[status]?.l||status}`,`${p.id}${nota?` · ${nota}`:""}`);if(pickupSel?.id===p.id)setPickupSel(u);}};
+  const puCancelar=p=>{const m=window.prompt(`Cancelar el pick-up ${p.id}.\nMotivo:`);if(!m)return;puCambiar(p,"cancelado",{motivoCancelacion:m},m);};
+  // Crear el WR desde el pick-up recogido (abre el Nuevo WR con los datos puestos)
+  const puCrearWR=p=>{
+    if(!hasPerm("crear_wr")){window.alert("Tu rol no tiene permiso para crear WR.");return;}
+    const c=clients.find(x=>x.id===p.clienteId);
+    const cajas=(p.paquetes||[]).flatMap(x=>Array.from({length:Math.max(1,parseInt(x.cantidad)||1)},()=>({...emptyCaja(),descripcion:String(x.descripcion||"").toUpperCase(),
+      pesoLb:x.pesoLb||"",largo:x.largo||"",ancho:x.ancho||"",alto:x.alto||""})));
+    setWrf({...emptyWRF(PAY_TYPES[0]),consignee:c?fullName(c):p.clienteNombre,casillero:c?.casillero||p.casillero||"",casilleroSearch:c?.casillero||p.casillero||"",
+      clienteId:c?.id||"",sucursalEntrega:c?.oficinaId||"",cajas:cajas.length?cajas:[emptyCaja()],notas:`PICK-UP ${p.id}`,pickupId:p.id});
+    setClientSearch(c?fullName(c):p.clienteNombre);
+    setPickupSel(null);setEditWR(null);setShowNewWR(true);
   };
 
-  const submitPickup=()=>{
-    const cot=calcPickupCotizacion(puf.paquetes);
-    const n={...puf,id:`PU-${String(pickupList.length+1).padStart(4,"0")}`,fecha_creado:new Date(),cotizacion:cot,status:"Pendiente"};
-    setPickupList(p=>[n,...p]);
-    setShowNewPickup(false);setPuf(emptyPickup());setPickupClientSearch("");setPickupClientResults([]);
-    logAction("Creó Pick-up",n.id);
-  };
-
-  const renderPickup=()=>(
+  const renderPickup=()=>{
+    const Q=sinAcentos(pickupQ.trim());
+    const visibles=pickupList.filter(p=>esEmpleadoPU||p.solicitanteId===currentUser.id||alcanceUsr?.clienteOk(clients.find(c=>c.id===p.clienteId)));
+    const grupoDe=p=>["recibido","cancelado"].includes(p.status)?p.status:"activos";
+    const cuenta={activos:0,recibido:0,cancelado:0};visibles.forEach(p=>{cuenta[grupoDe(p)]++;});
+    const lista=visibles.filter(p=>pickupFil==="todos"||grupoDe(p)===pickupFil)
+      .filter(p=>!Q||sinAcentos(`${p.id} ${p.clienteNombre} ${p.casillero} ${p.direccion} ${p.contacto} ${p.solicitanteNombre} ${p.chofer} ${p.wrId}`).includes(Q))
+      .sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
+    const sel=pickupSel?pickupList.find(x=>x.id===pickupSel.id)||pickupSel:null;
+    const mono={fontFamily:"'DM Mono',monospace"};
+    return(
     <div className="page-scroll">
-      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
-        <div style={{flex:1}}>
-          <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:20,fontWeight:700,color:"var(--navy)"}}>🚐 Solicitudes de Pick-up</div>
+      <div className="card" style={{marginBottom:12,display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
+        <div style={{display:"flex",gap:3,background:"var(--bg4)",borderRadius:7,padding:3,border:"1px solid var(--b1)"}}>
+          {[["activos","⏳ En curso"],["recibido","✅ Recibidos"],["cancelado","✕ Cancelados"],["todos","Todos"]].map(([k,l])=>
+            <button key={k} onClick={()=>setPickupFil(k)} style={{padding:"5px 12px",borderRadius:5,border:"none",cursor:"pointer",fontSize:13,fontWeight:600,background:pickupFil===k?"var(--navy)":"transparent",color:pickupFil===k?"#fff":"var(--t2)"}}>
+              {l}{k!=="todos"&&<span style={{marginLeft:6,fontSize:11,fontWeight:800,opacity:.8}}>{cuenta[k]}</span>}</button>)}
         </div>
-        <button className="btn-p" onClick={()=>setShowNewPickup(true)}>+ Nueva Solicitud</button>
+        <input className="fi" style={{flex:1,minWidth:220,fontSize:14,padding:"7px 10px"}} placeholder="Buscar pick-up, cliente, dirección, chofer…" value={pickupQ} onChange={e=>setPickupQ(e.target.value)}/>
+        {(hasPerm("solicitar_pickup")||puGestiona)&&<button className="btn-p" onClick={puNuevo}>+ Solicitar Pick-up</button>}
       </div>
 
-      {/* LISTA */}
-      {pickupList.length===0?(
-        <div className="card" style={{textAlign:"center",padding:60,color:"var(--t3)"}}>
-          No hay solicitudes de pick-up aún.<br/>
-          <button className="btn-p" style={{marginTop:14}} onClick={()=>setShowNewPickup(true)}>+ Crear primera solicitud</button>
-        </div>
-      ):(
-        <div className="card" style={{padding:0}}>
-          <table className="ct">
-            <thead><tr><th>ID</th><th>Cliente</th><th>Dirección</th><th>Fecha</th><th>Hora</th><th>Chofer</th><th>Paquetes</th><th>Peso lb</th><th>Ft³</th><th>Cotización</th><th>Estado</th></tr></thead>
-            <tbody>
-              {pickupList.map(p=>(
-                <tr key={p.id}>
-                  <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",fontSize:14}}>{p.id}</span></td>
-                  <td style={{fontWeight:600}}>{p.clienteNombre||"—"}</td>
-                  <td style={{maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",color:"var(--t2)",fontSize:14}}>{p.clienteDir||"—"}</td>
-                  <td style={{fontFamily:"'DM Mono',monospace",fontSize:13}}>{p.fecha||"—"}</td>
-                  <td style={{fontFamily:"'DM Mono',monospace",fontSize:13}}>{p.hora||"—"}</td>
-                  <td style={{fontWeight:600,color:"var(--t1)"}}>{p.chofer||"—"}</td>
-                  <td style={{textAlign:"center",fontWeight:700}}>{p.paquetes.reduce((s,x)=>s+(parseInt(x.cantidad)||1),0)}</td>
-                  <td style={{fontFamily:"'DM Mono',monospace",fontWeight:600}}>{p.cotizacion?.totalLb||0}lb</td>
-                  <td style={{fontFamily:"'DM Mono',monospace",color:"var(--sky)"}}>{p.cotizacion?.totalFt3||0}</td>
-                  <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--green)"}}>${p.cotizacion?.estimado||0}</td>
-                  <td><span className={`st ${p.status==="Pendiente"?"s1":p.status==="Completado"?"s3":"s2"}`}><span className="st-dot"/>{p.status}</span></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <div className="card" style={{padding:0}}>
+        {lista.length===0?<div style={{textAlign:"center",padding:40,color:"var(--t3)"}}>{Q?"Sin coincidencias.":"No hay solicitudes."}</div>:(
+        <table className="ct">
+          <thead><tr><th>N°</th><th>Para</th><th>Dirección</th><th>Fecha</th><th>Bultos</th><th>Chofer</th>{esEmpleadoPU&&<th>Pidió</th>}<th>Estado</th></tr></thead>
+          <tbody>{lista.map(p=>(
+            <tr key={p.id} style={{cursor:"pointer"}} onClick={()=>{setPickupSel(p);setPuConf({fecha:p.fechaProgramada||p.fechaDeseada||"",chofer:p.chofer||"",monto:p.monto?String(p.monto):"",moneda:p.moneda||"USD"});}}>
+              <td style={{...mono,fontWeight:700,color:"var(--navy)"}}>{p.id}</td>
+              <td style={{fontWeight:600}}>{p.clienteNombre||"—"}{p.casillero&&<span style={{...mono,color:"var(--gold2)",marginLeft:6,fontSize:12}}>#{p.casillero}</span>}</td>
+              <td style={{fontSize:13,color:"var(--t2)",maxWidth:260,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{p.direccion||"—"}</td>
+              <td style={{...mono,fontSize:13}}>{p.fechaProgramada||p.fechaDeseada||"—"}{p.franja&&<div style={{fontSize:11,color:"var(--t3)"}}>{p.franja}</div>}</td>
+              <td style={{textAlign:"center",fontWeight:700}}>{puBultos(p)}</td>
+              <td style={{fontSize:13}}>{p.chofer||"—"}</td>
+              {esEmpleadoPU&&<td style={{fontSize:12,color:"var(--t2)"}}>{p.solicitanteNombre||"—"}</td>}
+              <td>{puChip(p.status)}{p.wrId&&<div style={{...mono,fontSize:11,color:"var(--t3)",marginTop:2}}>WR {p.wrId}</div>}</td>
+            </tr>))}</tbody>
+        </table>)}
+      </div>
 
-      {/* MODAL NUEVA SOLICITUD */}
+      {/* DETALLE */}
+      {sel&&(
+        <div className="ov" onClick={()=>setPickupSel(null)}>
+          <div className="modal mlg" style={{maxWidth:820,width:"96%"}} onClick={e=>e.stopPropagation()}>
+            <div className="mhd"><div className="mt">🚐 Pick-up {sel.id} {puChip(sel.status)}</div><button className="mcl" onClick={()=>setPickupSel(null)}>✕</button></div>
+            <div className="mbd" style={{maxHeight:"74vh",overflow:"auto"}}>
+              <div className="fgrid g2" style={{gap:12,marginBottom:12}}>
+                {[["Para",`${sel.clienteNombre}${sel.casillero?` · #${sel.casillero}`:""}`],["Contacto",`${sel.contacto||"—"} · ${sel.telefono||"—"}`],
+                  ["Dirección de recogida",sel.direccion],["Fecha deseada",`${sel.fechaDeseada||"—"}${sel.franja?` · ${sel.franja}`:""}`],
+                  ...(sel.status!=="solicitado"&&sel.status!=="cancelado"?[["Fecha programada",sel.fechaProgramada||"—"],["Chofer",sel.chofer||"—"]]:[]),
+                  ...(esEmpleadoPU?[["Pidió",sel.solicitanteNombre||"—"],["Cargo pick-up",sel.monto?fmtMoney(sel.monto,sel.moneda):"—"]]:[]),
+                  ...(sel.wrId?[["WR",sel.wrId]]:[]),...(sel.notas?[["Notas",sel.notas]]:[]),...(sel.motivoCancelacion?[["Motivo de cancelación",sel.motivoCancelacion]]:[])
+                ].map(([l,v])=><div key={l}><div className="fl">{l}</div><div style={{fontSize:14,fontWeight:600}}>{v||"—"}</div></div>)}
+              </div>
+              <div className="sdiv">PAQUETES ({puBultos(sel)})</div>
+              <table className="ct" style={{marginBottom:12}}>
+                <thead><tr><th>Cant.</th><th>Descripción</th><th>Peso aprox.</th><th>Medidas (in)</th></tr></thead>
+                <tbody>{(sel.paquetes||[]).map((x,i)=><tr key={i}><td style={{fontWeight:700}}>{x.cantidad||1}</td><td>{x.descripcion||"—"}</td><td style={mono}>{x.pesoLb?`${x.pesoLb} lb`:"—"}</td><td style={mono}>{x.largo&&x.ancho&&x.alto?`${x.largo}×${x.ancho}×${x.alto}`:"—"}</td></tr>)}</tbody>
+              </table>
+              {puGestiona&&sel.status==="solicitado"&&(
+                <div className="card" style={{background:"var(--bg4)",marginBottom:12}}>
+                  <div className="sdiv" style={{marginTop:0}}>CONFIRMAR</div>
+                  <div className="fgrid g4" style={{gap:8,alignItems:"end"}}>
+                    <div className="fg"><div className="fl">Fecha programada</div><input className="fi" type="date" value={puConf.fecha} onChange={e=>setPuConf(x=>({...x,fecha:e.target.value}))}/></div>
+                    <div className="fg"><div className="fl">Chofer</div><input className="fi" value={puConf.chofer} onChange={e=>setPuConf(x=>({...x,chofer:e.target.value.toUpperCase()}))}/></div>
+                    <div className="fg"><div className="fl">Cargo pick-up</div><input className="fi" type="number" step="0.01" min="0" value={puConf.monto} onChange={e=>setPuConf(x=>({...x,monto:e.target.value}))}/></div>
+                    <div className="fg"><div className="fl">Moneda</div><select className="fs" value={puConf.moneda} onChange={e=>setPuConf(x=>({...x,moneda:e.target.value}))}><option>USD</option><option>EUR</option></select></div>
+                  </div>
+                  <button className="btn-p" style={{marginTop:10}} onClick={()=>{if(!puConf.fecha){window.alert("Pon la fecha programada.");return;}
+                    puCambiar(sel,"confirmado",{fechaProgramada:puConf.fecha,chofer:puConf.chofer,monto:parseFloat(puConf.monto)||0,moneda:puConf.moneda},`Programado ${puConf.fecha}${puConf.chofer?` · ${puConf.chofer}`:""}`);}}>✅ Confirmar pick-up</button>
+                </div>)}
+              <div className="sdiv">HISTORIAL</div>
+              {(sel.historial||[]).map((h,i)=><div key={i} style={{fontSize:13,padding:"3px 0",borderBottom:"1px solid var(--b2)"}}><span style={mono}>{fmtDate(h.fecha)} {fmtTime(h.fecha)}</span> · <b>{PU_ST[h.status]?.l||h.status}</b>{h.nota&&h.nota!==PU_ST[h.status]?.l?` · ${h.nota}`:""}{esEmpleadoPU&&h.user?<span style={{color:"var(--t3)"}}> · {h.user}</span>:null}</div>)}
+            </div>
+            <div className="mft" style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+              {sel.status==="solicitado"&&(puGestiona||sel.solicitanteId===currentUser.id)&&<button className="btn-s" onClick={()=>{setPuf({...sel});setPickupClientSearch(sel.clienteNombre);setPickupSel(null);setShowNewPickup(true);}}>✏️ Editar</button>}
+              {!["recibido","cancelado"].includes(sel.status)&&(puGestiona||(sel.status==="solicitado"&&sel.solicitanteId===currentUser.id))&&<button className="btn-s" style={{color:"var(--red)",borderColor:"var(--red)"}} onClick={()=>puCancelar(sel)}>✕ Cancelar</button>}
+              <span style={{flex:1}}/>
+              {puGestiona&&sel.status==="confirmado"&&<button className="btn-p" onClick={()=>puCambiar(sel,"recogido",{},"Recogido")}>📦 Marcar recogido</button>}
+              {puGestiona&&sel.status==="recogido"&&<button className="btn-p" onClick={()=>puCrearWR(sel)}>📋 Recibir y crear WR</button>}
+              <button className="btn-s" onClick={()=>setPickupSel(null)}>Cerrar</button>
+            </div>
+          </div>
+        </div>)}
+
+      {/* SOLICITUD */}
       {showNewPickup&&(
         <div className="ov">
           <div className="modal mxl" onClick={e=>e.stopPropagation()}>
-            <div className="mhd"><div className="mt">🚐 Nueva Solicitud de Pick-up</div><button className="mcl" onClick={()=>setShowNewPickup(false)}>✕</button></div>
-
+            <div className="mhd"><div className="mt">🚐 {puf.id?`Editar ${puf.id}`:"Solicitar Pick-up"}</div><button className="mcl" onClick={()=>setShowNewPickup(false)}>✕</button></div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
-              {/* Cliente */}
               <div>
-                <div className="sdiv">DATOS DEL CLIENTE</div>
-                <div style={{position:"relative",marginBottom:10}}>
-                  <div className="fl" style={{marginBottom:4}}>Buscar cliente</div>
-                  <input className="fi" value={pickupClientSearch} onChange={e=>{
-                    setPickupClientSearch(e.target.value);
-                    if(e.target.value.length>1){
-                      setPickupClientResults(clients.filter(c=>c.tipo==="cliente"&&(fullName(c).toLowerCase().includes(e.target.value.toLowerCase())||(c.casillero||"").toLowerCase().includes(e.target.value.toLowerCase()))));
-                    }else setPickupClientResults([]);
-                  }} placeholder="Nombre o casillero…"/>
-                  {pickupClientResults.length>0&&(
-                    <div style={{position:"absolute",top:"calc(100% + 4px)",left:0,right:0,background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:8,boxShadow:"var(--shadow2)",zIndex:50,maxHeight:180,overflowY:"auto"}}>
-                      {pickupClientResults.map(c=>(
-                        <div key={c.id} onClick={()=>{spuf("clienteId",c.id);spuf("clienteNombre",fullName(c));spuf("clienteDir",c.dir||"");spuf("clienteTel",c.tel1||"");setPickupClientSearch(fullName(c));setPickupClientResults([]);}} style={{padding:"9px 12px",cursor:"pointer",borderBottom:"1px solid var(--b2)",fontSize:15}} onMouseEnter={e=>e.currentTarget.style.background="#EEF3FF"} onMouseLeave={e=>e.currentTarget.style.background=""}>
-                          {fullName(c)} <span style={{color:"var(--gold2)",fontFamily:"'DM Mono',monospace",fontSize:13}}>{c.casillero}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                <div className="sdiv">PARA QUIÉN</div>
+                {currentUser.rol==="I"?<div style={{fontWeight:700,fontSize:15,marginBottom:10}}>{puf.clienteNombre} {puf.casillero&&<span style={{color:"var(--gold2)"}}>#{puf.casillero}</span>}</div>:(
+                <div className="fi-search" style={{position:"relative",marginBottom:10}}>
+                  <input className="fi" value={pickupClientSearch} placeholder="Buscar cliente por nombre o casillero…" onChange={e=>{
+                    const v=e.target.value;setPickupClientSearch(v);spuf("clienteNombre",v.toUpperCase());spuf("clienteId","");spuf("casillero","");
+                    const bq=crearBuscador(v.trim());
+                    setPickupClientResults(bq&&(v.trim().length>=2||/^\d$/.test(v.trim()))?puClientesPosibles().filter(c=>bq.casillero(c.casillero)||bq.nombre(fullName(c))).slice(0,20):[]);}}/>
+                  {pickupClientResults.length>0&&<div className="fi-search-res">{pickupClientResults.map(c=>(
+                    <div key={c.id} className="fi-search-item" onMouseDown={e=>{e.preventDefault();
+                      setPuf(p=>({...p,clienteId:c.id,clienteNombre:fullName(c),casillero:c.casillero||"",direccion:p.direccion||[c.dir,c.municipio,c.estado].filter(Boolean).join(", "),contacto:p.contacto||fullName(c),telefono:p.telefono||c.tel1||""}));
+                      setPickupClientSearch(fullName(c));setPickupClientResults([]);}}>
+                      {fullName(c)} <span className="fi-search-cas">#{c.casillero}</span></div>))}</div>}
+                </div>)}
                 <div className="fgrid g2" style={{gap:8}}>
-                  <div className="fg full"><div className="fl">Dirección de Recogida</div><input className="fi" value={puf.clienteDir} onChange={e=>spuf("clienteDir",e.target.value)} placeholder="Dirección completa…"/></div>
-                  <div className="fg"><div className="fl">Teléfono</div><input className="fi" value={puf.clienteTel} onChange={e=>spuf("clienteTel",e.target.value)}/></div>
-                  <div className="fg"><div className="fl">Notas</div><input className="fi" value={puf.notas} onChange={e=>spuf("notas",e.target.value)} placeholder="Instrucciones especiales…"/></div>
+                  <div className="fg full"><div className="fl">Dirección de recogida *</div><input className="fi" value={puf.direccion} onChange={e=>spuf("direccion",e.target.value.toUpperCase())}/></div>
+                  <div className="fg"><div className="fl">Persona de contacto</div><input className="fi" value={puf.contacto} onChange={e=>spuf("contacto",e.target.value.toUpperCase())}/></div>
+                  <div className="fg"><div className="fl">Teléfono *</div><input className="fi" value={puf.telefono} onChange={e=>spuf("telefono",e.target.value)}/></div>
                 </div>
               </div>
-              {/* Logística */}
               <div>
-                <div className="sdiv">FECHA, HORA Y CHOFER</div>
+                <div className="sdiv">CUÁNDO</div>
                 <div className="fgrid g2" style={{gap:8}}>
-                  <div className="fg"><div className="fl">Fecha de Recogida</div><input className="fi" type="date" value={puf.fecha} onChange={e=>spuf("fecha",e.target.value)}/></div>
-                  <div className="fg"><div className="fl">Hora Preferida</div><input className="fi" type="time" value={puf.hora} onChange={e=>spuf("hora",e.target.value)}/></div>
-                  <div className="fg full"><div className="fl">Chofer Asignado</div>
-                    <select className="fs" value={puf.chofer} onChange={e=>spuf("chofer",e.target.value)}>
-                      <option value="">— Sin asignar —</option>
-                      {clients.filter(c=>["D","D1"].includes(c.rol)).map(c=><option key={c.id} value={fullName(c)}>{fullName(c)}</option>)}
-                      <option value="Chofer Externo">Chofer Externo</option>
-                    </select>
-                  </div>
+                  <div className="fg"><div className="fl">Fecha deseada</div><input className="fi" type="date" value={puf.fechaDeseada} onChange={e=>spuf("fechaDeseada",e.target.value)}/></div>
+                  <div className="fg"><div className="fl">Horario</div><select className="fs" value={puf.franja} onChange={e=>spuf("franja",e.target.value)}>
+                    <option value="">Cualquier hora</option><option value="Mañana">Mañana</option><option value="Tarde">Tarde</option></select></div>
+                  <div className="fg full"><div className="fl">Notas</div><textarea className="fi" rows={3} value={puf.notas} onChange={e=>spuf("notas",e.target.value)} style={{resize:"vertical"}}/></div>
                 </div>
               </div>
             </div>
-
-            {/* Paquetes */}
-            <div className="sdiv">PAQUETES A RECOGER</div>
-            {puf.paquetes.map((pkg,i)=>(
-              <div key={i} style={{display:"grid",gridTemplateColumns:"60px 1fr 80px 80px 80px 100px auto",gap:8,marginBottom:8,alignItems:"flex-end"}}>
-                <div className="fg"><div className="fl">Cant.</div><input className="fi" type="number" min="1" value={pkg.cantidad} onChange={e=>setPuf(p=>({...p,paquetes:p.paquetes.map((x,j)=>j===i?{...x,cantidad:e.target.value}:x)}))}/></div>
-                <div className="fg"><div className="fl">Descripción</div><input className="fi" value={pkg.descripcion} onChange={e=>setPuf(p=>({...p,paquetes:p.paquetes.map((x,j)=>j===i?{...x,descripcion:e.target.value}:x)}))} placeholder="Electrónica, ropa…"/></div>
-                <div className="fg"><div className="fl">L (in)</div><input className="fi" type="number" value={pkg.largo} onChange={e=>setPuf(p=>({...p,paquetes:p.paquetes.map((x,j)=>j===i?{...x,largo:e.target.value}:x)}))} /></div>
-                <div className="fg"><div className="fl">A (in)</div><input className="fi" type="number" value={pkg.ancho} onChange={e=>setPuf(p=>({...p,paquetes:p.paquetes.map((x,j)=>j===i?{...x,ancho:e.target.value}:x)}))} /></div>
-                <div className="fg"><div className="fl">H (in)</div><input className="fi" type="number" value={pkg.alto} onChange={e=>setPuf(p=>({...p,paquetes:p.paquetes.map((x,j)=>j===i?{...x,alto:e.target.value}:x)}))} /></div>
-                <div className="fg"><div className="fl">Peso (lb)</div><input className="fi" type="number" value={pkg.pesoLb} onChange={e=>setPuf(p=>({...p,paquetes:p.paquetes.map((x,j)=>j===i?{...x,pesoLb:e.target.value}:x)}))} /></div>
-                {puf.paquetes.length>1&&<button className="btn-d" style={{padding:"7px 10px"}} onClick={()=>setPuf(p=>({...p,paquetes:p.paquetes.filter((_,j)=>j!==i)}))}>🗑</button>}
-              </div>
-            ))}
-            <button onClick={()=>setPuf(p=>({...p,paquetes:[...p.paquetes,{descripcion:"",largo:"",ancho:"",alto:"",pesoLb:"",cantidad:1}]}))} style={{width:"100%",padding:"8px",border:"2px dashed var(--b1)",borderRadius:8,background:"var(--bg4)",cursor:"pointer",fontSize:15,color:"var(--t2)",marginBottom:14}}>+ Agregar paquete</button>
-
-            {/* Cotización previa */}
-            {(()=>{const cot=calcPickupCotizacion(puf.paquetes);return(
-              <div style={{background:"var(--bg4)",border:"1px solid var(--b1)",borderRadius:8,padding:"12px 14px",marginBottom:14}}>
-                <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:15,fontWeight:700,color:"var(--navy)",marginBottom:8}}>💵 Cotización Estimada</div>
-                <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10}}>
-                  {[["Peso Total",`${cot.totalLb} lb`,"var(--t1)"],["Ft³ Total",String(cot.totalFt3),"var(--sky)"],["Estimado",`$${cot.estimado}`,"var(--green)"]].map(([l,v,c])=>(
-                    <div key={l} style={{background:"var(--bg2)",borderRadius:6,padding:"8px 12px",border:"1px solid var(--b1)"}}>
-                      <div style={{fontSize:12,color:"var(--t3)",textTransform:"uppercase",letterSpacing:.8,marginBottom:3}}>{l}</div>
-                      <div style={{fontFamily:"'DM Mono',monospace",fontSize:18,fontWeight:800,color:c}}>{v}</div>
-                    </div>
-                  ))}
-                </div>
-                <div style={{fontSize:13,color:"var(--t3)",marginTop:8}}>* Estimado basado en tarifa estándar. Puede variar según servicios adicionales.</div>
-              </div>
-            );})()}
-
+            <div className="sdiv">PAQUETES</div>
+            {puf.paquetes.map((pkg,i)=>{const setP=(k,v)=>setPuf(p=>({...p,paquetes:p.paquetes.map((x,j)=>j===i?{...x,[k]:v}:x)}));return(
+              <div key={i} style={{display:"grid",gridTemplateColumns:"70px 1fr 90px 70px 70px 70px auto",gap:8,marginBottom:8,alignItems:"flex-end"}}>
+                <div className="fg"><div className="fl">Cant.</div><input className="fi" type="number" min="1" value={pkg.cantidad} onChange={e=>setP("cantidad",e.target.value)}/></div>
+                <div className="fg"><div className="fl">Descripción</div><input className="fi" value={pkg.descripcion} onChange={e=>setP("descripcion",e.target.value.toUpperCase())}/></div>
+                <div className="fg"><div className="fl">Peso (lb)</div><input className="fi" type="number" value={pkg.pesoLb} onChange={e=>setP("pesoLb",e.target.value)}/></div>
+                <div className="fg"><div className="fl">L (in)</div><input className="fi" type="number" value={pkg.largo} onChange={e=>setP("largo",e.target.value)}/></div>
+                <div className="fg"><div className="fl">A (in)</div><input className="fi" type="number" value={pkg.ancho} onChange={e=>setP("ancho",e.target.value)}/></div>
+                <div className="fg"><div className="fl">H (in)</div><input className="fi" type="number" value={pkg.alto} onChange={e=>setP("alto",e.target.value)}/></div>
+                {puf.paquetes.length>1?<button className="btn-d" style={{padding:"7px 10px"}} onClick={()=>setPuf(p=>({...p,paquetes:p.paquetes.filter((_,j)=>j!==i)}))}>🗑</button>:<span/>}
+              </div>);})}
+            <button className="btn-s" style={{marginBottom:14}} onClick={()=>setPuf(p=>({...p,paquetes:[...p.paquetes,{descripcion:"",largo:"",ancho:"",alto:"",pesoLb:"",cantidad:1}]}))}>+ Agregar paquete</button>
             <div className="mft">
               <button className="btn-s" onClick={()=>setShowNewPickup(false)}>Cancelar</button>
-              <button className="btn-p" onClick={submitPickup}>✅ Confirmar Solicitud</button>
+              <button className="btn-p" onClick={submitPickup}>{puf.id?"💾 Guardar":"🚐 Solicitar"}</button>
             </div>
           </div>
-        </div>
-      )}
+        </div>)}
     </div>
-  );
-
+    );
+  };
   // ── CALCULADORA ───────────────────────────────────────────────────────────────
   // Al cambiar país, resetear ciudad (evita selección inválida/obsoleta)
   const sc3=(k,v)=>setCalcForm(p=>{
@@ -7736,6 +7774,8 @@ export default function ENEXSystem(){
         cajas:w.cajas||1,pesoLb:parseFloat(w.pesoLb)||0,volLb:parseFloat(w.volLb)||0,pesoKg:parseFloat(w.pesoKg)||0,volKg:parseFloat(w.volKg)||0,
         ft3:parseFloat(w.ft3)||0,m3:parseFloat(w.m3)||0,unidad:pf.unidad,
         descripcion:`Flete WR ${w.id}`,cantidad:r2(pf.valor),precio:precioUnidad,total:0});
+      {const pu=pickupList.find(x=>x.status!=="cancelado"&&((w._pickupId&&x.id===w._pickupId)||(x.wrId&&x.wrId===w.id)));
+       if(pu&&pu.monto>0)out.push({tipo:"adicional",wrId:w.id,descripcion:`Pick-up ${pu.id}`,cantidad:1,precio:pu.monto,total:0});}
       (Array.isArray(w.cargos)?w.cargos:[]).forEach(c=>{
         const nombre=typeof c==="string"?c:(c?.concepto||c?.nombre||"");
         if(!nombre)return;

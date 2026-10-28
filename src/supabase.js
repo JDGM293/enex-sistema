@@ -511,6 +511,37 @@ export const dbDeletePago = async (id) => {
 }
 
 // ── CONFIGURACION (tipos de envio, pago, contenedor, paises) ─
+// ── PICK-UP ──────────────────────────────────────────────────
+const pickupFromDB = (r) => ({
+  id: r.id, fecha: r.fecha ? new Date(r.fecha) : (r.created_at ? new Date(r.created_at) : new Date()),
+  clienteId: r.cliente_id || '', clienteNombre: r.cliente_nombre || '', casillero: r.casillero || '',
+  solicitanteTipo: r.solicitante_tipo || '', solicitanteId: r.solicitante_id || '', solicitanteNombre: r.solicitante_nombre || '',
+  direccion: r.direccion || '', contacto: r.contacto || '', telefono: r.telefono || '',
+  fechaDeseada: r.fecha_deseada || '', franja: r.franja || '', paquetes: r.paquetes || [], notas: r.notas || '',
+  status: r.status || 'solicitado', fechaProgramada: r.fecha_programada || '', chofer: r.chofer || '',
+  monto: parseFloat(r.monto) || 0, moneda: r.moneda || 'USD', wrId: r.wr_id || '',
+  historial: r.historial || [], motivoCancelacion: r.motivo_cancelacion || '',
+})
+export const dbGetPickups = async () => {
+  const { data, error } = await supabase.from('pickup').select('*').order('fecha', { ascending: false })
+  if (error) { console.error('getPickups:', error); return [] }
+  return (data || []).map(pickupFromDB)
+}
+export const dbUpsertPickup = async (p) => {
+  const { error } = await supabase.from('pickup').upsert({
+    id: p.id, fecha: p.fecha instanceof Date ? p.fecha.toISOString() : p.fecha,
+    cliente_id: p.clienteId || '', cliente_nombre: p.clienteNombre || '', casillero: p.casillero || '',
+    solicitante_tipo: p.solicitanteTipo || '', solicitante_id: p.solicitanteId || '', solicitante_nombre: p.solicitanteNombre || '',
+    direccion: p.direccion || '', contacto: p.contacto || '', telefono: p.telefono || '',
+    fecha_deseada: p.fechaDeseada || null, franja: p.franja || '', paquetes: p.paquetes || [], notas: p.notas || '',
+    status: p.status || 'solicitado', fecha_programada: p.fechaProgramada || null, chofer: p.chofer || '',
+    monto: p.monto || 0, moneda: p.moneda || 'USD', wr_id: p.wrId || '',
+    historial: p.historial || [], motivo_cancelacion: p.motivoCancelacion || '',
+  })
+  if (error) { console.error('upsertPickup:', error); return false }
+  return true
+}
+
 export const dbGetConfig = async (clave) => {
   const { data, error } = await supabase
     .from('configuracion').select('valor').eq('clave', clave).limit(1)
