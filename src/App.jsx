@@ -2291,7 +2291,7 @@ export default function ENEXSystem(){
   const [cuadreSel,setCuadreSel]=useState(null);   // cuenta abierta {tipo,id,nombre}
   const [ctaQ,setCtaQ]=useState("");
   const [ctaFil,setCtaFil]=useState("");           // "" | cliente | agente | autonomo
-  const [ctaSoloSaldo,setCtaSoloSaldo]=useState(true);
+  const [ctaSoloSaldo,setCtaSoloSaldo]=useState("con");   // con | sin | todas
   const [ctaMon,setCtaMon]=useState("USD");
   const [ctaDesde,setCtaDesde]=useState("");
   const [ctaHasta,setCtaHasta]=useState("");
@@ -8112,9 +8112,10 @@ export default function ENEXSystem(){
     return out;
   };
   // Resumen de todas las cuentas: nos debe / le debemos por moneda
-  const resumenCuentas=()=>{
+  const resumenCuentas=(conClientes=false)=>{
     const m=new Map();
     const tocar=(pg)=>{const k=pagKey(pg);if(!m.has(k))m.set(k,{pg,debe:{},favor:{}});return m.get(k);};
+    if(conClientes)clients.filter(c=>c.tipo==="cliente").forEach(c=>tocar({tipo:"cliente",id:c.id,nombre:fullName(c)}));
     agentes.forEach(a=>tocar({tipo:"agente",id:a.id,nombre:a.nombre||a.codigo||"Agente"}));
     clients.filter(c=>c.tipo==="usuario"&&c.rol==="F").forEach(c=>tocar({tipo:"autonomo",id:c.id,nombre:fullName(c)||"Autónomo"}));
     facturas.forEach(f=>{if(["anulada","borrador"].includes(f.status))return;const r=tocar(pagadorDeFactura(f));
@@ -8709,11 +8710,12 @@ export default function ENEXSystem(){
           const mono={fontFamily:"'DM Mono',monospace"};
           if(!cuadreSel){
             const Q=sinAcentos(ctaQ.trim());
-            const todas=resumenCuentas().filter(r=>!keysVis||keysVis.has(pagKey(r.pg)));
+            const todas=resumenCuentas(ctaSoloSaldo!=="con"||!!Q).filter(r=>!keysVis||keysVis.has(pagKey(r.pg)));
             const filas=todas.filter(r=>!ctaFil||r.pg.tipo===ctaFil)
               .filter(r=>!Q||sinAcentos(`${r.pg.nombre} ${r.pg.casillero||""}`).includes(Q))
               .map(r=>({...r,pc:pendCom(pagKey(r.pg))}))
-              .filter(r=>!ctaSoloSaldo||Q||fm(r.debe).length||fm(r.favor).length||r.pc.length)
+              .filter(r=>{const tiene=fm(r.debe).length>0||fm(r.favor).length>0||r.pc.length>0;
+                return ctaSoloSaldo==="todas"||Q?true:ctaSoloSaldo==="con"?tiene:!tiene;})
               .sort((a,b)=>Object.values(b.debe).reduce((t,v)=>t+v,0)-Object.values(a.debe).reduce((t,v)=>t+v,0)||Object.values(b.favor).reduce((t,v)=>t+v,0)-Object.values(a.favor).reduce((t,v)=>t+v,0)||String(a.pg.nombre).localeCompare(String(b.pg.nombre)));
             const tot=(campo)=>{const o={};filas.forEach(r=>Object.entries(r[campo]).forEach(([mn,v])=>{o[mn]=r2((o[mn]||0)+v);}));return fm(o).join(" / ")||"—";};
             const MAX=300;
@@ -8721,12 +8723,13 @@ export default function ENEXSystem(){
               <div className="card" style={{padding:0}}>
                 <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
                   <input className="fi" style={{width:280,fontSize:14,padding:"6px 10px"}} placeholder="Buscar nombre o casillero…" value={ctaQ} onChange={e=>setCtaQ(e.target.value)}/>
-                  {[["","Todas"],["cliente","👤 Clientes"],["agente","🤝 Agentes"],["autonomo","🧑‍💻 Autónomos"]].map(([k,l])=>
-                    <button key={k||"t"} className={ctaFil===k?"btn-p":"btn-s"} style={{fontSize:13,padding:"5px 12px"}} onClick={()=>setCtaFil(k)}>{l}</button>)}
-                  <button className={ctaSoloSaldo?"btn-p":"btn-s"} style={{fontSize:13,padding:"5px 12px"}} onClick={()=>setCtaSoloSaldo(v=>!v)}>{ctaSoloSaldo?"Con saldo":"Todas, con y sin saldo"}</button>
+                  {(()=>{const seg=(ops,val,set)=><div style={{display:"flex",gap:3,background:"var(--bg4)",borderRadius:7,padding:3,border:"1px solid var(--b1)"}}>
+                      {ops.map(([k,l])=><button key={k||"t"} onClick={()=>set(k)} style={{padding:"4px 11px",borderRadius:5,border:"none",cursor:"pointer",fontSize:13,fontWeight:600,background:val===k?"var(--navy)":"transparent",color:val===k?"#fff":"var(--t2)"}}>{l}</button>)}</div>;
+                    return <>{seg([["","Todos"],["cliente","👤 Clientes"],["agente","🤝 Agentes"],["autonomo","🧑‍💻 Autónomos"]],ctaFil,setCtaFil)}
+                      {seg([["con","Con saldo"],["sin","Sin saldo"],["todas","Con y sin saldo"]],ctaSoloSaldo,setCtaSoloSaldo)}</>;})()}
                   {puede&&<button className="btn-p" style={{fontSize:13,padding:"6px 12px",marginLeft:"auto"}} onClick={()=>cobroAbrir(null)}>💵 Recibir pago</button>}
                 </div>
-                {filas.length===0?<div style={{textAlign:"center",padding:40,color:"var(--t3)"}}>{Q?"Sin coincidencias.":"No hay cuentas con saldo. ✅"}</div>:(
+                {filas.length===0?<div style={{textAlign:"center",padding:40,color:"var(--t3)"}}>{Q?"Sin coincidencias.":ctaSoloSaldo==="con"?"No hay cuentas con saldo. ✅":"No hay cuentas."}</div>:(
                 <table className="ct">
                   <thead><tr><th>Cuenta</th><th style={{textAlign:"right"}}>Nos debe</th><th style={{textAlign:"right"}}>Le debemos</th><th></th></tr></thead>
                   <tbody>
