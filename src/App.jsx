@@ -2224,6 +2224,7 @@ export default function ENEXSystem(){
   const [dnSearch,setDnSearch]=useState("");
   const [dnTipoFiltro,setDnTipoFiltro]=useState("todos"); // "todos" | "entrega" | "despacho"
   const [dnPrint,setDnPrint]=useState(null); // nota a imprimir
+  const [reciboVer,setReciboVer]=useState(null); // recibo en vista previa
   // Entregas por guía
   const [dnVista,setDnVista]=useState("guias"); // "guias" | "historial"
   const [dnGuiaSel,setDnGuiaSel]=useState(null); // id de guía abierta
@@ -5982,7 +5983,7 @@ export default function ENEXSystem(){
     const mono={fontFamily:"'DM Mono',monospace",fontWeight:700};
     const imprimirWR=w=>{setSelWR(w);setTimeout(()=>window.print(),600);};
     const verImp=(ver,imp)=><>{btn("👁️ Ver",ver)}{btn("🖨️ Imprimir",imp)}</>;
-    const verRecibo=rid=>{const html=reciboHTML(rid);if(!html)return;const w=window.open("","_blank","width=900,height=1100");if(!w){window.alert("El navegador bloqueó la ventana.");return;}w.document.write(html);w.document.close();};
+    const verRecibo=rid=>setReciboVer(rid);
     // Usuarios externos: solo documentos de su carga
     const idsVis=new Set(wrList.map(w=>w.id));
     const tocaVis=ids=>!alcanceUsr||(ids||[]).some(id=>idsVis.has(id));
@@ -8514,7 +8515,7 @@ export default function ENEXSystem(){
                           {x.factura&&puedeNC&&<button className="btn-s" style={{fontSize:12,padding:"2px 6px",color:"var(--purple)",borderColor:"var(--purple)"}} title="Nota de crédito" onClick={()=>ncOpen(x.factura)}>📝</button>}
                           {x.factura&&["pagada","pagada_parcial"].includes(x.factura.status)&&(hasPerm("crear_factura")||hasPerm("facturar"))&&<button className="btn-s" style={{fontSize:12,padding:"2px 6px",marginLeft:4,color:"var(--cyan)",borderColor:"var(--cyan)"}} title="Cargo adicional" onClick={()=>facCargoAdicional(x.factura)}>➕</button>}
                           {x.nc&&puedeNC&&<button className="btn-s" style={{fontSize:12,padding:"2px 6px",color:"var(--red)",borderColor:"var(--red)"}} title="Anular nota de crédito" onClick={()=>facAnular(x.nc)}>✕</button>}
-                          {rid&&<button className="btn-s" style={{fontSize:12,padding:"2px 6px",marginRight:4}} title="Recibo" onClick={()=>printRecibo(rid)}>🧾</button>}
+                          {rid&&<button className="btn-s" style={{fontSize:12,padding:"2px 6px",marginRight:4}} title="Recibo" onClick={()=>setReciboVer(rid)}>🧾</button>}
                           {comp&&<a href={comp} target="_blank" rel="noreferrer" className="btn-s" style={{fontSize:12,padding:"2px 6px",marginRight:4,textDecoration:"none"}} title="Comprobante">📎</a>}
                           {x.pagos&&x.doc!=="🤝 Comisión"&&x.doc!=="💵 Reembolso"&&(hasPerm("anular_pago")||hasPerm("cobrar"))&&<button className="btn-s" style={{fontSize:12,padding:"2px 6px",color:"var(--red)",borderColor:"var(--red)"}} title="Anular" onClick={()=>pagoAnularGrupo(x.pagos)}>✕</button>}
                         </td>
@@ -8879,7 +8880,7 @@ export default function ENEXSystem(){
                       <td style={{...mono,textAlign:"right",fontWeight:800,color:g.monto<0?"var(--red)":"var(--green)"}}>{fmtMoney(g.monto,g.moneda)}</td>
                       <td style={{fontSize:12}}>{nombreUsr(g.usuario)}</td>
                       <td style={{whiteSpace:"nowrap"}}>
-                        {g.pagos[0].reciboId&&<button className="btn-s" style={{fontSize:12,padding:"2px 6px",marginRight:4}} title="Recibo" onClick={()=>printRecibo(g.pagos[0].reciboId)}>🧾</button>}
+                        {g.pagos[0].reciboId&&<button className="btn-s" style={{fontSize:12,padding:"2px 6px",marginRight:4}} title="Recibo" onClick={()=>setReciboVer(g.pagos[0].reciboId)}>🧾</button>}
                         {g.comp&&<a href={g.comp} target="_blank" rel="noreferrer" className="btn-s" style={{fontSize:12,padding:"2px 6px",marginRight:4,textDecoration:"none"}}>📎</a>}
                         {(hasPerm("anular_pago")||hasPerm("cobrar"))&&<button className="btn-s" style={{fontSize:12,padding:"2px 6px",color:"var(--red)",borderColor:"var(--red)"}} title="Anular" onClick={()=>pagoAnularGrupo(pagos.filter(p=>!p.anulado&&(g.pagos[0].reciboId?p.reciboId===g.pagos[0].reciboId:p.id===g.id)))}>✕</button>}
                       </td>
@@ -13759,23 +13760,39 @@ export default function ENEXSystem(){
       })()}
 
       {/* ── Factura Print Modal ── */}
+      {reciboVer&&(
+        <div className="ov">
+          <div className="modal mlg" style={{maxWidth:900,width:"96%"}}>
+            <div className="mhd no-print">
+              <div className="mt">🖨️ Recibo de Cobro — {reciboVer}</div>
+              <div style={{display:"flex",gap:6}}>
+                <button className="btn-p" style={{fontSize:13,padding:"4px 12px"}} onClick={()=>printRecibo(reciboVer)}>🖨️ Imprimir</button>
+                <button className="mcl" onClick={()=>setReciboVer(null)}>✕</button>
+              </div>
+            </div>
+            <div className="mbd" style={{maxHeight:"78vh",overflow:"hidden",padding:0}}>
+              <iframe title="Recibo" srcDoc={reciboHTML(reciboVer)||""} style={{width:"100%",height:"76vh",border:"none",background:"#fff",display:"block"}}/>
+            </div>
+          </div>
+        </div>
+      )}
       {facPrint&&(()=>{
         const f=facPrint;
         const pagosAplic=pagos.filter(p=>p.facturaId===f.id&&!p.anulado);
         return(
-          <div className="modal-backdrop" style={{overflow:"auto"}}>
-            <div className="modal" style={{width:820,maxHeight:"94vh",display:"flex",flexDirection:"column"}}>
-              <div className="mh">
-                <div style={{fontSize:16,fontWeight:700,color:"var(--navy)"}}>
-                  {f.tipo==="nota_credito"?"📝 Nota de Crédito":f.tipo==="proforma"?"📋 Proforma":"📄 Factura"} · {f.id}
-                  {f.status==="anulada"&&<span style={{marginLeft:10,color:"var(--red)",fontWeight:800}}>ANULADA</span>}
-                </div>
+          <div className="ov">
+            <div className="modal mlg" style={{maxWidth:900,width:"96%"}}>
+              <div className="mhd no-print">
+                <div className="mt">🖨️ {f.tipo==="nota_credito"?"Nota de Crédito":f.tipo==="proforma"?"Proforma":"Factura"} — {f.id}
+                  {f.status==="anulada"&&<span style={{marginLeft:10,color:"var(--red)",fontWeight:800}}>ANULADA</span>}</div>
                 <div style={{display:"flex",gap:6}}>
-                  {hasPerm("imp_factura")&&<button className="btn-p" style={{fontSize:13,padding:"4px 10px"}} onClick={()=>printFactura(f)}>🖨️ Imprimir</button>}
+                  {hasPerm("imp_factura")&&<button className="btn-p" style={{fontSize:13,padding:"4px 12px"}} onClick={()=>printFactura(f)}>🖨️ Imprimir</button>}
                   <button className="mcl" onClick={()=>setFacPrint(null)}>✕</button>
                 </div>
               </div>
-              <iframe title="Factura" srcDoc={facturaHTML(f)} style={{width:"100%",height:"78vh",border:"none",background:"#fff"}}/>
+              <div className="mbd" style={{maxHeight:"78vh",overflow:"hidden",padding:0}}>
+                <iframe title="Factura" srcDoc={facturaHTML(f)} style={{width:"100%",height:"76vh",border:"none",background:"#fff",display:"block"}}/>
+              </div>
             </div>
           </div>
         );
