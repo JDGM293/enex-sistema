@@ -3025,6 +3025,7 @@ export default function ENEXSystem(){
     if(!w)return;
     // Bloque F — WR reempacado (2.3) queda fijo: no se puede asignar tipo ni confirmar
     const _saltar=hasPerm("saltar_bloqueos");
+    if(wrTipoFijo(w)&&tipo!==w.tipoEnvio){window.alert(`El WR ${w.id} ya está facturado, en entrega, entregado o cerrado. Su tipo de envío no se puede cambiar.`);return;}
     if(!_saltar&&w.status?.code==="2.3"){
       window.alert(`El WR ${w.id} fue reempacado en ${w.reempacadoEn||"otro WR"} y queda fijo en estado Reempacado. No se puede confirmar ni cambiar su tipo de envío.`);
       return;
@@ -4081,7 +4082,7 @@ export default function ENEXSystem(){
         )}
         {/* Barra de confirmación por tipo de envío — solo si el WR es modificable
             (estados 1, 2 o 3). Reempacado, Egresado y Consolidado+ quedan fijos. */}
-        {canEdit&&(hasPerm("saltar_bloqueos")||wrEsModificable(selWR))&&(
+        {canEdit&&!wrTipoFijo(selWR)&&(hasPerm("saltar_bloqueos")||wrEsModificable(selWR))&&(
           <div className="no-print" style={{display:"flex",alignItems:"center",gap:10,padding:"8px 14px",background:"var(--bg4)",borderBottom:"1px solid var(--b1)",flexWrap:"wrap"}}>
             <div style={{fontSize:12,fontWeight:700,color:"var(--t3)",textTransform:"uppercase",letterSpacing:.5}}>Tipo de Envío:</div>
             <select className="fs" style={{fontSize:13,padding:"4px 8px",minWidth:180}} value={selWR.tipoEnvio||""}
@@ -9093,6 +9094,10 @@ export default function ENEXSystem(){
   // El permiso "saltar_bloqueos" solo se aplica en acciones sobre un WR concreto
   // (detalle del WR), nunca en listas ni tablas.
   const wrEsModificable=(w)=>["1","2","3"].includes(w?.status?.code||"");
+  // Tipo de envío fijo para todos (incluso con "saltar bloqueos"): ya en entrega, entregado, cobrado,
+  // egresado, faltante o con factura activa
+  const wrTipoFijo=(w)=>["18","18.1","18.2","18.3","20","20.1","20.2","21","22","23","25"].includes(w?.status?.code||"")
+    ||facturas.some(f=>f.status!=="anulada"&&f.tipo!=="nota_credito"&&Array.isArray(f.wrIds)&&f.wrIds.includes(w?.id));
   // Un WR no puede facturarse si está Reempacado (2.3 — es fantasma, la mercancía
   // está en el WR hijo) ni si ya fue Egresado (25 — debió facturarse antes del despacho).
   // El resto de los estados sí pueden facturarse (PREPAID en origen, COD tras recepción).
