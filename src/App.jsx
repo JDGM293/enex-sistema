@@ -2291,7 +2291,7 @@ export default function ENEXSystem(){
   const [puConf,setPuConf]=useState({fecha:"",transportista:"",chofer:"",monto:"",moneda:"USD"});
   const [pickupClientSearch,setPickupClientSearch]=useState("");
   const [pickupClientResults,setPickupClientResults]=useState([]);
-  const CALC_FORM_EMPTY={largo:"",ancho:"",alto:"",pesoLb:"",unitDim:"in",origPais:"",origCiudad:"",destPais:"",destCiudad:"",tipoEnvio:""};
+  const CALC_FORM_EMPTY={orig:null,dest:null,tipoEnvio:"",para:null,paraQ:"",unitDim:"in",unitPeso:"lb",cajas:[{cantidad:1,largo:"",ancho:"",alto:"",peso:""}]};
   const [calcForm,setCalcForm]=useState(CALC_FORM_EMPTY);
   const [contabTab,setContabTab]=useState("porguia");
   const [cuadreSel,setCuadreSel]=useState(null);   // cuenta abierta {tipo,id,nombre}
@@ -7300,182 +7300,132 @@ export default function ENEXSystem(){
     );
   };
   // ── CALCULADORA ───────────────────────────────────────────────────────────────
-  // Al cambiar país, resetear ciudad (evita selección inválida/obsoleta)
-  const sc3=(k,v)=>setCalcForm(p=>{
-    const next={...p,[k]:v};
-    if(k==="origPais") next.origCiudad="";
-    if(k==="destPais") next.destCiudad="";
-    return next;
-  });
-
-  // Lookup de tarifa en la tabla real de Tarifas (config) — match exacto 5 campos;
-  // fallback a paisOrig+paisDest+tipoEnvio si no hay match con ciudad; null si no hay nada.
-  const findTarifa=(oPais,oCiu,dPais,dCiu,tipo)=>{
-    if(!oPais||!dPais||!tipo)return null;
-    const activas=(tarifas||[]).filter(t=>t.activo!==false);
-    // 1) exact match (5 campos)
-    let m=activas.find(t=>t.paisOrig===oPais&&t.ciudadOrig===oCiu&&t.paisDest===dPais&&t.ciudadDest===dCiu&&t.tipoEnvio===tipo);
-    if(m)return {...m,matchLevel:"ciudad"};
-    // 2) match por país origen + país destino + tipo
-    m=activas.find(t=>t.paisOrig===oPais&&t.paisDest===dPais&&t.tipoEnvio===tipo);
-    if(m)return {...m,matchLevel:"pais"};
-    return null;
+  // Usa las mismas tarifas y reglas que la facturación: tarifa especial de quien cotiza
+  // (agente, autónomo o cliente) y si no tiene, la predeterminada de la ruta.
+  const setCalc=x=>setCalcForm(p=>({...p,...x}));
+  const calcCaja=()=>({cantidad:1,largo:"",ancho:"",alto:"",peso:""});
+  // Para quién se cotiza: usuarios externos, siempre ellos mismos
+  const calcPara=(()=>{
+    const u=currentUser||{};
+    if(u.rol==="E"||u.rol==="E1"){const a=agentes.find(x=>x.id===u.agenteId);return a?{tipo:"agente",id:a.id,nombre:a.nombre||a.codigo}:null;}
+    if(u.rol==="F")return {tipo:"autonomo",id:u.id,nombre:fullName(u)};
+    if(u.rol==="I")return {tipo:"cliente",id:u.id,nombre:fullName(u)};
+    return calcForm.para||null;
+  })();
+  // Se calcula al dibujar la pantalla (usa funciones de tarifas definidas más abajo)
+  const calcCalcular=()=>{
+    const f=calcForm;
+    const cajas=(f.cajas||[]).filter(c=>(parseFloat(c.peso)||0)>0||((parseFloat(c.largo)||0)&&(parseFloat(c.ancho)||0)&&(parseFloat(c.alto)||0)));
+    if(!cajas.length)return null;
+    const aCm=v=>(parseFloat(v)||0)*(f.unitDim==="in"?2.54:1);
+    const aKg=v=>(parseFloat(v)||0)/(f.unitPeso==="lb"?2.20462:1);
+    let bultos=0,kg=0,volKg=0,m3=0,factKg=0,factLb=0;
+    cajas.forEach(c=>{
+      const q=Math.max(1,parseInt(c.cantidad)||1);
+      const cm3=aCm(c.largo)*aCm(c.ancho)*aCm(c.alto);
+      const k=aKg(c.peso), vk=cm3/5000;
+      bultos+=q;kg+=k*q;volKg+=vk*q;m3+=cm3/1e6*q;
+      factKg+=Math.max(k,vk)*q;factLb+=Math.max(k*2.20462,vk*2.20462)*q;
+    });
+    const r={bultos,kg:r2(kg),lb:r2(kg*2.20462),volKg:r2(volKg),volLb:r2(volKg*2.20462),m3:Math.round(m3*10000)/10000,ft3:Math.round(m3*35.3147*1000)/1000};
+    if(!f.orig||!f.dest||!f.tipoEnvio)return {...r,falta:true};
+    const w={origCountry:f.orig.pais,origCity:f.orig.ciudad,destCountry:f.dest.pais,destCity:f.dest.ciudad};
+    const tf=tarifaParaWR(w,f.tipoEnvio,calcPara);
+    if(!tf)return {...r,sinTarifa:true};
+    const aereo=tipoEsAereoG(f.tipoEnvio), maritimo=tipoEsMaritimoG(f.tipoEnvio);
+    const uni=unidadTarifa(tf,aereo||!maritimo);
+    const cant=uni==="kg"?r2(factKg):uni==="lb"?r2(factLb):uni==="m3"?r.m3:r.ft3;
+    const precio=parseFloat(maritimo?tf.porFt3:tf.porLb)||0;
+    const flete=r2(cant*precio), min=parseFloat(tf.min)||0;
+    return {...r,tf,uni,cant,precio,flete,min,total:r2(Math.max(flete,min)),usoMinimo:min>flete,moneda:tf.moneda||"USD"};
   };
 
-  const calcTarifa=findTarifa(calcForm.origPais,calcForm.origCiudad,calcForm.destPais,calcForm.destCiudad,calcForm.tipoEnvio);
-  // Moneda: la de la tarifa encontrada; si no hay, la del país origen
-  const calcCurr=calcTarifa?.moneda||PAIS_CURR[calcForm.origPais]||"USD";
-  const calcCurrSym=cSym(calcCurr);
-
-  const calcResult=(()=>{
-    const l=parseFloat(calcForm.largo)||0,a=parseFloat(calcForm.ancho)||0,h=parseFloat(calcForm.alto)||0;
-    const pesoInput=parseFloat(calcForm.pesoLb)||0;
-    if(!l&&!a&&!h&&!pesoInput)return null;
-    // Si unitDim=cm el usuario ingresa kg → convertir a lb para cálculo
-    const lb=calcForm.unitDim==="cm"?parseFloat((pesoInput*2.205).toFixed(2)):pesoInput;
-    const lCm=calcForm.unitDim==="in"?l*2.54:l,aCm=calcForm.unitDim==="in"?a*2.54:a,hCm=calcForm.unitDim==="in"?h*2.54:h;
-    const vc=calcVol(lCm,aCm,hCm,"cm");
-    // Si no hay tarifa configurada para la ruta+tipo, devolver solo medidas sin total
-    if(!calcTarifa){
-      const kg=parseFloat((lb/2.205).toFixed(2));
-      return {lb,kg,volLb:vc.volLb,ft3:vc.ft3,m3:vc.m3,total:null,billingLb:Math.max(lb,vc.volLb),tarifaMissing:true};
-    }
-    const porLb=parseFloat(calcTarifa.porLb)||0;
-    const porFt3=parseFloat(calcTarifa.porFt3)||0;
-    const min=parseFloat(calcTarifa.min)||0;
-    // Peso facturable aéreo = max(real, volumétrico) · Marítimo = solo ft³
-    const billingLb=Math.max(lb,vc.volLb);
-    const esAereo=tipoEsAereoG(calcForm.tipoEnvio);
-    const esMaritimo=tipoEsMaritimoG(calcForm.tipoEnvio);
-    const rawByLb=billingLb*porLb;
-    const rawByFt3=vc.ft3*porFt3;
-    const byLb=Math.max(min,rawByLb);
-    const byFt3=Math.max(min,rawByFt3);
-    const rawSel=esAereo?rawByLb:(esMaritimo?rawByFt3:Math.max(rawByLb,rawByFt3));
-    const totalFinal=Math.max(min,rawSel);
-    const total=parseFloat(totalFinal.toFixed(2));
-    const kg=parseFloat((lb/2.205).toFixed(2));
-    return {
-      lb,kg,volLb:vc.volLb,ft3:vc.ft3,m3:vc.m3,total,
-      byLb:parseFloat(byLb.toFixed(2)),byFt3:parseFloat(byFt3.toFixed(2)),
-      billingLb,
-      raw:parseFloat(rawSel.toFixed(2)),
-      usoMinimo:totalFinal>rawSel-0.001&&totalFinal<=min+0.001,
-      tarifa:calcTarifa,
-      tarifaMissing:false,
-    };
-  })();
-
-  const renderCalculadora=()=>(
+  const renderCalculadora=()=>{
+    const f=calcForm, R=calcCalcular();
+    const mono={fontFamily:"'DM Mono',monospace"};
+    const setCaja=(i,x)=>setCalc({cajas:f.cajas.map((c,j)=>j===i?{...c,...x}:c)});
+    const lugarTxt=x=>x?(x.ciudad?`${x.ciudad} · ${x.pais}`:`${x.pais} (todo el país)`):"";
+    const elegirLugar=(k,titulo)=>(
+      <div style={{flex:1,minWidth:240}}>
+        {f[k]?<div><div className="sdiv">{titulo}</div>
+            <span style={{display:"inline-block",fontSize:14,fontWeight:700,padding:"6px 12px",borderRadius:14,background:"#EEF3FF",color:"var(--navy)",border:"1px solid #B8C8F0"}}>{lugarTxt(f[k])}
+              <span style={{cursor:"pointer",color:"var(--red)",marginLeft:8}} onClick={()=>setCalc({[k]:null})}>✕</span></span></div>
+          :<SelectorLugares titulo={titulo} countries={COUNTRIES} value={[]} onChange={v=>setCalc({[k]:v[0]||null})}/>}
+      </div>);
+    const esStaff=!["E","E1","F","I"].includes(currentUser?.rol);
+    const UL={lb:"lb",kg:"kg",ft3:"ft³",m3:"m³"};
+    return(
     <div className="page-scroll">
-      <div style={{maxWidth:820,margin:"0 auto"}}>
-        <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:22,fontWeight:700,color:"var(--navy)",marginBottom:4}}>🧮 Calculadora de Envío</div>
-
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
-          {/* Ruta */}
-          <div className="card">
-            <div className="sdiv">RUTA DE ENVÍO</div>
-            <div className="fgrid g2" style={{gap:10}}>
-              <div className="fg">
-                <div className="fl">País Origen</div>
-                <select className="fs" value={calcForm.origPais} onChange={e=>sc3("origPais",e.target.value)}>
-                  <option value="">— Seleccionar —</option>
-                  {COUNTRIES.map(c=><option key={c.dial} value={c.dial}>{c.name}</option>)}
-                </select>
-              </div>
-              <div className="fg">
-                <div className="fl">Ciudad Origen</div>
-                <select className="fs" value={calcForm.origCiudad} onChange={e=>sc3("origCiudad",e.target.value)} disabled={!calcForm.origPais}>
-                  <option value="">— Seleccionar —</option>
-                  {(COUNTRIES.find(c=>c.dial===calcForm.origPais)?.cities||[]).map(c=><option key={c.code} value={c.code}>{c.name}</option>)}
-                </select>
-              </div>
-              <div className="fg">
-                <div className="fl">País Destino</div>
-                <select className="fs" value={calcForm.destPais} onChange={e=>sc3("destPais",e.target.value)}>
-                  <option value="">— Seleccionar —</option>
-                  {COUNTRIES.map(c=><option key={c.dial} value={c.dial}>{c.name}</option>)}
-                </select>
-              </div>
-              <div className="fg">
-                <div className="fl">Ciudad Destino</div>
-                <select className="fs" value={calcForm.destCiudad} onChange={e=>sc3("destCiudad",e.target.value)} disabled={!calcForm.destPais}>
-                  <option value="">— Seleccionar —</option>
-                  {(COUNTRIES.find(c=>c.dial===calcForm.destPais)?.cities||[]).map(c=><option key={c.code} value={c.code}>{c.name}</option>)}
-                </select>
-              </div>
-              <div className="fg full">
-                <div className="fl">Tipo de Envío</div>
-                <select className="fs" value={calcForm.tipoEnvio} onChange={e=>sc3("tipoEnvio",e.target.value)}>
-                  <option value="">— Seleccionar —</option>
-                  {SEND_TYPES.map(t=><option key={t}>{t}</option>)}
-                </select>
-              </div>
-            </div>
+      <div style={{maxWidth:900,margin:"0 auto"}}>
+        <div className="card" style={{marginBottom:12}}>
+          <div style={{display:"flex",gap:14,flexWrap:"wrap",marginBottom:10}}>
+            {elegirLugar("orig","ORIGEN")}
+            {elegirLugar("dest","DESTINO")}
           </div>
-
-          {/* Medidas */}
-          <div className="card">
-            <div className="sdiv">MEDIDAS Y PESO</div>
-            <div style={{display:"flex",gap:6,marginBottom:12}}>
-              {["in","cm"].map(u=><button key={u} className={`btn-${calcForm.unitDim===u?"p":"s"}`} style={{flex:1}} onClick={()=>sc3("unitDim",u)}>{u==="in"?"Pulgadas":"Centímetros"}</button>)}
-            </div>
-            <div className="fgrid g2" style={{gap:10}}>
-              <div className="fg"><div className="fl">Largo ({calcForm.unitDim})</div><input className="fi" type="number" value={calcForm.largo} onChange={e=>sc3("largo",e.target.value)}/></div>
-              <div className="fg"><div className="fl">Ancho ({calcForm.unitDim})</div><input className="fi" type="number" value={calcForm.ancho} onChange={e=>sc3("ancho",e.target.value)}/></div>
-              <div className="fg"><div className="fl">Alto ({calcForm.unitDim})</div><input className="fi" type="number" value={calcForm.alto} onChange={e=>sc3("alto",e.target.value)}/></div>
-              <div className="fg"><div className="fl">Peso ({calcForm.unitDim==="in"?"lb":"kg"})</div><input className="fi" type="number" value={calcForm.pesoLb} onChange={e=>sc3("pesoLb",e.target.value)}/></div>
-            </div>
+          <div style={{display:"flex",gap:14,flexWrap:"wrap",alignItems:"flex-end"}}>
+            <div className="fg" style={{minWidth:200}}><div className="fl">Tipo de envío</div>
+              <select className="fs" value={f.tipoEnvio} onChange={e=>setCalc({tipoEnvio:e.target.value})}>
+                <option value="">— Seleccionar —</option>{SEND_TYPES.map(t=><option key={t}>{t}</option>)}</select></div>
+            {esStaff?(
+              <div className="fg" style={{flex:1,minWidth:260}}><div className="fl">Cotizar para</div>
+                {f.para?<span style={{display:"inline-block",fontSize:14,fontWeight:700,padding:"6px 12px",borderRadius:14,background:"#FFF3E0",color:"#E65100",border:"1px solid #FFCC80"}}>
+                    {({agente:"🤝",autonomo:"🧑‍💻",cliente:"👤"})[f.para.tipo]} {f.para.nombre}<span style={{cursor:"pointer",color:"var(--red)",marginLeft:8}} onClick={()=>setCalc({para:null,paraQ:""})}>✕</span></span>
+                  :<div className="fi-search" style={{position:"relative"}}>
+                    <input className="fi" placeholder="Público general · o busca agente, autónomo o cliente…" value={f.paraQ||""} onChange={e=>setCalc({paraQ:e.target.value})}/>
+                    {(()=>{const Q=sinAcentos((f.paraQ||"").trim());if(Q.length<2)return null;
+                      const ops=[...agentes.map(a=>({tipo:"agente",id:a.id,nombre:a.nombre||a.codigo,sub:"Agente"})),
+                        ...clients.filter(c=>c.tipo==="usuario"&&c.rol==="F").map(c=>({tipo:"autonomo",id:c.id,nombre:fullName(c),sub:"Autónomo"})),
+                        ...clients.filter(c=>c.tipo==="cliente").map(c=>({tipo:"cliente",id:c.id,nombre:fullName(c),sub:`Cliente #${c.casillero||""}`}))]
+                        .filter(o=>sinAcentos(`${o.nombre} ${o.sub}`).includes(Q)).slice(0,20);
+                      return ops.length>0&&<div className="fi-search-res">{ops.map(o=>(
+                        <div key={o.tipo+o.id} className="fi-search-item" onMouseDown={e=>{e.preventDefault();setCalc({para:o,paraQ:""});}}>
+                          {o.nombre}<span style={{fontSize:12,color:"var(--t3)",marginLeft:8}}>{o.sub}{tarifas.some(t=>t.aplicaTipo===o.tipo&&t.aplicaId===o.id)?" · ⭐ tarifa especial":""}</span></div>))}</div>;})()}
+                  </div>}
+              </div>
+            ):calcPara&&<div style={{fontSize:13,color:"var(--t2)",alignSelf:"center"}}>Cotizando para <b>{calcPara.nombre}</b></div>}
           </div>
         </div>
 
-        {/* Botón Limpiar */}
-        <div style={{display:"flex",justifyContent:"flex-end",marginBottom:10}}>
-          <button className="btn-s" onClick={()=>setCalcForm(CALC_FORM_EMPTY)}>🧹 Limpiar valores</button>
+        <div className="card" style={{marginBottom:12}}>
+          <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap",marginBottom:10}}>
+            <div className="sdiv" style={{margin:0,flex:1}}>CAJAS</div>
+            <span style={{fontSize:13,color:"var(--t2)"}}>Medidas</span>
+            <select className="fs" style={{width:90}} value={f.unitDim} onChange={e=>setCalc({unitDim:e.target.value})}><option value="in">in</option><option value="cm">cm</option></select>
+            <span style={{fontSize:13,color:"var(--t2)"}}>Peso</span>
+            <select className="fs" style={{width:90}} value={f.unitPeso} onChange={e=>setCalc({unitPeso:e.target.value})}><option value="lb">lb</option><option value="kg">kg</option></select>
+          </div>
+          {f.cajas.map((c,i)=>(
+            <div key={i} style={{display:"grid",gridTemplateColumns:"80px repeat(4,1fr) 40px",gap:8,marginBottom:8,alignItems:"flex-end"}}>
+              <div className="fg"><div className="fl">Cant.</div><input className="fi" type="number" min="1" value={c.cantidad} onChange={e=>setCaja(i,{cantidad:e.target.value})}/></div>
+              <div className="fg"><div className="fl">Largo ({f.unitDim})</div><input className="fi" type="number" value={c.largo} onChange={e=>setCaja(i,{largo:e.target.value})}/></div>
+              <div className="fg"><div className="fl">Ancho ({f.unitDim})</div><input className="fi" type="number" value={c.ancho} onChange={e=>setCaja(i,{ancho:e.target.value})}/></div>
+              <div className="fg"><div className="fl">Alto ({f.unitDim})</div><input className="fi" type="number" value={c.alto} onChange={e=>setCaja(i,{alto:e.target.value})}/></div>
+              <div className="fg"><div className="fl">Peso c/u ({f.unitPeso})</div><input className="fi" type="number" value={c.peso} onChange={e=>setCaja(i,{peso:e.target.value})}/></div>
+              {f.cajas.length>1?<button className="btn-d" style={{padding:"7px 8px"}} onClick={()=>setCalc({cajas:f.cajas.filter((_,j)=>j!==i)})}>🗑</button>:<span/>}
+            </div>))}
+          <div style={{display:"flex",gap:8}}>
+            <button className="btn-s" onClick={()=>setCalc({cajas:[...f.cajas,calcCaja()]})}>+ Agregar caja</button>
+            <button className="btn-s" style={{marginLeft:"auto"}} onClick={()=>setCalcForm({...CALC_FORM_EMPTY,tipoEnvio:f.tipoEnvio})}>🧹 Limpiar</button>
+          </div>
         </div>
 
-        {/* Resultado */}
-        {calcResult&&(
-          <>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:14}}>
-              {[[`⚖️ Peso Real`,calcForm.unitDim==="cm"?`${calcResult.kg} kg`:`${calcResult.lb} lb`,"var(--t1)"],["📐 Peso Vol.",`${calcResult.volLb} lb`,"var(--orange)"],["📦 Ft³",String(calcResult.ft3),"var(--sky)"],["🌐 M³",String(calcResult.m3),"var(--teal)"]].map(([l,v,c])=>(
-                <div key={l} style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,padding:"14px",textAlign:"center",boxShadow:"var(--shadow)"}}>
-                  <div style={{fontSize:15,marginBottom:6}}>{l}</div>
-                  <div style={{fontFamily:"'DM Mono',monospace",fontSize:22,fontWeight:800,color:c}}>{v}</div>
-                </div>
-              ))}
-            </div>
-
-            {calcResult.tarifaMissing?(
-              <div style={{background:"#FEF3C7",border:"1.5px solid #F59E0B",borderRadius:14,padding:"20px",marginBottom:14,textAlign:"center"}}>
-                <div style={{fontSize:26,marginBottom:6}}>⚠️</div>
-                <div style={{fontSize:17,fontWeight:700,color:"#92400E",marginBottom:4}}>No hay tarifa configurada para esta ruta</div>
-                <div style={{fontSize:14,color:"#92400E"}}>
-                  {calcForm.origPais&&calcForm.destPais&&calcForm.tipoEnvio
-                    ?`Configure una tarifa para ${COUNTRIES.find(c=>c.dial===calcForm.origPais)?.name||calcForm.origPais} → ${COUNTRIES.find(c=>c.dial===calcForm.destPais)?.name||calcForm.destPais} · ${calcForm.tipoEnvio} en Configuración → Tarifas.`
-                    :"Complete país origen, país destino y tipo de envío para calcular el costo."}
-                </div>
-              </div>
-            ):(
-              <>
-                <div style={{background:"var(--navy)",borderRadius:14,padding:"24px",marginBottom:14,textAlign:"center"}}>
-                  <div style={{fontSize:15,color:"rgba(255,255,255,.6)",marginBottom:8}}>Costo Estimado · {calcForm.tipoEnvio||"—"} · {COUNTRIES.find(c=>c.dial===calcForm.origPais)?.name?.split(" ")[0]||"—"} → {COUNTRIES.find(c=>c.dial===calcForm.destPais)?.name?.split(" ")[0]||"—"}</div>
-                  <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:54,fontWeight:800,color:"#E5AE3A",lineHeight:1}}>{calcCurrSym}{calcResult.total}</div>
-                  <div style={{fontSize:14,color:"rgba(255,255,255,.4)",marginTop:6}}>{calcCurr} · Estimado aproximado{calcResult.usoMinimo?` · Aplicado mínimo ${calcCurrSym}${calcResult.tarifa.min}`:""}</div>
-                </div>
-                <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,padding:"14px",marginBottom:14,display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,fontSize:13}}>
-                  <div><span style={{color:"var(--t3)"}}>Tarifa aplicada:</span> <b style={{fontFamily:"'DM Mono',monospace"}}>{calcCurrSym}{calcResult.tarifa.porLb||0}/lb · {calcCurrSym}{calcResult.tarifa.porFt3||0}/ft³</b></div>
-                  <div><span style={{color:"var(--t3)"}}>Cargo mínimo:</span> <b style={{fontFamily:"'DM Mono',monospace"}}>{calcCurrSym}{calcResult.tarifa.min||0}</b></div>
-                  <div><span style={{color:"var(--t3)"}}>Match:</span> <b>{calcResult.tarifa.matchLevel==="ciudad"?"🎯 Ciudad":"🌍 País"}</b></div>
-                </div>
-                <div style={{fontSize:14,color:"var(--t3)",textAlign:"center"}}>* Los precios son estimados basados en tarifas configuradas. Contacta a ENEX para una cotización exacta.</div>
-              </>
-            )}
-          </>
-        )}
+        {R&&(<>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:10,marginBottom:12}}>
+            {[["Bultos",R.bultos],["Peso real",f.unitPeso==="kg"?`${R.kg} kg`:`${R.lb} lb`],["Peso vol.",f.unitPeso==="kg"?`${R.volKg} kg`:`${R.volLb} lb`],["Ft³",R.ft3],["M³",R.m3]].map(([l,v])=>(
+              <div key={l} className="card" style={{textAlign:"center",padding:12}}><div style={{fontSize:13,color:"var(--t3)"}}>{l}</div><div style={{...mono,fontSize:20,fontWeight:800,color:"var(--navy)"}}>{v}</div></div>))}
+          </div>
+          {R.falta?<div className="card" style={{textAlign:"center",color:"var(--t3)",padding:20}}>Elige origen, destino y tipo de envío.</div>
+          :R.sinTarifa?<div style={{background:"#FEF3C7",border:"1.5px solid #F59E0B",borderRadius:12,padding:18,textAlign:"center",color:"#92400E",fontWeight:700}}>⚠️ No hay tarifa para {lugarTxt(f.orig)} → {lugarTxt(f.dest)} · {f.tipoEnvio}</div>
+          :(<div style={{background:"var(--navy)",borderRadius:14,padding:22,textAlign:"center",color:"#fff"}}>
+              <div style={{fontSize:14,opacity:.7,marginBottom:6}}>{f.tipoEnvio} · {lugarTxt(f.orig)} → {lugarTxt(f.dest)}</div>
+              <div style={{fontSize:52,fontWeight:800,color:"#E5AE3A",lineHeight:1}}>{fmtMoney(R.total,R.moneda)}</div>
+              <div style={{fontSize:14,opacity:.85,marginTop:10,...mono}}>{R.cant} {UL[R.uni]} × {fmtMoney(R.precio,R.moneda)}/{UL[R.uni]} = {fmtMoney(R.flete,R.moneda)}{R.usoMinimo?` · mínimo ${fmtMoney(R.min,R.moneda)}`:""}</div>
+              <div style={{fontSize:12,opacity:.6,marginTop:6}}>{R.tf._especial?`⭐ Tarifa especial de ${calcPara?.nombre||""}`:"Tarifa general"} · {R.tf.id} · {R.moneda}{(tipoEsAereoG(f.tipoEnvio))?` · se cobra el mayor entre peso real y volumétrico`:""}</div>
+            </div>)}
+        </>)}
       </div>
-    </div>
-  );
+    </div>);
+  };
 
   // ── CONTABILIDAD & FACTURACIÓN (Lote 6, rewrite) ────────────────────────────
   // Paquetería internacional — solo USD o EUR, sin IVA, sin IGTF.
