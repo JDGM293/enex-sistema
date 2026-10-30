@@ -2242,7 +2242,6 @@ export default function ENEXSystem(){
   const [docTextos,setDocTextos]=useState({});    // datos de empresa y textos de declaración/autorización
   const [docTxtDraft,setDocTxtDraft]=useState(null);
   const [docsTab,setDocsTab]=useState("generar");
-  const [docsQ,setDocsQ]=useState("");
   const [docEd,setDocEd]=useState(null);
   const [fmtSel,setFmtSel]=useState("_default");
   const [fmtDraft,setFmtDraft]=useState(null);
@@ -6021,7 +6020,7 @@ export default function ENEXSystem(){
       .sort((a,b)=>String(b.id).localeCompare(String(a.id))).slice(0,MAX).map(w=>({k:w.id,
         izq:<><span style={{...mono,color:"var(--navy)"}}>{w.id}</span><div style={{fontSize:13,color:"var(--t3)"}}>{w.consignee||"—"}{w.casillero?` · #${w.casillero}`:""} · {w.cajas||1} caja{(w.cajas||1)===1?"":"s"}</div></>,
         estado:<StBadge st={w.status}/>,
-        acc:<>{btn("📄 WR",()=>imprimirWR(w))}{btn("🏷️ Etiquetas",()=>setShowLabels({wr:w,dims:w.dims||[],remitente:w.shipper||"",tipoEnvio:w.tipoEnvio||""}))}</>}));
+        acc:<>{btn("📄 WR",()=>imprimirWR(w))}{btn("🏷️ Etiquetas",()=>setShowLabels({wr:w,dims:w.dims||[],remitente:w.shipper||"",tipoEnvio:w.tipoEnvio||""}))}{btn("📑 Documentos",()=>docAbrir(w))}</>}));
     if(tipo==="guia")filas=guiasVis.filter(g=>hay(`${g.id} ${g.destino||""} ${g.tipoEnvio||""} ${g.awb||""} ${g.bl||""}`))
       .sort((a,b)=>String(b.id).localeCompare(String(a.id))).slice(0,MAX).map(g=>({k:g.id,
         izq:<><span style={{...mono,color:"var(--purple)"}}>{g.id}</span><div style={{fontSize:13,color:"var(--t3)"}}>{g.destino||"—"} · {g.tipoEnvio||"—"} · {(g.containers||[]).length} cont. · {g.totalWR||0} WR</div></>,
@@ -6184,32 +6183,14 @@ export default function ENEXSystem(){
 
   const renderDocs=()=>{
     const puedeFmt=hasPerm("editar_documento")||hasPerm("configuracion");
-    const TABS=[["generar","📑 Generar"],...(puedeFmt?[["formatos","🌎 Formatos por país"],["textos","⚙️ Empresa y textos"]]:[])];
-    const tab=TABS.some(t=>t[0]===docsTab)?docsTab:"generar";
-    const mono={fontFamily:"'DM Mono',monospace"};
+    const TABS=puedeFmt?[["formatos","🌎 Formatos por país"],["textos","⚙️ Empresa y textos"]]:[];
+    if(!TABS.length)return <div className="page-scroll"><div className="card" style={{textAlign:"center",padding:40,color:"var(--t3)"}}>Tu rol no tiene permiso para editar formatos.</div></div>;
+    const tab=TABS.some(t=>t[0]===docsTab)?docsTab:"formatos";
     return(
     <div className="page-scroll">
       <div style={{display:"flex",gap:3,background:"var(--bg4)",borderRadius:8,padding:3,border:"1px solid var(--b1)",marginBottom:12}}>
         {TABS.map(([k,l])=><button key={k} onClick={()=>setDocsTab(k)} style={{flex:1,padding:"8px 10px",borderRadius:6,border:"none",cursor:"pointer",fontSize:14,fontWeight:600,background:tab===k?"var(--navy)":"transparent",color:tab===k?"#fff":"var(--t2)"}}>{l}</button>)}
       </div>
-
-      {tab==="generar"&&(()=>{
-        const Q=sinAcentos(docsQ.trim());
-        const lista=wrList.filter(w=>!alcanceUsr||alcanceUsr.wrOk(w))
-          .filter(w=>!Q||sinAcentos(`${w.id} ${w.consignee||""} ${w.casillero||""} ${w.shipper||""} ${(w.dims||[]).map(d=>d.tracking).join(" ")}`).includes(Q))
-          .sort((a,b)=>String(b.id).localeCompare(String(a.id))).slice(0,30);
-        return(<>
-          <div className="card" style={{marginBottom:12}}><input className="fi" autoFocus style={{fontSize:15,padding:"9px 12px"}} placeholder="Buscar WR, consignatario, casillero, remitente o tracking…" value={docsQ} onChange={e=>setDocsQ(e.target.value)}/></div>
-          <div className="card" style={{padding:0}}>
-            {lista.length===0?<div style={{textAlign:"center",padding:40,color:"var(--t3)"}}>{Q?"Sin coincidencias.":"No hay WR."}</div>:lista.map(w=>(
-              <div key={w.id} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 14px",borderBottom:"1px solid var(--b1)",flexWrap:"wrap"}}>
-                <div style={{flex:1,minWidth:240}}><span style={{...mono,fontWeight:700,color:"var(--navy)"}}>{w.id}</span>
-                  <div style={{fontSize:13,color:"var(--t3)"}}>{w.shipper||"—"} → {w.consignee||"—"}{w.casillero?` #${w.casillero}`:""} · {nomPais(w.destCountry)||"—"}</div></div>
-                <StBadge st={w.status}/>
-                <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{DOC_TIPOS.map(([k,l])=><button key={k} className="btn-s" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>docAbrir(w,k)}>{l.split(" ")[0]} {l.split(" ")[1]}</button>)}</div>
-              </div>))}
-          </div></>);
-      })()}
 
       {tab==="formatos"&&(()=>{
         const Q=sinAcentos((fmtDraft?.q||"").trim());
