@@ -157,6 +157,8 @@ input.fi:not([type="email"]):not([type="password"]):not([type="number"]){text-tr
 .wt td .type-b{font-size:11.5px;padding:2px 6px}
 
 /* cells */
+.c-lnk{cursor:pointer;transition:background .12s}
+.c-lnk:hover{background:#EEF3FF}
 .c-wr{display:inline-block;font-family:'DM Mono',monospace;font-weight:700;font-size:14px;background:#fff;border:2px solid #1A2B4A;color:#1A2B4A;padding:3px 9px;border-radius:5px;letter-spacing:.5px;white-space:nowrap}
 .c-route{font-size:12px;color:var(--t3);margin-top:3px}
 .c-name{color:var(--t1);font-weight:600;font-size:15px}
@@ -358,6 +360,7 @@ input.fi:not([type="email"]):not([type="password"]):not([type="number"]){text-tr
 .mt{font-family:Arial,Helvetica,sans-serif;font-size:21px;font-weight:700;flex:1;color:var(--navy)}
 .mcl{width:28px;height:28px;border-radius:6px;background:var(--bg4);border:1px solid var(--b1);color:var(--t2);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all .12s}
 .mcl:hover{background:var(--bg5);color:var(--t1)}
+.mst{font-size:13px;color:var(--t3);font-weight:400;font-family:inherit;margin-top:2px}
 .mft{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;padding-top:14px;border-top:1px solid var(--b1)}
 
 /* ── SCAN ─────────────────────────────────────────────────────────────────── */
@@ -700,6 +703,16 @@ const Ico=({e,n,solo,sp,style})=>{
   const k=n||ICO_MAP[String(e||"").replace(/️/g,"")];
   if(!k||!ICO_SVG[k]){const t=String(e||"");return /[☀-➿\u{1F000}-\u{1FAFF}]/u.test(t)?null:(t?<span style={style}>{t}</span>:null);}
   return <svg className={`ico${solo?" ico-solo":""}${sp?" ico-sp":""}`} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" dangerouslySetInnerHTML={{__html:ICO_SVG[k]}}/>;
+};
+
+// ─── NÚMEROS DE DOCUMENTO ────────────────────────────────────────────────────
+// Mismo formato en todo el sistema; al tocarlo abre el documento.
+let NUM_ABRIR=null;
+const Num=({t,id,pre="",nolink,style})=>{
+  if(id==null||id==="")return <span style={{color:"var(--t4)"}}>—</span>;
+  const puede=!nolink&&NUM_ABRIR&&NUM_ABRIR(t,id,true);
+  return <span className={`c-wr${puede?" c-lnk":""}`} style={style} title={puede?"Abrir":undefined}
+    onClick={puede?e=>{e.stopPropagation();e.preventDefault();NUM_ABRIR(t,id);}:undefined}>{pre}{id}</span>;
 };
 
 // ─── ROLE DEFINITIONS ────────────────────────────────────────────────────────
@@ -1420,10 +1433,7 @@ const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[
           const g=consolList.find(c=>(Array.isArray(c.wrIds)&&c.wrIds.includes(w.id))||(c.containers||[]).some(ct=>(ct.wr||[]).some(r=>r.id===w.id)));
           if(!g)return <span style={{color:"var(--t4)",fontSize:12}}>—</span>;
           return(
-            <span onClick={onGuiaClick?()=>onGuiaClick(g):undefined} title={onGuiaClick?`Abrir guía ${g.id}`:`Guía ${g.id}`}
-              style={{display:"inline-block",fontFamily:"'DM Mono',monospace",fontWeight:700,fontSize:14,letterSpacing:.5,color:"var(--navy)",background:"#EEF3FF",border:"2px solid #B8C8F0",borderRadius:5,padding:"3px 9px",cursor:onGuiaClick?"pointer":"default"}}>
-              {g.id}
-            </span>
+            <Num t="guia" id={g.id}/>
           );
         })()}
       </td>
@@ -1480,6 +1490,21 @@ const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[
 
 // ─── WR TABLE COMPONENT ────────────────────────────────────────────────────────
 const PAGE_SIZE=50;
+// Paginador común: 50 por página, con ventana de páginas para listas grandes.
+const Paginador=({pg,n,onPg,siempre})=>{
+  const tot=Math.max(1,Math.ceil(n/PAGE_SIZE));
+  if(n<=PAGE_SIZE&&!siempre)return null;
+  const a=Math.max(1,Math.min(pg-2,tot-4)),b=Math.min(tot,a+4);
+  const nums=[];for(let i=a;i<=b;i++)nums.push(i);
+  return(<div className="pag">
+    <button className="pag-btn" disabled={pg===1} onClick={()=>onPg(1)}>«</button>
+    <button className="pag-btn" disabled={pg===1} onClick={()=>onPg(pg-1)}>‹</button>
+    {nums.map(p=><button key={p} className={`pag-btn ${pg===p?"on":""}`} onClick={()=>onPg(p)}>{p}</button>)}
+    <button className="pag-btn" disabled={pg===tot} onClick={()=>onPg(pg+1)}>›</button>
+    <button className="pag-btn" disabled={pg===tot} onClick={()=>onPg(tot)}>»</button>
+    <span className="pag-info">{n?((pg-1)*PAGE_SIZE)+1:0}–{Math.min(pg*PAGE_SIZE,n)} de {n}</span>
+  </div>);
+};
 const WRTable=({rows,selId,onSelect,unitL,unitW,onSort,sortCol,sortDir,dimOpen,onDimToggle,page,onPage,clients=[],agentes=[],oficinas=[],empresaNombre="Casa Matriz",sendTypes=[],onAssignTipo,onFotoClick,onTimelineClick,consolList=[],onGuiaClick,canBypass=false})=>{
   const totalPages=Math.max(1,Math.ceil(rows.length/PAGE_SIZE));
   const pageRows=rows.slice((page-1)*PAGE_SIZE,page*PAGE_SIZE);
@@ -1530,20 +1555,7 @@ const WRTable=({rows,selId,onSelect,unitL,unitW,onSort,sortCol,sortDir,dimOpen,o
           </tbody>
         </table>
       </div>
-      {/* PAGINATION */}
-      <div className="pag">
-        <button className="pag-btn" disabled={page===1} onClick={()=>onPage(1)}>«</button>
-        <button className="pag-btn" disabled={page===1} onClick={()=>onPage(page-1)}>‹</button>
-        {Array.from({length:totalPages},(_,i)=>i+1).map(p=>(
-          <button key={p} className={`pag-btn ${page===p?"on":""}`} onClick={()=>onPage(p)}>{p}</button>
-        ))}
-        <button className="pag-btn" disabled={page===totalPages} onClick={()=>onPage(page+1)}>›</button>
-        <button className="pag-btn" disabled={page===totalPages} onClick={()=>onPage(totalPages)}>»</button>
-        <span className="pag-info">
-          {((page-1)*PAGE_SIZE)+1}–{Math.min(page*PAGE_SIZE,rows.length)} de {rows.length} registros
-        </span>
-        <span style={{fontSize:12,color:"var(--t3)",marginLeft:4}}>| 50 por página</span>
-      </div>
+      <Paginador pg={page} n={rows.length} onPg={onPage} siempre/>
     </>
   );
 };
@@ -2011,14 +2023,14 @@ function WebcamCaptureModal({ onCapture, onClose }){
   };
 
   return (
-    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
-      <div style={{background:"var(--bg2)",borderRadius:12,overflow:"hidden",width:"100%",maxWidth:680,boxShadow:"var(--shadow2)",display:"flex",flexDirection:"column",maxHeight:"90vh"}}>
+    <div className="ov" style={{zIndex:9999}}>
+      <div className="modal mmd" style={{padding:0,overflow:"hidden",boxShadow:"var(--shadow2)",display:"flex",flexDirection:"column",maxHeight:"90vh"}}>
         {/* Header */}
-        <div style={{padding:"14px 18px",borderBottom:"1px solid var(--b1)",background:"var(--navy)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-          <div style={{fontSize:15,fontWeight:700,display:"flex",alignItems:"center",gap:8}}>
-            <span style={{fontSize:18}}><Ico e="📸" solo/></span> Capturar foto del paquete
+        <div className="mhd" style={{padding:"16px 22px 10px",margin:0}}>
+          <div className="mt">
+            <Ico e="📸" sp/>Capturar foto del paquete
           </div>
-          <button onClick={onClose} style={{width:28,height:28,borderRadius:"50%",border:"none",background:"rgba(255,255,255,0.12)",color:"#fff",fontSize:18,fontWeight:700,cursor:"pointer",lineHeight:1}}>×</button>
+          <button className="mcl" onClick={onClose}>✕</button>
         </div>
         {/* Body */}
         <div style={{padding:16,flex:1,overflow:"auto",background:"#000"}}>
@@ -2106,14 +2118,14 @@ function PhotoGalleryModal({ wrId, currentUser, onClose }){
   const cajaKeys = Object.keys(grupos).sort((a,b)=>Number(a)-Number(b));
 
   return (
-    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",zIndex:9998,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
-      <div style={{background:"var(--bg2)",borderRadius:12,overflow:"hidden",width:"100%",maxWidth:900,boxShadow:"var(--shadow2)",display:"flex",flexDirection:"column",maxHeight:"92vh"}}>
-        <div style={{padding:"14px 18px",borderBottom:"1px solid var(--b1)",background:"var(--navy)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-          <div style={{fontSize:15,fontWeight:700,display:"flex",alignItems:"center",gap:8}}>
-            <span style={{fontSize:18}}><Ico e="📷" solo/></span> Fotos del WR {wrId}
-            {!loading && <span style={{background:"var(--gold)",fontSize:12,padding:"2px 8px",borderRadius:10}}>{fotos.length}</span>}
+    <div className="ov" style={{zIndex:9998}}>
+      <div className="modal mlg" style={{padding:0,overflow:"hidden",boxShadow:"var(--shadow2)",display:"flex",flexDirection:"column",maxHeight:"92vh"}}>
+        <div className="mhd" style={{padding:"16px 22px 10px",margin:0}}>
+          <div className="mt">
+            <Ico e="📷" sp/>Fotos del WR <Num t="wr" id={wrId} nolink/>
+            {!loading && <span style={{background:"var(--gold)",fontSize:12,padding:"2px 8px",borderRadius:10,marginLeft:8,verticalAlign:"middle"}}>{fotos.length}</span>}
           </div>
-          <button onClick={onClose} style={{width:28,height:28,borderRadius:"50%",border:"none",background:"rgba(255,255,255,0.12)",color:"#fff",fontSize:18,fontWeight:700,cursor:"pointer",lineHeight:1}}>×</button>
+          <button className="mcl" onClick={onClose}>✕</button>
         </div>
         <div style={{padding:16,flex:1,overflow:"auto"}}>
           {loading ? (
@@ -2222,6 +2234,10 @@ export default function SistemaCarga(){
   const [sortCol,setSortCol]=useState("fecha");
   const [sortDir,setSortDir]=useState("desc");
   const [page,setPage]=useState(1);
+  const [pags,setPags]=useState({});
+  const pagNum=(k,n)=>Math.min(pags[k]||1,Math.max(1,Math.ceil(n/PAGE_SIZE)));
+  const pagSlice=(k,rows)=>{const pg=pagNum(k,rows.length);return rows.slice((pg-1)*PAGE_SIZE,pg*PAGE_SIZE);};
+  const pagPie=(k,n)=><Paginador pg={pagNum(k,n)} n={n} onPg={x=>setPags(p=>({...p,[k]:x}))}/>;
   const [scanV,setScanV]=useState("");
   const [scanLog,setScanLog]=useState([]); // {tracking, carrier, ts, registered}
   const [scanCarrier,setScanCarrier]=useState("");
@@ -2940,6 +2956,7 @@ export default function SistemaCarga(){
   const seqPrev=String(_wrNextSeq+(wrSecInicio-1)).padStart(7,"0");
 
   // Genera el próximo número de casillero basado en los existentes
+  const sigIdRegistro=(esUser,lista=clients)=>{const pre=esUser?"U":"C";const n=Math.max(0,...lista.map(c=>{const m=String(c.id||"").match(new RegExp(`^${pre}-(\\d+)$`));return m?+m[1]:0;}));return `${pre}-${String(n+1).padStart(3,"0")}`;};
   const nextCasillero=(lista=clients)=>{
     const nums=lista
       .filter(c=>c.casillero&&/\d/.test(c.casillero))
@@ -2988,7 +3005,7 @@ export default function SistemaCarga(){
     const parts=parseNombreCompleto(rem);
     const cas=nextCasillero();
     const nc={
-      id:`CLI-${Date.now()}`,tipo:"cliente",
+      id:sigIdRegistro(false),tipo:"cliente",
       primerNombre:parts.primerNombre,segundoNombre:parts.segundoNombre,
       primerApellido:parts.primerApellido,segundoApellido:parts.segundoApellido,
       cedula:doc,dir:String(wrf.remitenteDir||"").trim(),municipio:"",estado:"",pais:"",cp:"",
@@ -3026,7 +3043,7 @@ export default function SistemaCarga(){
     if(!editWR&&!_clienteId&&wrf.consignee.trim()){
       const parts=parseNombreCompleto(wrf.consignee);
       const cas=nextCasillero();
-      const newId=`CLI-${Date.now()}`;
+      const newId=sigIdRegistro(false);
       const newCliente={
         id:newId,tipo:"cliente",
         primerNombre:parts.primerNombre,segundoNombre:parts.segundoNombre,
@@ -3556,7 +3573,7 @@ export default function SistemaCarga(){
       </div>
       <div className="card" style={{padding:0}}>
         <div className="ct-wrap">
-          <table className="ct">
+          <><table className="ct">
             <thead><tr>
               <th>ID</th><th>Tipo</th><th>Nombre Completo</th><th>ID Identificación</th>
               <th>Casillero</th><th>Dirección</th><th>Municipio</th><th>Estado</th>
@@ -3565,7 +3582,7 @@ export default function SistemaCarga(){
               {(hasPerm("editar_cliente")||hasPerm("borrar_cliente"))&&<th>Acc.</th>}
             </tr></thead>
             <tbody>
-              {filteredCl.map(c=>{
+              {pagSlice("clientes",filteredCl).map(c=>{
                 const CT_LABEL={agente:"Agente",vendedor_agente:"Vend. Agente",autonomo:"Autónomo",oficina:"Oficina",vendedor_oficina:"Vend. Oficina",matriz:"Matriz"};
                 const CT_COLOR={agente:"#E8F0FE",vendedor_agente:"#FFF0E8",autonomo:"#E8FEF0",oficina:"#F0E8FE",vendedor_oficina:"#FEF0E8",matriz:"#EEF0F4"};
                 const CT_TEXT={agente:"var(--cyan)",vendedor_agente:"var(--gold2)",autonomo:"var(--green)",oficina:"var(--purple)",vendedor_oficina:"#D0700A",matriz:"var(--t3)"};
@@ -3604,7 +3621,7 @@ export default function SistemaCarga(){
                 );
               })}
             </tbody>
-          </table>
+          </table>{pagPie("clientes",(filteredCl).length)}</>
         </div>
       </div>
     </div>
@@ -3979,7 +3996,6 @@ export default function SistemaCarga(){
                             <div className="fl" style={{marginBottom:2,fontSize:10}}>Tracking {ti+1}</div>
                             <div style={{display:"flex",gap:4}}>
                               <input className="fi" style={{padding:"4px 6px",fontFamily:"'DM Mono',monospace",fontSize:12,flex:1}} value={caja[tfield]||""} onChange={e=>swCaja(idx,tfield,e.target.value.toUpperCase())} placeholder="Escanear…"/>
-                              {ti===0&&<button type="button" className="scan-btn" style={{padding:"4px 8px",fontSize:13}} title="Escanear código de barras (requiere lector USB)"><Ico e="📡" solo/></button>}
                             </div>
                           </div>
                         </Fragment>
@@ -4185,15 +4201,15 @@ export default function SistemaCarga(){
                 <span style={{fontWeight:700,color:"var(--t3)",textTransform:"uppercase",fontSize:11,letterSpacing:.5}}><Ico e="📝" sp/>Entrega:</span>
                 {dnsRel.length===0
                   ?<span style={{color:"var(--t4)"}}>sin nota</span>
-                  :dnsRel.map(n=>(<span key={n.id} style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",background:"#E8F0FE",padding:"2px 6px",borderRadius:4,border:"1px solid #B8C8F0"}}>{n.id}</span>))}
+                  :dnsRel.map(n=>(<Num t="entrega" id={n.id} key={n.id}/>))}
               </div>
               <div style={{display:"flex",alignItems:"center",gap:6}}>
                 <span style={{fontWeight:700,color:"var(--t3)",textTransform:"uppercase",fontSize:11,letterSpacing:.5}}><Ico e="💰" sp/>Facturación:</span>
                 {facsRel.length===0
                   ?<span style={{color:"var(--t4)"}}>sin factura</span>
                   :facsRel.map(f=>(
-                      <span key={f.id} style={{display:"inline-flex",alignItems:"center",gap:4,fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",background:"#FFF9E7",padding:"2px 6px",borderRadius:4,border:"1px solid #F0C040"}}>
-                        {f.id} <span style={{fontSize:11,color:statusFacColor(f.status),fontWeight:700}}>{statusFacLabel[f.status]||f.status}</span>
+                      <span key={f.id} style={{display:"inline-flex",alignItems:"center",gap:6}}>
+                        <Num t="factura" id={f.id}/> <span style={{fontSize:11,color:statusFacColor(f.status),fontWeight:700}}>{statusFacLabel[f.status]||f.status}</span>
                         <span style={{fontSize:11,color:"var(--t2)"}}>· {f.moneda} {(parseFloat(f.total)||0).toFixed(2)}{(parseFloat(f.saldo)||0)>0?` (saldo ${f.moneda} ${(parseFloat(f.saldo)||0).toFixed(2)})`:""}</span>
                       </span>
                     ))}
@@ -4575,7 +4591,7 @@ export default function SistemaCarga(){
             <tbody>
               {showStatModal.rows.map(w=>(
                 <tr key={w.id}>
-                  <td><span className="c-wr">{w.id}</span></td>
+                  <td><Num t="wr" id={w.id}/></td>
                   <td><div className="c-dt">{fmtDate(w.fecha)}</div></td>
                   <td><div className="c-name">{w.consignee}</div></td>
                   <td><span className="c-cas">{w.casillero}</span></td>
@@ -4626,6 +4642,17 @@ export default function SistemaCarga(){
     });
   };
   // Branch al que pertenece un cliente — misma regla que la columna "Branch" del Dashboard.
+  NUM_ABRIR=(t,id,solo)=>{
+    const ir=(x,fn)=>{if(!x)return false;if(!solo)fn(x);return true;};
+    if(t==="wr")return ir(wrList.find(w=>w.id===id),setSelWR);
+    if(t==="guia")return ir(consolList.find(g=>g.id===id),setRdArchView);
+    if(t==="factura")return ir(facturas.find(f=>f.id===id),setFacPrint);
+    if(t==="entrega")return ir(deliveryNotes.find(n=>n.id===id),setDnPrint);
+    if(t==="release")return ir(cargoReleases.find(c=>c.id===id),setCrPrint);
+    if(t==="pickup")return ir(pickupList.find(p=>p.id===id),setPuPrint);
+    if(t==="recibo")return ir(pagos.some(p=>p.reciboId===id)?id:null,setReciboVer);
+    return false;
+  };
   const branchDeCliente=(cl)=>{
     const ct=cl?.clienteTipo||"";
     if(ct==="matriz")return{ic:<Ico e="🏛️"/>,nombre:empresaNombre||"Casa Matriz",tipo:"Casa Matriz"};
@@ -5264,18 +5291,14 @@ export default function SistemaCarga(){
                         <td style={{padding:"7px 8px"}}><StBadge st={w.status}/></td>
                         {/* N° WR — clickeable para abrir detalle */}
                         <td style={{padding:"7px 8px"}}>
-                          <div onClick={()=>setSelWR(w)} style={{fontFamily:"'DM Mono',monospace",fontWeight:700,fontSize:13,color:"var(--navy)",background:"#EEF3FF",padding:"2px 6px",borderRadius:4,border:"1px solid #B8C8F0",display:"inline-block",cursor:"pointer",textDecoration:"underline"}}
-                            onMouseEnter={e=>e.currentTarget.style.background="#D8E8FF"}
-                            onMouseLeave={e=>e.currentTarget.style.background="#EEF3FF"}>
-                            {w.id}
-                          </div>
+                          <Num t="wr" id={w.id}/>
                         </td>
                         {/* N° Guía — justo después del N° WR */}
                         {!hideMiddle&&(
                           <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--purple)",fontWeight:600}}>
                             {(()=>{const gid=getNumGuia(w);const g=consolList.find(c=>c.id===gid);
                               return g
-                                ? <span onClick={()=>setRdArchView(g)} title={`Abrir guía ${g.id}`} style={{cursor:"pointer",textDecoration:"underline"}}>{g.id}</span>
+                                ? <Num t="guia" id={g.id}/>
                                 : gid;})()}
                           </td>
                         )}
@@ -5403,7 +5426,7 @@ export default function SistemaCarga(){
           const ids=crCliModal.selectedIds;
           return (
             <div className="ov" onClick={()=>setCrCliModal(null)}>
-              <div className="modal" style={{maxWidth:820}} onClick={e=>e.stopPropagation()}>
+              <div className="modal mmd" onClick={e=>e.stopPropagation()}>
                 <div className="mhd">
                   <div className="mt"><Ico e="🚀" sp/>Cargo Release — {fullName(cli)}</div>
                   <button className="mcl" onClick={()=>setCrCliModal(null)}>✕</button>
@@ -5455,7 +5478,7 @@ export default function SistemaCarga(){
           const ids=rpqCliModal.selectedIds;
           return (
             <div className="ov" onClick={()=>setRpqCliModal(null)}>
-              <div className="modal" style={{maxWidth:820}} onClick={e=>e.stopPropagation()}>
+              <div className="modal mmd" onClick={e=>e.stopPropagation()}>
                 <div className="mhd">
                   <div className="mt"><Ico e="🔁" sp/>Reempaque — {fullName(cli)}</div>
                   <button className="mcl" onClick={()=>setRpqCliModal(null)}>✕</button>
@@ -5792,7 +5815,7 @@ export default function SistemaCarga(){
         </div>
       ):(
         <div className="card" style={{padding:0}}>
-          <table className="ct">
+          <><table className="ct">
             <thead><tr>
               <th>N° Guía</th><th>Fecha</th><th>Origen</th><th>Destino</th><th>Tipo Envío</th>
               <th style={{textAlign:"center"}}>Cont.</th><th style={{textAlign:"center"}}>WR</th><th style={{textAlign:"center"}}>Cajas</th>
@@ -5802,13 +5825,13 @@ export default function SistemaCarga(){
               {consolList.filter(c=>guiaEnFiltro(c,lmFilter)).length===0&&(
                 <tr><td colSpan={14} style={{textAlign:"center",padding:40,color:"var(--t3)"}}>No hay guías en este grupo.</td></tr>
               )}
-              {consolList.filter(c=>guiaEnFiltro(c,lmFilter)).map(c=>{
+              {pagSlice("guias",consolList.filter(c=>guiaEnFiltro(c,lmFilter))).map(c=>{
                 const st=getStatus(guiaCode(c));
                 return (
                 <tr key={c.id} style={{cursor:"default"}}>
                   {/* N° de guía — único punto que abre el detalle (ver / editar / borrar / etiquetas) */}
                   <td onClick={()=>setRdArchView(c)} title="Abrir guía" style={{cursor:"pointer"}}>
-                    <span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",background:"#fff",padding:"3px 8px",borderRadius:5,border:"2px solid var(--navy)",fontSize:13,whiteSpace:"nowrap"}}>{c.id}</span>
+                    <Num t="guia" id={c.id}/>
                   </td>
                   <td style={{fontFamily:"'DM Mono',monospace",fontSize:12,whiteSpace:"nowrap"}}>{fmtDate(c.fecha)}</td>
                   <td style={{fontWeight:600,color:"var(--t1)",whiteSpace:"nowrap"}}>{guiaOrigen(c)}</td>
@@ -5832,7 +5855,7 @@ export default function SistemaCarga(){
                 );
               })}
             </tbody>
-          </table>
+          </table>{pagPie("guias",(consolList.filter(c=>guiaEnFiltro(c,lmFilter))).length)}</>
         </div>
       )}
 
@@ -5912,7 +5935,7 @@ export default function SistemaCarga(){
                     style={{display:"inline-flex",alignItems:"center",gap:6,margin:"3px",padding:"5px 10px",background:"#fff",border:"2px solid #1A8A4A",borderRadius:6,cursor:"pointer",transition:"all .12s"}}
                     onMouseEnter={e=>{e.currentTarget.style.background="#E8F8EE";e.currentTarget.style.transform="scale(1.02)";}}
                     onMouseLeave={e=>{e.currentTarget.style.background="#fff";e.currentTarget.style.transform="";}}>
-                    <span style={{fontFamily:"'DM Mono',monospace",fontWeight:800,color:"var(--navy)",fontSize:14}}>{w.id}</span>
+                    <Num t="wr" id={w.id}/>
                     <span style={{color:"var(--t2)",fontSize:13}}>{w.consignee}</span>
                     <span style={{color:"var(--t3)",fontSize:12,background:"var(--bg4)",padding:"1px 5px",borderRadius:3}}>{w.cajas}cj · {w.pesoLb}lb</span>
                     <span style={{color:"var(--green)",fontSize:14}}>+</span>
@@ -6011,7 +6034,7 @@ export default function SistemaCarga(){
                             {cont.wr.map((w,wi)=>(
                               <tr key={w.id}>
                                 <td style={{color:"var(--t3)"}}>{wi+1}</td>
-                                <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",fontSize:12}}>{w.id}</span></td>
+                                <td><Num t="wr" id={w.id}/></td>
                                 <td style={{fontWeight:600}}>{w.consignee}</td>
                                 <td style={{textAlign:"center"}}>{w.cajas}</td>
                                 <td style={{fontFamily:"'DM Mono',monospace",fontWeight:600}}>{w.pesoLb}lb</td>
@@ -6119,7 +6142,6 @@ export default function SistemaCarga(){
     const Q=sinAcentos(etqSearch.trim());
     const hay=txt=>!Q||sinAcentos(txt).includes(Q);
     const porFecha=(a,b)=>new Date(b.fecha||0)-new Date(a.fecha||0);
-    const MAX=30;
     const btn=(l,fn,extra={})=><button className="btn-s" style={{fontSize:13,padding:"5px 12px",whiteSpace:"nowrap",...extra}} onClick={fn}>{l}</button>;
     const mono={fontFamily:"'DM Mono',monospace",fontWeight:700};
     const imprimirWR=w=>{setSelWR(w);setTimeout(()=>window.print(),600);};
@@ -6135,40 +6157,40 @@ export default function SistemaCarga(){
     const TIPOS=[["wr","WR"],["guia","Guía"],["entrega","Nota de entrega"],["egreso","Cargo Release"],["factura","Factura"],["recibo","Recibo"],["pickup","Pick-up"]];
     let filas=[];
     if(tipo==="wr")filas=wrList.filter(w=>hay(`${w.id} ${w.consignee||""} ${w.casillero||""} ${w.shipper||""} ${(w.dims||[]).map(d=>d.tracking).join(" ")} ${w.tracking||""}`))
-      .sort((a,b)=>String(b.id).localeCompare(String(a.id))).slice(0,MAX).map(w=>({k:w.id,
-        izq:<><span style={{...mono,color:"var(--navy)"}}>{w.id}</span><div style={{fontSize:13,color:"var(--t3)"}}>{w.consignee||"—"}{w.casillero?` · #${w.casillero}`:""} · {w.cajas||1} caja{(w.cajas||1)===1?"":"s"}</div></>,
+      .sort((a,b)=>porFecha(a,b)||String(b.id).localeCompare(String(a.id))).map(w=>({k:w.id,
+        izq:<><Num t="wr" id={w.id}/><div style={{fontSize:13,color:"var(--t3)"}}>{w.consignee||"—"}{w.casillero?` · #${w.casillero}`:""} · {w.cajas||1} caja{(w.cajas||1)===1?"":"s"}</div></>,
         estado:<StBadge st={w.status}/>,
         acc:<>{btn("WR",()=>imprimirWR(w))}{btn("Etiquetas",()=>setShowLabels({wr:w,dims:w.dims||[],remitente:w.shipper||"",tipoEnvio:w.tipoEnvio||""}))}{btn("Documentos",()=>docAbrir(w))}</>}));
     if(tipo==="guia")filas=guiasVis.filter(g=>hay(`${g.id} ${g.destino||""} ${g.tipoEnvio||""} ${g.awb||""} ${g.bl||""}`))
-      .sort((a,b)=>String(b.id).localeCompare(String(a.id))).slice(0,MAX).map(g=>({k:g.id,
-        izq:<><span style={{...mono,color:"var(--purple)"}}>{g.id}</span><div style={{fontSize:13,color:"var(--t3)"}}>{g.destino||"—"} · {g.tipoEnvio||"—"} · {(g.containers||[]).length} cont. · {g.totalWR||0} WR</div></>,
+      .sort((a,b)=>String(b.id).localeCompare(String(a.id))).map(g=>({k:g.id,
+        izq:<><Num t="guia" id={g.id}/><div style={{fontSize:13,color:"var(--t3)"}}>{g.destino||"—"} · {g.tipoEnvio||"—"} · {(g.containers||[]).length} cont. · {g.totalWR||0} WR</div></>,
         estado:<span style={{fontSize:12,color:"var(--t2)",fontWeight:600}}>{g.status||"—"}</span>,
         acc:<>{btn("Guía",()=>printGuiaArchivada(g))}{btn("Etiquetas",()=>setShowConsolLabels({guia:g,containers:g.containers||[],remitente:empresaNombre}))}</>}));
     if(tipo==="entrega")filas=deliveryNotes.filter(n=>tocaVis(n.wrIds)&&hay(`${n.id} ${n.receptorNombre||""} ${n.consignatario||""} ${n.guiaId||""} ${(n.wrIds||[]).join(" ")}`))
-      .sort(porFecha).slice(0,MAX).map(n=>({k:n.id,
-        izq:<><span style={{...mono,color:"var(--navy)"}}>{n.id}</span><div style={{fontSize:13,color:"var(--t3)"}}>{fmtDate(n.fecha)} · {n.receptorEntidad?.nombre||n.receptorNombre||n.consignatario||"—"} · {(n.wrIds||[]).length} WR{n.guiaId?` · guía ${n.guiaId}`:""}</div></>,
+      .sort(porFecha).map(n=>({k:n.id,
+        izq:<><Num t="entrega" id={n.id}/><div style={{fontSize:13,color:"var(--t3)"}}>{fmtDate(n.fecha)} · {n.receptorEntidad?.nombre||n.receptorNombre||n.consignatario||"—"} · {(n.wrIds||[]).length} WR{n.guiaId?` · guía ${n.guiaId}`:""}</div></>,
         estado:n.anulado?<span style={{fontSize:12,fontWeight:700,color:"var(--red)"}}>Anulada</span>:<span style={{fontSize:12,fontWeight:700,color:"var(--green)"}}>{n.tipo==="despacho"?"Despacho":"Entrega"}</span>,
         acc:verImp(()=>setDnPrint(n),()=>{setDnPrint(n);setTimeout(()=>window.print(),600);})}));
     if(tipo==="egreso")filas=cargoReleases.filter(c=>tocaVis(c.wrIds)&&hay(`${c.id} ${c.agenteCarga||""} ${c.contacto||""} ${(c.wrIds||[]).join(" ")}`))
-      .sort(porFecha).slice(0,MAX).map(c=>({k:c.id,
-        izq:<><span style={{...mono,color:"var(--navy)"}}>{c.id}</span><div style={{fontSize:13,color:"var(--t3)"}}>{fmtDate(c.fecha)} · {c.agenteCarga||c.contacto||"—"} · {(c.wrIds||[]).length} WR</div></>,
+      .sort(porFecha).map(c=>({k:c.id,
+        izq:<><Num t="release" id={c.id}/><div style={{fontSize:13,color:"var(--t3)"}}>{fmtDate(c.fecha)} · {c.agenteCarga||c.contacto||"—"} · {(c.wrIds||[]).length} WR</div></>,
         estado:c.anulado?<span style={{fontSize:12,fontWeight:700,color:"var(--red)"}}>Anulado</span>:null,
         acc:verImp(()=>setCrPrint(c),()=>{setCrPrint(c);setTimeout(()=>window.print(),600);})}));
     if(tipo==="factura")filas=facsVis.filter(f=>f.status!=="borrador"&&hay(`${f.id} ${f.receptorNombre||""} ${f.receptorCasillero||""} ${f.receptorDoc||""} ${(f.wrIds||[]).join(" ")}`))
-      .sort((a,b)=>(b.numero||0)-(a.numero||0)).slice(0,MAX).map(f=>({k:f.id,
-        izq:<><span style={{...mono,color:"var(--navy)"}}>{f.tipo==="nota_credito"?"NC ":""}{f.id}</span><div style={{fontSize:13,color:"var(--t3)"}}>{fmtDate(f.fechaEmision||f.fecha)} · {f.receptorNombre||"—"} · {fmtMoney(f.total,f.moneda)}</div></>,
+      .sort((a,b)=>(b.numero||0)-(a.numero||0)).map(f=>({k:f.id,
+        izq:<><Num t="factura" id={f.id} pre={f.tipo==="nota_credito"?"NC ":""}/><div style={{fontSize:13,color:"var(--t3)"}}>{fmtDate(f.fechaEmision||f.fecha)} · {f.receptorNombre||"—"} · {fmtMoney(f.total,f.moneda)}</div></>,
         estado:<span className={`st ${FAC_STATUS_CLS[f.status]||"s5"}`}><span className="st-dot"/>{(FAC_STATUS_LABEL[f.status]||f.status).replace(/^\S+\s/,"")}</span>,
         acc:verImp(()=>setFacPrint(f),()=>printFactura(f))}));
     if(tipo==="recibo"){const m=new Map();pagosVis.forEach(p=>{if(!p.reciboId)return;if(!m.has(p.reciboId))m.set(p.reciboId,{id:p.reciboId,fecha:p.fecha,quien:p.pagadorNombre||(pagadorDePago(p)||{}).nombre||"—",monto:0,moneda:p.moneda||"USD",anulado:true,facs:new Set()});
         const r=m.get(p.reciboId);if(!p.anulado){r.anulado=false;if(p.tipoPago!=="saldo_favor")r.monto+=p.monto;}if(p.facturaId)r.facs.add(p.facturaId);});
-      filas=[...m.values()].filter(r=>hay(`${r.id} ${r.quien} ${[...r.facs].join(" ")}`)).sort(porFecha).slice(0,MAX).map(r=>({k:r.id,
-        izq:<><span style={{...mono,color:"var(--navy)"}}>{r.id}</span><div style={{fontSize:13,color:"var(--t3)"}}>{fmtDate(r.fecha)} · {r.quien} · {fmtMoney(r.monto,r.moneda)}{r.facs.size?` · fact. ${[...r.facs].join(", ")}`:""}</div></>,
+      filas=[...m.values()].filter(r=>hay(`${r.id} ${r.quien} ${[...r.facs].join(" ")}`)).sort(porFecha).map(r=>({k:r.id,
+        izq:<><Num t="recibo" id={r.id}/><div style={{fontSize:13,color:"var(--t3)"}}>{fmtDate(r.fecha)} · {r.quien} · {fmtMoney(r.monto,r.moneda)}{r.facs.size?` · fact. ${[...r.facs].join(", ")}`:""}</div></>,
         estado:r.anulado?<span style={{fontSize:12,fontWeight:700,color:"var(--red)"}}>Anulado</span>:null,
         acc:verImp(()=>verRecibo(r.id),()=>printRecibo(r.id))}));}
     if(tipo==="pickup")filas=pickupList.filter(p=>(!alcanceUsr||p.solicitanteId===currentUser.id||alcanceUsr.clienteOk(clients.find(c=>c.id===p.clienteId)))
         &&hay(`${p.id} ${p.clienteNombre} ${p.casillero} ${p.direccion} ${p.contacto} ${p.wrId}`))
-      .sort((a,b)=>new Date(b.fecha)-new Date(a.fecha)).slice(0,MAX).map(p=>({k:p.id,
-        izq:<><span style={{...mono,color:"var(--navy)"}}>{p.id}</span><div style={{fontSize:13,color:"var(--t3)"}}>{fmtDate(p.fecha)} · {p.clienteNombre||"—"} · {puBultos(p)} bulto{puBultos(p)===1?"":"s"}{p.wrId?` · WR ${p.wrId}`:""}</div></>,
+      .sort((a,b)=>new Date(b.fecha)-new Date(a.fecha)).map(p=>({k:p.id,
+        izq:<><Num t="pickup" id={p.id}/><div style={{fontSize:13,color:"var(--t3)"}}>{fmtDate(p.fecha)} · {p.clienteNombre||"—"} · {puBultos(p)} bulto{puBultos(p)===1?"":"s"}{p.wrId?` · WR ${p.wrId}`:""}</div></>,
         estado:puChip(p.status),
         acc:verImp(()=>setPuPrint(p),()=>{setPuPrint(p);setTimeout(()=>window.print(),600);})}));
     const ph={pickup:"Buscar pick-up, cliente, dirección o WR…",wr:"Buscar WR, nombre, casillero o tracking…",guia:"Buscar guía, destino, AWB o BL…",entrega:"Buscar nota, receptor, guía o WR…",egreso:"Buscar cargo release, agente de carga o WR…",factura:"Buscar factura, cliente, casillero o WR…",recibo:"Buscar recibo, cliente o factura…"}[tipo];
@@ -6182,13 +6204,13 @@ export default function SistemaCarga(){
       </div>
       <div className="card" style={{padding:0}}>
         {filas.length===0?<div style={{textAlign:"center",padding:40,color:"var(--t3)"}}>{Q?"Sin coincidencias.":"No hay documentos."}</div>:
-        filas.map(f=>(
+        pagSlice("imp_"+tipo,filas).map(f=>(
           <div key={f.k} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 14px",borderBottom:"1px solid var(--b1)",flexWrap:"wrap"}}>
             <div style={{flex:1,minWidth:220}}>{f.izq}</div>
             {f.estado}
             <div style={{display:"flex",gap:6}}>{f.acc}</div>
           </div>))}
-        {!Q&&filas.length===MAX&&<div style={{padding:10,textAlign:"center",fontSize:13,color:"var(--t3)"}}>Últimos {MAX}</div>}
+        {pagPie("imp_"+tipo,filas.length)}
       </div>
     </div>
     );
@@ -7174,13 +7196,13 @@ export default function SistemaCarga(){
               {hasPerm("crear_agente")&&<button className="btn-p" style={{fontSize:13}} onClick={()=>{setAgForm({nombre:"",ciudad:"",pais:"",tel:"",email:"",contacto:"",notas:""});setShowNewAgente(true);}}>+ Nuevo Agente</button>}
             </div>
             <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,overflow:"hidden"}}>
-              <table className="ct">
+              <><table className="ct">
                 <thead><tr>
                   <th>Código</th><th>Nombre</th><th>Ciudad</th><th>País</th><th>Teléfono</th><th>Email</th><th>Contacto</th><th>Estado</th><th>Acc.</th>
                 </tr></thead>
                 <tbody>
                   {agentes.length===0&&<tr><td colSpan={9} style={{textAlign:"center",padding:30,color:"var(--t3)"}}>No hay agentes registrados.</td></tr>}
-                  {agentes.map(a0=>{const a=conDatos(a0);return(
+                  {pagSlice("agentes",agentes).map(a0=>{const a=conDatos(a0);return(
                     <tr key={a.id} style={{cursor:"pointer"}} onClick={()=>setVerAgente(a0)}>
                       <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",background:"#EEF3FF",padding:"2px 8px",borderRadius:4,border:"1px solid #B8C8F0"}}>{a.codigo}</span></td>
                       <td style={{fontWeight:600}}>{a.nombre}</td>
@@ -7198,7 +7220,7 @@ export default function SistemaCarga(){
                     </tr>
                   );})}
                 </tbody>
-              </table>
+              </table>{pagPie("agentes",(agentes).length)}</>
             </div>
             {verAgente&&(()=>{const a=conDatos(verAgente);const us=usuariosDe(verAgente);
               const cls=clients.filter(c=>c.tipo==="cliente"&&["agente","vendedor_agente"].includes(c.clienteTipo)&&c.agenteId===verAgente.id);
@@ -7206,7 +7228,7 @@ export default function SistemaCarga(){
               const D=(l,v)=><div><div className="fl">{l}</div><div style={{fontSize:14,fontWeight:600}}>{v||"—"}</div></div>;
               return(
               <div className="ov" onClick={()=>setVerAgente(null)}>
-                <div className="modal" style={{maxWidth:620}} onClick={e=>e.stopPropagation()}>
+                <div className="modal mmd" onClick={e=>e.stopPropagation()}>
                   <div className="mhd"><div className="mt"><Ico e="🤝" sp/>{a.codigo} — {a.nombre}</div><button className="mcl" onClick={()=>setVerAgente(null)}>✕</button></div>
                   <div className="fgrid g2" style={{gap:12,marginBottom:14}}>
                     {D("Ciudad",a.ciudad)}{D("País",a.pais)}{D("Teléfono",a.tel)}{D("Email",a.email)}{D("Contacto",a.contacto)}{D("Estado",a.activo!==false?"Activo":"Inactivo")}
@@ -7227,7 +7249,7 @@ export default function SistemaCarga(){
               </div>);})()}
             {showNewAgente&&(
               <div className="ov">
-                <div className="modal" style={{maxWidth:520}} onClick={e=>e.stopPropagation()}>
+                <div className="modal msm" onClick={e=>e.stopPropagation()}>
                   <div className="mhd"><div className="mt">{editAgente?"Editar Agente":"Nuevo Agente"}</div><button className="mcl" onClick={()=>{setShowNewAgente(false);setEditAgente(null);}}>✕</button></div>
                   <div className="fgrid g2" style={{marginBottom:10}}>
                     <div className="fg full"><div className="fl">Nombre del Agente *</div><input className="fi" value={agForm.nombre} onChange={e=>setAgForm(p=>({...p,nombre:e.target.value.toUpperCase()}))} placeholder="Nombre completo o razón social"/></div>
@@ -7273,13 +7295,13 @@ export default function SistemaCarga(){
               {hasPerm("crear_oficina")&&<button className="btn-p" style={{fontSize:13}} onClick={()=>{setOfForm({nombre:"",ciudad:"",pais:"",tel:"",email:"",contacto:"",notas:"",tipo:"Matriz"});setShowNewOficina(true);}}>+ Nueva Oficina</button>}
             </div>
             <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,overflow:"hidden"}}>
-              <table className="ct">
+              <><table className="ct">
                 <thead><tr>
                   <th>Código</th><th>Nombre</th><th>Tipo</th><th>Ciudad</th><th>País</th><th>Teléfono</th><th>Email</th><th>Contacto</th><th>Estado</th><th>Acc.</th>
                 </tr></thead>
                 <tbody>
                   {oficinas.length===0&&<tr><td colSpan={10} style={{textAlign:"center",padding:30,color:"var(--t3)"}}>No hay oficinas registradas aún.</td></tr>}
-                  {oficinas.map(o=>(
+                  {pagSlice("oficinas",oficinas).map(o=>(
                     <tr key={o.id}>
                       <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--purple)",background:"#F3EFFE",padding:"2px 8px",borderRadius:4,border:"1px solid #C0A0F0"}}>{o.codigo}</span></td>
                       <td style={{fontWeight:600}}>{o.nombre}</td>
@@ -7303,11 +7325,11 @@ export default function SistemaCarga(){
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table>{pagPie("oficinas",(oficinas).length)}</>
             </div>
             {showNewOficina&&(
               <div className="ov">
-                <div className="modal" style={{maxWidth:520}} onClick={e=>e.stopPropagation()}>
+                <div className="modal msm" onClick={e=>e.stopPropagation()}>
                   <div className="mhd"><div className="mt">{editOficina?"Editar Oficina":"Nueva Oficina"}</div><button className="mcl" onClick={()=>{setShowNewOficina(false);setEditOficina(null);}}>✕</button></div>
                   <div className="fgrid g2" style={{marginBottom:10}}>
                     <div className="fg full"><div className="fl">Nombre de la Oficina *</div><input className="fi" value={ofForm.nombre} onChange={e=>setOfForm(p=>({...p,nombre:e.target.value.toUpperCase()}))} placeholder="Ej: Oficina Valencia"/></div>
@@ -7416,13 +7438,13 @@ export default function SistemaCarga(){
                   <input className="fi" style={{marginLeft:"auto",width:220,fontSize:13,padding:"6px 8px"}} placeholder="Buscar origen o destino…" value={tafQ} onChange={e=>setTafQ(e.target.value)}/>
                   <select className="fs" style={{width:160,fontSize:13}} value={tafTipoFil} onChange={e=>setTafTipoFil(e.target.value)}><option value="">Todos los envíos</option>{SEND_TYPES.map(t=><option key={t} value={t}>{t}</option>)}</select>
                 </div>
-              <table className="ct">
+              <><table className="ct">
                 <thead><tr>
                   <th>Origen</th><th>Destino</th><th>Tipo Envío</th><th>Monto</th><th>Mínimo</th><th>Moneda</th><th>Estado</th><th>Acc.</th>
                 </tr></thead>
                 <tbody>
                   {lista.length===0&&<tr><td colSpan={8} style={{textAlign:"center",padding:30,color:"var(--t3)"}}>{Q||tafTipoFil?"Sin coincidencias.":"Sin tarifas."}</td></tr>}
-                  {lista.map(t=>{
+                  {pagSlice("tarifas",lista).map(t=>{
                     const esAereo=tipoEsAereo(t.tipoEnvio);
                     const esMaritimo=tipoEsMaritimo(t.tipoEnvio);
                     const sy=cSym(t.moneda);
@@ -7445,13 +7467,13 @@ export default function SistemaCarga(){
                     );
                   })}
                 </tbody>
-              </table>
+              </table>{pagPie("tarifas",(lista).length)}</>
               </div>
             </div>);
             })()}
             {showNewTarifa&&(
               <div className="ov">
-                <div className="modal" style={{maxWidth:780}} onClick={e=>e.stopPropagation()}>
+                <div className="modal mmd" onClick={e=>e.stopPropagation()}>
                   <div className="mhd"><div className="mt">{editTarifa?"Editar Tarifa":"Nuevas Tarifas"}</div><button className="mcl" onClick={()=>setShowNewTarifa(false)}>✕</button></div>
                   <div className="sdiv">APLICA A</div>
                   <div className="fgrid g2" style={{marginBottom:10}}>
@@ -7550,12 +7572,12 @@ export default function SistemaCarga(){
               <button className="btn-s" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>window.print()}><Ico e="🖨" sp/>Exportar</button>
             </div>
             <div style={{maxHeight:"60vh",overflowY:"auto"}}>
-              <table className="ct">
+              <><table className="ct">
                 <thead><tr>
                   <th>Fecha / Hora</th><th>Usuario</th><th>Rol</th><th>Acción</th><th>Detalle</th>
                 </tr></thead>
                 <tbody>
-                  {actLog.filter(a=>!actFilter||a.user.toLowerCase().includes(actFilter.toLowerCase())||a.action.toLowerCase().includes(actFilter.toLowerCase())||a.detail.toLowerCase().includes(actFilter.toLowerCase())).map((a,i)=>(
+                  {pagSlice("actividad",actLog.filter(a=>!actFilter||a.user.toLowerCase().includes(actFilter.toLowerCase())||a.action.toLowerCase().includes(actFilter.toLowerCase())||a.detail.toLowerCase().includes(actFilter.toLowerCase()))).map((a,i)=>(
                     <tr key={i}>
                       <td style={{fontFamily:"'DM Mono',monospace",fontSize:12,whiteSpace:"nowrap"}}>{fmtDate(a.ts)} {fmtTime(a.ts)}</td>
                       <td style={{fontWeight:600,color:"var(--navy)"}}>{a.user}</td>
@@ -7565,7 +7587,7 @@ export default function SistemaCarga(){
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table>{pagPie("actividad",(actLog.filter(a=>!actFilter||a.user.toLowerCase().includes(actFilter.toLowerCase())||a.action.toLowerCase().includes(actFilter.toLowerCase())||a.detail.toLowerCase().includes(actFilter.toLowerCase()))).length)}</>
             </div>
           </div>
         )}
@@ -7661,7 +7683,7 @@ export default function SistemaCarga(){
                     onMouseLeave={e=>{if(trkSelected?.id!==w.id)e.currentTarget.style.background=""}}>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
-                        <span style={{fontFamily:"'DM Mono',monospace",fontWeight:800,fontSize:15,color:"var(--navy)",background:"#EEF3FF",padding:"2px 7px",borderRadius:4,border:"1px solid #B8C8F0"}}>{w.id}</span>
+                        <Num t="wr" id={w.id}/>
                         <StBadge st={w.status}/>
                       </div>
                       <div style={{fontSize:15,fontWeight:600,color:"var(--t1)"}}>{w.consignee}</div>
@@ -7944,26 +7966,26 @@ export default function SistemaCarga(){
 
       <div className="card" style={{padding:0}}>
         {lista.length===0?<div style={{textAlign:"center",padding:40,color:"var(--t3)"}}>{Q?"Sin coincidencias.":"No hay solicitudes."}</div>:(
-        <table className="ct">
+        <><table className="ct">
           <thead><tr><th>N°</th><th>Para</th><th>Dirección</th><th>Fecha</th><th>Bultos</th><th>Recoge</th>{esEmpleadoPU&&<th>Pidió</th>}<th>Estado</th></tr></thead>
-          <tbody>{lista.map(p=>(
+          <tbody>{pagSlice("pickups",lista).map(p=>(
             <tr key={p.id} style={{cursor:"pointer"}} onClick={()=>{setPickupSel(p);setPuConf({fecha:p.fechaProgramada||p.fechaDeseada||"",transportista:p.transportista||"",chofer:p.chofer||"",monto:p.monto?String(p.monto):"",moneda:p.moneda||"USD"});}}>
-              <td style={{...mono,fontWeight:700,color:"var(--navy)"}}>{p.id}</td>
+              <td style={{...mono,fontWeight:700,color:"var(--navy)"}}><Num t="pickup" id={p.id}/></td>
               <td style={{fontWeight:600}}>{p.clienteNombre||"—"}{p.casillero&&<span style={{...mono,color:"var(--gold2)",marginLeft:6,fontSize:12}}>#{p.casillero}</span>}</td>
               <td style={{fontSize:13,color:"var(--t2)",maxWidth:260,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{p.direccion||"—"}</td>
               <td style={{...mono,fontSize:13}}>{p.fechaProgramada||p.fechaDeseada||"—"}{p.franja&&<div style={{fontSize:11,color:"var(--t3)"}}>{p.franja}</div>}</td>
               <td style={{textAlign:"center",fontWeight:700}}>{puBultos(p)}</td>
               <td style={{fontSize:13}}>{puRecoge(p)||"—"}</td>
               {esEmpleadoPU&&<td style={{fontSize:12,color:"var(--t2)"}}>{p.solicitanteNombre||"—"}</td>}
-              <td>{puChip(p.status)}{p.wrId&&<div style={{...mono,fontSize:11,color:"var(--t3)",marginTop:2}}>WR {p.wrId}</div>}</td>
+              <td>{puChip(p.status)}{p.wrId&&<div style={{...mono,fontSize:11,color:"var(--t3)",marginTop:2}}>WR <Num t="wr" id={p.wrId}/></div>}</td>
             </tr>))}</tbody>
-        </table>)}
+        </table>{pagPie("pickups",(lista).length)}</>)}
       </div>
 
       {/* DETALLE */}
       {sel&&(
         <div className="ov" onClick={()=>setPickupSel(null)}>
-          <div className="modal mlg" style={{maxWidth:820,width:"96%"}} onClick={e=>e.stopPropagation()}>
+          <div className="modal mmd" onClick={e=>e.stopPropagation()}>
             <div className="mhd"><div className="mt"><Ico e="🚐" sp/>Pick-up {sel.id} {puChip(sel.status)}</div><button className="mcl" onClick={()=>setPickupSel(null)}>✕</button></div>
             <div className="mbd" style={{maxHeight:"74vh",overflow:"auto"}}>
               <div className="fgrid g2" style={{gap:12,marginBottom:12}}>
@@ -9289,11 +9311,11 @@ export default function SistemaCarga(){
                   {(ctaDesde||ctaHasta)&&<button className="btn-s" style={{fontSize:12,padding:"3px 10px"}} onClick={()=>{setCtaDesde("");setCtaHasta("");}}>Todo</button>}
                 </div>
                 {movs.length===0?<div style={{textAlign:"center",padding:30,color:"var(--t3)"}}>Sin movimientos.</div>:(
-                <table className="ct">
+                <><table className="ct">
                   <thead><tr><th>Fecha</th><th>Documento</th><th>Detalle</th><th style={{textAlign:"right"}}>Debe</th><th style={{textAlign:"right"}}>Haber</th><th style={{textAlign:"right"}}>Saldo</th><th></th></tr></thead>
                   <tbody>
                     {d0&&<tr style={{background:"var(--bg3)"}}><td></td><td colSpan={4} style={{fontWeight:700}}>Saldo anterior</td><td style={{...mono,textAlign:"right",fontWeight:800}}>{saldoTxt(anterior)}</td><td></td></tr>}
-                    {vis.map((x,i)=>{const rid=x.pagos?.[0]?.reciboId;const comp=x.pagos?.find(p=>p.comprobanteUrl)?.comprobanteUrl;return(
+                    {pagSlice("ctaMovs",vis).map((x,i)=>{const rid=x.pagos?.[0]?.reciboId;const comp=x.pagos?.find(p=>p.comprobanteUrl)?.comprobanteUrl;return(
                       <tr key={i}>
                         <td style={{...mono,fontSize:13,whiteSpace:"nowrap"}}>{fmtDate(x.fecha)}</td>
                         <td style={{fontWeight:700,fontSize:13,whiteSpace:"nowrap"}}>{x.doc}{x.factura&&x.factura.status==="pagada"&&<span style={{marginLeft:6,fontSize:11,color:"var(--green)"}}>✓ pagada</span>}</td>
@@ -9312,7 +9334,7 @@ export default function SistemaCarga(){
                         </td>
                       </tr>);})}
                   </tbody>
-                </table>)}
+                </table>{pagPie("ctaMovs",(vis).length)}</>)}
               </div>
 
               {["agente","autonomo"].includes(pg.tipo)&&(
@@ -9322,12 +9344,12 @@ export default function SistemaCarga(){
                   {puede&&pend.length>0&&<button className="btn-p" style={{fontSize:13,padding:"5px 12px",marginLeft:"auto"}} onClick={()=>cuadreAcreditar(pg,pend)}><Ico e="⭐" sp/>Acreditar todas ({pend.length})</button>}
                 </div>
                 {cm.length===0?<div style={{textAlign:"center",padding:24,color:"var(--t3)"}}>Sin WR PREPAID cobrados de sus clientes.</div>:(
-                <table className="ct">
+                <><table className="ct">
                   <thead><tr><th>WR</th><th>Factura</th><th>Cliente</th><th style={{textAlign:"right"}}>Cobrado</th><th>Su tarifa</th><th style={{textAlign:"right"}}>Costo</th><th style={{textAlign:"right"}}>Comisión</th><th>Estado</th></tr></thead>
-                  <tbody>{cm.map(x=>{const cl=cliDeWR(x.w);return(
+                  <tbody>{pagSlice("comisiones",cm).map(x=>{const cl=cliDeWR(x.w);return(
                     <tr key={x.ref}>
-                      <td style={{...mono,fontWeight:700}}>{x.w.id}</td>
-                      <td style={mono}>{x.f.id}</td>
+                      <td style={{...mono,fontWeight:700}}><Num t="wr" id={x.w.id}/></td>
+                      <td style={mono}><Num t="factura" id={x.f.id}/></td>
                       <td style={{fontSize:13}}>{cl?fullName(cl):(x.w.consignee||"—")}</td>
                       <td style={{...mono,textAlign:"right"}}>{fmtMoney(x.cobrado,x.moneda)}</td>
                       <td style={{...mono,fontSize:12}}>{x.tf?`${x.tf.id}${x.tf._especial?" (especial)":""}`:"Sin tarifa"}{x.tf&&!x.monedaOk?<span style={{color:"var(--red)",marginLeft:6}}>{x.tf.moneda}</span>:""}</td>
@@ -9342,7 +9364,7 @@ export default function SistemaCarga(){
                           {puede&&<button className="btn-s" style={{fontSize:12,padding:"2px 8px",marginLeft:6,color:"var(--red)",borderColor:"var(--red)"}} onClick={()=>cuadreQuitarComision(pg,x)}>Quitar comisión</button>}</>}
                       </td>
                     </tr>);})}</tbody>
-                </table>)}
+                </table>{pagPie("comisiones",(cm).length)}</>)}
               </div>)}
             </div>
           );
@@ -9479,20 +9501,20 @@ export default function SistemaCarga(){
             </div>
             <div className="card" style={{padding:0}}>
               {facFilt.length===0?<div style={{textAlign:"center",padding:40,color:"var(--t3)"}}>No hay facturas con esos filtros.</div>:(
-                <table className="ct">
+                <><table className="ct">
                   <thead><tr>
                     <th>N° Factura</th><th>Tipo</th><th>Fecha</th><th>Receptor</th>
                     <th>WR / Guía</th><th>Nota Entrega</th>
                     <th>Mon</th><th>Total</th><th>Pagado</th><th>Saldo</th><th>Estado</th><th style={{minWidth:160}}>Acciones</th>
                   </tr></thead>
                   <tbody>
-                    {facFilt.map(f=>{
+                    {pagSlice("facturas",facFilt).map(f=>{
                       const negativa=f.tipo==="nota_credito";
                       // Notas de entrega ligadas (comparten WRs con la factura)
                       const dnsRel=deliveryNotes.filter(n=>!n.anulado&&Array.isArray(n.wrIds)&&Array.isArray(f.wrIds)&&n.wrIds.some(id=>f.wrIds.includes(id)));
                       return(
                         <tr key={f.id}>
-                          <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",fontSize:14}}>{f.id}</span>{f.ncFacturaOrigen&&<div style={{fontSize:11,color:"var(--purple)",fontFamily:"'DM Mono',monospace"}}>← {f.ncFacturaOrigen}</div>}</td>
+                          <td><Num t="factura" id={f.id}/>{f.ncFacturaOrigen&&<div style={{fontSize:11,color:"var(--purple)",fontFamily:"'DM Mono',monospace"}}>← {f.ncFacturaOrigen}</div>}</td>
                           <td><span style={{fontSize:12,padding:"2px 6px",borderRadius:4,background:f.tipo==="nota_credito"?"var(--purple)":(f.tipo==="proforma"?"var(--gold2)":"var(--cyan)"),color:"#fff",fontWeight:700}}>{f.tipo==="nota_credito"?"NC":f.tipo==="proforma"?"PRF":"FAC"}</span></td>
                           <td style={{fontFamily:"'DM Mono',monospace",fontSize:13}}>{fmtDate(f.fecha)}</td>
                           <td style={{fontWeight:600}}>{f.receptorNombre||"—"}<div style={{fontSize:12,color:"var(--gold2)",fontFamily:"'DM Mono',monospace"}}>{f.receptorCasillero||f.receptorDoc||""}</div></td>
@@ -9504,7 +9526,7 @@ export default function SistemaCarga(){
                           <td style={{fontSize:11}}>
                             {dnsRel.length===0
                               ?<span style={{color:"var(--t4)"}}>—</span>
-                              :dnsRel.map(n=>(<div key={n.id} style={{fontFamily:"'DM Mono',monospace",color:"var(--navy)",fontWeight:600}}>{n.id}</div>))}
+                              :dnsRel.map(n=>(<Num t="entrega" id={n.id} key={n.id}/>))}
                           </td>
                           <td style={{textAlign:"center",fontWeight:700,fontSize:13}}>{f.moneda}</td>
                           <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:negativa?"var(--purple)":"var(--navy)"}}>{fmtMoney(f.total,f.moneda)}</td>
@@ -9524,7 +9546,7 @@ export default function SistemaCarga(){
                       );
                     })}
                   </tbody>
-                </table>
+                </table>{pagPie("facturas",(facFilt).length)}</>
               )}
             </div>
           </>
@@ -9549,7 +9571,6 @@ export default function SistemaCarga(){
                 return ctaSoloSaldo==="todas"||Q?true:ctaSoloSaldo==="con"?tiene:!tiene;})
               .sort((a,b)=>Object.values(b.debe).reduce((t,v)=>t+v,0)-Object.values(a.debe).reduce((t,v)=>t+v,0)||Object.values(b.favor).reduce((t,v)=>t+v,0)-Object.values(a.favor).reduce((t,v)=>t+v,0)||String(a.pg.nombre).localeCompare(String(b.pg.nombre)));
             const tot=(campo)=>{const o={};filas.forEach(r=>Object.entries(r[campo]).forEach(([mn,v])=>{o[mn]=r2((o[mn]||0)+v);}));return fm(o).join(" / ")||"—";};
-            const MAX=300;
             return(
               <div className="card" style={{padding:0}}>
                 <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
@@ -9561,10 +9582,10 @@ export default function SistemaCarga(){
                   {puede&&<button className="btn-p" style={{fontSize:13,padding:"6px 12px",marginLeft:"auto"}} onClick={()=>cobroAbrir(null)}><Ico e="💵" sp/>Recibir pago</button>}
                 </div>
                 {filas.length===0?<div style={{textAlign:"center",padding:40,color:"var(--t3)"}}>{Q?"Sin coincidencias.":ctaSoloSaldo==="con"?"No hay cuentas con saldo. ":"No hay cuentas."}</div>:(
-                <table className="ct">
+                <><table className="ct">
                   <thead><tr><th>Cuenta</th><th style={{textAlign:"right"}}>Nos debe</th><th style={{textAlign:"right"}}>Le debemos</th><th></th></tr></thead>
                   <tbody>
-                    {filas.slice(0,MAX).map(r=>(
+                    {pagSlice("cuentas",filas).map(r=>(
                       <tr key={pagKey(r.pg)} style={{cursor:"pointer"}} onClick={()=>{setCuadreSel(r.pg);setCuadrePago(null);setCtaDesde("");setCtaHasta("");}}>
                         <td><span style={{fontWeight:700}}>{IC[r.pg.tipo]||<Ico e="👤"/>} {r.pg.nombre||"—"}</span>
                           <div style={{fontSize:12,color:"var(--t3)"}}>{TL[r.pg.tipo]||"Cliente"}{r.pg.casillero?` · #${r.pg.casillero}`:""}</div></td>
@@ -9578,8 +9599,7 @@ export default function SistemaCarga(){
                       <td style={{...mono,textAlign:"right",fontWeight:800,color:"var(--green)"}}>{tot("favor")}</td><td></td>
                     </tr>
                   </tbody>
-                </table>)}
-                {filas.length>MAX&&<div style={{padding:10,textAlign:"center",fontSize:13,color:"var(--t3)"}}>Se muestran {MAX} de {filas.length}. Usa el buscador.</div>}
+                </table>{pagPie("cuentas",(filas).length)}</>)}
               </div>
             );
           }
@@ -9659,12 +9679,12 @@ export default function SistemaCarga(){
               </div>)}
               {grupos.length>0&&(
               <div className="card" style={{padding:0}}>
-                <table className="ct">
+                <><table className="ct">
                   <thead><tr><th>Fecha</th><th>Documento</th><th>Quién</th><th>Forma</th><th>Referencia</th><th style={{textAlign:"right"}}>Monto</th><th>Usuario</th><th></th></tr></thead>
-                  <tbody>{grupos.map(g=>(
+                  <tbody>{pagSlice("caja",grupos).map(g=>(
                     <tr key={g.id}>
                       <td style={{...mono,fontSize:13,whiteSpace:"nowrap"}}>{fmtDate(g.fecha)} {fmtTime(g.fecha)}</td>
-                      <td style={{...mono,fontSize:13}}>{g.id}</td>
+                      <td style={{...mono,fontSize:13}}><Num t="recibo" id={g.id}/></td>
                       <td style={{fontWeight:600,fontSize:13}}>{g.quien}</td>
                       <td style={{fontSize:13}}>{ml(g.metodo)}</td>
                       <td style={{...mono,fontSize:12,color:"var(--t2)"}}>{g.ref||"—"}</td>
@@ -9676,7 +9696,7 @@ export default function SistemaCarga(){
                         {(hasPerm("anular_pago")||hasPerm("cobrar"))&&<button className="btn-s" style={{fontSize:12,padding:"2px 6px",color:"var(--red)",borderColor:"var(--red)"}} title="Anular" onClick={()=>pagoAnularGrupo(pagos.filter(p=>!p.anulado&&(g.pagos[0].reciboId?p.reciboId===g.pagos[0].reciboId:p.id===g.id)))}>✕</button>}
                       </td>
                     </tr>))}</tbody>
-                </table>
+                </table>{pagPie("caja",(grupos).length)}</>
               </div>)}
             </div>
           );
@@ -9721,7 +9741,7 @@ export default function SistemaCarga(){
                     return (
                       <div key={g.id} className="card" onClick={()=>{setFacGuiaSel(g.id);setFacGuiaBuscar("");}} style={{cursor:"pointer",padding:14,border:"1px solid var(--b1)"}}>
                         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-                          <span style={{fontFamily:"'DM Mono',monospace",fontWeight:800,fontSize:18,color:"var(--navy)"}}>{g.id}</span><TypeBadge t={g.tipoEnvio}/>
+                          <Num t="guia" id={g.id}/><TypeBadge t={g.tipoEnvio}/>
                         </div>
                         <div style={{fontSize:14,color:"var(--t2)",marginBottom:8}}><Ico e="📍" sp/>{g.destino||"—"} · {fmtDate(g.fecha)}</div>
                         <div style={{height:8,background:"var(--bg4)",borderRadius:4,overflow:"hidden",marginBottom:8}}><div style={{width:`${pct}%`,height:"100%",background:"var(--green)"}}/></div>
@@ -9753,7 +9773,7 @@ export default function SistemaCarga(){
             <div>
               <div className="card" style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",marginBottom:12}}>
                 <button className="btn-s" onClick={()=>setFacGuiaSel(null)}>← Guías</button>
-                <span style={{fontFamily:"'DM Mono',monospace",fontWeight:800,fontSize:20,color:"var(--navy)"}}>{g.id}</span>
+                <Num t="guia" id={g.id}/>
                 <TypeBadge t={g.tipoEnvio}/><span style={{fontSize:14,color:"var(--t2)"}}><Ico e="📍" sp/>{g.destino||"—"}</span>
                 <span style={{marginLeft:"auto",display:"flex",gap:8,flexWrap:"wrap"}}>
                   {puedeFac&&pendTot.length>0&&<button className="btn-p" onClick={()=>{const n=facFromGuia(g,true);if(n.length)window.alert(`${n.length} factura(s) en borrador.`);}}><Ico e="⚡" sp/>Facturar todo lo pendiente ({pendTot.length})</button>}
@@ -9784,7 +9804,7 @@ export default function SistemaCarga(){
                             {est&&<div style={{color:"var(--t3)",fontWeight:600}} title="Estimado de lo pendiente">≈ {fmtMoney(est.total,est.moneda)}</div>}
                           </td>
                           <td>{gr.facturas.map(f=><div key={f.id} style={{display:"flex",gap:6,alignItems:"center",marginBottom:3}}>
-                                <span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)"}}>{f.id}</span>{chipF(f)}</div>)}
+                                <Num t="factura" id={f.id}/>{chipF(f)}</div>)}
                               {gr.pendientes.length>0&&<span style={{fontSize:12,fontWeight:700,color:"var(--orange)"}}>{gr.pendientes.length} WR sin facturar</span>}</td>
                           <td><div style={{display:"flex",gap:6,flexWrap:"wrap",justifyContent:"flex-end"}}>
                             {gr.pendientes.length>0&&puedeFac&&<button className="btn-p" style={{fontSize:13,padding:"5px 12px"}} onClick={()=>facturarUno(gr)}><Ico e="🧾" sp/>Facturar</button>}
@@ -9805,11 +9825,11 @@ export default function SistemaCarga(){
               {prepaid.length>0&&(
                 <div className="card" style={{padding:0,overflow:"hidden",marginTop:12}}>
                   <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",fontSize:15,fontWeight:700,color:"var(--navy)"}}><Ico e="💳" sp/>PREPAID ({prepaid.length})</div>
-                  <table className="ct">
+                  <><table className="ct">
                     <thead><tr><th>WR</th><th>Consignatario</th><th>Paga</th><th>Factura</th><th>Total</th><th>Estado</th><th></th></tr></thead>
-                    <tbody>{prepaid.map(w=>{const f=facPrepaid.find(x=>x.wrIds.includes(w.id));return(
+                    <tbody>{pagSlice("prepaid",prepaid).map(w=>{const f=facPrepaid.find(x=>x.wrIds.includes(w.id));return(
                       <tr key={w.id}>
-                        <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700}}>{w.id}</td>
+                        <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700}}><Num t="wr" id={w.id}/></td>
                         <td style={{fontSize:13}}>{w.consignee||"—"}{w.casillero?<span style={{color:"var(--gold2)",marginLeft:6,fontFamily:"'DM Mono',monospace"}}>#{w.casillero}</span>:null}</td>
                         <td style={{fontSize:13}}>{f?.receptorNombre||w.shipper||"—"}</td>
                         <td style={{fontFamily:"'DM Mono',monospace"}}>{f?.id||"—"}</td>
@@ -9818,7 +9838,7 @@ export default function SistemaCarga(){
                         <td style={{whiteSpace:"nowrap"}}>{f?<button className="btn-s" style={{fontSize:12,padding:"3px 6px"}} onClick={()=>setFacPrint(f)}><Ico e="🖨️" solo/></button>
                           :puedeFac&&<button className="btn-p" style={{fontSize:12,padding:"3px 8px"}} onClick={()=>{if(!w.tipoEnvio){window.alert("Asigna primero el tipo de envío del WR.");return;}facOpenNew(facConstruirWR(w));}}><Ico e="💰" sp/>Facturar</button>}</td>
                       </tr>);})}</tbody>
-                  </table>
+                  </table>{pagPie("prepaid",(prepaid).length)}</>
                 </div>)}
             </div>
           );
@@ -9886,10 +9906,10 @@ export default function SistemaCarga(){
               <div className="card" style={{padding:0}}>
                 <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",fontFamily:"Arial,Helvetica,sans-serif",fontSize:16,fontWeight:700,color:"var(--navy)"}}><Ico e="👥" sp/>Quién debe cuánto</div>
                 {deudores.length===0?<div style={{textAlign:"center",padding:30,color:"var(--t3)"}}>No hay deudores. <Ico e="✅"/></div>:(
-                  <table className="ct">
+                  <><table className="ct">
                     <thead><tr><th>Tipo</th><th>Receptor</th><th>Mon</th><th>Facturas</th><th>Total</th><th>Pagado</th><th>Saldo</th></tr></thead>
                     <tbody>
-                      {deudores.map((d,i)=>(
+                      {pagSlice("deudores",deudores).map((d,i)=>(
                         <tr key={i}>
                           <td style={{fontSize:13,fontWeight:700,color:"var(--purple)"}}>{(REC_TYPES.find(r=>r.k===d.tipo)||{l:d.tipo}).l}</td>
                           <td style={{fontWeight:600}}>{d.nombre}<div style={{fontSize:12,color:"var(--gold2)",fontFamily:"'DM Mono',monospace"}}>{d.casillero||""}</div></td>
@@ -9901,7 +9921,7 @@ export default function SistemaCarga(){
                         </tr>
                       ))}
                     </tbody>
-                  </table>
+                  </table>{pagPie("deudores",(deudores).length)}</>
                 )}
               </div>
             </div>
@@ -10313,7 +10333,7 @@ export default function SistemaCarga(){
                   :candidatos.map(w=>(
                     <tr key={w.id} className={rpqSel.includes(w.id)?"sel":""} onClick={()=>toggleSel(w.id)} style={{cursor:"pointer"}}>
                       <td style={{textAlign:"center"}}><input type="checkbox" checked={rpqSel.includes(w.id)} onChange={()=>toggleSel(w.id)}/></td>
-                      <td><span className="c-wr">{w.id}</span></td>
+                      <td><Num t="wr" id={w.id}/></td>
                       <td><span className="c-dt">{fmtDate(w.fecha)}</span></td>
                       <td><span className="c-name">{w.consignee||"—"}</span></td>
                       <td><span className="c-cas">{w.casillero||"—"}</span></td>
@@ -10352,14 +10372,14 @@ export default function SistemaCarga(){
           </div>
           {rpqHistOpen&&(
             <div style={{maxHeight:"55vh",overflow:"auto",border:"1px solid var(--b1)",borderRadius:8}}>
-              <table className="wt">
+              <><table className="wt">
                 <thead><tr><th>N° WR</th><th>Consignatario</th><th>Casillero</th><th>Fecha</th><th>Reempacado en</th><th>Estado</th></tr></thead>
                 <tbody>
                   {yaReempacados.length===0
                     ?<tr><td colSpan={6} style={{textAlign:"center",padding:30,color:"var(--t3)"}}>No hay reempaques que coincidan con los filtros.</td></tr>
-                    :yaReempacados.map(w=>(
+                    :pagSlice("reempacados",yaReempacados).map(w=>(
                       <tr key={w.id}>
-                        <td><span className="c-wr">{w.id}</span></td>
+                        <td><Num t="wr" id={w.id}/></td>
                         <td>{w.consignee||"—"}</td>
                         <td><span className="c-cas">{w.casillero||"—"}</span></td>
                         <td>{fmtDate(w.fecha)}</td>
@@ -10368,7 +10388,7 @@ export default function SistemaCarga(){
                       </tr>
                     ))}
                 </tbody>
-              </table>
+              </table>{pagPie("reempacados",(yaReempacados).length)}</>
             </div>
           )}
         </div>
@@ -11262,7 +11282,7 @@ export default function SistemaCarga(){
         return(
           <div key={c.id} className="card" style={{marginBottom:12}}>
             <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:10}}>
-              <span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",background:"#EEF3FF",padding:"3px 8px",borderRadius:4,border:"1px solid #B8C8F0",fontSize:14}}>{c.id}</span>
+              <Num t="guia" id={c.id}/>
               <TypeBadge t={c.tipoEnvio}/>
               <span style={{fontWeight:700,color:"var(--t1)"}}>{c.destino||"—"}</span>
               <span style={{fontSize:12,color:"var(--t3)"}}>{c.totalWR||0} WR · {c.totalCajas||0} cajas · {c.totalLb||0}lb</span>
@@ -11355,7 +11375,7 @@ export default function SistemaCarga(){
                             {(ct.wr||[]).map((w,wi)=>(
                               <tr key={w.id}>
                                 <td style={{color:"var(--t3)"}}>{wi+1}</td>
-                                <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)"}}>{w.id}</span></td>
+                                <td><Num t="wr" id={w.id}/></td>
                                 <td style={{fontWeight:600}}>{w.consignee}</td>
                                 <td style={{textAlign:"center"}}>{w.cajas}</td>
                                 <td style={{fontFamily:"'DM Mono',monospace",fontWeight:600}}>{w.pesoLb}lb</td>
@@ -11448,7 +11468,7 @@ export default function SistemaCarga(){
       if(!q)return true;
       return [w.id,w.consignee,w.casillero,trkAll(w)].some(v=>String(v||"").toLowerCase().includes(q));
     });
-    const enAlmacen=wrList.filter(w=>w.status?.code==="17").slice(0,30);
+    const enAlmacen=wrList.filter(w=>w.status?.code==="17");
     // Render de las acciones por WR en el checklist — depende del estado actual
     const renderChkActions=(w)=>{
       const c=chkCode(w);
@@ -11537,13 +11557,13 @@ export default function SistemaCarga(){
             {guiasRecep.length===0?(
               <div style={{textAlign:"center",padding:30,color:"var(--t3)",fontSize:13}}>No hay guías en Tránsito 2 o en destino.</div>
             ):(
-              <table className="ct">
+              <><table className="ct">
                 <thead><tr>
                   <th>N° Guía</th><th>Fecha</th><th>Destino</th><th>Tipo</th><th>WR</th><th>Cajas</th>
                   <th>Vuelo/Barco</th><th>AWB / BL</th><th>Estado</th><th>Recibidos</th>
                 </tr></thead>
                 <tbody>
-                  {guiasRecep.map(c=>{
+                  {pagSlice("guiasRecep",guiasRecep).map(c=>{
                     const ids=(c.containers||[]).flatMap(ct=>(ct.wr||[]).map(w=>w.id));
                     const ws=wrList.filter(w=>ids.includes(w.id));
                     const rec=ws.filter(w=>["17","20","20.1","20.2","21","22","23","25"].includes(w.status?.code||"")).length;
@@ -11552,7 +11572,7 @@ export default function SistemaCarga(){
                     return(
                       <tr key={c.id} onClick={()=>setRdSelGuia(sel?"":c.id)} style={{cursor:"pointer"}}
                         title={sel?"Click para cerrar el checklist":"Click para abrir el checklist"}>
-                        <td style={sb}><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",background:"#EEF3FF",padding:"2px 6px",borderRadius:4,border:`${sel?2:1}px solid ${sel?"var(--navy)":"#B8C8F0"}`,fontSize:13}}>{c.id}</span></td>
+                        <td style={sb}><Num t="guia" id={c.id}/></td>
                         <td style={{fontFamily:"'DM Mono',monospace",fontSize:12,...sb}}>{fmtDate(c.fecha)}</td>
                         <td style={{fontWeight:600,color:"var(--t1)",...sb}}>{c.destino}</td>
                         <td style={sb}><TypeBadge t={c.tipoEnvio}/></td>
@@ -11566,7 +11586,7 @@ export default function SistemaCarga(){
                     );
                   })}
                 </tbody>
-              </table>
+              </table>{pagPie("guiasRecep",(guiasRecep).length)}</>
             )}
           </div>
 
@@ -11577,7 +11597,7 @@ export default function SistemaCarga(){
             return(
             <div className="card" style={{marginBottom:14}}>
               <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:8,flexWrap:"wrap"}}>
-                <div style={{fontSize:15,fontWeight:700,color:"var(--navy)"}}><Ico e="📋" sp/>Checklist {guiaSel.id} ({checklist.length} WR)</div>
+                <div style={{fontSize:15,fontWeight:700,color:"var(--navy)"}}><Ico e="📋" sp/>Checklist <Num t="guia" id={guiaSel.id}/> ({checklist.length} WR)</div>
                 {/* Stats inline */}
                 <div style={{display:"flex",gap:8,fontSize:13,alignItems:"center"}}>
                   <span style={{background:"#E8F5E9",color:"#2E7D32",padding:"2px 8px",borderRadius:10,fontWeight:700,border:"1px solid #A5D6A7"}}>✓ {nRecibidos} recibidos</span>
@@ -11617,7 +11637,7 @@ export default function SistemaCarga(){
                         return(
                           <tr key={w.id} style={{background:rowBg}}>
                             <td style={{textAlign:"center",fontSize:12,color:"var(--t3)",fontFamily:"'DM Mono',monospace"}}>{i+1}</td>
-                            <td><span className="c-wr">{w.id}</span></td>
+                            <td><Num t="wr" id={w.id}/></td>
                             <td><span className="c-name">{w.consignee||"—"}</span></td>
                             <td><span className="c-cas">{w.casillero||"—"}</span></td>
                             <td><span className="c-trk">{w.tracking||"—"}</span></td>
@@ -11633,14 +11653,14 @@ export default function SistemaCarga(){
               {/* SOBRANTES DE ESTA GUÍA */}
               {sobrantesGuia.length>0&&(
                 <div style={{marginTop:12,border:"1px dashed #CE93D8",borderRadius:8,padding:10,background:"#FCF5FF"}}>
-                  <div style={{fontSize:14,fontWeight:700,color:"#7B1FA2",marginBottom:6}}><Ico e="➕" sp/>Sobrantes detectados en {guiaSel.id} ({sobrantesGuia.length})</div>
+                  <div style={{fontSize:14,fontWeight:700,color:"#7B1FA2",marginBottom:6}}><Ico e="➕" sp/>Sobrantes detectados en <Num t="guia" id={guiaSel.id}/> ({sobrantesGuia.length})</div>
                   <div style={{maxHeight:"40vh",overflow:"auto"}}>
                     <table className="wt">
                       <thead><tr><th>N° WR</th><th>Consignatario</th><th>Tracking</th><th style={{width:260}}>Resolución</th></tr></thead>
                       <tbody>
                         {sobrantesGuia.map(w=>(
                           <tr key={w.id}>
-                            <td><span className="c-wr">{w.id}</span></td>
+                            <td><Num t="wr" id={w.id}/></td>
                             <td>{w.consignee||"—"}</td>
                             <td><span className="c-trk">{w.tracking||"—"}</span></td>
                             <td>{hasPerm("hacer_recepcion_dest")?(
@@ -11695,7 +11715,7 @@ export default function SistemaCarga(){
                       ?<tr><td colSpan={6} style={{textAlign:"center",padding:40,color:"var(--t3)"}}>No hay WR pendientes de recepción.</td></tr>
                       :candidatos.map(w=>(
                         <tr key={w.id}>
-                          <td><span className="c-wr">{w.id}</span></td>
+                          <td><Num t="wr" id={w.id}/></td>
                           <td><span className="c-name">{w.consignee||"—"}</span></td>
                           <td><span className="c-cas">{w.casillero||"—"}</span></td>
                           <td><span className="c-trk">{w.tracking||"—"}</span></td>
@@ -11715,12 +11735,12 @@ export default function SistemaCarga(){
                 <div style={{fontSize:15,fontWeight:700,color:"var(--navy)"}}><Ico e="📦" sp/>Últimos WR recibidos en Almacén</div>
               </div>
               <div style={{maxHeight:"50vh",overflow:"auto",border:"1px solid var(--b1)",borderRadius:8}}>
-                <table className="wt">
+                <><table className="wt">
                   <thead><tr><th>N° WR</th><th>Consignatario</th><th>Casillero</th><th>Tracking</th><th>Estado</th><th style={{width:170}}>Acciones</th></tr></thead>
                   <tbody>
-                    {enAlmacen.map(w=>(
+                    {pagSlice("almacen",enAlmacen).map(w=>(
                       <tr key={w.id}>
-                        <td><span className="c-wr">{w.id}</span></td>
+                        <td><Num t="wr" id={w.id}/></td>
                         <td>{w.consignee||"—"}</td>
                         <td>{w.casillero||"—"}</td>
                         <td><span className="c-trk">{w.tracking||"—"}</span></td>
@@ -11747,7 +11767,7 @@ export default function SistemaCarga(){
                       </tr>
                     ))}
                   </tbody>
-                </table>
+                </table>{pagPie("almacen",(enAlmacen).length)}</>
               </div>
             </div>
           )}
@@ -11800,18 +11820,18 @@ export default function SistemaCarga(){
             {archFiltradas.length===0?(
               <div style={{textAlign:"center",padding:60,color:"var(--t3)"}}>{guiasArchivadas.length===0?"Aún no hay guías recibidas/archivadas.":"Ninguna guía coincide con los filtros."}</div>
             ):(
-              <table className="ct">
+              <><table className="ct">
                 <thead><tr>
                   <th>N° Guía</th><th>Destino</th><th>Tipo</th><th>WR</th><th>Cajas</th>
                   <th>Peso lb</th><th>Ft³</th><th>Fecha creación</th><th>Recibida en almacén</th>
                   <th style={{width:240}}>Acciones</th>
                 </tr></thead>
                 <tbody>
-                  {archFiltradas.map(c=>(
+                  {pagSlice("archivo",archFiltradas).map(c=>(
                     <tr key={c.id} style={{cursor:"pointer"}} onClick={()=>setRdArchView(c)}
                       onMouseEnter={e=>{Array.from(e.currentTarget.cells).forEach(cell=>cell.style.background="#EEF3FF");}}
                       onMouseLeave={e=>{Array.from(e.currentTarget.cells).forEach(cell=>cell.style.background="");}}>
-                      <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",background:"#EEF3FF",padding:"2px 6px",borderRadius:4,border:"1px solid #B8C8F0",fontSize:13}}>{c.id}</span></td>
+                      <td><Num t="guia" id={c.id}/></td>
                       <td style={{fontWeight:600,color:"var(--t1)"}}>{c.destino}</td>
                       <td><TypeBadge t={c.tipoEnvio}/></td>
                       <td style={{textAlign:"center",fontWeight:700,color:"var(--navy)"}}>{c.totalWR||0}</td>
@@ -11867,7 +11887,7 @@ export default function SistemaCarga(){
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table>{pagPie("archivo",(archFiltradas).length)}</>
             )}
           </div>
           </>
@@ -11960,7 +11980,7 @@ export default function SistemaCarga(){
       };
       return(
         <div className="ov">
-          <div className="modal" style={{maxWidth:480}}>
+          <div className="modal msm">
             <div className="mhd"><div className="mt">{titulo} — {w.id}</div><button className="mcl" onClick={()=>setAlModal(null)}>✕</button></div>
             <div style={{padding:"14px 16px",display:"flex",flexDirection:"column",gap:10}}>
               <div style={{fontSize:13,color:"var(--t2)"}}>{k.cli?fullName(k.cli):(w.consignee||"—")} · {w.casillero||""} · {w.cajas||0} caja{w.cajas===1?"":"s"} · valor declarado ${(w.valor||0).toFixed(2)}</div>
@@ -12012,7 +12032,7 @@ export default function SistemaCarga(){
           <div style={{textAlign:"center",padding:40,color:"var(--t3)"}}>{alTab==="abiertas"?(q?"Ningún caso abierto coincide.":"No hay faltantes ni sobrantes abiertos."):"Aún no hay casos cerrados."}</div>
         ):(
           <div style={{overflowX:"auto"}}>
-          <table className="ct">
+          <><table className="ct">
             <thead><tr>
               <th>Tipo</th><th>N° WR</th><th>Cliente</th><th>Guía</th><th>Estado</th>
               <th>{alTab==="abiertas"?"Abierto":"Cerrado"}</th>
@@ -12021,15 +12041,15 @@ export default function SistemaCarga(){
               <th style={{minWidth:200}}>Última nota</th><th style={{minWidth:220}}>Acciones</th>
             </tr></thead>
             <tbody>
-              {lista.map(k=>{
+              {pagSlice("faltantes",lista).map(k=>{
                 const d=dias(k.inicio?.fecha);
                 return(
                 <tr key={k.w.id}>
                   <td style={{whiteSpace:"nowrap",fontWeight:700,color:k.tipo==="faltante"?"#C62828":"#7B1FA2"}}>{k.tipo==="faltante"?"Faltante":"Sobrante"}</td>
-                  <td><span onClick={()=>setSelWR(k.w)} title="Abrir WR" style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",cursor:"pointer",textDecoration:"underline"}}>{k.w.id}</span></td>
+                  <td><Num t="wr" id={k.w.id}/></td>
                   <td><div style={{fontWeight:600}}>{k.cli?fullName(k.cli):(k.w.consignee||"—")}</div><div style={{fontSize:11,color:"var(--t3)"}}>{k.w.casillero||""}</div></td>
-                  <td style={{whiteSpace:"nowrap"}}>{k.g?<span onClick={()=>setRdArchView(k.g)} title="Abrir guía" style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",cursor:"pointer",textDecoration:"underline"}}>{k.g.id}</span>:"—"}
-                    {k.gCorrecta&&<div style={{fontSize:11,color:"#2E7D32"}}>es de {k.gCorrecta.id}</div>}</td>
+                  <td style={{whiteSpace:"nowrap"}}>{k.g?<Num t="guia" id={k.g.id}/>:"—"}
+                    {k.gCorrecta&&<div style={{fontSize:11,color:"#2E7D32"}}>es de <Num t="guia" id={k.gCorrecta.id}/></div>}</td>
                   <td><StBadge st={k.w.status}/></td>
                   <td style={{whiteSpace:"nowrap",fontSize:12}}>
                     {alTab==="abiertas"
@@ -12043,7 +12063,7 @@ export default function SistemaCarga(){
                 </tr>);
               })}
             </tbody>
-          </table>
+          </table>{pagPie("faltantes",(lista).length)}</>
           </div>
         )}
       </div>
@@ -12127,7 +12147,7 @@ export default function SistemaCarga(){
                   :candidatos.map(w=>(
                     <tr key={w.id} className={crSel.includes(w.id)?"sel":""} onClick={()=>toggleSel(w.id)} style={{cursor:"pointer"}}>
                       <td style={{textAlign:"center"}}><input type="checkbox" checked={crSel.includes(w.id)} onChange={()=>toggleSel(w.id)}/></td>
-                      <td><span className="c-wr">{w.id}</span></td>
+                      <td><Num t="wr" id={w.id}/></td>
                       <td><span className="c-dt">{fmtDate(w.fecha)}</span></td>
                       <td><span className="c-name">{w.consignee||"—"}</span></td>
                       <td><span className="c-cas">{w.casillero||"—"}</span></td>
@@ -12167,7 +12187,7 @@ export default function SistemaCarga(){
           </div>
           {crHistOpen&&(
             <div style={{maxHeight:"60vh",overflow:"auto",border:"1px solid var(--b1)",borderRadius:8}}>
-              <table className="ct">
+              <><table className="ct">
                 <thead><tr>
                   <th>N° Egreso</th><th>Fecha</th><th>Agente</th><th>Contacto</th><th>Vehículo</th>
                   <th style={{textAlign:"center"}}>WR</th><th>Usuario</th><th>Estado</th><th style={{width:200}}>Acciones</th>
@@ -12175,9 +12195,9 @@ export default function SistemaCarga(){
                 <tbody>
                   {historico.length===0?(
                     <tr><td colSpan={9} style={{textAlign:"center",padding:30,color:"var(--t3)"}}>No hay egresos en el rango filtrado.</td></tr>
-                  ):historico.map(c=>(
+                  ):pagSlice("releases",historico).map(c=>(
                     <tr key={c.id} style={{background:c.anulado?"#FFF5F5":""}}>
-                      <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",background:"#EEF3FF",padding:"2px 6px",borderRadius:4,border:"1px solid #B8C8F0",fontSize:13}}>{c.id}</span></td>
+                      <td><Num t="release" id={c.id}/></td>
                       <td style={{fontFamily:"'DM Mono',monospace",fontSize:12}}>{fmtDate(c.fecha)} {fmtTime(c.fecha)}</td>
                       <td style={{fontWeight:600,color:"var(--t1)"}}>{c.agenteCarga||"—"}</td>
                       <td style={{fontSize:13,color:"var(--t2)"}}>{c.contacto||"—"}{c.documento?` · ${c.documento}`:""}</td>
@@ -12200,7 +12220,7 @@ export default function SistemaCarga(){
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table>{pagPie("releases",(historico).length)}</>
             </div>
           )}
         </div>
@@ -12241,7 +12261,7 @@ export default function SistemaCarga(){
                   <div key={g.id} className="card" onClick={()=>{setDnGuiaSel(g.id);setDnBuscar("");setDnAbiertos({});}}
                     style={{cursor:"pointer",padding:14,border:"1px solid var(--b1)"}}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,marginBottom:8}}>
-                      <span style={{fontFamily:"'DM Mono',monospace",fontWeight:800,fontSize:18,color:"var(--navy)"}}>{g.id}</span>
+                      <Num t="guia" id={g.id}/>
                       <TypeBadge t={g.tipoEnvio}/>
                     </div>
                     <div style={{fontSize:14,color:"var(--t2)",marginBottom:10}}><Ico e="📍" sp/>{g.destino||"—"} · {fmtDate(g.fecha)}</div>
@@ -12291,7 +12311,7 @@ export default function SistemaCarga(){
       const nota=dnNotasDeWR(w.id)[0];
       return (
         <span key={w.id} style={{display:"inline-flex",alignItems:"center",gap:6,padding:"3px 8px",borderRadius:6,border:wrCoincide(w)?"2px solid var(--orange)":"1px solid var(--b1)",background:wrCoincide(w)?"#FFF3E0":"var(--bg2)",fontSize:13}}>
-          <span onClick={()=>setSelWR(w)} title="Abrir WR" style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",cursor:"pointer"}}>{w.id}</span>
+          <Num t="wr" id={w.id}/>
           <StBadge st={w.status}/>
           {nota&&<span onClick={()=>setDnPrint(nota)} title={`Imprimir nota ${nota.id}`} style={{cursor:"pointer"}}><Ico e="🖨️" solo/></span>}
         </span>
@@ -12322,7 +12342,7 @@ export default function SistemaCarga(){
       <div>
         <div className="card" style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",marginBottom:12}}>
           <button className="btn-s" onClick={()=>{setDnGuiaSel(null);setDnBuscar("");}}>← Guías</button>
-          <span style={{fontFamily:"'DM Mono',monospace",fontWeight:800,fontSize:20,color:"var(--navy)"}}>{g.id}</span>
+          <Num t="guia" id={g.id}/>
           <TypeBadge t={g.tipoEnvio}/>
           <span style={{fontSize:14,color:"var(--t2)"}}><Ico e="📍" sp/>{g.destino||"—"}</span>
           <span style={{fontSize:14,marginLeft:"auto",display:"flex",gap:12,flexWrap:"wrap"}}>
@@ -12433,19 +12453,19 @@ export default function SistemaCarga(){
           {lista.length===0?(
             <div style={{textAlign:"center",padding:60,color:"var(--t3)"}}>No hay {tipoFiltro==="todos"?"entregas ni despachos":(tipoFiltro==="entrega"?"entregas":"despachos")} registrados.</div>
           ):(
-            <table className="ct">
+            <><table className="ct">
               <thead><tr>
                 <th>N° Nota</th><th>Tipo</th><th>Fecha</th><th>Guía</th><th>Receptor</th><th>Método</th>
                 <th style={{textAlign:"center"}}>WR</th><th>Factura</th><th>Usuario</th><th>Estado</th><th style={{width:200}}>Acciones</th>
               </tr></thead>
               <tbody>
-                {lista.map(n=>{
+                {pagSlice("notas",lista).map(n=>{
                   const facsRel=facturas.filter(f=>f.status!=="anulada"&&Array.isArray(f.wrIds)&&(n.wrIds||[]).some(id=>f.wrIds.includes(id)));
                   const statusBadge={borrador:"Borrador",emitida:"Emitida",pagada_parcial:"Parcial",pagada:"Pagada"};
                   const t=tipoDe(n);
                   return (
                   <tr key={n.id} style={{background:n.anulado?"#FFF5F5":""}}>
-                    <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",background:"#EEF3FF",padding:"2px 6px",borderRadius:4,border:"1px solid #B8C8F0",fontSize:13}}>{n.id}</span></td>
+                    <td><Num t="entrega" id={n.id}/></td>
                     <td>{tipoBadge(t)}</td>
                     <td style={{fontFamily:"'DM Mono',monospace",fontSize:12}}>{fmtDate(n.fecha)} {fmtTime(n.fecha)}</td>
                     <td style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--purple)",fontWeight:600}}>{n.guiaId||"—"}</td>
@@ -12460,7 +12480,7 @@ export default function SistemaCarga(){
                         ?<span style={{color:"var(--t4)"}}>—</span>
                         :facsRel.map(f=>(
                             <div key={f.id} style={{fontFamily:"'DM Mono',monospace",color:"var(--navy)",fontWeight:600}}>
-                              {f.id} <span style={{fontSize:11,color:f.status==="pagada"?"var(--green)":f.status==="pagada_parcial"?"var(--orange)":"var(--t3)",fontWeight:700,marginLeft:4}}>{statusBadge[f.status]||f.status}</span>
+                              <Num t="factura" id={f.id}/> <span style={{fontSize:11,color:f.status==="pagada"?"var(--green)":f.status==="pagada_parcial"?"var(--orange)":"var(--t3)",fontWeight:700,marginLeft:4}}>{statusBadge[f.status]||f.status}</span>
                             </div>
                           ))}
                     </td>
@@ -12481,7 +12501,7 @@ export default function SistemaCarga(){
                   </tr>
                 );})}
               </tbody>
-            </table>
+            </table>{pagPie("notas",(lista).length)}</>
           )}
         </div>
       </div>
@@ -12776,7 +12796,7 @@ export default function SistemaCarga(){
         const f=crIndivModal;
         return (
           <div className="ov" onClick={()=>setCrIndivModal(null)}>
-            <div className="modal" style={{maxWidth:520}} onClick={e=>e.stopPropagation()}>
+            <div className="modal msm" onClick={e=>e.stopPropagation()}>
               <div className="mhd">
                 <div className="mt"><Ico e="🚀" sp/>Cargo Release — {f.wrs.length===1?`WR ${f.wrs[0].id}`:`${f.wrs.length} WR`}</div>
                 <button className="mcl" onClick={()=>setCrIndivModal(null)}>✕</button>
@@ -12813,8 +12833,8 @@ export default function SistemaCarga(){
         const {cr:_cr,wr:_wr,cliente:_cli}=crIndivRecibo;
         const _fecha=new Date(_cr.fecha).toLocaleString("es-VE",{dateStyle:"medium",timeStyle:"short"});
         return (
-          <div className="ov" onClick={()=>setCrIndivRecibo(null)} style={{background:"rgba(0,0,0,0.7)"}}>
-            <div className="modal" style={{maxWidth:640}} onClick={e=>e.stopPropagation()}>
+          <div className="ov" onClick={()=>setCrIndivRecibo(null)}>
+            <div className="modal mmd" onClick={e=>e.stopPropagation()}>
               <div className="mhd no-print">
                 <div className="mt"><Ico e="🧾" sp/>Recibo de Cargo Release</div>
                 <button className="mcl" onClick={()=>setCrIndivRecibo(null)}>✕</button>
@@ -13313,7 +13333,7 @@ export default function SistemaCarga(){
         );
       })()}
 
-      {showNewCl&&<ClientModal agentes={agentes} oficinas={oficinas} autonomos={clients.filter(c=>c.tipo==="usuario"&&c.rol==="F")} allClients={clients} title="Nuevo Registro" initial={{tipo:"cliente",clienteTipo:"matriz",primerNombre:"",segundoNombre:"",primerApellido:"",segundoApellido:"",cedula:"",dir:"",municipio:"",estado:"",pais:"",cp:"",tel1:"",tel2:"",email:"",casillero:"",rol:"I",password:"",...presetDominio()}} onClose={()=>setShowNewCl(false)} onSave={f=>{const esUser=f.tipo==="usuario";const prefix=esUser?"U":"C";const nextNum=clients.filter(c=>c.tipo===(esUser?"usuario":"cliente")).length+1;const newId=`${prefix}-${String(nextNum).padStart(3,"0")}`;const casillero=(!esUser&&!f.casillero)?nextCasillero():f.casillero;const newRec={...f,id:newId,casillero,clienteTipo:f.clienteTipo||"matriz",password:""};setClients(p=>[...p,newRec]);setShowNewCl(false);logAction("Creó registro",`${newId} — ${f.primerNombre} ${f.primerApellido}`);(async()=>{await dbUpsertCliente(newRec);await sincronizarCuenta(newRec,f.password);})();}}/>}
+      {showNewCl&&<ClientModal agentes={agentes} oficinas={oficinas} autonomos={clients.filter(c=>c.tipo==="usuario"&&c.rol==="F")} allClients={clients} title="Nuevo Registro" initial={{tipo:"cliente",clienteTipo:"matriz",primerNombre:"",segundoNombre:"",primerApellido:"",segundoApellido:"",cedula:"",dir:"",municipio:"",estado:"",pais:"",cp:"",tel1:"",tel2:"",email:"",casillero:"",rol:"I",password:"",...presetDominio()}} onClose={()=>setShowNewCl(false)} onSave={f=>{const esUser=f.tipo==="usuario";const newId=sigIdRegistro(esUser);const casillero=(!esUser&&!f.casillero)?nextCasillero():f.casillero;const newRec={...f,id:newId,casillero,clienteTipo:f.clienteTipo||"matriz",password:""};setClients(p=>[...p,newRec]);setShowNewCl(false);logAction("Creó registro",`${newId} — ${f.primerNombre} ${f.primerApellido}`);(async()=>{await dbUpsertCliente(newRec);await sincronizarCuenta(newRec,f.password);})();}}/>}
       {showEditCl&&<ClientModal agentes={agentes} oficinas={oficinas} autonomos={clients.filter(c=>c.tipo==="usuario"&&c.rol==="F")} allClients={clients} title={`Editar — ${fullName(showEditCl)}`} initial={showEditCl} onClose={()=>setShowEditCl(null)} onSave={f=>{const ant=showEditCl;const rec={...f,clienteTipo:f.clienteTipo||"matriz",password:""};setClients(p=>p.map(c=>c.id===f.id?rec:c));logAction("Editó registro",`${f.id} — ${f.primerNombre} ${f.primerApellido}`);setShowEditCl(null);(async()=>{await dbUpsertCliente(rec);await sincronizarCuenta(rec,f.password,ant);})();}}/>}
 
       {/* ── Cargo Release — MODAL FORMULARIO ───────────────────────────────── */}
@@ -13333,7 +13353,7 @@ export default function SistemaCarga(){
         const agentesCarga=agentes.filter(a=>a.tipo==="transporte"||a.tipoAgente==="transporte"||!a.tipoAgente);
         return(
           <div className="ov">
-            <div className="modal mlg" style={{maxWidth:1100,width:"96%"}} onClick={e=>e.stopPropagation()}>
+            <div className="modal mlg" onClick={e=>e.stopPropagation()}>
               <div className="mhd">
                 <div style={{flex:1}}>
                   <div className="mt"><Ico e="🚀" sp/>{editing?`Editar Egreso ${f.editId}`:"Nuevo Egreso (Cargo Release)"}</div>
@@ -13372,7 +13392,7 @@ export default function SistemaCarga(){
                     <div style={{display:"flex",flexDirection:"column",gap:4}}>
                       {sel.map(w=>(
                         <div key={w.id} style={{display:"flex",alignItems:"center",gap:8,background:"#fff",padding:"4px 8px",borderRadius:4,border:"1px solid #E0E7EF",fontSize:13}}>
-                          <span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",minWidth:80}}>{w.id}</span>
+                          <Num t="wr" id={w.id} nolink/>
                           <span className={`st ${w.status?.cls||"s1"}`} style={{fontSize:11}}>{w.status?.label||"—"}</span>
                           <span style={{flex:1,color:"var(--t2)"}}>{w.consignee||"—"}</span>
                           <span style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--t3)"}}>{w.tracking||"—"}</span>
@@ -13391,7 +13411,7 @@ export default function SistemaCarga(){
                       <div style={{padding:10,color:"var(--t3)",fontSize:13,textAlign:"center"}}>No hay WR disponibles{qRef?` para "${qRef}"`:""}</div>
                     ):filtered.map(w=>(
                       <div key={w.id} style={{display:"flex",alignItems:"center",gap:8,padding:"4px 8px",borderBottom:"1px solid #EEF",fontSize:13,cursor:"pointer"}} onClick={()=>setCrModal(p=>({...p,wrIds:[...p.wrIds,w.id]}))}>
-                        <span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",minWidth:80}}>{w.id}</span>
+                        <Num t="wr" id={w.id} nolink/>
                         <span className={`st ${w.status?.cls||"s1"}`} style={{fontSize:11}}>{w.status?.label||"—"}</span>
                         <span style={{flex:1,color:"var(--t2)"}}>{w.consignee||"—"}</span>
                         <span style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--t3)"}}>{w.tracking||"—"}</span>
@@ -13418,7 +13438,7 @@ export default function SistemaCarga(){
         const totalLb=wrs.reduce((s,w)=>s+(w.dims||[]).reduce((a,d)=>a+parseFloat(d.pkLb||d.pk*2.205||0),0),0);
         return(
           <div className="ov">
-            <div className="modal mlg" style={{maxWidth:900,width:"96%"}}>
+            <div className="modal mlg">
               <div className="mhd no-print">
                 <div className="mt"><Ico e="🖨️" sp/>Nota de Egreso — {cr.id}</div>
                 <div style={{display:"flex",gap:6}}>
@@ -13512,7 +13532,7 @@ export default function SistemaCarga(){
       {/* ── Delivery Note — MODAL FORMULARIO ────────────────────────────────── */}
       {pwModal&&(
         <div className="ov" onClick={()=>setPwModal(null)}>
-          <div className="modal" style={{maxWidth:400}} onClick={e=>e.stopPropagation()}>
+          <div className="modal msm" onClick={e=>e.stopPropagation()}>
             <div className="mhd"><div className="mt"><Ico e="🔑" sp/>Cambiar mi contraseña</div><button className="mcl" onClick={()=>setPwModal(null)}>✕</button></div>
             <div className="mbd" style={{display:"flex",flexDirection:"column",gap:10}}>
               {pwModal.ok
@@ -13551,13 +13571,13 @@ export default function SistemaCarga(){
         );
         return (
           <div className="ov">
-            <div className="modal" style={{maxWidth:760,width:"96%"}} onClick={e=>e.stopPropagation()}>
+            <div className="modal mmd" onClick={e=>e.stopPropagation()}>
               <div className="mhd" style={{borderTop:`4px solid ${color}`}}>
                 <div className="mt">{esDesp?`Despacho — ${f.entidad.nombre}`:`Entrega — ${f.consignatario||f.entidad.nombre}`}</div>
                 <button className="mcl" onClick={()=>setDnQuick(null)}>✕</button>
               </div>
               <div className="mbd" style={{maxHeight:"72vh",overflow:"auto"}}>
-                <div style={{fontSize:13,color:"var(--t3)",marginBottom:8}}>Guía <b style={{fontFamily:"'DM Mono',monospace",color:"var(--navy)"}}>{f.guiaId}</b>{aSucursal?" · pasa a Despachado a Sucursal":""}</div>
+                <div style={{fontSize:13,color:"var(--t3)",marginBottom:8}}>Guía <Num t="guia" id={f.guiaId}/>{aSucursal?" · pasa a Despachado a Sucursal":""}</div>
                 <div style={{border:"1px solid var(--b1)",borderRadius:8,overflow:"hidden",marginBottom:12}}>
                   <table style={{width:"100%",borderCollapse:"collapse",fontSize:14}}>
                     <thead><tr style={{background:"var(--bg3)"}}>
@@ -13570,7 +13590,7 @@ export default function SistemaCarga(){
                         return (
                           <tr key={w.id} onClick={()=>tog(w.id)} style={{cursor:"pointer",borderTop:"1px solid var(--b2)",background:f.wrIds.includes(w.id)?"#FFF9E6":""}}>
                             <td style={{textAlign:"center",padding:6}}><input type="checkbox" checked={f.wrIds.includes(w.id)} readOnly/></td>
-                            <td style={{padding:"6px 8px",fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)"}}>{w.id}</td>
+                            <td style={{padding:"6px 8px",fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)"}}><Num t="wr" id={w.id} nolink/></td>
                             <td style={{padding:"6px 8px"}}>{cl?fullName(cl):(w.consignee||"—")}</td>
                             <td style={{padding:"6px 8px",fontFamily:"'DM Mono',monospace",color:"var(--gold2)",fontWeight:700}}>{cl?.casillero||w.casillero||"—"}</td>
                             <td style={{padding:"6px 8px"}}>{w.cajas||1}</td>
@@ -13743,7 +13763,7 @@ export default function SistemaCarga(){
         const colorTipo=esDespacho?"#E65100":"#2E7D32";
         return(
           <div className="ov">
-            <div className="modal mlg" style={{maxWidth:1100,width:"96%"}} onClick={e=>e.stopPropagation()}>
+            <div className="modal mlg" onClick={e=>e.stopPropagation()}>
               <div className="mhd" style={{borderTop:`4px solid ${colorTipo}`}}>
                 <div style={{flex:1}}>
                   <div className="mt">{esDespacho?<Ico e="🚚"/>:<Ico e="📦"/>} {editing?`Editar Nota ${f.editId}`:(esDespacho?"Nuevo Despacho":"Nueva Entrega")}</div>
@@ -13835,7 +13855,7 @@ export default function SistemaCarga(){
                             return (
                               <tr key={w.id} style={{borderTop:"1px solid #EEF",cursor:"pointer",background:check?"#FFF9E6":""}} onClick={()=>toggleWR(w.id)}>
                                 <td style={{padding:"4px 6px",textAlign:"center"}}><input type="checkbox" checked={check} readOnly/></td>
-                                <td style={{padding:"4px 6px",fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)"}}>{w.id}</td>
+                                <td style={{padding:"4px 6px",fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)"}}><Num t="wr" id={w.id} nolink/></td>
                                 <td style={{padding:"4px 6px",color:"var(--t2)"}}>{cli?[cli.primerNombre,cli.primerApellido].filter(Boolean).join(" "):w.consignee||"—"}</td>
                                 <td style={{padding:"4px 6px",color:"var(--t2)",maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{cleanReempaqueDesc(w.descripcion)||"—"}</td>
                                 <td style={{padding:"4px 6px",textAlign:"center"}}>{w.cajas||1}</td>
@@ -13944,7 +13964,7 @@ export default function SistemaCarga(){
         })():null;
         return(
           <div className="ov">
-            <div className="modal mlg" style={{maxWidth:900,width:"96%"}}>
+            <div className="modal mlg">
               <div className="mhd no-print">
                 <div className="mt"><Ico e="🖨️" sp/>Nota de {esDespacho?"Despacho":"Entrega"} — {dn.id}</div>
                 <div style={{display:"flex",gap:6}}>
@@ -14152,20 +14172,19 @@ export default function SistemaCarga(){
               ?oficinas.map(o=>({id:o.id,label:`${o.nombre||""} · ${o.rif||""}`}))
               :[];
         return(
-          <div className="modal-backdrop">
-            <div className="modal" style={{width:1150,maxWidth:"98vw",maxHeight:"94vh",overflow:"auto"}}>
-              <div className="mh">
-                <div>
-                  <div style={{fontSize:17,fontWeight:700,color:"var(--navy)"}}>
+          <div className="ov">
+            <div className="modal mxl">
+              <div className="mhd">
+                <div className="mt">
+                  <div>
                     {f._editing?"Editar factura":"Nueva factura"}
-                    {f.id&&<span style={{fontFamily:"'DM Mono',monospace",marginLeft:10,color:"var(--navy)"}}>{f.id}</span>}
-                    {!f.id&&<span style={{fontFamily:"'DM Mono',monospace",marginLeft:10,color:"var(--t3)"}}>#{buildFacturaId(nextInvoiceNum)}</span>}
+                    {f.id?<Num t="factura" id={f.id} nolink style={{marginLeft:10}}/>:<span className="c-wr" style={{marginLeft:10,opacity:.55}}>{buildFacturaId(nextInvoiceNum)}</span>}
                   </div>
-                  <div style={{fontSize:13,color:"var(--t3)"}}>Tipo: {f.tipo==="proforma"?"Proforma":"Factura"} · {f.status==="borrador"?"Borrador":FAC_STATUS_LABEL[f.status]}</div>
+                  <div className="mst">Tipo: {f.tipo==="proforma"?"Proforma":"Factura"} · {f.status==="borrador"?"Borrador":FAC_STATUS_LABEL[f.status]}</div>
                 </div>
                 <button className="mcl" onClick={()=>setFacModal(null)}>✕</button>
               </div>
-              <div className="mb" style={{padding:14}}>
+              <div>
                 {(f.guiaIds||[]).length>0&&!f._verDatos?(
                   <div style={{display:"flex",gap:14,alignItems:"flex-start",flexWrap:"wrap",border:"1px solid var(--b1)",borderRadius:8,padding:"10px 12px"}}>
                     <div style={{flex:1,minWidth:260}}>
@@ -14267,7 +14286,7 @@ export default function SistemaCarga(){
                       <tbody>
                         {fl.map(l=>(
                           <tr key={l._i}>
-                            <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)"}}>{l.wrId}</td>
+                            <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)"}}><Num t="wr" id={l.wrId}/></td>
                             {conCli&&<td>{l.cliente}<div style={{fontSize:12,color:"var(--gold2)",fontFamily:"'DM Mono',monospace"}}>{l.casillero}</div></td>}
                             <td style={{textAlign:"right"}}>{l.cajas}</td>
                             {colsMed.map(([k])=><td key={k} style={{textAlign:"right",fontFamily:"'DM Mono',monospace"}}>{l[k]??"—"}</td>)}
@@ -14364,7 +14383,7 @@ export default function SistemaCarga(){
                   </div>
                 </div>
               </div>
-              <div className="mf" style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
+              <div className="mft">
                 <button className="btn-s" onClick={()=>setFacModal(null)}>Cancelar</button>
                 {f.status==="borrador"&&<button className="btn-s" onClick={facSaveBorrador}><Ico e="💾" sp/>Guardar borrador</button>}
                 {(f.status==="borrador"||f.status==="emitida")&&<button className="btn-p" onClick={facEmitir}><Ico e="📤" sp/>{f.status==="emitida"?"Actualizar emitida":"Emitir"}</button>}
@@ -14418,7 +14437,7 @@ export default function SistemaCarga(){
                     <tbody>{c.facs.map(f=>{const a=aplicDe(f.id);return(
                       <tr key={f.id} style={{opacity:m.sel[f.id]?1:.5}}>
                         <td><input type="checkbox" checked={!!m.sel[f.id]} onChange={e=>set({sel:{...m.sel,[f.id]:e.target.checked}})}/></td>
-                        <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)"}}>{f.id}</td>
+                        <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)"}}><Num t="factura" id={f.id}/></td>
                         <td style={{fontSize:13}}>{fmtDate(f.fechaEmision||f.fecha)}</td>
                         <td style={{textAlign:"right",fontFamily:"'DM Mono',monospace"}}>{fmtMoney(f.saldo,f.moneda)}</td>
                         <td style={{textAlign:"right",fontFamily:"'DM Mono',monospace",fontWeight:800,color:a>0?"var(--green)":"var(--t4)"}}>{a>0?fmtMoney(a,f.moneda):"—"}</td>
@@ -14464,16 +14483,16 @@ export default function SistemaCarga(){
         const fact=facturas.find(x=>x.id===p.facturaId);
         if(!fact)return null;
         return(
-          <div className="modal-backdrop">
-            <div className="modal" style={{width:560}}>
-              <div className="mh">
-                <div>
-                  <div style={{fontSize:17,fontWeight:700,color:"var(--navy)"}}><Ico e="💵" sp/>Registrar pago</div>
-                  <div style={{fontSize:13,color:"var(--t3)"}}>Factura {fact.id} · Saldo {fmtMoney(fact.saldo,fact.moneda)}</div>
+          <div className="ov">
+            <div className="modal msm">
+              <div className="mhd">
+                <div className="mt">
+                  <div><Ico e="💵" sp/>Registrar pago</div>
+                  <div className="mst">Factura <Num t="factura" id={fact.id}/> · Saldo {fmtMoney(fact.saldo,fact.moneda)}</div>
                 </div>
                 <button className="mcl" onClick={()=>setPagoModal(null)}>✕</button>
               </div>
-              <div className="mb" style={{padding:14}}>
+              <div>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
                   <div>
                     <label className="fl">Monto ({fact.moneda})</label>
@@ -14499,7 +14518,7 @@ export default function SistemaCarga(){
                   <textarea className="fi" rows={2} value={p.notaReferencial} onChange={e=>setPagoModal(x=>({...x,notaReferencial:e.target.value}))} style={{resize:"vertical"}}/>
                 </div>
               </div>
-              <div className="mf" style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
+              <div className="mft">
                 <button className="btn-s" onClick={()=>setPagoModal(null)}>Cancelar</button>
                 <button className="btn-p" onClick={pagoSubmit}><Ico e="💵" sp/>Registrar pago</button>
               </div>
@@ -14513,16 +14532,16 @@ export default function SistemaCarga(){
         const orig=facturas.find(x=>x.id===ncModal.facturaOrigenId);
         if(!orig)return null;
         return(
-          <div className="modal-backdrop">
-            <div className="modal" style={{width:520}}>
-              <div className="mh">
-                <div>
-                  <div style={{fontSize:17,fontWeight:700,color:"var(--purple)"}}><Ico e="📝" sp/>Nota de Crédito</div>
-                  <div style={{fontSize:13,color:"var(--t3)"}}>Factura origen: {orig.id} · Total {fmtMoney(orig.total,orig.moneda)} · Pagado {fmtMoney(orig.pagado,orig.moneda)}</div>
+          <div className="ov">
+            <div className="modal msm">
+              <div className="mhd">
+                <div className="mt">
+                  <div><Ico e="📝" sp/>Nota de Crédito</div>
+                  <div className="mst">Factura origen: <Num t="factura" id={orig.id}/> · Total {fmtMoney(orig.total,orig.moneda)} · Pagado {fmtMoney(orig.pagado,orig.moneda)}</div>
                 </div>
                 <button className="mcl" onClick={()=>setNcModal(null)}>✕</button>
               </div>
-              <div className="mb" style={{padding:14}}>
+              <div>
                 <div style={{marginBottom:10}}>
                   <label className="fl">Monto a acreditar ({orig.moneda})</label>
                   <input className="fi" type="number" step="0.01" value={ncModal.monto} onChange={e=>setNcModal(x=>({...x,monto:e.target.value}))}/>
@@ -14544,7 +14563,7 @@ export default function SistemaCarga(){
                   <textarea className="fi" rows={2} value={ncModal.notas} onChange={e=>setNcModal(x=>({...x,notas:e.target.value}))} style={{resize:"vertical"}}/>
                 </div>
               </div>
-              <div className="mf" style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
+              <div className="mft">
                 <button className="btn-s" onClick={()=>setNcModal(null)}>Cancelar</button>
                 <button className="btn-p" style={{background:"var(--purple)"}} onClick={ncSubmit}><Ico e="📝" sp/>Emitir NC</button>
               </div>
@@ -14556,7 +14575,7 @@ export default function SistemaCarga(){
       {/* ── Factura Print Modal ── */}
       {puPrint&&(()=>{const p=puPrint;const td={border:"1px solid #999",padding:"5px 8px",fontSize:13};return(
         <div className="ov">
-          <div className="modal mlg" style={{maxWidth:900,width:"96%"}}>
+          <div className="modal mlg">
             <div className="mhd no-print">
               <div className="mt"><Ico e="🖨️" sp/>Solicitud de Pick-up — {p.id}</div>
               <div style={{display:"flex",gap:6}}>
@@ -14601,7 +14620,7 @@ export default function SistemaCarga(){
         const sum=(ed.lineas||[]).reduce((t,x)=>t+(parseFloat(x.cantidad)||0)*(parseFloat(x.valorUnit)||0),0);
         return(
         <div className="ov">
-          <div className="modal mlg" style={{maxWidth:1100,width:"97%"}}>
+          <div className="modal mlg">
             <div className="mhd">
               <div className="mt"><Ico e="📑" sp/>Documentos — WR {ed.wr.id}</div>
               <div style={{display:"flex",gap:6}}>
@@ -14645,7 +14664,7 @@ export default function SistemaCarga(){
         </div>);})()}
       {reciboVer&&(
         <div className="ov">
-          <div className="modal mlg" style={{maxWidth:900,width:"96%"}}>
+          <div className="modal mlg">
             <div className="mhd no-print">
               <div className="mt"><Ico e="🖨️" sp/>Recibo de Cobro — {reciboVer}</div>
               <div style={{display:"flex",gap:6}}>
@@ -14664,7 +14683,7 @@ export default function SistemaCarga(){
         const pagosAplic=pagos.filter(p=>p.facturaId===f.id&&!p.anulado);
         return(
           <div className="ov">
-            <div className="modal mlg" style={{maxWidth:900,width:"96%"}}>
+            <div className="modal mlg">
               <div className="mhd no-print">
                 <div className="mt"><Ico e="🖨️" sp/>{f.tipo==="nota_credito"?"Nota de Crédito":f.tipo==="proforma"?"Proforma":"Factura"} — {f.id}
                   {f.status==="anulada"&&<span style={{marginLeft:10,color:"var(--red)",fontWeight:800}}>ANULADA</span>}</div>
