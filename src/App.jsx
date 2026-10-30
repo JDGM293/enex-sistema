@@ -842,7 +842,7 @@ table.t td{padding:5px 7px;border-bottom:1px solid #dde3ea;vertical-align:top}
 table.t tbody tr:nth-child(even) td{background:#f7f9fc}
 table.t thead{display:table-header-group}
 table.t tr{page-break-inside:avoid}
-.r{text-align:right}.c{text-align:center}.mono{font-family:'Courier New',monospace}
+.r,table.t th.r,table.t td.r{text-align:right}.c,table.t th.c,table.t td.c{text-align:center}.mono{font-family:'Courier New',monospace}
 table.t tr.tot td{background:#eef2f8!important;font-weight:800;border-top:2px solid #1A2B4A}
 table.t tr.grp td{background:#e6ecf5!important;font-weight:700;color:#1A2B4A}
 table.t td.vacio{text-align:center;color:#8a94a3;padding:16px}
@@ -6069,7 +6069,7 @@ export default function SistemaCarga(){
   const pFirmas=lista=>`<div class="firmas" style="grid-template-columns:repeat(${lista.length},1fr)">${lista.map(([t,s])=>`<div>${prnE(t)}${s?`<small>${prnE(s)}</small>`:""}</div>`).join("")}</div>`;
   const pTotales=filas=>`<div class="totales">${filas.filter(Boolean).map(([k,v,cls])=>`<div class="f ${cls||""}"><span>${k}</span><span>${v}</span></div>`).join("")}</div>`;
   const nombreUsuario=id=>{const c=clients.find(x=>x.id===id||x.email===id);return c?fullName(c):(id||"");};
-  const nm=(v,d=2)=>(Math.round((parseFloat(v)||0)*10**d)/10**d).toLocaleString("es",{minimumFractionDigits:0,maximumFractionDigits:d});
+  const nm=(v,d=2)=>(Math.round((parseFloat(v)||0)*10**d)/10**d).toLocaleString("en-US",{minimumFractionDigits:0,maximumFractionDigits:d});
 
   // Vista previa y salida a impresora
   const prnVer=(titulo,html)=>{if(html)setPrnVista({titulo,html});};
