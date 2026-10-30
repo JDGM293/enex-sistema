@@ -361,6 +361,12 @@ input.fi:not([type="email"]):not([type="password"]):not([type="number"]){text-tr
 .mt{font-family:Arial,Helvetica,sans-serif;font-size:21px;font-weight:700;flex:1;color:var(--navy)}
 .mcl{width:28px;height:28px;border-radius:6px;background:var(--bg4);border:1px solid var(--b1);color:var(--t2);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all .12s}
 .mcl:hover{background:var(--bg5);color:var(--t1)}
+.chat-mini-msgs{max-height:260px;min-height:120px;overflow-y:auto;display:flex;flex-direction:column;gap:7px;padding:2px}
+.chat-mini-m{max-width:88%}
+.chat-mini-m.yo{align-self:flex-end;text-align:right}
+.chat-mini-h{font-size:11px;color:var(--t3);margin-bottom:2px}
+.chat-mini-b{display:inline-block;text-align:left;background:var(--bg3);border:1px solid var(--b1);border-radius:9px;padding:6px 9px;font-size:13px;line-height:1.4;white-space:pre-wrap;word-break:break-word}
+.chat-mini-m.yo .chat-mini-b{background:var(--navy);color:#fff;border:none}
 .chat-grid{display:grid;grid-template-columns:250px 1fr;flex:1;min-height:0;overflow:hidden;height:100%}
 .chat-lado{background:var(--navy);display:flex;flex-direction:column;overflow:hidden;min-height:0}
 .chat-busca{margin-top:10px;background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.15);color:#fff;font-size:14px;padding:7px 10px}
@@ -2516,6 +2522,7 @@ export default function SistemaCarga(){
   const [chatCanModal,setChatCanModal]=useState(false);
   const chatRef=useRef({tab:"",conv:"",yo:""});
   const chatScroll=useRef(null);
+  const chatMiniScroll=useRef(null);
   useEffect(()=>{
     if(!authUid||!currentUser?.id)return;
     const yo=currentUser.id;chatRef.current.yo=yo;
@@ -2526,7 +2533,7 @@ export default function SistemaCarga(){
       setChatMsgs(p=>{if(!p[m.conv])return p;const l=p[m.conv];const i=l.findIndex(x=>x.id===m.id);
         return {...p,[m.conv]:i>=0?l.map(x=>x.id===m.id?m:x):[...l,m]};});
       if(pl.eventType!=="INSERT")return;
-      const abierto=chatRef.current.tab==="chat"&&chatRef.current.conv===m.conv;
+      const abierto=["chat","dashboard"].includes(chatRef.current.tab)&&chatRef.current.conv===m.conv;
       if(abierto){dbChatMarcarLeido(yo,m.conv);}
       setChatNL(p=>({...p,[m.conv]:{n:(abierto||m.autorId===yo)?0:((p[m.conv]?.n||0)+1),ultimo:m.creado}}));
     }).subscribe();
@@ -2537,11 +2544,11 @@ export default function SistemaCarga(){
   },[authUid,currentUser?.id]);
   useEffect(()=>{chatRef.current.tab=tab;chatRef.current.conv=chatConv;},[tab,chatConv]);
   useEffect(()=>{ // al entrar al chat en pantalla ancha se abre el primer canal
-    if(tab!=="chat"||chatConv||!chatCanales.length||!currentUser||window.innerWidth<=760)return;
+    if(!["chat","dashboard"].includes(tab)||chatConv||!chatCanales.length||!currentUser||(tab==="chat"&&window.innerWidth<=760)||(tab==="dashboard"&&(dashWide||window.innerWidth<=900)))return;
     const c=chatCanales.find(c=>currentUser.rol==="A"||(c.roles||[]).includes(currentUser.rol));
     if(c)chatAbrir("c:"+c.id);
-  },[tab,chatCanales]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(()=>{const el=chatScroll.current;if(el)el.scrollTop=el.scrollHeight;},[chatConv,(chatMsgs[chatConv]||[]).length,tab]);
+  },[tab,chatCanales,dashWide]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(()=>{[chatScroll.current,chatMiniScroll.current].forEach(el=>{if(el)el.scrollTop=el.scrollHeight;});},[chatConv,(chatMsgs[chatConv]||[]).length,tab]);
   const [pickupList,setPickupList]=useState([]);
   const [showNewPickup,setShowNewPickup]=useState(false);
   const [pickupSel,setPickupSel]=useState(null);
@@ -3509,27 +3516,7 @@ export default function SistemaCarga(){
               );
             })}
           </div>
-          {/* ACCESOS DIRECTOS — atajos a los modulos que no tienen cuadro de stat
-              propio arriba. Ocupa el slot que estaba reservado en el panel derecho. */}
-          <div className="card">
-            <div className="card-tt"><Ico e="⚡" sp/>Accesos Directos</div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-              {[
-                {id:"reempaque",    ic:<Ico e="🔁"/>, l:"Reempaque",     n:wrList.filter(w=>w.status?.code==="2.3").length, sub:"reempacados", c:"#5B3FB5"},
-                {id:"cargorelease", ic:<Ico e="🚀"/>, l:"Cargo Release", n:wrList.filter(w=>w.status?.code==="25").length,  sub:"egresados",   c:"#0080CC"},
-              ].map(b=>(
-                <button key={b.id} type="button" title={`Abrir ${b.l} en una ventana, sin salir del Dashboard`} onClick={()=>setQuickTab(b.id)}
-                  style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,padding:"11px 6px",
-                    borderRadius:9,border:`1px solid ${b.c}40`,background:`${b.c}10`,cursor:"pointer",transition:"all .12s"}}
-                  onMouseEnter={e=>{e.currentTarget.style.background=`${b.c}22`;e.currentTarget.style.transform="translateY(-1px)";}}
-                  onMouseLeave={e=>{e.currentTarget.style.background=`${b.c}10`;e.currentTarget.style.transform="none";}}>
-                  <span style={{fontSize:21,lineHeight:1}}>{b.ic}</span>
-                  <span style={{fontSize:12.5,fontWeight:700,color:b.c,whiteSpace:"nowrap"}}>{b.l}</span>
-                  <span style={{fontSize:11,color:"var(--t3)"}}>{b.n} {b.sub}</span>
-                </button>
-              ))}
-            </div>
-          </div>
+          {hasPerm("ver_chat")&&renderChatMini()}
         </div>}
       </div>
     </>
@@ -7983,6 +7970,41 @@ export default function SistemaCarga(){
         <button className="btn-s" onClick={nuevo}><Ico e="➕" sp/>Nuevo canal</button>
         {chatCanDraft&&<div style={{display:"flex",gap:8}}><button className="btn-s" onClick={()=>setChatCanDraft(null)}>Descartar</button><button className="btn-p" onClick={guardar}><Ico e="💾" sp/>Guardar</button></div>}
       </div>
+    </div>);
+  };
+
+  // Chat en el panel derecho del Dashboard: la conversación activa, compacta.
+  const renderChatMini=()=>{
+    const conv=chatConv;const msgs=(chatMsgs[conv]||[]).slice(-12);
+    const dms=Object.keys(chatNL).filter(k=>k.startsWith("d:"));
+    if(conv.startsWith("d:")&&!dms.includes(conv))dms.push(conv);
+    const lbl=k=>{const n=chatNL[k]?.n||0;return `${k.startsWith("c:")?"# ":""}${chatNombreConv(k)}${n?` (${n})`:""}`;};
+    return(
+    <div className="card chat-mini">
+      <div className="card-tt" style={{display:"flex",alignItems:"center",gap:6}}>
+        <span style={{cursor:"pointer",flex:1}} onClick={()=>setTab("chat")} title="Abrir el chat"><Ico e="💬" sp/>Chat interno</span>
+        {chatTotalNL>0&&<span className="chat-nl">{chatTotalNL}</span>}
+      </div>
+      <select className="fs" style={{fontSize:13,padding:"5px 8px",marginBottom:8}} value={conv} onChange={e=>chatAbrir(e.target.value)}>
+        {!conv&&<option value="">Elegir conversación…</option>}
+        {chatCanalesMios.map(c=><option key={c.id} value={"c:"+c.id}>{lbl("c:"+c.id)}</option>)}
+        {dms.map(k=><option key={k} value={k}>{lbl(k)}</option>)}
+      </select>
+      {conv&&<>
+        <div ref={chatMiniScroll} className="chat-mini-msgs">
+          {msgs.length===0&&<div style={{textAlign:"center",color:"var(--t3)",fontSize:13,padding:"20px 0"}}>Sin mensajes</div>}
+          {msgs.map(m=>{const yo=m.autorId===chatYo;const a=clients.find(c=>c.id===m.autorId);return(
+            <div key={m.id} className={`chat-mini-m${yo?" yo":""}`}>
+              <div className="chat-mini-h">{yo?"Tú":(a?`${a.primerNombre} ${a.primerApellido}`:m.autorNombre)} · {fmtTime(m.creado)}</div>
+              <div className="chat-mini-b">{m.borrado?<i style={{color:"var(--t3)"}}>Mensaje eliminado</i>:<>{m.texto&&chatTexto(m.texto)}{(m.adjuntos||[]).length>0&&<div style={{fontSize:12,opacity:.8}}><Ico e="📎" sp/>{m.adjuntos.length} adjunto{m.adjuntos.length>1?"s":""}</div>}</>}</div>
+            </div>);})}
+        </div>
+        {hasPerm("enviar_chat")&&<div style={{display:"flex",gap:6,marginTop:8}}>
+          <input className="fi" style={{flex:1,fontSize:13,padding:"6px 9px"}} value={chatMsg} onChange={e=>setChatMsg(e.target.value)}
+            onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();sendChat();}}} placeholder="Escribir…"/>
+          <button className="btn-p" style={{padding:"6px 10px"}} onClick={sendChat} disabled={chatEnviando} title="Enviar"><Ico e="🚀" solo/></button>
+        </div>}
+      </>}
     </div>);
   };
 
