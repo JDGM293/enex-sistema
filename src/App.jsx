@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, Fragment } from "react";
 import { createPortal } from "react-dom";
+import { renderToStaticMarkup } from "react-dom/server";
 import { dbGetPickups, dbUpsertPickup } from './supabase'
 import { descargarXlsx } from './xlsx'
 import { dbGetActividadReporte } from './supabase'
@@ -800,6 +801,75 @@ const siglaUsuario=(u,clients=[],agentes=[],oficinas=[])=>{
   if(u.rol==="G")return `OF${num(of?.codigo)}`;
   if(u.rol==="I")return `CL${u.casillero||""}`;
   return u.rol||"";
+};
+
+// ─── IMPRESIÓN: formato único para todos los documentos ──────────────────────
+// Todos los documentos se arman como HTML con el mismo encabezado, estilos y pie,
+// se ven en una vista previa idéntica a lo impreso y se imprimen sin capturar la pantalla.
+const prnE=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
+const PRN_CSS=`
+@page{size:letter portrait;margin:12mm 12mm 14mm}
+*{box-sizing:border-box}
+html,body{background:#fff}
+body{font-family:Arial,Helvetica,sans-serif;color:#1b1f24;margin:0;padding:28px 32px;font-size:12px;line-height:1.4}
+@media print{body{padding:0}}
+.hd{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;border-bottom:3px solid #1A2B4A;padding-bottom:12px;margin-bottom:16px}
+.emp{display:flex;gap:12px;align-items:flex-start;min-width:0}
+.emp img{max-height:58px;max-width:150px;object-fit:contain}
+.emp .n{font-size:20px;font-weight:800;color:#1A2B4A;letter-spacing:.4px;line-height:1.15}
+.emp .l{font-size:11px;color:#4a5566;margin-top:2px}
+.emp .pw{font-size:9.5px;color:#8a94a3;margin-top:4px}
+.doc{text-align:right;flex-shrink:0}
+.doc .t{font-size:14px;font-weight:800;color:#1A2B4A;text-transform:uppercase;letter-spacing:1px}
+.doc .num{font-family:'Courier New',monospace;font-size:20px;font-weight:800;margin:3px 0 4px;color:#111}
+.doc .bc{display:flex;justify-content:flex-end;margin:2px 0 4px}
+.doc .m{font-size:11px;color:#333;line-height:1.5}
+.doc .m b{color:#111}
+.anul{border:2.5px solid #C62828;color:#C62828;font-weight:900;font-size:18px;letter-spacing:3px;text-align:center;padding:4px;margin-bottom:12px}
+.anul small{display:block;font-size:11px;letter-spacing:0;font-weight:700}
+.sec{font-size:10.5px;font-weight:800;color:#1A2B4A;text-transform:uppercase;letter-spacing:1px;border-bottom:1.5px solid #1A2B4A;padding-bottom:3px;margin:16px 0 7px}
+.g2,.g3,.g4{display:grid;gap:8px;margin-bottom:10px}
+.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}
+.box{border:1px solid #cdd5df;border-radius:5px;padding:7px 10px;min-width:0}
+.box .k{display:block;font-size:9.5px;color:#5a6b85;text-transform:uppercase;letter-spacing:.6px;font-weight:700;margin-bottom:2px}
+.box .v{font-size:12.5px;word-break:break-word}
+.box .v .s{display:block;font-size:11px;color:#4a5566}
+.lst{display:grid;grid-template-columns:auto 1fr;gap:3px 14px;font-size:12px}
+.lst .k{color:#5a6b85;font-weight:700}
+table.t{width:100%;border-collapse:collapse;margin-bottom:10px;font-size:11.5px}
+table.t th{background:#1A2B4A;color:#fff;padding:5px 7px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.5px;font-weight:700}
+table.t td{padding:5px 7px;border-bottom:1px solid #dde3ea;vertical-align:top}
+table.t tbody tr:nth-child(even) td{background:#f7f9fc}
+table.t thead{display:table-header-group}
+table.t tr{page-break-inside:avoid}
+.r{text-align:right}.c{text-align:center}.mono{font-family:'Courier New',monospace}
+table.t tr.tot td{background:#eef2f8!important;font-weight:800;border-top:2px solid #1A2B4A}
+table.t tr.grp td{background:#e6ecf5!important;font-weight:700;color:#1A2B4A}
+table.t td.vacio{text-align:center;color:#8a94a3;padding:16px}
+.sub{font-size:10.5px;color:#5a6b85}
+.totales{margin:6px 0 0 auto;width:330px;border:1px solid #cdd5df;border-radius:5px;padding:8px 12px}
+.totales .f{display:flex;justify-content:space-between;padding:2px 0}
+.totales .f span:last-child{font-family:'Courier New',monospace}
+.totales .gt{border-top:2px solid #1A2B4A;margin-top:5px;padding-top:5px;font-size:15px;font-weight:800;color:#1A2B4A}
+.totales .fav{color:#2E7D32;font-weight:700}
+.nota{font-size:11px;color:#333;margin:8px 0;text-align:justify;white-space:pre-wrap}
+.decl{border:1px solid #cdd5df;background:#f7f9fc;border-radius:5px;padding:8px 10px;font-size:11px;text-align:justify;margin:12px 0}
+.legal{font-size:9.5px;color:#4a5566;border-top:1px solid #cdd5df;padding-top:6px;margin-top:14px;text-align:justify;white-space:pre-line}
+.firmas{display:grid;gap:40px;margin-top:48px;page-break-inside:avoid}
+.firmas div{border-top:1px solid #111;padding-top:4px;text-align:center;font-size:11px;font-weight:700}
+.firmas small{display:block;font-weight:400;color:#555;margin-top:1px}
+.pie{margin-top:22px;border-top:1px solid #cdd5df;padding-top:5px;font-size:9px;color:#8a94a3;display:flex;justify-content:space-between;gap:12px}
+.salto{page-break-before:always}
+`;
+// Ventana de vista previa: muestra el documento tal como sale impreso.
+const PrnModal=({titulo,html,onClose})=>{
+  const ref=useRef(null);
+  return(<div className="ov" onClick={onClose}><div className="modal mlg" onClick={e=>e.stopPropagation()}>
+    <div className="mhd"><div className="mt"><Ico e="🖨️" sp/>{titulo}</div>
+      <button className="btn-p" style={{fontSize:13,padding:"5px 12px"}} onClick={()=>{try{ref.current.contentWindow.focus();ref.current.contentWindow.print();}catch(err){console.error(err);}}}><Ico e="🖨️" sp/>Imprimir</button>
+      <button className="mcl" onClick={onClose}>✕</button></div>
+    <iframe ref={ref} title={titulo} srcDoc={html} style={{width:"100%",height:"76vh",border:"1px solid var(--b1)",borderRadius:6,background:"#fff",display:"block"}}/>
+  </div></div>);
 };
 
 // ─── ROLE DEFINITIONS ────────────────────────────────────────────────────────
@@ -2257,6 +2327,7 @@ function PhotoGalleryModal({ wrId, currentUser, onClose }){
 export default function SistemaCarga(){
   const [sbMov,setSbMov]=useState(false);
   const [tbMenu,setTbMenu]=useState(false);
+  const [prnVista,setPrnVista]=useState(null); // {titulo, html}
   // ── LOGIN STATE ────────────────────────────────────────────────────────────
   const [currentUser,setCurrentUser]=useState(null);
   // Sesión de Supabase Auth: contraseñas cifradas y login en el servidor
@@ -4289,7 +4360,7 @@ export default function SistemaCarga(){
                   }}><Ico e="💰" sp/>Facturar {esPrepaid?"PREPAID":"COD"}</button>
               );
             })()}
-            <button className="btn-p" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>window.print()}><Ico e="🖨" sp/>Imprimir</button>
+            <button className="btn-p" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>prnImprimir(htmlWR(selWR))}><Ico e="🖨" sp/>Imprimir</button>
             <button className="mcl" onClick={()=>setSelWR(null)}>✕</button>
           </div>
         </div>
@@ -4492,182 +4563,6 @@ export default function SistemaCarga(){
           <div className="wr-legal" style={{whiteSpace:"pre-line"}}>{notaLegalWR(selWR)}</div>
           {/* Bloque de entrega/firma eliminado — la entrega ahora se gestiona vía Notas de Entrega (Delivery Notes) */}
         </div>
-        {/* ══ DOCUMENTO DE IMPRESIÓN — solo visible con window.print() ══ */}
-        {/* ══ DOCUMENTO DE IMPRESIÓN — solo visible con window.print() ══ */}
-        <div className="wr-print-only">
-          {(()=>{
-            const P={fontFamily:"Arial,Helvetica,sans-serif",fontSize:13,color:"#000",lineHeight:1.4};
-            const TH={border:"1px solid #888",padding:"3px 6px",background:"#ccc",fontSize:12,fontWeight:700,textAlign:"left"};
-            const TD={border:"1px solid #888",padding:"4px 6px",fontSize:13,verticalAlign:"top"};
-            const _cl2=clients.find(c=>c.id===selWR.clienteId);
-            const _da=[_cl2?.dir,_cl2?.municipio,_cl2?.estado,_cl2?.pais].filter(Boolean).join(", ");
-            const _oc2=oficinas.find(o=>(o.ciudad||"").toUpperCase().startsWith((selWR.origCity||"").toUpperCase()))||_origOff;
-            return(
-            <div style={{...P,padding:0,margin:0}}>
-
-              {/* ── CABECERA ── */}
-              <table style={{width:"100%",borderCollapse:"collapse",marginBottom:2}}><tbody><tr>
-                {/* izquierda: empresa */}
-                <td style={{verticalAlign:"top",paddingRight:16,width:"52%"}}>
-                  <div style={{fontSize:34,fontWeight:900,letterSpacing:3,lineHeight:1,marginBottom:4,fontFamily:"Arial Black,Arial,sans-serif"}}>{getHeaderName(selWR,clients,agentes,oficinas,empresaNombre)}</div>
-                  <div style={{fontSize:13,marginBottom:2}}>{_oc2?.ciudad||selWR.origCity||""}{_oc2?.pais?`, ${_oc2.pais}`:""}</div>
-                  {_oc2?.email&&<div style={{fontSize:12,marginTop:2}}>{_oc2.email}</div>}
-                  {_oc2?.tel&&<div style={{fontSize:12}}>Phone: {_oc2.tel}</div>}
-                  <div style={{fontSize:11,color:"#666",marginTop:6}}>Powered by {empresaNombre} Courier System</div>
-                </td>
-                {/* derecha: WR # + barcode real */}
-                <td style={{verticalAlign:"top",textAlign:"right",width:"48%"}}>
-                  <div style={{fontSize:12,color:"#555",marginBottom:1}}>Warehouse Receipt #:</div>
-                  <div style={{fontSize:30,fontWeight:900,fontFamily:"'Courier New',monospace",letterSpacing:2,lineHeight:1,marginBottom:3}}>{selWR.id}</div>
-                  <div style={{display:"flex",justifyContent:"flex-end",marginBottom:2}}>
-                    <WRBarcode value={selWR.id} height={45} width={2}/>
-                  </div>
-                  <div style={{fontSize:11,color:"#444",marginTop:3}}>
-                    Printed: {fmtDate(selWR.fecha)} {fmtTime(selWR.fecha)} | Received By: {_usuarioNombre}
-                  </div>
-                </td>
-              </tr></tbody></table>
-
-              {/* ── SHIPPER | CONSIGNEE ── */}
-              <table style={{width:"100%",borderCollapse:"collapse",marginBottom:0}}><tbody>
-                <tr>
-                  <td style={{...TH,width:"50%",borderRight:"none"}}>Shipper Information</td>
-                  <td style={TH}>Consignee Information</td>
-                </tr>
-                <tr>
-                  <td style={{...TD,borderRight:"none",borderTop:"none",minHeight:70}}>
-                    <div style={{fontWeight:700}}>{selWR.shipper||"—"}</div>
-                    {selWR.remitenteDir&&<div style={{fontSize:12,marginTop:2}}>{selWR.remitenteDir}</div>}
-                  </td>
-                  <td style={{...TD,borderTop:"none"}}>
-                    <div style={{fontWeight:700,fontSize:14}}>{selWR.consignee||"—"}</div>
-                    <div style={{fontSize:12,fontWeight:700,color:"#333",marginTop:2}}>#{selWR.casillero||"—"}</div>
-                    {_da&&<div style={{fontSize:12,marginTop:2}}>{_da}</div>}
-                    <div style={{fontSize:12,marginTop:4}}>{selWR.destCity||"—"}, {(selWR.destCountry||"").replace(/[^\w\s]/gi,"").trim()}</div>
-                  </td>
-                </tr>
-              </tbody></table>
-
-              {/* ── PAYMENT INFO | CIUDAD DESTINO ── */}
-              <table style={{width:"100%",borderCollapse:"collapse",marginBottom:0}}><tbody>
-                <tr>
-                  <td style={{...TD,borderTop:"none",width:"55%",padding:"3px 6px"}}>
-                    <div style={{fontSize:10,color:"#555"}}>Payment Type | Shipment Type | # Casillero | Insurance | Tipo Cliente</div>
-                    <div style={{fontSize:13,fontWeight:600}}>{selWR.tipoPago||"—"} | {selWR.tipoEnvio||"POR DEFINIR"} | # {selWR.casillero||"—"} | | {(()=>{const c=_cl2;if(!c)return"—";if(c.clienteTipo==="matriz")return"Matriz";if(c.clienteTipo==="agente")return"Agente";return c.clienteTipo||"Cliente";})()}</div>
-                  </td>
-                  <td style={{...TD,borderTop:"none",borderLeft:"none",fontSize:16,fontWeight:700}}>
-                    Ciudad Destino: {selWR.destCity||"—"}
-                  </td>
-                </tr>
-              </tbody></table>
-
-              {/* ── NOTAS ── */}
-              <table style={{width:"100%",borderCollapse:"collapse",marginBottom:0}}><tbody>
-                <tr><td style={{...TD,borderTop:"none",minHeight:36,padding:"4px 6px"}}>
-                  <span style={{fontWeight:700,fontSize:12}}>Notas:</span>{selWR.notas?" "+selWR.notas:""}
-                </td></tr>
-              </tbody></table>
-
-              {/* ── TABLA DE DIMENSIONES — 12 p1, 15 resto ── */}
-              {(()=>{
-                const R1=12,RN=15;
-                const allDims=selWR.dims&&selWR.dims.length>0?selWR.dims:[];
-                const cajasCount=parseInt(selWR.cajas)||0;
-                const totalRows=Math.max(allDims.length,cajasCount);
-                const rows=Array.from({length:Math.max(totalRows,1)},(_,i)=>allDims[i]||{});
-                const chunks=[rows.slice(0,R1)];
-                for(let i=R1;i<rows.length;i+=RN)chunks.push(rows.slice(i,i+RN));
-                const totalPages=chunks.length;
-                const DimThead=()=><thead><tr>
-                  <th style={{...TH,width:"7%"}}>Line/Qty</th>
-                  <th style={{...TH,width:"15%"}}>Dimensions (In)</th>
-                  <th style={{...TH,width:"33%"}}>Tracking</th>
-                  <th style={{...TH,width:"12%",textAlign:"right"}}>Weight lb</th>
-                  <th style={{...TH,width:"12%",textAlign:"right"}}>Vol lb</th>
-                  <th style={{...TH,width:"10%",textAlign:"right"}}>Ft³</th>
-                  <th style={{...TH,width:"11%",textAlign:"right"}}>M³</th>
-                </tr></thead>;
-                const renderChunk=(chunk,pi)=>{
-                  const offset=pi===0?0:R1+(pi-1)*RN;
-                  const isLast=pi===totalPages-1;
-                  return(
-                  <div key={pi} style={pi>0?{pageBreakBefore:"always",paddingTop:"0.45in"}:{}}>
-                    {pi>0&&<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",borderBottom:"2px solid #000",paddingBottom:4,marginBottom:6,fontSize:12}}>
-                      <span style={{fontWeight:700}}>{empresaNombre}</span>
-                      <span>WR# {selWR.id}</span>
-                      <span>{selWR.consignee} | #{selWR.casillero}</span>
-                      <span>Pág. {pi+1}/{totalPages}</span>
-                    </div>}
-                    <table style={{width:"100%",borderCollapse:"collapse",marginBottom:0,marginTop:pi===0?4:0}}>
-                      <DimThead/>
-                      <tbody>
-                        {chunk.length===0?<tr><td colSpan={7} style={{...TD,textAlign:"center",height:60,color:"#999"}}>Sin dimensiones registradas</td></tr>
-                        :chunk.map((d,i)=>{
-                          const idx=offset+i;
-                          const hasDims=d.l||d.a||d.h;
-                          const dv=hasDims?calcVol(d.l||0,d.a||0,d.h||0,"cm"):{volLb:0,ft3:0,m3:0};
-                          return(
-                          <tr key={idx}>
-                            <td style={{...TD,verticalAlign:"top"}}>{idx+1}</td>
-                            <td style={{...TD,verticalAlign:"top"}}>
-                              {hasDims?<div>{toIn(d.l)}x{toIn(d.a)}x{toIn(d.h)}</div>:<div style={{color:"#999"}}>—</div>}
-                              {d.carrier&&<div style={{fontSize:11,color:"#555"}}>{d.carrier}</div>}
-                            </td>
-                            <td style={{...TD,fontSize:12,verticalAlign:"top",fontFamily:"'Courier New',monospace"}}>
-                              {d.tracking&&<div>{d.tracking}</div>}
-                              {d.descripcion&&<div style={{fontSize:12,fontFamily:"Arial",color:"#222"}}>{d.descripcion}</div>}
-                              {d.factura&&<div style={{fontSize:11,fontFamily:"Arial",color:"#555"}}>Fact: {d.factura}</div>}
-                            </td>
-                            <td style={{...TD,textAlign:"right",fontWeight:700}}>{d.pk?toLb(d.pk):"—"}</td>
-                            <td style={{...TD,textAlign:"right"}}>{hasDims?dv.volLb:"—"}</td>
-                            <td style={{...TD,textAlign:"right"}}>{hasDims?dv.ft3:"—"}</td>
-                            <td style={{...TD,textAlign:"right"}}>{hasDims?dv.m3:"—"}</td>
-                          </tr>);
-                        })}
-                      </tbody>
-                      {isLast&&<tfoot>
-                        <tr style={{background:"#f0f0f0"}}>
-                          <td style={{...TD,fontWeight:700}}>Pzas: {selWR.cajas||0}</td>
-                          <td style={TD}></td><td style={TD}></td>
-                          <td style={{...TD,fontWeight:700,textAlign:"right"}}>{selWR.pesoLb}</td>
-                          <td style={{...TD,fontWeight:700,textAlign:"right"}}>{selWR.volLb||"—"}</td>
-                          <td style={{...TD,fontWeight:700,textAlign:"right"}}>{selWR.ft3}</td>
-                          <td style={{...TD,fontWeight:700,textAlign:"right"}}>{selWR.m3||"—"}</td>
-                        </tr>
-                      </tfoot>}
-                    </table>
-                  </div>);
-                };
-                return chunks.map((chunk,pi)=>renderChunk(chunk,pi));
-              })()}
-
-              {/* Bloque "Entregado por" eliminado — la entrega se imprime ahora vía Nota de Entrega */}
-
-              {/* ── 3 CASILLAS: EMPRESA · NOMBRE · FIRMA ── */}
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginTop:10,marginBottom:6}}>
-                <div style={{border:"1px solid #999",borderRadius:4,minHeight:54,display:"flex",flexDirection:"column"}}>
-                  <div style={{fontSize:9,fontWeight:700,color:"#444",textTransform:"uppercase",letterSpacing:.4,padding:"3px 6px",borderBottom:"1px solid #ccc",background:"#f5f5f5"}}>Empresa</div>
-                  <div style={{flex:1}}/>
-                </div>
-                <div style={{border:"1px solid #999",borderRadius:4,minHeight:54,display:"flex",flexDirection:"column"}}>
-                  <div style={{fontSize:9,fontWeight:700,color:"#444",textTransform:"uppercase",letterSpacing:.4,padding:"3px 6px",borderBottom:"1px solid #ccc",background:"#f5f5f5"}}>Nombre</div>
-                  <div style={{flex:1}}/>
-                </div>
-                <div style={{border:"1px solid #999",borderRadius:4,minHeight:54,display:"flex",flexDirection:"column"}}>
-                  <div style={{fontSize:9,fontWeight:700,color:"#444",textTransform:"uppercase",letterSpacing:.4,padding:"3px 6px",borderBottom:"1px solid #ccc",background:"#f5f5f5"}}>Firma</div>
-                  <div style={{flex:1}}/>
-                </div>
-              </div>
-
-              {/* ── TEXTO LEGAL ── */}
-              <div style={{fontSize:11,lineHeight:1.6,color:"#333",textAlign:"center",marginTop:8,borderTop:"1px solid #ccc",paddingTop:6}}>
-                <div style={{whiteSpace:"pre-line"}}>{notaLegalWR(selWR)}</div>
-              </div>
-
-            </div>);
-          })()}
-        </div>
-
         <div className="mft">
           <button className="btn-s" onClick={()=>setSelWR(null)}>Cerrar</button>
           <button className="btn-g" style={{fontSize:12,padding:"4px 10px"}}><Ico e="📧" sp/>Enviar al Cliente</button>
@@ -4683,7 +4578,7 @@ export default function SistemaCarga(){
         <div className="mhd">
           <div className="mt">{showStatModal.ic} {showStatModal.label} — {showStatModal.rows.length} registros</div>
           <div style={{display:"flex",gap:6}}>
-            <button className="btn-p" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>window.print()}><Ico e="🖨" sp/>Imprimir lista</button>
+            <button className="btn-p" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>prnVer(showStatModal.label,htmlStatLista(showStatModal.label,showStatModal.rows))}><Ico e="🖨" sp/>Imprimir lista</button>
             <button className="mcl" onClick={()=>setShowStatModal(null)}>✕</button>
           </div>
         </div>
@@ -4897,93 +4792,7 @@ export default function SistemaCarga(){
   // ── IMPRESIÓN DE GUÍA ARCHIVADA (Recepción en Almacén) ────────────────────
   // Abre una ventana con un HTML imprimible: header de la guía, contenedores
   // (con sus WRs) y totales. Pensado para archivo físico al cerrar la recepción.
-  const printGuiaArchivada=(c)=>{
-    if(!c){window.alert("Guía no encontrada.");return;}
-    const fechaImp=new Date().toLocaleString("es-VE",{dateStyle:"medium",timeStyle:"short"});
-    const fmtD=(d)=>d?new Date(d).toLocaleDateString("es-VE",{day:"2-digit",month:"2-digit",year:"numeric"}):"—";
-    const escapeHtml=(s)=>String(s||"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
-    const containers=Array.isArray(c.containers)?c.containers:[];
-    const totalWR=c.totalWR||containers.reduce((s,ct)=>s+(ct.wr?.length||0),0);
-    const totalCajas=c.totalCajas||containers.reduce((s,ct)=>s+(ct.wr||[]).reduce((a,w)=>a+(w.cajas||1),0),0);
-    const totalLb=c.totalLb||containers.reduce((s,ct)=>s+(ct.wr||[]).reduce((a,w)=>a+(w.pesoLb||0),0),0);
-    const totalFt3=c.totalFt3||containers.reduce((s,ct)=>s+(ct.wr||[]).reduce((a,w)=>a+(w.ft3||0),0),0);
-    const contBlocks=containers.map((ct,i)=>{
-      const dimsTxt=[ct.largo,ct.ancho,ct.alto].filter(Boolean).join(" × ");
-      const wrRows=(ct.wr||[]).map((w,wi)=>`
-        <tr>
-          <td style="border:1px solid #999;padding:3px 6px">${wi+1}</td>
-          <td style="border:1px solid #999;padding:3px 6px;font-family:monospace;font-weight:700">${escapeHtml(w.id)}</td>
-          <td style="border:1px solid #999;padding:3px 6px">${escapeHtml(w.consignee||"—")}</td>
-          <td style="border:1px solid #999;padding:3px 6px;text-align:center">${w.cajas||0}</td>
-          <td style="border:1px solid #999;padding:3px 6px;text-align:right;font-family:monospace">${(w.pesoLb||0).toFixed?(w.pesoLb||0).toFixed(1):w.pesoLb||0}lb</td>
-          <td style="border:1px solid #999;padding:3px 6px;font-family:monospace">${w.ft3||"—"}</td>
-          <td style="border:1px solid #999;padding:3px 6px">${escapeHtml(cleanReempaqueDesc(w.descripcion||"")||"—")}</td>
-        </tr>`).join("")||`<tr><td colspan="7" style="border:1px solid #999;padding:8px;text-align:center;color:#999">(sin WR)</td></tr>`;
-      return `
-        <div style="border:2px solid #1A2B4A;border-radius:6px;margin-bottom:10px;overflow:hidden">
-          <div style="background:#1A2B4A;color:#fff;padding:6px 10px;display:flex;justify-content:space-between;align-items:center">
-            <span style="font-weight:700">Contenedor ${i+1}${ct.tipo?` — ${escapeHtml(ct.tipo)}`:""}</span>
-            <span style="font-size:11px;color:#E5AE3A">${dimsTxt?escapeHtml(dimsTxt)+" in":""}${ct.sello?` · Sello: ${escapeHtml(ct.sello)}`:""}${ct.pesoLb?` · ${ct.pesoLb}lb`:""}</span>
-          </div>
-          <table style="width:100%;border-collapse:collapse;font-size:11px">
-            <thead><tr style="background:#F0F4FA">
-              <th style="border:1px solid #999;padding:4px 6px;text-align:left">#</th>
-              <th style="border:1px solid #999;padding:4px 6px;text-align:left">N° WR</th>
-              <th style="border:1px solid #999;padding:4px 6px;text-align:left">Consignatario</th>
-              <th style="border:1px solid #999;padding:4px 6px;text-align:center">Cajas</th>
-              <th style="border:1px solid #999;padding:4px 6px;text-align:right">Peso</th>
-              <th style="border:1px solid #999;padding:4px 6px;text-align:left">Ft³</th>
-              <th style="border:1px solid #999;padding:4px 6px;text-align:left">Descripción</th>
-            </tr></thead>
-            <tbody>${wrRows}</tbody>
-          </table>
-        </div>`;
-    }).join("");
-    const html=`<!doctype html><html><head><title>Guía ${escapeHtml(c.id)} — Recepción Almacén</title>
-<style>
-  body{margin:0;padding:20px;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#111;background:#fff}
-  .hd{border-bottom:3px solid #1A2B4A;padding-bottom:10px;margin-bottom:14px}
-  .hd h1{margin:0;font-size:20px;color:#1A2B4A;letter-spacing:1px}
-  .hd .sub{font-size:11px;color:#666;margin-top:3px}
-  .info{background:#F0F4FA;border:1px solid #C0CDD8;border-radius:6px;padding:10px 14px;margin-bottom:12px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px 14px;font-size:12px}
-  .info b{color:#1A2B4A}
-  .totals{background:#F0F4FA;border:1px solid #1A2B4A;border-radius:6px;padding:10px 14px;margin-top:12px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;font-size:13px;font-weight:700}
-  .totals .lbl{font-size:10px;color:#666;font-weight:600;text-transform:uppercase}
-  .ft{margin-top:18px;font-size:10px;color:#666;text-align:center;border-top:1px dashed #aaa;padding-top:8px}
-  @media print{body{padding:0}}
-</style></head><body>
-  <div class="hd">
-    <h1>${escapeHtml(empresaNombre)} — RECEPCIÓN EN ALMACÉN</h1>
-    <div class="sub">Generado: ${fechaImp}</div>
-  </div>
-  <div class="info">
-    <div><b>Guía:</b> ${escapeHtml(c.id)}</div>
-    <div><b>Destino:</b> ${escapeHtml(c.destino||"—")}</div>
-    <div><b>Tipo de envío:</b> ${escapeHtml(c.tipoEnvio||"—")}</div>
-    <div><b>Fecha creación:</b> ${fmtD(c.fecha)}</div>
-    <div><b>Fecha salida:</b> ${fmtD(c.fechaSalida)}</div>
-    <div><b>Fecha llegada:</b> ${fmtD(fechaLlegadaGuia(c))}</div>
-    <div><b>Recibida en almacén:</b> ${fmtD(c.fechaRecibidaAlmacen)}</div>
-    <div><b>N° vuelo / barco:</b> ${escapeHtml(c.numVuelo||"—")}</div>
-    <div><b>Estado:</b> ${escapeHtml(c.status||"Recibida")}</div>
-    <div><b>AWB:</b> ${escapeHtml(c.awb||"—")}</div>
-    <div><b>BL:</b> ${escapeHtml(c.bl||"—")}</div>
-    <div><b>Notas:</b> ${escapeHtml(c.notas||"—")}</div>
-  </div>
-  ${contBlocks||"<div style='text-align:center;padding:20px;color:#888'>Sin contenedores.</div>"}
-  <div class="totals">
-    <div><div class="lbl">Total WR</div>${totalWR}</div>
-    <div><div class="lbl">Total cajas</div>${totalCajas}</div>
-    <div><div class="lbl">Peso total</div>${(totalLb||0).toFixed?totalLb.toFixed(1):totalLb}lb</div>
-    <div><div class="lbl">Ft³ total</div>${(totalFt3||0).toFixed?totalFt3.toFixed(2):totalFt3}</div>
-  </div>
-  <div class="ft">Documento de archivo de recepción — ${escapeHtml([empresaNombre,marca.subtitulo].filter(Boolean).join(" "))}</div>
-  <script>window.addEventListener('load',()=>setTimeout(()=>window.print(),250));</script>
-</body></html>`;
-    const w=window.open("","_blank","width=900,height=1200");
-    if(!w){window.alert("Tu navegador bloqueó la ventana de impresión. Habilita pop-ups para este sitio.");return;}
-    w.document.open();w.document.write(html);w.document.close();
-  };
+  const printGuiaArchivada=c=>{if(!c){window.alert("Guía no encontrada.");return;}prnImprimir(htmlGuia(c));};
 
   // ── IMPRESIÓN DEL ESTADO DE CUENTA ────────────────────────────────────────
   // Abre una ventana con un HTML profesional del estado de cuenta del cliente
@@ -4992,98 +4801,7 @@ export default function SistemaCarga(){
   // de un agente / oficina / autónomo; agrega la columna Cliente.
   const printEstadoCuenta=(cli,wrs,filtros,totales,grupo=null)=>{
     if(!cli&&!grupo){window.alert("Selecciona un cliente primero.");return;}
-    const esc=(v)=>String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;");
-    const tituloNom=grupo?grupo.nombre:fullName(cli);
-    const tabLabel={todos:"Todos",pendientes:"Pendientes",porconfirmar:"Por Confirmar",reempacados:"Reempacados",egresados:"Egresados",entregadoscob:"Entregados / Por Cobrar"}[filtros.tab]||filtros.tab;
-    const MESES_P=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
-    const periodo=(filtros.mes||filtros.anio)
-      ? `${filtros.mes?MESES_P[parseInt(filtros.mes)-1]:"Todos los meses"} — ${filtros.anio||"Todos los años"}`
-      : "Sin filtro de período";
-    const fechaImp=new Date().toLocaleString("es-VE",{dateStyle:"medium",timeStyle:"short"});
-    const rows=wrs.map(w=>`
-      <tr>
-        <td style="padding:5px 6px;border-bottom:1px solid #ddd"><span style="background:#eef;color:#222;padding:2px 6px;border-radius:3px;font-size:10px;font-weight:700">${w.status?.code||"—"}</span> ${w.status?.label||""}</td>
-        <td style="padding:5px 6px;border-bottom:1px solid #ddd;font-family:monospace;font-weight:700">${w.id}</td>
-        <td style="padding:5px 6px;border-bottom:1px solid #ddd;font-family:monospace;color:#5B3FB5">${esc(getNumGuia(w)||"—")}</td>
-        ${grupo?(()=>{const c=grupo.cliDe(w);return `<td style="padding:5px 6px;border-bottom:1px solid #ddd">${esc(c?fullName(c):(w.consignee||"—"))}<div style="font-size:9px;color:#777">${esc(c?.casillero||w.casillero||"")}</div></td>`;})():""}
-        <td style="padding:5px 6px;border-bottom:1px solid #ddd;text-align:center">${w.cajas||0}</td>
-        <td style="padding:5px 6px;border-bottom:1px solid #ddd;font-family:monospace">${w.pesoLb||0}lb</td>
-        <td style="padding:5px 6px;border-bottom:1px solid #ddd;font-family:monospace">${w.volLb||"—"}lb</td>
-        <td style="padding:5px 6px;border-bottom:1px solid #ddd;font-family:monospace">${w.ft3||"—"}</td>
-        <td style="padding:5px 6px;border-bottom:1px solid #ddd;font-family:monospace">${w.m3||"—"}</td>
-        <td style="padding:5px 6px;border-bottom:1px solid #ddd">${w.tipoEnvio||"—"}</td>
-        <td style="padding:5px 6px;border-bottom:1px solid #ddd;max-width:200px;overflow:hidden">${(cleanReempaqueDesc(w.descripcion)||"—").replace(/</g,"&lt;").slice(0,60)}</td>
-        <td style="padding:5px 6px;border-bottom:1px solid #ddd;font-family:monospace;font-weight:700;text-align:right">$${(w.valor||0).toFixed(2)}</td>
-      </tr>`).join("");
-    const totalCajas=wrs.reduce((s,w)=>s+(w.cajas||0),0);
-    const html=`<!doctype html><html><head><title>Estado de Cuenta — ${esc(tituloNom)}</title>
-<style>
-  body{margin:0;padding:20px;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#111;background:#fff}
-  .hd{border-bottom:3px solid #1A2B4A;padding-bottom:10px;margin-bottom:14px}
-  .hd h1{margin:0;font-size:20px;color:#1A2B4A;letter-spacing:1px}
-  .hd .sub{font-size:11px;color:#666;margin-top:3px}
-  .cli-box{background:#F0F4FA;border:1px solid #C0CDD8;border-radius:6px;padding:10px 14px;margin-bottom:12px;display:grid;grid-template-columns:1fr 1fr;gap:4px 14px;font-size:12px}
-  .cli-box b{color:#1A2B4A}
-  .meta{display:flex;gap:14px;font-size:11px;color:#444;margin-bottom:10px}
-  .meta span b{color:#000}
-  table{width:100%;border-collapse:collapse;font-size:11px}
-  thead th{background:#1A2B4A;color:#fff;padding:6px 6px;text-align:left;font-size:10px;letter-spacing:.6px;text-transform:uppercase}
-  tfoot td{background:#F0F4FA;font-weight:700;padding:6px 6px;border-top:2px solid #1A2B4A}
-  .ft{margin-top:18px;font-size:10px;color:#666;text-align:center;border-top:1px dashed #aaa;padding-top:8px}
-  @media print{body{padding:0}}
-</style></head><body>
-  <div class="hd">
-    <h1>${empresaNombre} — ESTADO DE CUENTA</h1>
-    <div class="sub">Generado: ${fechaImp}</div>
-  </div>
-  ${grupo?`<div class="cli-box">
-    <div><b>${grupo.tipo==="agente"?"Agente":grupo.tipo==="oficina"?"Oficina":"Autónomo"}:</b> ${esc(grupo.nombre)}</div>
-    <div><b>Código / Ref.:</b> ${esc(grupo.sub||"—")}</div>
-    <div><b>Email:</b> ${esc(grupo.email||"—")}</div>
-    <div><b>Teléfono:</b> ${esc(grupo.tel||"—")}</div>
-    <div style="grid-column:1/-1"><b>${grupo.tipo==="oficina"?"Clientes con carga en esta oficina":"Clientes bajo su dominio"}:</b> ${grupo.nClientes}</div>
-  </div>`:`<div class="cli-box">
-    <div><b>Cliente:</b> ${fullName(cli)||"—"}</div>
-    <div><b>Casillero:</b> ${cli.casillero||"—"}</div>
-    <div><b>Email:</b> ${cli.email||"—"}</div>
-    <div><b>Teléfono:</b> ${cli.tel1||"—"}</div>
-    <div style="grid-column:1/-1"><b>Branch:</b> ${(()=>{const b=branchDeCliente(cli);return b?esc(`${b.nombre} (${b.tipo})`):"—";})()}</div>
-    <div style="grid-column:1/-1"><b>Dirección:</b> ${[cli.municipio,cli.estado,cli.pais].filter(Boolean).join(", ")||"—"}</div>
-  </div>`}
-  <div class="meta">
-    <span><b>Filtro:</b> ${tabLabel}</span>
-    <span><b>Período:</b> ${periodo}</span>
-    <span><b>Registros:</b> ${wrs.length}</span>
-  </div>
-  <table>
-    <thead>
-      <tr>
-        <th>Estado</th><th>N° WR</th><th>N° Guía</th>${grupo?"<th>Cliente</th>":""}<th>Cajas</th><th>Peso</th><th>P.Vol</th><th>Ft³</th><th>M³</th><th>Tipo</th><th>Descripción</th><th style="text-align:right">Valor</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${rows||`<tr><td colspan="${grupo?12:11}" style="padding:30px;text-align:center;color:#888">Sin registros para este filtro.</td></tr>`}
-    </tbody>
-    ${wrs.length>0?`<tfoot>
-      <tr>
-        <td colspan="${grupo?4:3}">TOTALES</td>
-        <td style="text-align:center">${totalCajas}</td>
-        <td style="font-family:monospace">${totales.pesoLb}lb</td>
-        <td style="font-family:monospace">${totales.volLb}lb</td>
-        <td style="font-family:monospace">${totales.ft3}</td>
-        <td style="font-family:monospace">${totales.m3}</td>
-        <td colspan="2"></td>
-        <td style="text-align:right;font-family:monospace;color:#1A7A3A">$${totales.valor}</td>
-      </tr>
-    </tfoot>`:""}
-  </table>
-  <div class="ft">Documento generado por ${empresaNombre} · Este estado refleja únicamente los movimientos del filtro seleccionado.</div>
-</body></html>`;
-    const w=window.open("","_blank","width=900,height=1100");
-    if(!w){window.alert("El navegador bloqueó la ventana de impresión.");return;}
-    w.document.write(html);
-    w.document.close();
-    setTimeout(()=>{w.focus();w.print();},300);
+    prnVer("Estado de cuenta",htmlEstadoCuentaWR(cli,wrs,filtros,totales,grupo));
   };
 
   const renderEstadoCuenta=()=>{
@@ -6249,7 +5967,6 @@ export default function SistemaCarga(){
     const porFecha=(a,b)=>new Date(b.fecha||0)-new Date(a.fecha||0);
     const btn=(l,fn,extra={})=><button className="btn-s" style={{fontSize:13,padding:"5px 12px",whiteSpace:"nowrap",...extra}} onClick={fn}>{l}</button>;
     const mono={fontFamily:"'DM Mono',monospace",fontWeight:700};
-    const imprimirWR=w=>{setSelWR(w);setTimeout(()=>window.print(),600);};
     const verImp=(ver,imp)=><>{btn("Ver",ver)}{btn("Imprimir",imp)}</>;
     const verRecibo=rid=>setReciboVer(rid);
     // Usuarios externos: solo documentos de su carga
@@ -6265,22 +5982,22 @@ export default function SistemaCarga(){
       .sort((a,b)=>porFecha(a,b)||String(b.id).localeCompare(String(a.id))).map(w=>({k:w.id,
         izq:<><Num t="wr" id={w.id}/><div style={{fontSize:13,color:"var(--t3)"}}>{w.consignee||"—"}{w.casillero?` · #${w.casillero}`:""} · {w.cajas||1} caja{(w.cajas||1)===1?"":"s"}</div></>,
         estado:<StBadge st={w.status}/>,
-        acc:<>{btn("WR",()=>imprimirWR(w))}{btn("Etiquetas",()=>setShowLabels({wr:w,dims:w.dims||[],remitente:w.shipper||"",tipoEnvio:w.tipoEnvio||""}))}{btn("Documentos",()=>docAbrir(w))}</>}));
+        acc:<>{btn("Ver",()=>prnVer(`WR ${w.id}`,htmlWR(w)))}{btn("Imprimir",()=>prnImprimir(htmlWR(w)))}{btn("Etiquetas",()=>setShowLabels({wr:w,dims:w.dims||[],remitente:w.shipper||"",tipoEnvio:w.tipoEnvio||""}))}{btn("Documentos",()=>docAbrir(w))}</>}));
     if(tipo==="guia")filas=guiasVis.filter(g=>hay(`${g.id} ${g.destino||""} ${g.tipoEnvio||""} ${g.awb||""} ${g.bl||""}`))
       .sort((a,b)=>String(b.id).localeCompare(String(a.id))).map(g=>({k:g.id,
         izq:<><Num t="guia" id={g.id}/><div style={{fontSize:13,color:"var(--t3)"}}>{g.destino||"—"} · {g.tipoEnvio||"—"} · {(g.containers||[]).length} cont. · {g.totalWR||0} WR</div></>,
         estado:<span style={{fontSize:12,color:"var(--t2)",fontWeight:600}}>{g.status||"—"}</span>,
-        acc:<>{btn("Guía",()=>printGuiaArchivada(g))}{btn("Etiquetas",()=>setShowConsolLabels({guia:g,containers:g.containers||[],remitente:empresaNombre}))}</>}));
+        acc:<>{btn("Ver",()=>prnVer(`Guía ${g.id}`,htmlGuia(g)))}{btn("Imprimir",()=>prnImprimir(htmlGuia(g)))}{btn("Etiquetas",()=>setShowConsolLabels({guia:g,containers:g.containers||[],remitente:empresaNombre}))}</>}));
     if(tipo==="entrega")filas=deliveryNotes.filter(n=>tocaVis(n.wrIds)&&hay(`${n.id} ${n.receptorNombre||""} ${n.consignatario||""} ${n.guiaId||""} ${(n.wrIds||[]).join(" ")}`))
       .sort(porFecha).map(n=>({k:n.id,
         izq:<><Num t="entrega" id={n.id}/><div style={{fontSize:13,color:"var(--t3)"}}>{fmtDate(n.fecha)} · {n.receptorEntidad?.nombre||n.receptorNombre||n.consignatario||"—"} · {(n.wrIds||[]).length} WR{n.guiaId?` · guía ${n.guiaId}`:""}</div></>,
         estado:n.anulado?<span style={{fontSize:12,fontWeight:700,color:"var(--red)"}}>Anulada</span>:<span style={{fontSize:12,fontWeight:700,color:"var(--green)"}}>{n.tipo==="despacho"?"Despacho":"Entrega"}</span>,
-        acc:verImp(()=>setDnPrint(n),()=>{setDnPrint(n);setTimeout(()=>window.print(),600);})}));
+        acc:verImp(()=>setDnPrint(n),()=>prnImprimir(htmlNota(n)))}));
     if(tipo==="egreso")filas=cargoReleases.filter(c=>tocaVis(c.wrIds)&&hay(`${c.id} ${c.agenteCarga||""} ${c.contacto||""} ${(c.wrIds||[]).join(" ")}`))
       .sort(porFecha).map(c=>({k:c.id,
         izq:<><Num t="release" id={c.id}/><div style={{fontSize:13,color:"var(--t3)"}}>{fmtDate(c.fecha)} · {c.agenteCarga||c.contacto||"—"} · {(c.wrIds||[]).length} WR</div></>,
         estado:c.anulado?<span style={{fontSize:12,fontWeight:700,color:"var(--red)"}}>Anulado</span>:null,
-        acc:verImp(()=>setCrPrint(c),()=>{setCrPrint(c);setTimeout(()=>window.print(),600);})}));
+        acc:verImp(()=>setCrPrint(c),()=>prnImprimir(htmlRelease(c)))}));
     if(tipo==="factura")filas=facsVis.filter(f=>f.status!=="borrador"&&hay(`${f.id} ${f.receptorNombre||""} ${f.receptorCasillero||""} ${f.receptorDoc||""} ${(f.wrIds||[]).join(" ")}`))
       .sort((a,b)=>(b.numero||0)-(a.numero||0)).map(f=>({k:f.id,
         izq:<><Num t="factura" id={f.id} pre={f.tipo==="nota_credito"?"NC ":""}/><div style={{fontSize:13,color:"var(--t3)"}}>{fmtDate(f.fechaEmision||f.fecha)} · {f.receptorNombre||"—"} · {fmtMoney(f.total,f.moneda)}</div></>,
@@ -6297,7 +6014,7 @@ export default function SistemaCarga(){
       .sort((a,b)=>new Date(b.fecha)-new Date(a.fecha)).map(p=>({k:p.id,
         izq:<><Num t="pickup" id={p.id}/><div style={{fontSize:13,color:"var(--t3)"}}>{fmtDate(p.fecha)} · {p.clienteNombre||"—"} · {puBultos(p)} bulto{puBultos(p)===1?"":"s"}{p.wrId?` · WR ${p.wrId}`:""}</div></>,
         estado:puChip(p.status),
-        acc:verImp(()=>setPuPrint(p),()=>{setPuPrint(p);setTimeout(()=>window.print(),600);})}));
+        acc:verImp(()=>setPuPrint(p),()=>prnImprimir(htmlPickup(p)))}));
     const ph={pickup:"Buscar pick-up, cliente, dirección o WR…",wr:"Buscar WR, nombre, casillero o tracking…",guia:"Buscar guía, destino, AWB o BL…",entrega:"Buscar nota, receptor, guía o WR…",egreso:"Buscar cargo release, agente de carga o WR…",factura:"Buscar factura, cliente, casillero o WR…",recibo:"Buscar recibo, cliente o factura…"}[tipo];
     return (
     <div className="page-scroll">
@@ -6320,6 +6037,199 @@ export default function SistemaCarga(){
     </div>
     );
   };
+
+  // ── IMPRESIÓN ──────────────────────────────────────────────────────────────
+  // Plantilla común: encabezado (logo + datos de la empresa del país de origen o de quien emite),
+  // título y número del documento, cuerpo y pie. Vista previa = documento impreso.
+  const prnEmisor=(pais,emisor)=>{
+    const E=docCfg(pais||"","empresa");
+    if(emisor)return {nombre:emisor.nombre,lineas:(emisor.lineas||[]).filter(Boolean),logo:emisor.logo||"",powered:emisor.powered};
+    return {nombre:E.razon||empresaNombre||"",lineas:[E.dir,[E.tel,E.email].filter(Boolean).join(" · "),E.idFiscal].filter(Boolean),logo:marca.logo||""};
+  };
+  const prnBarcode=v=>renderToStaticMarkup(<WRBarcode value={String(v)} height={40} width={1.6}/>);
+  const prnHTML=({titulo,numero="",meta=[],pais="",emisor=null,cuerpo="",barcode=false,anulado=null,horizontal=false})=>{
+    const em=prnEmisor(pais,emisor);const ahora=new Date();
+    const css=PRN_CSS+(horizontal?"@page{size:letter landscape}":"");
+    return `<!doctype html><html><head><meta charset="utf-8"><title>${prnE(titulo)}${numero?` ${prnE(numero)}`:""}</title><style>${css}</style></head><body>
+      ${anulado?`<div class="anul">${anulado.texto||"ANULADO"}${anulado.motivo?`<small>${prnE(anulado.motivo)}</small>`:""}</div>`:""}
+      <div class="hd">
+        <div class="emp">${em.logo?`<img src="${prnE(em.logo)}" alt="">`:""}<div><div class="n">${prnE(em.nombre)}</div>${em.lineas.map(l=>`<div class="l">${prnE(l)}</div>`).join("")}${em.powered?`<div class="pw">${prnE(em.powered)}</div>`:""}</div></div>
+        <div class="doc"><div class="t">${titulo}</div>${numero?`<div class="num">${prnE(numero)}</div>`:""}${barcode&&numero?`<div class="bc">${prnBarcode(numero)}</div>`:""}
+          <div class="m">${meta.filter(x=>x&&x[1]!==undefined&&x[1]!==null&&x[1]!=="").map(([k,v])=>`${prnE(k)}: <b>${prnE(v)}</b>`).join("<br>")}</div></div>
+      </div>
+      ${cuerpo}
+      <div class="pie"><span>${prnE(em.nombre)}${numero?` · ${prnE(numero)}`:""}</span><span>Impreso el ${fmtDate(ahora)} ${fmtTime(ahora)} · ${prnE(fullName(currentUser))}</span></div>
+    </body></html>`;
+  };
+  // Piezas comunes del cuerpo
+  const pSec=t=>`<div class="sec">${t}</div>`;
+  const pBox=(k,v,sub="")=>`<div class="box"><span class="k">${prnE(k)}</span><div class="v">${v}${sub?`<span class="s">${sub}</span>`:""}</div></div>`;
+  const pGrid=(n,boxes)=>`<div class="g${n}">${boxes.filter(Boolean).join("")}</div>`;
+  const pTabla=(cols,filas,pie="")=>`<table class="t"><thead><tr>${cols.map(c=>`<th class="${c.r?"r":c.c?"c":""}">${prnE(c.l)}</th>`).join("")}</tr></thead><tbody>${filas||`<tr><td class="vacio" colspan="${cols.length}">Sin registros</td></tr>`}${pie}</tbody></table>`;
+  const pFirmas=lista=>`<div class="firmas" style="grid-template-columns:repeat(${lista.length},1fr)">${lista.map(([t,s])=>`<div>${prnE(t)}${s?`<small>${prnE(s)}</small>`:""}</div>`).join("")}</div>`;
+  const pTotales=filas=>`<div class="totales">${filas.filter(Boolean).map(([k,v,cls])=>`<div class="f ${cls||""}"><span>${k}</span><span>${v}</span></div>`).join("")}</div>`;
+  const nombreUsuario=id=>{const c=clients.find(x=>x.id===id||x.email===id);return c?fullName(c):(id||"");};
+  const nm=(v,d=2)=>(Math.round((parseFloat(v)||0)*10**d)/10**d).toLocaleString("es",{minimumFractionDigits:0,maximumFractionDigits:d});
+
+  // Vista previa y salida a impresora
+  const prnVer=(titulo,html)=>{if(html)setPrnVista({titulo,html});};
+  const prnImprimir=html=>{
+    if(!html)return;
+    const f=document.createElement("iframe");
+    f.setAttribute("aria-hidden","true");
+    Object.assign(f.style,{position:"fixed",right:"0",bottom:"0",width:"0",height:"0",border:"0",visibility:"hidden"});
+    document.body.appendChild(f);
+    f.onload=()=>{try{f.contentWindow.focus();f.contentWindow.print();}catch(err){console.error(err);}setTimeout(()=>f.remove(),60000);};
+    f.srcdoc=html;
+  };
+
+  // ── Documentos ─────────────────────────────────────────────────────────────
+  const htmlWR=w=>{
+    if(!w)return "";
+    const cl=clients.find(c=>c.id===w.clienteId)||clients.find(c=>c.casillero&&c.casillero===w.casillero);
+    const of=oficinas.find(o=>(o.ciudad||"").toUpperCase().startsWith((w.origCity||"").toUpperCase()))||_origOff;
+    const cab=getHeaderName(w,clients,agentes,oficinas,empresaNombre);
+    const propio=sinAcentos(cab)===sinAcentos(empresaNombre||"");
+    const emisor=propio?null:{nombre:cab,lineas:[[of?.ciudad||w.origCity,of?.pais].filter(Boolean).join(", "),[of?.tel,of?.email].filter(Boolean).join(" · ")],powered:`${empresaNombre}`};
+    const usr=clients.find(c=>c.id===w.usuario);
+    const dest=cl?[cl.dir,cl.municipio,cl.estado,cl.pais].filter(Boolean).join(", "):"";
+    const tipoCli=!cl?"":({matriz:"Casa matriz",agente:"Agente",vendedor_agente:"Vendedor de agente",oficina:"Oficina",vendedor_oficina:"Vendedor de oficina",autonomo:"Autónomo"})[cl.clienteTipo||"matriz"]||"";
+    const dims=(w.dims||[]).length?w.dims:[];
+    const filas=dims.map((d,i)=>{const hay=d.l||d.a||d.h;const v=hay?calcVol(d.l||0,d.a||0,d.h||0,"cm"):{volLb:0,ft3:0,m3:0};
+      return `<tr><td>${i+1}</td><td>${hay?`${toIn(d.l)}×${toIn(d.a)}×${toIn(d.h)}`:"—"}${d.carrier?`<div class="sub">${prnE(d.carrier)}</div>`:""}</td>
+        <td><span class="mono">${prnE(d.tracking||"")}</span>${d.descripcion?`<div>${prnE(d.descripcion)}</div>`:""}${d.factura?`<div class="sub">Fact.: ${prnE(d.factura)}</div>`:""}</td>
+        <td class="r"><b>${d.pk?toLb(d.pk):"—"}</b></td><td class="r">${hay?v.volLb:"—"}</td><td class="r">${hay?v.ft3:"—"}</td><td class="r">${hay?v.m3:"—"}</td></tr>`;}).join("");
+    const tot=`<tr class="tot"><td colspan="3">${w.cajas||dims.length||0} pieza${(w.cajas||dims.length)===1?"":"s"}</td><td class="r">${w.pesoLb||0}</td><td class="r">${w.volLb||"—"}</td><td class="r">${w.ft3||"—"}</td><td class="r">${w.m3||"—"}</td></tr>`;
+    const cuerpo=
+      pGrid(2,[pBox("Remitente",`<b>${prnE(w.shipper||"—")}</b>`,prnE([w.remitenteDir,[w.remitenteTel,w.remitenteEmail].filter(Boolean).join(" · ")].filter(Boolean).join(" · "))),
+        pBox("Consignatario",`<b>${prnE(w.consignee||"—")}</b>${w.casillero?` · #${prnE(w.casillero)}`:""}`,prnE([dest,`${w.destCity||""} ${nomPais(w.destCountry)}`.trim()].filter(Boolean).join(" · ")))])+
+      pGrid(4,[pBox("Tipo de pago",prnE(w.tipoPago||"—")),pBox("Tipo de envío",prnE(w.tipoEnvio||"Por definir")),pBox("Destino",prnE(`${w.destCity||""} · ${nomPais(w.destCountry)}`)),pBox("Tipo de cliente",prnE(tipoCli||"—"))])+
+      (w.notas?`<div class="nota"><b>Notas:</b> ${prnE(w.notas)}</div>`:"")+
+      pSec("Detalle de la carga")+
+      pTabla([{l:"#"},{l:"Medidas (in)"},{l:"Tracking / contenido"},{l:"Peso lb",r:1},{l:"Vol. lb",r:1},{l:"Ft³",r:1},{l:"M³",r:1}],filas,tot)+
+      pFirmas([["Empresa"],["Nombre"],["Firma"]])+
+      `<div class="legal">${prnE(notaLegalWR(w))}</div>`;
+    return prnHTML({titulo:"Warehouse Receipt",numero:w.id,barcode:true,pais:w.origCountry,emisor,
+      meta:[["Fecha",`${fmtDate(w.fecha)} ${fmtTime(w.fecha)}`],["Origen",`${w.origCity||""} · ${nomPais(w.origCountry)}`],["Recibido por",usr?fullName(usr):(w.usuario||"")]],cuerpo});
+  };
+
+  const htmlGuia=c=>{
+    if(!c)return "";
+    const cts=Array.isArray(c.containers)?c.containers:[];
+    const all=cts.flatMap(ct=>ct.wr||[]);
+    const tot={wr:c.totalWR||all.length,cajas:c.totalCajas||all.reduce((a,w)=>a+(w.cajas||1),0),lb:c.totalLb||all.reduce((a,w)=>a+(parseFloat(w.pesoLb)||0),0),ft3:c.totalFt3||all.reduce((a,w)=>a+(parseFloat(w.ft3)||0),0)};
+    const bloques=cts.map((ct,i)=>{
+      const dimsTxt=[ct.largo,ct.ancho,ct.alto].filter(Boolean).join(" × ");
+      return pSec(`Contenedor ${i+1}${ct.tipo?` · ${prnE(ct.tipo)}`:""}${dimsTxt?` · ${prnE(dimsTxt)} in`:""}${ct.sello?` · Sello ${prnE(ct.sello)}`:""}${ct.pesoLb?` · ${ct.pesoLb} lb`:""}`)+
+        pTabla([{l:"#"},{l:"N° WR"},{l:"Consignatario"},{l:"Cajas",c:1},{l:"Peso lb",r:1},{l:"Ft³",r:1},{l:"Descripción"}],
+          (ct.wr||[]).map((w,wi)=>`<tr><td>${wi+1}</td><td class="mono"><b>${prnE(w.id)}</b></td><td>${prnE(w.consignee||"—")}</td><td class="c">${w.cajas||0}</td><td class="r">${nm(w.pesoLb,1)}</td><td class="r">${w.ft3||"—"}</td><td>${prnE(cleanReempaqueDesc(w.descripcion||"")||"—")}</td></tr>`).join(""));
+    }).join("");
+    const cuerpo=pGrid(4,[pBox("Destino",prnE(c.destino||"—")),pBox("Tipo de envío",prnE(c.tipoEnvio||"—")),pBox("Vuelo / barco",prnE(c.numVuelo||"—")),pBox("Estado",prnE(c.status||"—")),
+        pBox("Salida",fmtDate(c.fechaSalida)),pBox("Llegada",fmtDate(fechaLlegadaGuia(c))),pBox("Recibida en almacén",fmtDate(c.fechaRecibidaAlmacen)),pBox("AWB / BL",prnE([c.awb,c.bl].filter(Boolean).join(" · ")||"—"))])+
+      (c.notas?`<div class="nota"><b>Notas:</b> ${prnE(c.notas)}</div>`:"")+
+      (bloques||`<div class="nota">Sin contenedores.</div>`)+
+      pGrid(4,[pBox("Total WR",`<b>${tot.wr}</b>`),pBox("Total cajas",`<b>${tot.cajas}</b>`),pBox("Peso total",`<b>${nm(tot.lb,1)} lb</b>`),pBox("Ft³ total",`<b>${nm(tot.ft3,2)}</b>`)]);
+    return prnHTML({titulo:"Guía",numero:c.id,barcode:true,meta:[["Fecha",fmtDate(c.fecha)]],cuerpo});
+  };
+
+  const htmlEstadoCuentaWR=(cli,wrs,filtros,totales,grupo=null)=>{
+    const MES=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+    const tabLabel={todos:"Todos",pendientes:"Pendientes",porconfirmar:"Por confirmar",reempacados:"Reempacados",egresados:"Egresados",entregadoscob:"Entregados / por cobrar"}[filtros.tab]||filtros.tab||"Todos";
+    const periodo=(filtros.mes||filtros.anio)?`${filtros.mes?MES[parseInt(filtros.mes)-1]:"Todos los meses"} ${filtros.anio||""}`.trim():"Todo";
+    const b=cli?branchDeCliente(cli):null;
+    const cab=grupo?pGrid(2,[pBox(grupo.tipo==="agente"?"Agente":grupo.tipo==="oficina"?"Oficina":"Autónomo",`<b>${prnE(grupo.nombre)}</b>`,prnE(grupo.sub||"")),
+        pBox("Contacto",prnE([grupo.email,grupo.tel].filter(Boolean).join(" · ")||"—"),`${grupo.nClientes} cliente${grupo.nClientes===1?"":"s"}`)])
+      :pGrid(2,[pBox("Cliente",`<b>${prnE(fullName(cli))}</b>${cli.casillero?` · #${prnE(cli.casillero)}`:""}`,prnE([cli.municipio,cli.estado,cli.pais].filter(Boolean).join(", "))),
+        pBox("Contacto",prnE([cli.email,cli.tel1].filter(Boolean).join(" · ")||"—"),b?prnE(`${b.nombre} (${b.tipo})`):"")]);
+    const filas=wrs.map(w=>{const c=grupo?grupo.cliDe(w):null;return `<tr><td>${prnE(w.status?.label||"—")}</td><td class="mono"><b>${prnE(w.id)}</b></td><td class="mono">${prnE(getNumGuia(w)||"—")}</td>${grupo?`<td>${prnE(c?fullName(c):(w.consignee||"—"))}<div class="sub">${prnE(c?.casillero||w.casillero||"")}</div></td>`:""}<td class="c">${w.cajas||0}</td><td class="r">${w.pesoLb||0}</td><td class="r">${w.volLb||"—"}</td><td class="r">${w.ft3||"—"}</td><td>${prnE(w.tipoEnvio||"—")}</td><td>${prnE((cleanReempaqueDesc(w.descripcion)||"—").slice(0,60))}</td><td class="r">${fmtMoney(w.valor||0,"USD")}</td></tr>`;}).join("");
+    const totF=wrs.length?`<tr class="tot"><td colspan="${grupo?4:3}">Totales · ${wrs.length} WR</td><td class="c">${wrs.reduce((s,w)=>s+(w.cajas||0),0)}</td><td class="r">${totales.pesoLb}</td><td class="r">${totales.volLb}</td><td class="r">${totales.ft3}</td><td colspan="2"></td><td class="r">${fmtMoney(totales.valor,"USD")}</td></tr>`:"";
+    const cuerpo=cab+pSec(`Envíos · ${prnE(tabLabel)}`)+pTabla([{l:"Estado"},{l:"N° WR"},{l:"Guía"},...(grupo?[{l:"Cliente"}]:[]),{l:"Cajas",c:1},{l:"Peso lb",r:1},{l:"Vol. lb",r:1},{l:"Ft³",r:1},{l:"Envío"},{l:"Descripción"},{l:"Valor",r:1}],filas,totF);
+    return prnHTML({titulo:"Estado de cuenta",meta:[["Fecha",fmtDate(new Date())],["Período",periodo],["Filtro",tabLabel]],cuerpo,horizontal:true});
+  };
+
+  const htmlNota=dn=>{
+    if(!dn)return "";
+    const wrs=(dn.wrIds||[]).map(id=>wrList.find(w=>w.id===id)).filter(Boolean);
+    const desp=(dn.tipo||"entrega")==="despacho";
+    const guia=dn.guiaId?consolList.find(c=>c.id===dn.guiaId):null;
+    const aereo=dnGuiaEsAerea(guia);
+    const S=k=>wrs.reduce((s,w)=>s+(parseFloat(w[k])||0),0);
+    const met={retiro_oficina:"Retiro en oficina",domicilio:"Entrega a domicilio",transportista:"Transportista / agente",despacho:"Despacho"}[dn.metodoEntrega]||"—";
+    const re=dn.receptorEntidad||{};
+    const datos=[[desp?"Receptor":"Consignatario",dn.consignatario||re.nombre],
+      desp&&re.despacha&&["Despacha",re.despacha],
+      desp&&re.chofer&&["Transporta",[re.chofer,re.choferId&&`ID ${re.choferId}`,re.vehiculo].filter(Boolean).join(" · ")],
+      desp&&re.recibidoPor&&["Recibido en sucursal",`${re.recibidoPor} · ${fmtDate(re.recibidoFecha)} ${fmtTime(re.recibidoFecha)}`],
+      [desp||re.recibe==="encargado"?"Recibe":"Firma",[dn.receptorNombre,re.relacion].filter(Boolean).join(" · ")],
+      ["Identificación",dn.receptorDocumento],["Teléfono",dn.receptorTelefono],["Método",met],
+      dn.direccionEntrega&&["Dirección",dn.direccionEntrega],!desp&&dn.transportista&&["Transportista",dn.transportista],dn.notas&&["Notas",dn.notas]].filter(Boolean);
+    const cols=[{l:"#"},{l:"N° WR"},...(desp?[{l:"Cliente"}]:[]),{l:"Descripción"},{l:"Cajas",c:1},...(aereo?[{l:"Peso lb",r:1},{l:"Vol. lb",r:1},{l:"A cobrar lb",r:1}]:[{l:"Peso lb",r:1},{l:"Ft³",r:1},{l:"M³",r:1}])];
+    const fila=(w,i)=>{const c=cliDeWR(w);const f=wrPesoFacturable(w,aereo);
+      return `<tr><td>${i+1}</td><td class="mono"><b>${prnE(w.id)}</b></td>${desp?`<td>${prnE(c?`${c.primerNombre} ${c.primerApellido}`:(w.consignee||"—"))}${c?.casillero?`<div class="sub">${prnE(c.casillero)}</div>`:""}</td>`:""}<td>${prnE((cleanReempaqueDesc(w.descripcion)||"—").slice(0,70))}</td><td class="c">${w.cajas||1}</td>
+        ${aereo?`<td class="r">${nm(w.pesoLb,1)}</td><td class="r">${nm(w.volLb,1)}</td><td class="r"><b>${nm(f.valor,1)}</b></td>`:`<td class="r">${nm(w.pesoLb,1)}</td><td class="r"><b>${nm(w.ft3,2)}</b></td><td class="r">${nm(w.m3,3)}</td>`}</tr>`;};
+    let filas="";let i=0;
+    if(desp){const m=new Map();wrs.forEach(w=>{const c=cliDeWR(w);const k=c?.id||w.consignee||"-";if(!m.has(k))m.set(k,{n:c?`${c.primerNombre} ${c.primerApellido}`:(w.consignee||"—"),cas:c?.casillero||"",wrs:[]});m.get(k).wrs.push(w);});
+      [...m.values()].forEach(g=>{filas+=`<tr class="grp"><td colspan="${cols.length}">${prnE(g.n)}${g.cas?` · ${prnE(g.cas)}`:""} (${g.wrs.length} WR)</td></tr>`;g.wrs.forEach(w=>{filas+=fila(w,i++);});});}
+    else filas=wrs.map((w,j)=>fila(w,j)).join("");
+    const tot=`<tr class="tot"><td colspan="${desp?4:3}">Totales · ${wrs.length} WR</td><td class="c">${S("cajas")}</td>${aereo?`<td class="r">${nm(S("pesoLb"),1)}</td><td class="r">${nm(S("volLb"),1)}</td><td class="r">${nm(wrs.reduce((s,w)=>s+wrPesoFacturable(w,true).valor,0),1)} lb</td>`:`<td class="r">${nm(S("pesoLb"),1)}</td><td class="r">${nm(S("ft3"),2)} ft³</td><td class="r">${nm(S("m3"),3)} m³</td>`}</tr>`;
+    const cuerpo=`<div class="lst">${datos.map(([k,v])=>`<div class="k">${prnE(k)}</div><div>${prnE(v||"—")}</div>`).join("")}</div>`+
+      pSec("Detalle")+pTabla(cols,filas,tot)+
+      `<div class="decl"><b>Declaración de recepción:</b> el receptor declara haber recibido conforme, en buen estado y en la cantidad indicada, la mercancía descrita en esta nota. Cualquier discrepancia o daño visible debe reportarse al momento de la firma. Una vez firmada, ${prnE(empresaNombre)} queda liberado de toda responsabilidad sobre la mercancía entregada.</div>`+
+      pFirmas([[desp?"Despacha":`Entrega ${empresaNombre}`,desp&&re.despacha?re.despacha:"Firma y sello"],...(desp?[["Transporta",[re.chofer,re.choferId].filter(Boolean).join(" · ")]]:[]),["Recibe conforme",[dn.receptorNombre,dn.receptorDocumento].filter(Boolean).join(" · ")]]);
+    return prnHTML({titulo:desp?"Nota de despacho":"Nota de entrega",numero:dn.id,barcode:true,
+      meta:[["Fecha",`${fmtDate(dn.fecha)} ${fmtTime(dn.fecha)}`],["Guía",[dn.guiaId,guia?.tipoEnvio].filter(Boolean).join(" · ")],["Usuario",nombreUsuario(dn.usuario)]],
+      anulado:dn.anulado?{texto:"ANULADA",motivo:dn.motivoAnulacion}:null,cuerpo});
+  };
+
+  const htmlRelease=cr=>{
+    if(!cr)return "";
+    const wrs=(cr.wrIds||[]).map(id=>wrList.find(w=>w.id===id)).filter(Boolean);
+    const lbW=w=>(w.dims||[]).reduce((a,d)=>a+parseFloat(d.pkLb||d.pk*2.205||0),0)||parseFloat(w.pesoLb)||0;
+    const cuerpo=pGrid(4,[pBox("Agente de carga",`<b>${prnE(cr.agenteCarga||"—")}</b>`),pBox("Contacto",prnE(cr.contacto||"—")),pBox("Identificación",prnE(cr.documento||"—")),pBox("Vehículo",prnE(cr.vehiculo||"—"))])+
+      (cr.notas?`<div class="nota"><b>Notas:</b> ${prnE(cr.notas)}</div>`:"")+
+      pSec("Detalle de la carga")+
+      pTabla([{l:"#"},{l:"N° WR"},{l:"Consignatario"},{l:"Tracking"},{l:"Cajas",c:1},{l:"Peso lb",r:1}],
+        wrs.map((w,i)=>`<tr><td>${i+1}</td><td class="mono"><b>${prnE(w.id)}</b></td><td>${prnE(w.consignee||"—")}</td><td class="mono">${prnE(w.tracking||"—")}</td><td class="c">${(w.dims||[]).length||w.cajas||0}</td><td class="r">${nm(lbW(w),1)}</td></tr>`).join(""),
+        wrs.length?`<tr class="tot"><td colspan="4">Totales · ${wrs.length} WR</td><td class="c">${wrs.reduce((s,w)=>s+((w.dims||[]).length||w.cajas||0),0)}</td><td class="r">${nm(wrs.reduce((s,w)=>s+lbW(w),0),1)}</td></tr>`:"")+
+      `<div class="decl">La firma confirma la recepción conforme de los WR listados. Cualquier discrepancia debe reportarse al momento de la entrega.</div>`+
+      pFirmas([[`Entrega ${empresaNombre}`,"Firma y sello"],["Recibe (agente de carga)",[cr.agenteCarga,cr.documento].filter(Boolean).join(" · ")]]);
+    return prnHTML({titulo:"Cargo release",numero:cr.id,barcode:true,meta:[["Fecha",`${fmtDate(cr.fecha)} ${fmtTime(cr.fecha)}`],["Usuario",nombreUsuario(cr.usuario)]],
+      anulado:cr.anulado?{texto:"ANULADO",motivo:cr.motivoAnulacion}:null,cuerpo});
+  };
+  const htmlReleaseRecibo=({cr,wr,cliente})=>{
+    if(!cr||!wr)return "";
+    const cuerpo=pGrid(2,[pBox("WR",`<b class="mono">${prnE(wr.id)}</b> · ${wr.cajas||0} caja${wr.cajas===1?"":"s"} · ${wr.pesoLb||0} lb`,prnE(wr.descripcion||"")),
+        pBox("Consignatario",`<b>${prnE(wr.consignee||"—")}</b>`,`Casillero ${prnE(wr.casillero||cliente?.casillero||"—")} · Valor declarado ${fmtMoney(wr.valor||0,"USD")}`)])+
+      pGrid(2,[pBox("Retira",`<b>${prnE(cr.agenteCarga||"—")}</b>`,`ID ${prnE(cr.documento||"—")}`),pBox("Empresa",prnE(cr.contacto||"—"),cr.notas?prnE(cr.notas):"")])+
+      `<div class="decl">El receptor certifica haber recibido la mercancía descrita en buenas condiciones. Este documento es comprobante de egreso y libera de responsabilidad a ${prnE(empresaNombre)}.</div>`+
+      pFirmas([["Firma del receptor"],[`Firma y sello ${empresaNombre}`]]);
+    return prnHTML({titulo:"Comprobante de egreso",numero:cr.id,meta:[["Fecha",`${fmtDate(cr.fecha)} ${fmtTime(cr.fecha)}`],["Usuario",nombreUsuario(cr.usuario)]],cuerpo});
+  };
+
+  const htmlPickup=p=>{
+    if(!p)return "";
+    const t=puTot(p);
+    const cuerpo=pGrid(2,[pBox("Recoger para",`<b>${prnE(p.clienteNombre||"—")}</b>${p.casillero?` · #${prnE(p.casillero)}`:""}`,prnE([p.contacto,p.telefono].filter(Boolean).join(" · "))),
+        pBox("Dirección de recogida",prnE(p.direccion||"—"))])+
+      pGrid(4,[pBox("Fecha preferida",prnE([p.fechaDeseada,p.franja].filter(Boolean).join(" · ")||"—")),pBox("Fecha programada",prnE(p.fechaProgramada||"—")),pBox("Empresa / carrier",prnE(p.transportista||"—")),pBox("Chofer",prnE(p.chofer||"—"))])+
+      pSec("Paquetes (aproximado)")+
+      pTabla([{l:"Cant.",c:1},{l:"Contenido"},{l:"Peso c/u",r:1},{l:"Medidas c/u (in)"},{l:"Peso total",r:1}],
+        (p.paquetes||[]).map(x=>`<tr><td class="c">${x.cantidad||1}</td><td>${prnE(x.descripcion||"—")}</td><td class="r">${x.pesoLb?`${x.pesoLb} lb`:"—"}</td><td>${x.largo&&x.ancho&&x.alto?`${x.largo}×${x.ancho}×${x.alto}`:"—"}</td><td class="r">${x.pesoLb?`${nm((parseFloat(x.pesoLb)||0)*(parseInt(x.cantidad)||1),1)} lb`:"—"}</td></tr>`).join(""),
+        `<tr class="tot"><td class="c">${t.bultos}</td><td>Total aproximado</td><td></td><td>${t.ft3?`${t.ft3} ft³`:""}</td><td class="r">${t.lb?`${t.lb} lb`:"—"}</td></tr>`)+
+      (p.notas?`<div class="nota"><b>Notas:</b> ${prnE(p.notas)}</div>`:"")+
+      `<div class="decl">Contenido, peso, medidas, fecha y horario son aproximados o preferidos. Los datos definitivos se registran al recibir la mercancía en el almacén.</div>`+
+      pFirmas([["Entrega","Nombre, ID y firma"],["Recibe chofer / empresa","Nombre y firma"]]);
+    return prnHTML({titulo:"Solicitud de pick-up",numero:p.id,barcode:true,
+      meta:[["Solicitado",`${fmtDate(p.fecha)} ${fmtTime(p.fecha)}`],["Por",p.solicitanteNombre],["Estado",(PU_ST[p.status]||PU_ST.solicitado).l],["WR",p.wrId]],cuerpo});
+  };
+
+  const htmlStatLista=(titulo,rows)=>prnHTML({titulo,meta:[["Fecha",fmtDate(new Date())],["Registros",String(rows.length)]],horizontal:true,
+    cuerpo:pTabla([{l:"N° WR"},{l:"Fecha"},{l:"Consignatario"},{l:"Casillero"},{l:"Carrier"},{l:"Tracking"},{l:"Valor",r:1},{l:"Peso kg",r:1},{l:"Estado"},{l:"Envío"}],
+      rows.map(w=>`<tr><td class="mono"><b>${prnE(w.id)}</b></td><td>${fmtDate(w.fecha)}</td><td>${prnE(w.consignee||"")}</td><td>${prnE(w.casillero||"")}</td><td>${prnE(w.carrier||"")}</td><td class="mono">${prnE(w.tracking||"")}</td><td class="r">${fmtMoney(w.valor||0,"USD")}</td><td class="r">${w.pesoKg||0}</td><td>${prnE(w.status?.label||"")}</td><td>${prnE(w.tipoEnvio||"")}</td></tr>`).join(""))});
+
+  const htmlActividad=lista=>prnHTML({titulo:"Registro de actividad",meta:[["Fecha",fmtDate(new Date())],["Eventos",String(lista.length)]],horizontal:true,
+    cuerpo:pTabla([{l:"Fecha / hora"},{l:"Usuario"},{l:"Rol"},{l:"Acción"},{l:"Detalle"}],
+      lista.map(a=>`<tr><td>${fmtDate(a.ts)} ${fmtTime(a.ts)}</td><td>${prnE(a.user)}</td><td>${prnE(ROLE_DEFS[a.role]?.name||a.role||"")}</td><td>${prnE(a.action)}</td><td>${prnE(a.detail||"")}</td></tr>`).join(""))});
 
   // ── DOCUMENTOS ────────────────────────────────────────────────────────────────
   // Factura comercial / proforma (formato por país de destino), declaración de contenido,
@@ -6367,68 +6277,50 @@ export default function SistemaCarga(){
     setDocEd({wr:w,tipo,motivo:"Efectos personales",incoterm:fmt.incoterm,moneda:fmt.moneda,lineas:docLineasDeWR(w)});
   };
   const docHTML=ed=>{
-    const w=ed.wr;const e=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
-    const fmt=fmtFCDe(w.destCountry);const R=docRemitente(w),D=docDestinatario(w);const g=guiaDeWR(w);const E=docCfg(w.origCountry,"empresa");const X=docCfg(w.origCountry,"exp");
-    const T=(es,en)=>fmt.idioma==="en"&&ed.tipo==="factura"?en:fmt.idioma==="bi"&&ed.tipo==="factura"?`${es} / <i>${en}</i>`:es;
+    const w=ed.wr;const e=prnE;
+    const fmt=fmtFCDe(w.destCountry);const R=docRemitente(w),D=docDestinatario(w);const g=guiaDeWR(w);const X=docCfg(w.origCountry,"exp");
+    const T=(es,en)=>fmt.idioma==="en"&&ed.tipo==="factura"?en:fmt.idioma==="bi"&&ed.tipo==="factura"?`${es} / ${en}`:es;
     const reemp=t=>String(t||"").split("{EMPRESA}").join(empresaNombre||"").split("{REMITENTE}").join(R.nombre||"________________");
-    const css=`*{box-sizing:border-box}body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:0;padding:24px;font-size:12px}
-      .hd{display:flex;justify-content:space-between;border-bottom:3px solid #1A2B4A;padding-bottom:10px;margin-bottom:12px}
-      h1{margin:0;font-size:20px}h2{margin:0;font-size:18px;text-align:right}.r{text-align:right}.c{text-align:center}
-      .box{border:1px solid #999;padding:8px 10px;border-radius:4px}.box b.t{display:block;font-size:11px;color:#1A2B4A;text-transform:uppercase;margin-bottom:4px}
-      .g2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px}
-      table{width:100%;border-collapse:collapse;margin-bottom:10px}th{background:#1A2B4A;color:#fff;padding:5px 6px;text-align:left;font-size:11px}td{border-bottom:1px solid #ccc;padding:5px 6px}
-      .tot td{font-weight:800;border-top:2px solid #1A2B4A}.firma{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:40px}.firma div{border-top:1px solid #000;padding-top:4px;text-align:center;font-size:11px}
-      .nota{font-size:11px;margin:8px 0;text-align:justify}`;
-    const cab=(titulo,num)=>`<div class="hd"><div><h1>${e(E.razon||empresaNombre||"")}</h1><div>${e([E.dir,E.tel,E.email].filter(Boolean).join(" · "))}</div>${E.idFiscal?`<div>${e(E.idFiscal)}</div>`:""}</div>
-      <div><h2>${titulo}</h2><div class="r">${num?`N° <b>${e(num)}</b><br>`:""}${T("Fecha","Date")}: ${fmtDate(new Date())}<br>WR: <b>${e(w.id)}</b>${g?`<br>${T("Guía","Airway bill")}: ${e(g.id)}${g.awb?` · AWB ${e(g.awb)}`:""}${g.bl?` · BL ${e(g.bl)}`:""}`:""}</div></div></div>`;
-    const partes=`<div class="g2"><div class="box"><b class="t">${T("Remitente","Shipper")}</b><b>${e(R.nombre)}</b><br>${e(R.dir)}<br>${e([R.tel,R.email].filter(Boolean).join(" · "))}${R.doc?`<br>ID: ${e(R.doc)}`:""}</div>
-      <div class="box"><b class="t">${T("Destinatario","Consignee")}</b><b>${e(D.nombre)}</b>${D.casillero?` · #${e(D.casillero)}`:""}<br>${e(D.dir)}<br>${e([D.tel,D.email].filter(Boolean).join(" · "))}<br>${e(fmt.idLabel)}: ${e(D.doc||"________________")}</div></div>`;
+    const meta=[[T("Fecha","Date"),fmtDate(new Date())],["WR",w.id],g&&[T("Guía","Airway bill"),[g.id,g.awb&&`AWB ${g.awb}`,g.bl&&`BL ${g.bl}`].filter(Boolean).join(" · ")]];
+    const partes=pGrid(2,[pBox(T("Remitente","Shipper"),`<b>${e(R.nombre)}</b>`,e([R.dir,[R.tel,R.email].filter(Boolean).join(" · "),R.doc&&`ID ${R.doc}`].filter(Boolean).join(" · "))),
+      pBox(T("Destinatario","Consignee"),`<b>${e(D.nombre)}</b>${D.casillero?` · #${e(D.casillero)}`:""}`,e([D.dir,[D.tel,D.email].filter(Boolean).join(" · "),`${fmt.idLabel}: ${D.doc||"________________"}`].filter(Boolean).join(" · ")))]);
     const dims=w.dims||[];const totKg=dims.reduce((t,d)=>t+(parseFloat(d.pk)||0),0)||parseFloat(w.pesoKg)||0;
-    const pie=`<script>window.addEventListener('load',()=>{if(window.__print)setTimeout(()=>window.print(),250);});</script>`;
+    const doc=(titulo,numero,cuerpo)=>prnHTML({titulo,numero,meta,pais:w.origCountry,cuerpo});
     if(ed.tipo==="factura"){
-      const com=ed.motivo==="Venta";const L=ed.lineas||[];const sum=L.reduce((t,x)=>t+(parseFloat(x.cantidad)||0)*(parseFloat(x.valorUnit)||0),0);
-      const hs=fmt.hs==="si",ori=fmt.origenMerc==="si";const mon=ed.moneda||"USD";
-      return `<html><head><meta charset="utf-8"><title>${e(com?fmt.tituloCom:fmt.tituloPro)} ${e(w.id)}</title><style>${css}</style></head><body>
-        ${cab(e(com?fmt.tituloCom:fmt.tituloPro),`${com?"CI":"PF"}-${w.id}`)}${partes}
-        <div class="g4">${[[T("Origen","Origin"),`${w.origCity||""} · ${nomPais(w.origCountry)}`],[T("Destino","Destination"),`${w.destCity||""} · ${nomPais(w.destCountry)}`],
-          [T("Envío","Service"),w.tipoEnvio||"—"],[T("Bultos","Packages"),String(dims.length||w.cajas||1)],[T("Peso total","Total weight"),`${r2(totKg)} kg · ${r2(totKg*2.20462)} lb`],
-          ...(ed.incoterm?[["Incoterm",ed.incoterm]]:[]),[T("Motivo","Reason for export"),ed.motivo],[T("Moneda","Currency"),mon]].map(([l,v])=>`<div class="box"><b class="t">${l}</b>${e(v)}</div>`).join("")}</div>
-        <table><thead><tr><th>${T("Cant.","Qty")}</th><th>${T("Descripción","Description")}</th>${hs?`<th>${T("Cód. arancelario","HS code")}</th>`:""}${ori?`<th>${T("País de origen","Country of origin")}</th>`:""}<th class="r">${T("Peso kg","Weight kg")}</th><th class="r">${T("Valor unit.","Unit value")}</th><th class="r">Total</th></tr></thead><tbody>
-        ${L.map(x=>{const q=parseFloat(x.cantidad)||0,u=parseFloat(x.valorUnit)||0;return `<tr><td>${e(x.cantidad)}</td><td>${e(x.descripcion)}</td>${hs?`<td>${e(x.hs)}</td>`:""}${ori?`<td>${e(x.origen)}</td>`:""}<td class="r">${e(x.pesoKg)}</td><td class="r">${fmtMoney(u,mon)}</td><td class="r">${fmtMoney(q*u,mon)}</td></tr>`;}).join("")}
-        <tr class="tot"><td colspan="${4+(hs?1:0)+(ori?1:0)}" class="r">${T("Valor total declarado","Total declared value")} (${mon})</td><td class="r">${fmtMoney(sum,mon)}</td></tr></tbody></table>
-        ${com?"":`<div class="nota"><b>${T("Sin valor comercial. Valor indicado solo para fines aduaneros.","No commercial value. Value for customs purposes only.")}</b></div>`}
-        <div class="nota">${e(fmt.declaracion)}</div>
-        <div class="firma"><div>${T("Firma del remitente","Shipper's signature")}<br>${e(R.nombre)}</div><div>${T("Fecha","Date")}</div></div>${pie}</body></html>`;
+      const com=ed.motivo==="Venta";const L=ed.lineas||[];const mon=ed.moneda||"USD";
+      const sum=L.reduce((t,x)=>t+(parseFloat(x.cantidad)||0)*(parseFloat(x.valorUnit)||0),0);
+      const hs=fmt.hs==="si",ori=fmt.origenMerc==="si";
+      return doc(e(com?fmt.tituloCom:fmt.tituloPro),`${com?"CI":"PF"}-${w.id}`,partes+
+        pGrid(4,[pBox(T("Origen","Origin"),e(`${w.origCity||""} · ${nomPais(w.origCountry)}`)),pBox(T("Destino","Destination"),e(`${w.destCity||""} · ${nomPais(w.destCountry)}`)),
+          pBox(T("Envío","Service"),e(w.tipoEnvio||"—")),pBox(T("Bultos","Packages"),String(dims.length||w.cajas||1)),pBox(T("Peso total","Total weight"),`${nm(totKg)} kg · ${nm(totKg*2.20462)} lb`),
+          ed.incoterm&&pBox("Incoterm",e(ed.incoterm)),pBox(T("Motivo","Reason for export"),e(ed.motivo)),pBox(T("Moneda","Currency"),e(mon))])+
+        pTabla([{l:T("Cant.","Qty")},{l:T("Descripción","Description")},...(hs?[{l:T("Cód. arancelario","HS code")}]:[]),...(ori?[{l:T("País de origen","Country of origin")}]:[]),{l:T("Peso kg","Weight kg"),r:1},{l:T("Valor unit.","Unit value"),r:1},{l:"Total",r:1}],
+          L.map(x=>{const q=parseFloat(x.cantidad)||0,u=parseFloat(x.valorUnit)||0;return `<tr><td>${e(x.cantidad)}</td><td>${e(x.descripcion)}</td>${hs?`<td>${e(x.hs)}</td>`:""}${ori?`<td>${e(x.origen)}</td>`:""}<td class="r">${e(x.pesoKg)}</td><td class="r">${fmtMoney(u,mon)}</td><td class="r">${fmtMoney(q*u,mon)}</td></tr>`;}).join(""),
+          `<tr class="tot"><td colspan="${4+(hs?1:0)+(ori?1:0)}" class="r">${T("Valor total declarado","Total declared value")} (${mon})</td><td class="r">${fmtMoney(sum,mon)}</td></tr>`)+
+        (com?"":`<div class="decl"><b>${T("Sin valor comercial. Valor indicado solo para fines aduaneros.","No commercial value. Value for customs purposes only.")}</b></div>`)+
+        `<div class="nota">${e(fmt.declaracion)}</div>`+pFirmas([[T("Firma del remitente","Shipper's signature"),R.nombre],[T("Fecha","Date")]]));
     }
     if(ed.tipo==="empaque"){
       const rows=dims.length?dims:[{l:0,a:0,h:0,pk:parseFloat(w.pesoKg)||0,volKg:parseFloat(w.volKg)||0,descripcion:w.descripcion,tracking:w.tracking}];
-      const n=v=>r2(parseFloat(v)||0);
       const tot=rows.reduce((t,d)=>({kg:t.kg+(parseFloat(d.pk)||0),vk:t.vk+(parseFloat(d.volKg)||0),m3:t.m3+(parseFloat(d.m3)||0)}),{kg:0,vk:0,m3:0});
-      return `<html><head><meta charset="utf-8"><title>Lista de empaque ${e(w.id)}</title><style>${css}</style></head><body>
-        ${cab("LISTA DE EMPAQUE<br><span style='font-size:13px'>PACKING LIST</span>","")}${partes}
-        <table><thead><tr><th>#</th><th>Tracking</th><th>Descripción</th><th class="r">L×A×H cm</th><th class="r">L×A×H in</th><th class="r">Peso kg</th><th class="r">Peso lb</th><th class="r">Vol. kg</th></tr></thead><tbody>
-        ${rows.map((d,i)=>`<tr><td>${i+1}/${rows.length}</td><td>${e(d.tracking||"")}</td><td>${e(d.descripcion||w.descripcion||"")}</td><td class="r">${d.l?`${n(d.l)}×${n(d.a)}×${n(d.h)}`:"—"}</td><td class="r">${d.l?`${n(d.l/2.54)}×${n(d.a/2.54)}×${n(d.h/2.54)}`:"—"}</td><td class="r">${n(d.pk)}</td><td class="r">${n((parseFloat(d.pk)||0)*2.20462)}</td><td class="r">${n(d.volKg)}</td></tr>`).join("")}
-        <tr class="tot"><td colspan="5">TOTAL · ${rows.length} bulto${rows.length===1?"":"s"}${tot.m3?` · ${Math.round(tot.m3*10000)/10000} m³`:""}</td><td class="r">${n(tot.kg)}</td><td class="r">${n(tot.kg*2.20462)}</td><td class="r">${n(tot.vk)}</td></tr></tbody></table>
-        <div class="firma"><div>Preparado por</div><div>Recibido por</div></div>${pie}</body></html>`;
+      return doc("Lista de empaque","",partes+
+        pTabla([{l:"#"},{l:"Tracking"},{l:"Descripción"},{l:"L×A×H cm",r:1},{l:"L×A×H in",r:1},{l:"Peso kg",r:1},{l:"Peso lb",r:1},{l:"Vol. kg",r:1}],
+          rows.map((d,i)=>`<tr><td>${i+1}/${rows.length}</td><td class="mono">${e(d.tracking||"")}</td><td>${e(d.descripcion||w.descripcion||"")}</td><td class="r">${d.l?`${nm(d.l)}×${nm(d.a)}×${nm(d.h)}`:"—"}</td><td class="r">${d.l?`${nm(d.l/2.54)}×${nm(d.a/2.54)}×${nm(d.h/2.54)}`:"—"}</td><td class="r">${nm(d.pk)}</td><td class="r">${nm((parseFloat(d.pk)||0)*2.20462)}</td><td class="r">${nm(d.volKg)}</td></tr>`).join(""),
+          `<tr class="tot"><td colspan="5">Total · ${rows.length} bulto${rows.length===1?"":"s"}${tot.m3?` · ${nm(tot.m3,4)} m³`:""}</td><td class="r">${nm(tot.kg)}</td><td class="r">${nm(tot.kg*2.20462)}</td><td class="r">${nm(tot.vk)}</td></tr>`)+
+        pFirmas([["Preparado por"],["Recibido por"]]));
     }
     if(ed.tipo==="declaracion"){
       const L=ed.lineas||[];const mon=ed.moneda||"USD";const sum=L.reduce((t,x)=>t+(parseFloat(x.cantidad)||0)*(parseFloat(x.valorUnit)||0),0);
-      return `<html><head><meta charset="utf-8"><title>Declaración de contenido ${e(w.id)}</title><style>${css}</style></head><body>
-        ${cab("DECLARACIÓN DE CONTENIDO<br><span style='font-size:13px'>Y DE MERCANCÍA NO PROHIBIDA</span>","")}${partes}
-        <table><thead><tr><th>Cant.</th><th>Descripción del contenido</th><th class="r">Valor</th></tr></thead><tbody>
-        ${L.map(x=>`<tr><td>${e(x.cantidad)}</td><td>${e(x.descripcion)}</td><td class="r">${fmtMoney((parseFloat(x.cantidad)||0)*(parseFloat(x.valorUnit)||0),mon)}</td></tr>`).join("")}
-        <tr class="tot"><td colspan="2" class="r">Valor total declarado</td><td class="r">${fmtMoney(sum,mon)}</td></tr></tbody></table>
-        <div class="nota" style="font-size:13px">${e(reemp(X.declaracion))}</div>
-        <div class="firma"><div>Firma del remitente<br>${e(R.nombre)}</div><div>ID: ${e(R.doc||"________________")}<br>Fecha: ____/____/______</div></div>${pie}</body></html>`;
+      return doc("Declaración de contenido","",partes+
+        pTabla([{l:"Cant."},{l:"Descripción del contenido"},{l:"Valor",r:1}],
+          L.map(x=>`<tr><td>${e(x.cantidad)}</td><td>${e(x.descripcion)}</td><td class="r">${fmtMoney((parseFloat(x.cantidad)||0)*(parseFloat(x.valorUnit)||0),mon)}</td></tr>`).join(""),
+          `<tr class="tot"><td colspan="2" class="r">Valor total declarado</td><td class="r">${fmtMoney(sum,mon)}</td></tr>`)+
+        `<div class="decl" style="font-size:12px">${e(reemp(X.declaracion))}</div>`+pFirmas([["Firma del remitente",R.nombre],["Identificación",R.doc||"________________"]]));
     }
-    return `<html><head><meta charset="utf-8"><title>Autorización ${e(R.nombre)}</title><style>${css}</style></head><body>
-      ${cab("AUTORIZACIÓN DE INSPECCIÓN<br><span style='font-size:13px'>Y CARTA DE INSTRUCCIONES</span>","")}
-      <div class="box" style="margin-bottom:12px"><b class="t">Remitente</b><b>${e(R.nombre)}</b><br>${e(R.dir)}<br>${e([R.tel,R.email].filter(Boolean).join(" · "))}<br>ID: ${e(R.doc||"________________")}</div>
-      <div class="nota" style="font-size:14px;line-height:1.6">${e(reemp(X.autorizacion))}</div>
-      <div class="firma"><div>Firma del remitente<br>${e(R.nombre)}</div><div>Fecha: ____/____/______</div></div>${pie}</body></html>`;
+    return doc("Autorización de inspección","",pGrid(2,[pBox("Remitente",`<b>${e(R.nombre)}</b>`,e([R.dir,[R.tel,R.email].filter(Boolean).join(" · ")].filter(Boolean).join(" · "))),pBox("Identificación",e(R.doc||"________________"))])+
+      `<div class="decl" style="font-size:13px;line-height:1.6">${e(reemp(X.autorizacion))}</div>`+pFirmas([["Firma del remitente",R.nombre],["Fecha"]]));
   };
-  const docImprimir=ed=>{const w=window.open("","_blank","width=900,height=1100");if(!w){window.alert("El navegador bloqueó la ventana de impresión.");return;}
-    w.__print=true;w.document.write(docHTML(ed));w.document.close();logAction("Imprimió documento",`${({factura:"Factura comercial/proforma",declaracion:"Declaración de contenido",empaque:"Lista de empaque",autorizacion:"Autorización"})[ed.tipo]} · WR ${ed.wr.id}`);};
+  const docImprimir=ed=>{prnImprimir(docHTML(ed));logAction("Imprimió documento",`${({factura:"Factura comercial/proforma",declaracion:"Declaración de contenido",empaque:"Lista de empaque",autorizacion:"Autorización"})[ed.tipo]} · WR ${ed.wr.id}`);};
   const DOC_TIPOS=[["factura","Factura comercial / proforma"],["declaracion","Declaración de contenido"],["empaque","Lista de empaque"],["autorizacion","Autorización e instrucciones"]];
 
   const renderDocs=()=>{
@@ -6779,10 +6671,9 @@ export default function SistemaCarga(){
       if(R.grupos)R.grupos.forEach(g=>{cuerpo+=`<tr class="g"><td colspan="${R.cols.length}">${e(R.gl)}: ${e(g.k)}</td></tr>`+g.rows.map(fd).join("")+ft("Subtotal",g.rows.length,g.tot);});
       else cuerpo=R.filas.map(fd).join("");cuerpo+=ft("TOTAL",R.filas.length,R.tot);}
     const filt=repTextoFiltros(rep,par,R.C);
-    const w=window.open("","_blank","width=1100,height=900");if(!w){window.alert("El navegador bloqueó la ventana de impresión.");return;}
-    w.document.write(`<html><head><meta charset="utf-8"><title>${e(rep.nombre)}</title><style>body{font-family:Arial,Helvetica,sans-serif;font-size:11px;padding:18px;color:#111}h1{font-size:17px;margin:0}table{width:100%;border-collapse:collapse;margin-top:10px}th{background:#1A2B4A;color:#fff;padding:4px 5px;text-align:left}td{border-bottom:1px solid #ddd;padding:3px 5px}.r{text-align:right}.g td{background:#EEF3FF;font-weight:700}.t td{font-weight:800;border-top:2px solid #1A2B4A;background:#f6f6f6}@page{size:landscape;margin:12mm}</style></head><body>
-      <h1>${e(empresaNombre)} · ${e(rep.nombre)}</h1><div>${fmtDate(new Date())} ${fmtTime(new Date())}${filt?` · ${e(filt)}`:""}</div>
-      <table><thead><tr>${head}</tr></thead><tbody>${cuerpo}</tbody></table><script>window.addEventListener('load',()=>setTimeout(()=>window.print(),250));</script></body></html>`);w.document.close();};
+    cuerpo=cuerpo.replace(/<tr class="t">/g,'<tr class="tot">').replace(/<tr class="g">/g,'<tr class="grp">');
+    prnVer(rep.nombre,prnHTML({titulo:rep.nombre,meta:[["Fecha",`${fmtDate(new Date())} ${fmtTime(new Date())}`],filt&&["Filtros",filt],["Registros",String(R.filas.length)]],horizontal:R.cols.length>7,
+      cuerpo:`<table class="t"><thead><tr>${head}</tr></thead><tbody>${cuerpo}</tbody></table>`}));};
   const repGuardarLista=async n=>{const ok=await dbSetConfig('reportes_guardados',n);if(ok===false){window.alert("No se pudo guardar.");return false;}setRepGuardados(n);return true;};
   const repPuedeEditar=r=>(hasPerm("editar_reporte")||hasPerm("crear_reporte")||currentUser.rol==="A")&&(!r.owner||r.owner===currentUser.id||currentUser.rol==="A");
   const repAbrir=r=>{setRepSel(r.id);setRepPar({desde:"",hasta:"",q:"",f:{}});setRepModo("ver");if(r.fuente==="actividad"&&repAct==null)dbGetActividadReporte().then(setRepAct);};
@@ -7676,7 +7567,7 @@ export default function SistemaCarga(){
               <span style={{fontSize:12,background:"var(--bg4)",border:"1px solid var(--b1)",borderRadius:4,padding:"2px 8px",color:"var(--t3)"}}>{actLog.length} eventos</span>
               <div style={{flex:1}}/>
               <input className="fi" style={{width:200,fontSize:13}} value={actFilter} onChange={e=>setActFilter(e.target.value)} placeholder="Filtrar por usuario o acción…"/>
-              <button className="btn-s" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>window.print()}><Ico e="🖨" sp/>Exportar</button>
+              <button className="btn-s" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>prnVer("Registro de actividad",htmlActividad(actLog.filter(a=>!actFilter||a.user.toLowerCase().includes(actFilter.toLowerCase())||a.action.toLowerCase().includes(actFilter.toLowerCase())||a.detail.toLowerCase().includes(actFilter.toLowerCase()))))}><Ico e="🖨" sp/>Imprimir</button>
             </div>
             <div style={{maxHeight:"60vh",overflowY:"auto"}}>
               <><table className="ct">
@@ -8671,83 +8562,37 @@ export default function SistemaCarga(){
   };
   // Documento de la factura (se muestra en pantalla y se imprime tal cual)
   const facturaHTML=(f,listaPagos=pagos)=>{
-    const e=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
-    const $=v=>fmtMoney(v,f.moneda);
-    const n=v=>(Math.round((parseFloat(v)||0)*100)/100).toLocaleString("es",{minimumFractionDigits:0,maximumFractionDigits:2});
+    const e=prnE;const $=v=>fmtMoney(v,f.moneda);
     const L=(f.lineas||[]).map(l=>({...l,tipo:l.tipo||"extra"}));
     const fl=L.filter(l=>l.tipo==="flete"),ad=L.filter(l=>l.tipo==="adicional"),mn=L.filter(l=>l.tipo==="minimo"),ex=L.filter(l=>l.tipo==="extra");
     const S=(a,k)=>a.reduce((t,l)=>t+(parseFloat(l[k])||0),0);
     const aereo=/^a[eé]r/i.test(f.tipoEnvio||"")||fl.some(l=>["lb","kg"].includes(l.unidad));
-    const uniC=fl[0]?.unidad||f.tarifa?.unidad||(aereo?"lb":"ft3");
-    const uni=UNI_LBL[uniC]||uniC;
-    const cm=aereo?(uniC==="kg"?[["pesoKg","Kg."],["volKg","Kg. Vol"]]:[["pesoLb","Lb."],["volLb","Lb. Vol"]]):[["ft3","Ft³"],["m3","M³"]];
+    const uniC=fl[0]?.unidad||f.tarifa?.unidad||(aereo?"lb":"ft3");const uni=UNI_LBL[uniC]||uniC;
+    const cm=aereo?(uniC==="kg"?[["pesoKg","Kg"],["volKg","Kg vol."]]:[["pesoLb","Lb"],["volLb","Lb vol."]]):[["ft3","Ft³"],["m3","M³"]];
     const conCli=fl.some(l=>l.cliente);
-    const titulo=f.tipo==="nota_credito"?"NOTA DE CRÉDITO":f.tipo==="proforma"?"PROFORMA":"FACTURA";
+    const titulo=f.tipo==="nota_credito"?"Nota de crédito":f.tipo==="proforma"?"Proforma":"Factura";
     const pagosAplic=listaPagos.filter(p=>p.facturaId===f.id&&!p.anulado);
-    const td='style="padding:5px 7px;border-bottom:1px solid #ddd"';
-    const tdr='style="padding:5px 7px;border-bottom:1px solid #ddd;text-align:right;font-family:monospace"';
-    const th=(t,r)=>`<th style="padding:6px 7px;background:#1A2B4A;color:#fff;font-size:11px;text-transform:uppercase;letter-spacing:.5px;text-align:${r?"right":"left"}">${t}</th>`;
-    const tablaFlete=fl.length?`<h3>WR y flete <span class="sub">(${aereo?"aéreo — el mayor entre peso real y volumétrico":"marítimo — "+(uniC==="m3"?"metros cúbicos":"pies cúbicos")})</span></h3>
-      <table><thead><tr>${th("N° WR")}${conCli?th("Cliente"):""}${th("Cajas",1)}${cm.map(([,t])=>th(t,1)).join("")}${th("A cobrar ("+uni+")",1)}${th("Tarifa",1)}${th("Importe",1)}</tr></thead><tbody>
-      ${fl.map(l=>`<tr><td ${td}><b>${e(l.wrId)}</b></td>${conCli?`<td ${td}>${e(l.cliente)}<div class="cas">${e(l.casillero)}</div></td>`:""}<td ${tdr}>${l.cajas||0}</td>${cm.map(([k])=>`<td ${tdr}>${n(l[k])}</td>`).join("")}<td ${tdr}><b>${n(l.cantidad)}</b></td><td ${tdr}>${$(l.precio)}</td><td ${tdr}><b>${$(l.total)}</b></td></tr>`).join("")}
-      ${fl.length>1?`<tr class="tot"><td style="padding:5px 7px;border-bottom:1px solid #ddd;white-space:nowrap">TOTALES · ${fl.length} WR</td>${conCli?`<td ${td}></td>`:""}<td ${tdr}>${S(fl,"cajas")}</td>${cm.map(([k])=>`<td ${tdr}>${n(S(fl,k))}</td>`).join("")}<td ${tdr}>${n(S(fl,"cantidad"))} ${uni}</td><td ${td}></td><td ${tdr}>${$(S(fl,"total"))}</td></tr>`:""}
-      </tbody></table>`:"";
-    const tablaSimple=(tt,arr,conWR)=>arr.length?`<h3>${tt}</h3><table><thead><tr>${conWR?th("N° WR"):""}${th("Concepto")}${th("Cant.",1)}${th("Precio",1)}${th("Importe",1)}</tr></thead><tbody>
-      ${arr.map(l=>`<tr>${conWR?`<td ${td}>${e(l.wrId||"")}</td>`:""}<td ${td}>${e(l.descripcion)}</td><td ${tdr}>${n(l.cantidad)}</td><td ${tdr}>${$(l.precio)}</td><td ${tdr}><b>${$(l.total)}</b></td></tr>`).join("")}</tbody></table>`:"";
-    const filaTot=(k,v,cls="")=>`<div class="tr ${cls}"><span>${k}</span><span>${v}</span></div>`;
-    return `<!doctype html><html><head><meta charset="utf-8"><title>${titulo} ${e(f.id)}</title><style>
-      *{box-sizing:border-box}body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:0;padding:24px;font-size:13px}
-      .hd{display:flex;justify-content:space-between;border-bottom:3px solid #1A2B4A;padding-bottom:10px;margin-bottom:14px}
-      .emp{font-size:26px;font-weight:900;letter-spacing:2px;color:#1A2B4A}.num{font-size:18px;font-weight:900;font-family:monospace}
-      .box{display:grid;grid-template-columns:1fr 1fr;gap:4px 18px;border:1px solid #ccc;border-radius:6px;padding:10px 12px;margin-bottom:12px}
-      h3{font-size:14px;color:#1A2B4A;margin:16px 0 6px}h3 .sub{font-weight:400;color:#666;font-size:12px}
-      table{width:100%;border-collapse:collapse;font-size:12.5px}.tot td{background:#F1F4F9;font-weight:800;border-top:2px solid #1A2B4A}.cas{font-size:11px;color:#8a6d1a;font-family:monospace}
-      .totales{margin-left:auto;width:320px;margin-top:14px;border:1px solid #ccc;border-radius:6px;padding:10px 12px}
-      .tr{display:flex;justify-content:space-between;padding:3px 0}.tr span:last-child{font-family:monospace}
-      .gt{border-top:2px solid #1A2B4A;margin-top:6px;padding-top:6px;font-size:17px;font-weight:900;color:#1A2B4A}
-      .anul{color:#C62828;font-weight:900;font-size:20px;text-align:center;border:2px solid #C62828;padding:4px;margin-bottom:10px}
-      .pie{margin-top:16px;font-size:11.5px;color:#444;white-space:pre-wrap}
-      @media print{body{padding:0}@page{size:letter portrait;margin:.45in}}
-    </style></head><body>
-      ${f.status==="anulada"?`<div class="anul">ANULADA${f.motivoAnulacion?` — ${e(f.motivoAnulacion)}`:""}</div>`:""}
-      <div class="hd"><div><div class="emp">${e(empresaNombre)}</div><div>${e(marca.subtitulo||"")}</div></div>
-        <div style="text-align:right"><div style="font-weight:800">${titulo}</div><div class="num">Nº ${e(f.id)}</div>
-          <div>Fecha: ${fmtDate(f.fecha)}</div>${f.fechaEmision?`<div>Emisión: ${fmtDate(f.fechaEmision)}</div>`:""}
-          <div>Moneda: ${e(f.moneda)}</div>${f.ncFacturaOrigen?`<div>Ref. factura: ${e(f.ncFacturaOrigen)}</div>`:""}</div></div>
-      <div class="box">
-        <div><b>${f.receptorTipo==="agente"?"Agente":f.receptorTipo==="autonomo"?"Autónomo":"Cliente"}:</b> ${e(f.receptorNombre)}</div>
-        <div><b>ID Identificación:</b> ${e(f.receptorDoc||"—")}</div>
-        ${f.receptorCasillero?`<div><b>Casillero:</b> ${e(f.receptorCasillero)}</div>`:""}
-        <div><b>Teléfono:</b> ${e(f.receptorTel||"—")}</div>
-        <div style="grid-column:1/-1"><b>Dirección:</b> ${e(f.receptorDir||"—")}</div>
-        <div><b>Email:</b> ${e(f.receptorEmail||"—")}</div>
-        ${(f.guiaIds||[]).length?`<div><b>Guía:</b> ${e(f.guiaIds.join(", "))}</div>`:""}
-        ${f.tipoEnvio?`<div><b>Tipo de envío:</b> ${e(f.tipoEnvio)}</div>`:""}
-      </div>
-      ${tablaFlete}
-      ${tablaSimple("Servicios y gastos adicionales",ad,true)}
-      ${tablaSimple("Cobros extra",ex,false)}
-      <div class="totales">
-        ${fl.length?filaTot("Flete",$(S(fl,"total"))):""}
-        ${mn.length?filaTot("Ajuste a mínimo",$(S(mn,"total"))):""}
-        ${ad.length?filaTot("Servicios y gastos",$(S(ad,"total"))):""}
-        ${ex.length?filaTot("Cobros extra",$(S(ex,"total"))):""}
-        ${filaTot("<b>Subtotal</b>",`<b>${$(f.subtotal)}</b>`)}
-        ${(f.descuento||0)>0?filaTot(`Descuento${f.descuentoTipo==="pct"?` (${n(f.descuentoValor)}%)`:""}`,`−${$(f.descuento)}`):""}
-        ${filaTot("TOTAL",$(f.total),"gt")}
-        ${(f.pagado||0)>0?filaTot("Pagado",$(f.pagado))+filaTot("<b>Saldo</b>",`<b>${$(f.saldo)}</b>`):""}
-      </div>
-      ${pagosAplic.length?`<h3>Pagos aplicados</h3><table><thead><tr>${th("Nº Pago")}${th("Fecha")}${th("Tipo")}${th("Ref.")}${th("Monto",1)}</tr></thead><tbody>${pagosAplic.map(p=>`<tr><td ${td}>${e(p.id)}</td><td ${td}>${fmtDate(p.fecha)}</td><td ${td}>${e((PAY_METHODS.find(m=>m.k===p.tipoPago)||{l:p.tipoPago||""}).l)}</td><td ${td}>${e([p.referencia,p.notaReferencial].filter(Boolean).join(" · "))}</td><td ${tdr}>${fmtMoney(p.monto,p.moneda||f.moneda)}</td></tr>`).join("")}</tbody></table>`:""}
-      ${f.notas?`<div class="pie"><b>Notas:</b> ${e(f.notas)}</div>`:""}
-      ${f.condiciones?`<div class="pie"><b>Condiciones:</b> ${e(f.condiciones)}</div>`:""}
-    </body></html>`;
+    const rt=f.receptorTipo==="agente"?"Agente":f.receptorTipo==="autonomo"?"Autónomo":"Cliente";
+    let cuerpo=pGrid(2,[pBox(rt,`<b>${e(f.receptorNombre||"—")}</b>${f.receptorCasillero?` · #${e(f.receptorCasillero)}`:""}`,e([f.receptorDoc&&`ID ${f.receptorDoc}`,f.receptorTel,f.receptorEmail].filter(Boolean).join(" · "))),
+      pBox("Dirección",e(f.receptorDir||"—"),e([(f.guiaIds||[]).length&&`Guía ${f.guiaIds.join(", ")}`,f.tipoEnvio].filter(Boolean).join(" · ")))]);
+    if(fl.length)cuerpo+=pSec(`WR y flete <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#5a6b85">· ${aereo?"aéreo: el mayor entre peso real y volumétrico":"marítimo: "+(uniC==="m3"?"metros cúbicos":"pies cúbicos")}</span>`)+
+      pTabla([{l:"N° WR"},...(conCli?[{l:"Cliente"}]:[]),{l:"Cajas",r:1},...cm.map(([,t])=>({l:t,r:1})),{l:`A cobrar (${uni})`,r:1},{l:"Tarifa",r:1},{l:"Importe",r:1}],
+        fl.map(l=>`<tr><td class="mono"><b>${e(l.wrId)}</b></td>${conCli?`<td>${e(l.cliente)}<div class="sub">${e(l.casillero)}</div></td>`:""}<td class="r">${l.cajas||0}</td>${cm.map(([k])=>`<td class="r">${nm(l[k])}</td>`).join("")}<td class="r"><b>${nm(l.cantidad)}</b></td><td class="r">${$(l.precio)}</td><td class="r"><b>${$(l.total)}</b></td></tr>`).join(""),
+        fl.length>1?`<tr class="tot"><td>Totales · ${fl.length} WR</td>${conCli?"<td></td>":""}<td class="r">${S(fl,"cajas")}</td>${cm.map(([k])=>`<td class="r">${nm(S(fl,k))}</td>`).join("")}<td class="r">${nm(S(fl,"cantidad"))} ${uni}</td><td></td><td class="r">${$(S(fl,"total"))}</td></tr>`:"");
+    const simple=(tt,arr,conWR)=>arr.length?pSec(tt)+pTabla([...(conWR?[{l:"N° WR"}]:[]),{l:"Concepto"},{l:"Cant.",r:1},{l:"Precio",r:1},{l:"Importe",r:1}],
+      arr.map(l=>`<tr>${conWR?`<td class="mono">${e(l.wrId||"")}</td>`:""}<td>${e(l.descripcion)}</td><td class="r">${nm(l.cantidad)}</td><td class="r">${$(l.precio)}</td><td class="r"><b>${$(l.total)}</b></td></tr>`).join("")):"";
+    cuerpo+=simple("Servicios y gastos adicionales",ad,true)+simple("Cobros extra",ex,false);
+    cuerpo+=pTotales([fl.length&&["Flete",$(S(fl,"total"))],mn.length&&["Ajuste a mínimo",$(S(mn,"total"))],ad.length&&["Servicios y gastos",$(S(ad,"total"))],ex.length&&["Cobros extra",$(S(ex,"total"))],
+      ["<b>Subtotal</b>",`<b>${$(f.subtotal)}</b>`],(f.descuento||0)>0&&[`Descuento${f.descuentoTipo==="pct"?` (${nm(f.descuentoValor)}%)`:""}`,`−${$(f.descuento)}`],
+      ["Total",$(f.total),"gt"],(f.pagado||0)>0&&["Pagado",$(f.pagado)],(f.pagado||0)>0&&["<b>Saldo</b>",`<b>${$(f.saldo)}</b>`]]);
+    if(pagosAplic.length)cuerpo+=pSec("Pagos aplicados")+pTabla([{l:"N° pago"},{l:"Fecha"},{l:"Forma"},{l:"Referencia"},{l:"Monto",r:1}],
+      pagosAplic.map(p=>`<tr><td class="mono">${e(p.reciboId||p.id)}</td><td>${fmtDate(p.fecha)}</td><td>${e(metodoLbl(p.tipoPago))}</td><td>${e([p.referencia,p.notaReferencial].filter(Boolean).join(" · "))}</td><td class="r">${fmtMoney(p.monto,p.moneda||f.moneda)}</td></tr>`).join(""));
+    if(f.notas)cuerpo+=`<div class="nota"><b>Notas:</b> ${e(f.notas)}</div>`;
+    if(f.condiciones)cuerpo+=`<div class="nota"><b>Condiciones:</b> ${e(f.condiciones)}</div>`;
+    return prnHTML({titulo,numero:f.id,meta:[["Fecha",fmtDate(f.fecha)],f.fechaEmision&&["Emisión",fmtDate(f.fechaEmision)],["Moneda",f.moneda],f.ncFacturaOrigen&&["Factura de origen",f.ncFacturaOrigen]],
+      anulado:f.status==="anulada"?{texto:"ANULADA",motivo:f.motivoAnulacion}:null,cuerpo});
   };
-  const printFactura=(f,listaPagos=pagos)=>{
-    const w=window.open("","_blank","width=900,height=1100");
-    if(!w){window.alert("El navegador bloqueó la ventana de impresión.");return;}
-    w.document.write(facturaHTML(f,listaPagos));w.document.close();
-    setTimeout(()=>{w.focus();w.print();},300);
-  };
+  const printFactura=(f,listaPagos=pagos)=>prnImprimir(facturaHTML(f,listaPagos));
   // Tarifa que aplica a un WR según tipo de envío, origen y destino (Configuración › Tarifas)
   // Primero una tarifa especial del receptor (cliente, agente o autónomo); si no tiene,
   // la predeterminada de la ruta. En una especial, la ruta vacía vale para cualquier ruta.
@@ -9080,65 +8925,28 @@ export default function SistemaCarga(){
     setCobroModal(null);
   };
   const reciboHTML=(reciboId,lista=pagos,facMap=null)=>{
-    const e=v=>String(v??"").replace(/[&<>"']/g,x=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[x]));
-    const ps=lista.filter(p=>p.reciboId===reciboId);
-    if(!ps.length)return "";
-    const p0=ps[0], mon=p0.moneda||"USD", $=v=>fmtMoney(v,mon);
+    const e=prnE;const ps=lista.filter(p=>p.reciboId===reciboId);if(!ps.length)return "";
+    const p0=ps[0],mon=p0.moneda||"USD",$=v=>fmtMoney(v,mon);
     const pg=pagadorDePago(p0)||{nombre:p0.pagadorNombre};
-    const activos=ps.filter(p=>!p.anulado);
-    const recibido=activos.filter(p=>p.tipoPago!=="saldo_favor").reduce((t,p)=>t+p.monto,0);
-    const usado=activos.filter(p=>p.tipoPago==="saldo_favor").reduce((t,p)=>t+p.monto,0);
-    const aFavor=activos.filter(p=>!p.facturaId).reduce((t,p)=>t+p.monto,0);
-    const porFac=new Map();activos.filter(p=>p.facturaId).forEach(p=>porFac.set(p.facturaId,(porFac.get(p.facturaId)||0)+p.monto));
-    const metodo=(PAY_METHODS.find(x=>x.k===(ps.find(p=>p.tipoPago!=="saldo_favor")||p0).tipoPago)||{l:""}).l.replace(/^\S+\s/,"");
-    const td='style="padding:6px 8px;border-bottom:1px solid #ddd"', tdr='style="padding:6px 8px;border-bottom:1px solid #ddd;text-align:right;font-family:monospace"';
-    const th=(t,r)=>`<th style="padding:6px 8px;background:#1A2B4A;color:#fff;font-size:11px;text-transform:uppercase;text-align:${r?"right":"left"}">${t}</th>`;
-    const filas=[...porFac.entries()].map(([fid,mt])=>{const f=(facMap&&facMap.get(fid))||facturas.find(x=>x.id===fid);
-      return `<tr><td ${td}><b>${e(fid)}</b></td><td ${td}>${f?fmtDate(f.fechaEmision||f.fecha):""}</td><td ${tdr}>${f?$(f.total):""}</td><td ${tdr}><b>${$(mt)}</b></td><td ${tdr}>${f?$(f.saldo):""}</td></tr>`;}).join("");
-    const fila=(k,v,cls="")=>`<div class="tr ${cls}"><span>${k}</span><span>${v}</span></div>`;
-    const anulado=ps.every(p=>p.anulado);
+    const act=ps.filter(p=>!p.anulado);
+    const recibido=act.filter(p=>p.tipoPago!=="saldo_favor").reduce((t,p)=>t+p.monto,0);
+    const usado=act.filter(p=>p.tipoPago==="saldo_favor").reduce((t,p)=>t+p.monto,0);
+    const aFavor=act.filter(p=>!p.facturaId).reduce((t,p)=>t+p.monto,0);
+    const porFac=new Map();act.filter(p=>p.facturaId).forEach(p=>porFac.set(p.facturaId,(porFac.get(p.facturaId)||0)+p.monto));
+    const metodo=metodoLbl((ps.find(p=>p.tipoPago!=="saldo_favor")||p0).tipoPago);
     const favorHoy=pg?.tipo?saldoFavorDe(pg,mon,lista):0;
-    return `<!doctype html><html><head><meta charset="utf-8"><title>Recibo ${e(reciboId)}</title><style>
-      *{box-sizing:border-box}body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:0;padding:24px;font-size:13px}
-      .hd{display:flex;justify-content:space-between;border-bottom:3px solid #1A2B4A;padding-bottom:10px;margin-bottom:14px}
-      .emp{font-size:26px;font-weight:900;letter-spacing:2px;color:#1A2B4A}.num{font-size:18px;font-weight:900;font-family:monospace}
-      .box{display:grid;grid-template-columns:1fr 1fr;gap:4px 18px;border:1px solid #ccc;border-radius:6px;padding:10px 12px;margin-bottom:12px}
-      table{width:100%;border-collapse:collapse;font-size:12.5px}
-      .totales{margin-left:auto;width:340px;margin-top:14px;border:1px solid #ccc;border-radius:6px;padding:10px 12px}
-      .tr{display:flex;justify-content:space-between;padding:3px 0}.tr span:last-child{font-family:monospace}
-      .gt{border-top:2px solid #1A2B4A;margin-top:6px;padding-top:6px;font-size:17px;font-weight:900;color:#1A2B4A}
-      .fav{color:#2E7D32;font-weight:800}.anul{color:#C62828;font-weight:900;font-size:20px;text-align:center;border:2px solid #C62828;padding:4px;margin-bottom:10px}
-      .firmas{display:flex;gap:60px;margin-top:60px}.firmas div{flex:1;text-align:center;border-top:1px solid #000;padding-top:4px;font-weight:700;font-size:12px}
-      @media print{body{padding:0}@page{size:letter portrait;margin:.45in}}
-    </style></head><body>
-      ${anulado?`<div class="anul">ANULADO</div>`:""}
-      <div class="hd"><div><div class="emp">${e(empresaNombre)}</div><div>${e(marca.subtitulo||"")}</div></div>
-        <div style="text-align:right"><div style="font-weight:800">RECIBO DE PAGO</div><div class="num">Nº ${e(reciboId)}</div>
-          <div>Fecha: ${fmtDate(p0.fecha)} ${fmtTime(p0.fecha)}</div><div>Moneda: ${e(mon)}</div></div></div>
-      <div class="box">
-        <div><b>${pg?.tipo==="agente"?"Agente":pg?.tipo==="autonomo"?"Autónomo":"Cliente"}:</b> ${e(pg?.nombre||p0.pagadorNombre)}</div>
-        <div><b>Forma de pago:</b> ${e(recibido>0?metodo:"Saldo a favor")}</div>
-        ${p0.referencia?`<div><b>Referencia:</b> ${e(p0.referencia)}</div>`:""}
-        ${p0.notaReferencial?`<div><b>Nota:</b> ${e(p0.notaReferencial)}</div>`:""}
-      </div>
-      ${filas?`<table><thead><tr>${th("Factura")}${th("Emisión")}${th("Total",1)}${th("Abonado",1)}${th("Saldo",1)}</tr></thead><tbody>${filas}</tbody></table>`:""}
-      <div class="totales">
-        ${fila("Monto recibido",$(recibido))}
-        ${usado>0?fila("Saldo a favor usado",$(usado)):""}
-        ${fila("Aplicado a facturas",$([...porFac.values()].reduce((t,v)=>t+v,0)))}
-        ${aFavor>0?fila("Queda a favor",$(aFavor),"fav"):""}
-        ${fila("Saldo a favor actual",$(favorHoy),"gt")}
-      </div>
-      <div class="firmas"><div>Recibido por</div><div>${e(pg?.nombre||"Pagador")}</div></div>
-    </body></html>`;
+    const rt=pg?.tipo==="agente"?"Agente":pg?.tipo==="autonomo"?"Autónomo":"Cliente";
+    const cuerpo=pGrid(2,[pBox(rt,`<b>${e(pg?.nombre||p0.pagadorNombre||"—")}</b>${pg?.casillero?` · #${e(pg.casillero)}`:""}`),
+        pBox("Forma de pago",e(recibido>0?metodo:"Saldo a favor"),e([p0.referencia&&`Ref. ${p0.referencia}`,p0.notaReferencial].filter(Boolean).join(" · ")))])+
+      (porFac.size?pSec("Facturas abonadas")+pTabla([{l:"Factura"},{l:"Emisión"},{l:"Total",r:1},{l:"Abonado",r:1},{l:"Saldo",r:1}],
+        [...porFac.entries()].map(([fid,mt])=>{const f=(facMap&&facMap.get(fid))||facturas.find(x=>x.id===fid);
+          return `<tr><td class="mono"><b>${e(fid)}</b></td><td>${f?fmtDate(f.fechaEmision||f.fecha):""}</td><td class="r">${f?$(f.total):""}</td><td class="r"><b>${$(mt)}</b></td><td class="r">${f?$(f.saldo):""}</td></tr>`;}).join("")):"")+
+      pTotales([["Monto recibido",$(recibido)],usado>0&&["Saldo a favor usado",$(usado)],["Aplicado a facturas",$([...porFac.values()].reduce((t,v)=>t+v,0))],aFavor>0&&["Queda a favor",$(aFavor),"fav"],["Saldo a favor actual",$(favorHoy),"gt"]])+
+      pFirmas([["Recibido por",nombreUsuario(p0.usuario)],["Pagador",pg?.nombre||""]]);
+    return prnHTML({titulo:"Recibo de pago",numero:reciboId,meta:[["Fecha",`${fmtDate(p0.fecha)} ${fmtTime(p0.fecha)}`],["Moneda",mon]],
+      anulado:ps.every(p=>p.anulado)?{texto:"ANULADO"}:null,cuerpo});
   };
-  const printRecibo=(reciboId,lista=pagos,facMap=null)=>{
-    const html=reciboHTML(reciboId,lista,facMap); if(!html)return;
-    const w=window.open("","_blank","width=900,height=1100");
-    if(!w){window.alert("El navegador bloqueó la ventana del recibo.");return;}
-    w.document.write(html);w.document.close();
-    setTimeout(()=>{w.focus();w.print();},300);
-  };
+  const printRecibo=(reciboId,lista=pagos,facMap=null)=>prnImprimir(reciboHTML(reciboId,lista,facMap));
 
   // ── Nota de crédito (crea una factura tipo "nota_credito" ligada a una origen) ─
   // ── Cuadre con agentes y autónomos ──────────────────────────────────────────
@@ -9524,17 +9332,12 @@ export default function SistemaCarga(){
           const pend=cm.filter(x=>!x.acreditada&&x.comision>0);
           const saldoTxt=v=>v>0.004?<span style={{color:"var(--orange)"}}>{fmtMoney(v,mon)}</span>:v<-0.004?<span style={{color:"var(--green)"}}>{fmtMoney(-v,mon)} a favor</span>:<span style={{color:"var(--t3)"}}>0</span>;
           const imprimir=()=>{
-            const e=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
             const st=v=>v>0.004?fmtMoney(v,mon):v<-0.004?`${fmtMoney(-v,mon)} a favor`:"0";
-            const w=window.open("","_blank","width=900,height=1100");if(!w){window.alert("El navegador bloqueó la ventana de impresión.");return;}
-            w.document.write(`<html><head><title>Estado de cuenta ${e(pg.nombre)}</title><style>body{font-family:Arial,Helvetica,sans-serif;font-size:12px;padding:24px;color:#111}h1{font-size:18px;margin:0}table{width:100%;border-collapse:collapse;margin-top:12px}th,td{border-bottom:1px solid #ddd;padding:5px 6px;text-align:left}th{background:#1A2B4A;color:#fff}.r{text-align:right}.hd{border-bottom:3px solid #1A2B4A;padding-bottom:8px;display:flex;justify-content:space-between}</style></head><body>
-              <div class="hd"><div><h1>${e(empresaNombre)}</h1><div>Estado de cuenta · ${mon}</div></div><div class="r"><b>${e(pg.nombre)}</b><br>${e(TL[pg.tipo]||"Cliente")}${pg.casillero?` · #${e(pg.casillero)}`:""}<br>${fmtDate(new Date())}${ctaDesde||ctaHasta?`<br>Periodo: ${e(ctaDesde||"inicio")} a ${e(ctaHasta||"hoy")}`:""}</div></div>
-              <table><thead><tr><th>Fecha</th><th>Documento</th><th>Detalle</th><th class="r">Debe</th><th class="r">Haber</th><th class="r">Saldo</th></tr></thead><tbody>
-              ${d0?`<tr><td></td><td colspan="4"><b>Saldo anterior</b></td><td class="r">${st(anterior)}</td></tr>`:""}
-              ${vis.map(x=>`<tr><td>${fmtDate(x.fecha)}</td><td>${e(x.doc)}</td><td>${e(x.det)}</td><td class="r">${x.debe?fmtMoney(x.debe,mon):""}</td><td class="r">${x.haber?fmtMoney(x.haber,mon):""}</td><td class="r">${st(x.saldo)}</td></tr>`).join("")}
-              </tbody></table><p class="r" style="font-size:14px"><b>Saldo: ${st(saldoFin)}</b></p>
-              <script>window.addEventListener('load',()=>setTimeout(()=>window.print(),250));</script></body></html>`);
-            w.document.close();
+            const cuerpo=pGrid(2,[pBox(TL[pg.tipo]||"Cliente",`<b>${prnE(pg.nombre)}</b>${pg.casillero?` · #${prnE(pg.casillero)}`:""}`),pBox("Período",prnE(ctaDesde||ctaHasta?`${ctaDesde||"inicio"} a ${ctaHasta||"hoy"}`:"Todo"),`Moneda ${mon}`)])+
+              pTabla([{l:"Fecha"},{l:"Documento"},{l:"Detalle"},{l:"Debe",r:1},{l:"Haber",r:1},{l:"Saldo",r:1}],
+                (d0?`<tr class="grp"><td></td><td colspan="4">Saldo anterior</td><td class="r">${st(anterior)}</td></tr>`:"")+vis.map(x=>`<tr><td>${fmtDate(x.fecha)}</td><td>${prnE(x.doc)}</td><td>${prnE(x.det)}</td><td class="r">${x.debe?fmtMoney(x.debe,mon):""}</td><td class="r">${x.haber?fmtMoney(x.haber,mon):""}</td><td class="r">${st(x.saldo)}</td></tr>`).join(""),
+                `<tr class="tot"><td colspan="5">Saldo</td><td class="r">${st(saldoFin)}</td></tr>`);
+            prnVer("Estado de cuenta",prnHTML({titulo:"Estado de cuenta",meta:[["Fecha",fmtDate(new Date())],["Moneda",mon]],cuerpo}));
           };
           return(
             <div>
@@ -9890,18 +9693,13 @@ export default function SistemaCarga(){
           const mesAnt1=new Date(hoy.getFullYear(),hoy.getMonth()-1,1), mesAntF=new Date(hoy.getFullYear(),hoy.getMonth(),0);
           const ml=k=>metodoLbl(k);
           const imprimir=()=>{
-            const e=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
-            const w=window.open("","_blank","width=900,height=1100");if(!w){window.alert("El navegador bloqueó la ventana de impresión.");return;}
-            w.document.write(`<html><head><title>Cierre de caja</title><style>body{font-family:Arial,Helvetica,sans-serif;font-size:12px;padding:24px;color:#111}h1{font-size:18px;margin:0}table{width:100%;border-collapse:collapse;margin-top:12px}th,td{border-bottom:1px solid #ddd;padding:5px 6px;text-align:left}th{background:#1A2B4A;color:#fff}.r{text-align:right}</style></head><body>
-              <h1>${e(empresaNombre)} · Cierre de caja</h1><div>${e(cajaDesde)}${cajaHasta&&cajaHasta!==cajaDesde?` a ${e(cajaHasta)}`:""}${cajaUsr?` · ${e(nombreUsr(cajaUsr))}`:""}</div>
-              <table><thead><tr><th>Forma de pago</th><th>Moneda</th><th class="r">Entró</th><th class="r">Salió</th><th class="r">Neto</th></tr></thead><tbody>
-              ${filasR.map(r=>`<tr><td>${e(ml(r.metodo))}</td><td>${r.moneda}</td><td class="r">${fmtMoney(r.entra,r.moneda)}</td><td class="r">${fmtMoney(r.sale,r.moneda)}</td><td class="r"><b>${fmtMoney(r.entra-r.sale,r.moneda)}</b></td></tr>`).join("")}
-              ${Object.entries(porMon).map(([mn,v])=>`<tr><td><b>TOTAL</b></td><td>${mn}</td><td class="r"><b>${fmtMoney(v.entra,mn)}</b></td><td class="r"><b>${fmtMoney(v.sale,mn)}</b></td><td class="r"><b>${fmtMoney(v.entra-v.sale,mn)}</b></td></tr>`).join("")}
-              </tbody></table>
-              <table><thead><tr><th>Fecha</th><th>Documento</th><th>Quién</th><th>Forma</th><th>Ref.</th><th class="r">Monto</th></tr></thead><tbody>
-              ${grupos.map(g=>`<tr><td>${fmtDate(g.fecha)} ${fmtTime(g.fecha)}</td><td>${e(g.id)}</td><td>${e(g.quien)}</td><td>${e(ml(g.metodo))}</td><td>${e(g.ref||"")}</td><td class="r">${fmtMoney(g.monto,g.moneda)}</td></tr>`).join("")}
-              </tbody></table><script>window.addEventListener('load',()=>setTimeout(()=>window.print(),250));</script></body></html>`);
-            w.document.close();
+            const cuerpo=pSec("Resumen por forma de pago")+pTabla([{l:"Forma de pago"},{l:"Moneda"},{l:"Entró",r:1},{l:"Salió",r:1},{l:"Neto",r:1}],
+                filasR.map(r=>`<tr><td>${prnE(ml(r.metodo))}</td><td>${r.moneda}</td><td class="r">${fmtMoney(r.entra,r.moneda)}</td><td class="r">${fmtMoney(r.sale,r.moneda)}</td><td class="r"><b>${fmtMoney(r.entra-r.sale,r.moneda)}</b></td></tr>`).join(""),
+                Object.entries(porMon).map(([mn,v])=>`<tr class="tot"><td>Total</td><td>${mn}</td><td class="r">${fmtMoney(v.entra,mn)}</td><td class="r">${fmtMoney(v.sale,mn)}</td><td class="r">${fmtMoney(v.entra-v.sale,mn)}</td></tr>`).join(""))+
+              pSec("Movimientos")+pTabla([{l:"Fecha"},{l:"Documento"},{l:"Quién"},{l:"Forma"},{l:"Referencia"},{l:"Monto",r:1}],
+                grupos.map(g=>`<tr><td>${fmtDate(g.fecha)} ${fmtTime(g.fecha)}</td><td class="mono">${prnE(g.id)}</td><td>${prnE(g.quien)}</td><td>${prnE(ml(g.metodo))}</td><td>${prnE(g.ref||"")}</td><td class="r">${fmtMoney(g.monto,g.moneda)}</td></tr>`).join(""))+
+              pFirmas([["Entrega caja"],["Recibe / revisa"]]);
+            prnVer("Cierre de caja",prnHTML({titulo:"Cierre de caja",meta:[["Período",`${cajaDesde}${cajaHasta&&cajaHasta!==cajaDesde?` a ${cajaHasta}`:""}`],["Usuario",cajaUsr?nombreUsr(cajaUsr):"Todos"]],cuerpo}));
           };
           return(
             <div>
@@ -13098,70 +12896,7 @@ export default function SistemaCarga(){
       })()}
 
       {/* RECIBO DE CARGO RELEASE INDIVIDUAL — imprimible */}
-      {crIndivRecibo&&(()=>{
-        const {cr:_cr,wr:_wr,cliente:_cli}=crIndivRecibo;
-        const _fecha=new Date(_cr.fecha).toLocaleString("es-VE",{dateStyle:"medium",timeStyle:"short"});
-        return (
-          <div className="ov" onClick={()=>setCrIndivRecibo(null)}>
-            <div className="modal mmd" onClick={e=>e.stopPropagation()}>
-              <div className="mhd no-print">
-                <div className="mt"><Ico e="🧾" sp/>Recibo de Cargo Release</div>
-                <button className="mcl" onClick={()=>setCrIndivRecibo(null)}>✕</button>
-              </div>
-              <div id="cr-recibo-print" style={{padding:24,background:"#fff",color:"#000",fontFamily:"Arial,Helvetica,sans-serif",fontSize:13,lineHeight:1.5}}>
-                <div style={{textAlign:"center",borderBottom:"2px solid #000",paddingBottom:10,marginBottom:14}}>
-                  <div style={{fontSize:22,fontWeight:900,letterSpacing:2}}>{empresaNombre}</div>
-                  <div style={{fontSize:12,marginTop:4,color:"#444"}}>CARGO RELEASE — COMPROBANTE DE EGRESO</div>
-                  <div style={{fontFamily:"'DM Mono',monospace",fontSize:15,fontWeight:700,marginTop:6}}>{_cr.id}</div>
-                </div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
-                  <div><b>Fecha:</b> {_fecha}</div>
-                  <div style={{textAlign:"right"}}><b>Operador:</b> {_cr.usuario||"—"}</div>
-                </div>
-                <div style={{border:"1px solid #000",padding:10,marginBottom:12,borderRadius:4}}>
-                  <div style={{fontWeight:700,fontSize:12,textTransform:"uppercase",letterSpacing:1,marginBottom:6,borderBottom:"1px solid #999",paddingBottom:3}}>Datos del WR</div>
-                  <div style={{display:"grid",gridTemplateColumns:"auto 1fr",gap:"4px 12px",fontSize:13}}>
-                    <div style={{fontWeight:700}}>N° WR:</div><div style={{fontFamily:"'DM Mono',monospace",fontWeight:700}}>{_wr.id}</div>
-                    <div style={{fontWeight:700}}>Consignatario:</div><div>{_wr.consignee||"—"}</div>
-                    <div style={{fontWeight:700}}>Casillero:</div><div>{_wr.casillero||(_cli?.casillero)||"—"}</div>
-                    <div style={{fontWeight:700}}>Cajas:</div><div>{_wr.cajas||0}</div>
-                    <div style={{fontWeight:700}}>Peso:</div><div>{_wr.pesoLb||0} lb ({_wr.pesoKg||0} kg)</div>
-                    <div style={{fontWeight:700}}>Descripción:</div><div>{_wr.descripcion||"—"}</div>
-                    <div style={{fontWeight:700}}>Valor Declarado:</div><div>${(_wr.valor||0).toFixed(2)}</div>
-                  </div>
-                </div>
-                <div style={{border:"1px solid #000",padding:10,marginBottom:12,borderRadius:4}}>
-                  <div style={{fontWeight:700,fontSize:12,textTransform:"uppercase",letterSpacing:1,marginBottom:6,borderBottom:"1px solid #999",paddingBottom:3}}>Receptor / Retira</div>
-                  <div style={{display:"grid",gridTemplateColumns:"auto 1fr",gap:"4px 12px",fontSize:13}}>
-                    <div style={{fontWeight:700}}>Nombre:</div><div style={{fontWeight:600}}>{_cr.agenteCarga||"—"}</div>
-                    <div style={{fontWeight:700}}>ID Identificación:</div><div style={{fontFamily:"'DM Mono',monospace"}}>{_cr.documento||"—"}</div>
-                    <div style={{fontWeight:700}}>Empresa:</div><div>{_cr.contacto||"—"}</div>
-                    {_cr.notas&&(<><div style={{fontWeight:700}}>Notas:</div><div style={{fontStyle:"italic",color:"#444"}}>{_cr.notas}</div></>)}
-                  </div>
-                </div>
-                <div style={{marginTop:22,display:"flex",gap:30,paddingTop:20}}>
-                  <div style={{flex:1,borderTop:"1px solid #000",paddingTop:6,textAlign:"center",fontSize:11,fontWeight:700}}>Firma del Receptor</div>
-                  <div style={{flex:1,borderTop:"1px solid #000",paddingTop:6,textAlign:"center",fontSize:11,fontWeight:700}}>Firma / Sello {empresaNombre}</div>
-                </div>
-                <div style={{marginTop:18,fontSize:10,color:"#666",textAlign:"center",borderTop:"1px dashed #999",paddingTop:8}}>
-                  El receptor certifica haber recibido la mercancía descrita en buenas condiciones. Este documento es comprobante de egreso y libera de responsabilidad a {empresaNombre}.
-                </div>
-              </div>
-              <div className="mft no-print">
-                <button className="btn-s" onClick={()=>setCrIndivRecibo(null)}>Cerrar</button>
-                <button className="btn-p" onClick={()=>{
-                  const html=document.getElementById("cr-recibo-print")?.outerHTML||"";
-                  const w=window.open("","_blank","width=800,height=900");
-                  if(!w){window.alert("El navegador bloqueó la ventana de impresión.");return;}
-                  w.document.write(`<!doctype html><html><head><title>Recibo ${_cr.id}</title><style>body{margin:0;padding:20px;font-family:Arial,Helvetica,sans-serif;background:#fff}@media print{body{padding:0}}</style></head><body>${html}</body></html>`);
-                  w.document.close();
-                  setTimeout(()=>{w.focus();w.print();},250);
-                }}><Ico e="🖨" sp/>Imprimir Recibo</button>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
+      {crIndivRecibo&&<PrnModal titulo="Comprobante de egreso" html={htmlReleaseRecibo(crIndivRecibo)} onClose={()=>setCrIndivRecibo(null)}/>}
       {showLabels&&(()=>{
         const _lwr=showLabels.wr;const _ldims=showLabels.dims||[];
         const _hdrName=getHeaderName(_lwr,clients,agentes,oficinas,empresaNombre);
@@ -13700,103 +13435,7 @@ export default function SistemaCarga(){
       })()}
 
       {/* ── Cargo Release — NOTA IMPRIMIBLE ─────────────────────────────────── */}
-      {crPrint&&(()=>{
-        const cr=crPrint;
-        const wrs=(cr.wrIds||[]).map(id=>wrList.find(w=>w.id===id)).filter(Boolean);
-        const totalCajas=wrs.reduce((s,w)=>s+(w.dims?.length||0),0);
-        const totalLb=wrs.reduce((s,w)=>s+(w.dims||[]).reduce((a,d)=>a+parseFloat(d.pkLb||d.pk*2.205||0),0),0);
-        return(
-          <div className="ov">
-            <div className="modal mlg">
-              <div className="mhd no-print">
-                <div className="mt"><Ico e="🖨️" sp/>Nota de Egreso — {cr.id}</div>
-                <div style={{display:"flex",gap:6}}>
-                  <button className="btn-p" style={{fontSize:13,padding:"4px 12px"}} onClick={()=>window.print()}><Ico e="🖨️" sp/>Imprimir</button>
-                  <button className="mcl" onClick={()=>setCrPrint(null)}>✕</button>
-                </div>
-              </div>
-              <div className="mbd" style={{maxHeight:"78vh",overflow:"auto"}}>
-                <div className="cr-print" style={{background:"#fff",color:"#000",padding:"24px 28px",fontFamily:"Arial,Helvetica,sans-serif",fontSize:14}}>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",borderBottom:"2px solid #000",paddingBottom:10,marginBottom:14}}>
-                    <div>
-                      <div style={{fontSize:22,fontWeight:900,letterSpacing:2}}>{empresaNombre}</div>
-                      <div style={{fontSize:12}}>{empresaNombre||"Int'l Courier"}</div>
-                      <div style={{fontSize:11,color:"#555"}}>Nota de Egreso / Cargo Release</div>
-                    </div>
-                    <div style={{textAlign:"right"}}>
-                      <div style={{fontSize:13,fontWeight:700}}>N° {cr.id}</div>
-                      <div style={{fontSize:12}}>Fecha: {fmtDate(cr.fecha)} {fmtTime(cr.fecha)}</div>
-                      <div style={{fontSize:12}}>Usuario: {cr.usuario||"—"}</div>
-                      {cr.anulado&&<div style={{fontSize:13,fontWeight:900,color:"#C62828",marginTop:4,border:"2px solid #C62828",padding:"2px 6px",display:"inline-block"}}>ANULADO</div>}
-                    </div>
-                  </div>
-
-                  <table style={{width:"100%",fontSize:13,marginBottom:12}}>
-                    <tbody>
-                      <tr><td style={{fontWeight:700,width:120,paddingBottom:3}}>Agente de carga:</td><td style={{paddingBottom:3}}>{cr.agenteCarga||"—"}</td></tr>
-                      <tr><td style={{fontWeight:700,paddingBottom:3}}>Contacto:</td><td style={{paddingBottom:3}}>{cr.contacto||"—"}</td></tr>
-                      <tr><td style={{fontWeight:700,paddingBottom:3}}>ID Identificación:</td><td style={{paddingBottom:3}}>{cr.documento||"—"}</td></tr>
-                      <tr><td style={{fontWeight:700,paddingBottom:3}}>Vehículo:</td><td style={{paddingBottom:3}}>{cr.vehiculo||"—"}</td></tr>
-                      {cr.notas&&<tr><td style={{fontWeight:700,paddingBottom:3,verticalAlign:"top"}}>Notas:</td><td style={{paddingBottom:3,whiteSpace:"pre-wrap"}}>{cr.notas}</td></tr>}
-                      {cr.anulado&&cr.motivoAnulacion&&<tr><td style={{fontWeight:700,color:"#C62828"}}>Motivo anulación:</td><td style={{color:"#C62828"}}>{cr.motivoAnulacion}</td></tr>}
-                    </tbody>
-                  </table>
-
-                  <div style={{fontSize:13,fontWeight:700,marginBottom:4}}>Detalle de carga ({wrs.length} WR · {totalCajas} cajas · {totalLb.toFixed(1)} lb)</div>
-                  <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,marginBottom:16}}>
-                    <thead>
-                      <tr style={{background:"#EEE"}}>
-                        <th style={{border:"1px solid #999",padding:"4px 6px",textAlign:"left"}}>#</th>
-                        <th style={{border:"1px solid #999",padding:"4px 6px",textAlign:"left"}}>WR</th>
-                        <th style={{border:"1px solid #999",padding:"4px 6px",textAlign:"left"}}>Consignatario</th>
-                        <th style={{border:"1px solid #999",padding:"4px 6px",textAlign:"left"}}>Tracking</th>
-                        <th style={{border:"1px solid #999",padding:"4px 6px",textAlign:"center"}}>Cajas</th>
-                        <th style={{border:"1px solid #999",padding:"4px 6px",textAlign:"right"}}>Peso (lb)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {wrs.map((w,i)=>{
-                        const c=(w.dims||[]).length;
-                        const lb=(w.dims||[]).reduce((a,d)=>a+parseFloat(d.pkLb||d.pk*2.205||0),0);
-                        return(
-                          <tr key={w.id}>
-                            <td style={{border:"1px solid #999",padding:"3px 6px"}}>{i+1}</td>
-                            <td style={{border:"1px solid #999",padding:"3px 6px",fontWeight:700}}>{w.id}</td>
-                            <td style={{border:"1px solid #999",padding:"3px 6px"}}>{w.consignee||"—"}</td>
-                            <td style={{border:"1px solid #999",padding:"3px 6px",fontFamily:"monospace"}}>{w.tracking||"—"}</td>
-                            <td style={{border:"1px solid #999",padding:"3px 6px",textAlign:"center"}}>{c}</td>
-                            <td style={{border:"1px solid #999",padding:"3px 6px",textAlign:"right"}}>{lb.toFixed(1)}</td>
-                          </tr>
-                        );
-                      })}
-                      {wrs.length===0&&(<tr><td colSpan={6} style={{border:"1px solid #999",padding:"8px 6px",textAlign:"center",color:"#999"}}>(sin WR)</td></tr>)}
-                      <tr style={{background:"#F8F8F8",fontWeight:700}}>
-                        <td colSpan={4} style={{border:"1px solid #999",padding:"4px 6px",textAlign:"right"}}>TOTALES:</td>
-                        <td style={{border:"1px solid #999",padding:"4px 6px",textAlign:"center"}}>{totalCajas}</td>
-                        <td style={{border:"1px solid #999",padding:"4px 6px",textAlign:"right"}}>{totalLb.toFixed(1)}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-
-                  <div style={{display:"flex",justifyContent:"space-between",gap:40,marginTop:40}}>
-                    <div style={{flex:1,textAlign:"center"}}>
-                      <div style={{borderTop:"1px solid #000",paddingTop:4,fontSize:12,fontWeight:700}}>Entrega {empresaNombre}</div>
-                      <div style={{fontSize:11,color:"#555",marginTop:2}}>Firma y sello</div>
-                    </div>
-                    <div style={{flex:1,textAlign:"center"}}>
-                      <div style={{borderTop:"1px solid #000",paddingTop:4,fontSize:12,fontWeight:700}}>Recibe (Agente de carga)</div>
-                      <div style={{fontSize:11,color:"#555",marginTop:2}}>{cr.agenteCarga||"—"}{cr.documento?` · ${cr.documento}`:""}</div>
-                    </div>
-                  </div>
-                  <div style={{marginTop:24,fontSize:11,color:"#777",textAlign:"center",borderTop:"1px dashed #999",paddingTop:6}}>
-                    La firma confirma recepción conforme de los WR listados. Cualquier discrepancia debe reportarse al momento de la entrega.
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
+      {crPrint&&<PrnModal titulo={`Cargo release ${crPrint.id}`} html={htmlRelease(crPrint)} onClose={()=>setCrPrint(null)}/>}
 
       {/* ── Delivery Note — MODAL FORMULARIO ────────────────────────────────── */}
       {pwModal&&(
@@ -14207,200 +13846,7 @@ export default function SistemaCarga(){
       })()}
 
       {/* ── Delivery Note — NOTA IMPRIMIBLE ─────────────────────────────────── */}
-      {dnPrint&&(()=>{
-        const dn=dnPrint;
-        const wrs=(dn.wrIds||[]).map(id=>wrList.find(w=>w.id===id)).filter(Boolean);
-        const esDespacho=(dn.tipo||"entrega")==="despacho";
-        const guia=dn.guiaId?consolList.find(c=>c.id===dn.guiaId):null;
-        const isAereo=dnGuiaEsAerea(guia);
-        const totalCajas=wrs.reduce((s,w)=>s+(w.cajas||0),0);
-        const totalRealLb=wrs.reduce((s,w)=>s+(parseFloat(w.pesoLb)||0),0);
-        const totalVolLb =wrs.reduce((s,w)=>s+(parseFloat(w.volLb )||0),0);
-        const totalFt3   =wrs.reduce((s,w)=>s+(parseFloat(w.ft3   )||0),0);
-        const totalM3    =wrs.reduce((s,w)=>s+(parseFloat(w.m3    )||0),0);
-        const totalFact  =wrs.reduce((s,w)=>s+wrPesoFacturable(w,isAereo).valor,0);
-        const metodoLabel={retiro_oficina:"Retiro en oficina",domicilio:"Entrega a domicilio",transportista:"Transportista / Agente",despacho:"Despacho"};
-        // Para despacho, agrupar visualmente los WR por cliente
-        const grupos=esDespacho?(()=>{
-          const m=new Map();
-          wrs.forEach(w=>{
-            const cli=cliDeWR(w);
-            const k=cli?.id||"sin_cliente";
-            if(!m.has(k))m.set(k,{cliente:cli,nombre:cli?[cli.primerNombre,cli.primerApellido].filter(Boolean).join(" "):(w.consignee||"—"),casillero:cli?.casillero||"",wrs:[]});
-            m.get(k).wrs.push(w);
-          });
-          return [...m.values()];
-        })():null;
-        return(
-          <div className="ov">
-            <div className="modal mlg">
-              <div className="mhd no-print">
-                <div className="mt"><Ico e="🖨️" sp/>Nota de {esDespacho?"Despacho":"Entrega"} — {dn.id}</div>
-                <div style={{display:"flex",gap:6}}>
-                  <button className="btn-p" style={{fontSize:13,padding:"4px 12px"}} onClick={()=>window.print()}><Ico e="🖨️" sp/>Imprimir</button>
-                  <button className="mcl" onClick={()=>setDnPrint(null)}>✕</button>
-                </div>
-              </div>
-              <div className="mbd" style={{maxHeight:"78vh",overflow:"auto"}}>
-                <div className="dn-print" style={{background:"#fff",color:"#000",padding:"24px 28px",fontFamily:"Arial,Helvetica,sans-serif",fontSize:14}}>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",borderBottom:"2px solid #000",paddingBottom:10,marginBottom:14}}>
-                    <div>
-                      <div style={{fontSize:22,fontWeight:900,letterSpacing:2}}>{empresaNombre}</div>
-                      <div style={{fontSize:12}}>{empresaNombre||"Int'l Courier"}</div>
-                      <div style={{fontSize:11,color:"#555"}}>Nota de {esDespacho?"Despacho a Agente / Oficina / Autónomo":"Entrega al Cliente"}</div>
-                    </div>
-                    <div style={{textAlign:"right"}}>
-                      <div style={{fontSize:13,fontWeight:700}}>N° {dn.id}</div>
-                      <div style={{fontSize:12}}>Fecha: {fmtDate(dn.fecha)} {fmtTime(dn.fecha)}</div>
-                      <div style={{fontSize:12}}>Guía: <b>{dn.guiaId||"—"}</b>{guia?.tipoEnvio?` · ${guia.tipoEnvio}`:""}</div>
-                      <div style={{fontSize:12}}>Usuario: {dn.usuario||"—"}</div>
-                      {dn.anulado&&<div style={{fontSize:13,fontWeight:900,color:"#C62828",marginTop:4,border:"2px solid #C62828",padding:"2px 6px",display:"inline-block"}}>ANULADA</div>}
-                    </div>
-                  </div>
-
-                  <table style={{width:"100%",fontSize:13,marginBottom:12}}>
-                    <tbody>
-                      <tr><td style={{fontWeight:700,width:140,paddingBottom:3}}>{esDespacho?"Receptor (entidad):":"Consignatario:"}</td><td style={{paddingBottom:3}}>{dn.consignatario||dn.receptorEntidad?.nombre||"—"}</td></tr>
-                      {esDespacho&&dn.receptorEntidad?.despacha&&<tr><td style={{fontWeight:700,paddingBottom:3}}>Despacha:</td><td style={{paddingBottom:3}}>{dn.receptorEntidad.despacha}</td></tr>}
-                      {esDespacho&&dn.receptorEntidad?.chofer&&<tr><td style={{fontWeight:700,paddingBottom:3}}>Transporta:</td><td style={{paddingBottom:3}}>{dn.receptorEntidad.chofer}{dn.receptorEntidad.choferId?` · ID ${dn.receptorEntidad.choferId}`:""}{dn.receptorEntidad.vehiculo?` · ${dn.receptorEntidad.vehiculo}`:""}</td></tr>}
-                      {esDespacho&&dn.receptorEntidad?.recibidoPor&&<tr><td style={{fontWeight:700,paddingBottom:3}}>Recibido en sucursal:</td><td style={{paddingBottom:3}}>{dn.receptorEntidad.recibidoPor} · {fmtDate(dn.receptorEntidad.recibidoFecha)} {fmtTime(dn.receptorEntidad.recibidoFecha)}</td></tr>}
-                      <tr><td style={{fontWeight:700,paddingBottom:3}}>{esDespacho||dn.receptorEntidad?.recibe==="encargado"?"Recibe:":"Persona que firma:"}</td><td style={{paddingBottom:3}}>{dn.receptorNombre||"—"}{dn.receptorEntidad?.recibe==="encargado"&&!esDespacho?" (encargado)":""}{dn.receptorEntidad?.relacion?` · ${dn.receptorEntidad.relacion}`:""}</td></tr>
-                      <tr><td style={{fontWeight:700,paddingBottom:3}}>ID Identificación:</td><td style={{paddingBottom:3}}>{dn.receptorDocumento||"—"}</td></tr>
-                      <tr><td style={{fontWeight:700,paddingBottom:3}}>Teléfono:</td><td style={{paddingBottom:3}}>{dn.receptorTelefono||"—"}</td></tr>
-                      <tr><td style={{fontWeight:700,paddingBottom:3}}>Método:</td><td style={{paddingBottom:3}}>{metodoLabel[dn.metodoEntrega]||"—"}</td></tr>
-                      {dn.direccionEntrega&&<tr><td style={{fontWeight:700,paddingBottom:3,verticalAlign:"top"}}>Dirección:</td><td style={{paddingBottom:3}}>{dn.direccionEntrega}</td></tr>}
-                      {dn.transportista&&!esDespacho&&<tr><td style={{fontWeight:700,paddingBottom:3}}>Transportista:</td><td style={{paddingBottom:3}}>{dn.transportista}</td></tr>}
-                      {dn.notas&&<tr><td style={{fontWeight:700,paddingBottom:3,verticalAlign:"top"}}>Notas:</td><td style={{paddingBottom:3,whiteSpace:"pre-wrap"}}>{dn.notas}</td></tr>}
-                      {dn.anulado&&dn.motivoAnulacion&&<tr><td style={{fontWeight:700,color:"#C62828"}}>Motivo anulación:</td><td style={{color:"#C62828"}}>{dn.motivoAnulacion}</td></tr>}
-                    </tbody>
-                  </table>
-
-                  <div style={{fontSize:13,fontWeight:700,marginBottom:4}}>
-                    Detalle de la {esDespacho?"despacho":"entrega"} · {wrs.length} WR · {totalCajas} cajas
-                    {isAereo
-                      ?<> · Peso real {totalRealLb.toFixed(1)}lb · P.Vol {totalVolLb.toFixed(1)}lb</>
-                      :<> · {totalFt3.toFixed(2)}ft³ · {totalM3.toFixed(3)}m³</>}
-                  </div>
-                  <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,marginBottom:16}}>
-                    <thead>
-                      <tr style={{background:"#EEE"}}>
-                        <th style={{border:"1px solid #999",padding:"4px 6px",textAlign:"left"}}>#</th>
-                        <th style={{border:"1px solid #999",padding:"4px 6px",textAlign:"left"}}>WR</th>
-                        {esDespacho&&<th style={{border:"1px solid #999",padding:"4px 6px",textAlign:"left"}}>Cliente</th>}
-                        <th style={{border:"1px solid #999",padding:"4px 6px",textAlign:"left"}}>Descripción</th>
-                        <th style={{border:"1px solid #999",padding:"4px 6px",textAlign:"center"}}>Cajas</th>
-                        {isAereo?(
-                          <>
-                            <th style={{border:"1px solid #999",padding:"4px 6px",textAlign:"right"}}>Peso real (lb)</th>
-                            <th style={{border:"1px solid #999",padding:"4px 6px",textAlign:"right"}}>P. Vol. (lb)</th>
-                            <th style={{border:"1px solid #999",padding:"4px 6px",textAlign:"right",background:"#FFF3E0"}}>A cobrar (lb)</th>
-                          </>
-                        ):(
-                          <>
-                            <th style={{border:"1px solid #999",padding:"4px 6px",textAlign:"right"}}>Peso (lb)</th>
-                            <th style={{border:"1px solid #999",padding:"4px 6px",textAlign:"right",background:"#FFF3E0"}}>Ft³</th>
-                            <th style={{border:"1px solid #999",padding:"4px 6px",textAlign:"right",background:"#FFF3E0"}}>M³</th>
-                          </>
-                        )}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(()=>{
-                        const totCols=esDespacho?(isAereo?8:8):(isAereo?7:7);
-                        const rows=[];
-                        const renderRow=(w,i)=>{
-                          const desc=cleanReempaqueDesc(w.descripcion)||"—";
-                          const cli=cliDeWR(w);
-                          const cliLabel=cli?`${[cli.primerNombre,cli.primerApellido].filter(Boolean).join(" ")}${cli.casillero?` · ${cli.casillero}`:""}`:w.consignee||"—";
-                          const fact=wrPesoFacturable(w,isAereo);
-                          return(
-                            <tr key={w.id}>
-                              <td style={{border:"1px solid #999",padding:"3px 6px"}}>{i+1}</td>
-                              <td style={{border:"1px solid #999",padding:"3px 6px",fontWeight:700,fontFamily:"monospace"}}>{w.id}</td>
-                              {esDespacho&&<td style={{border:"1px solid #999",padding:"3px 6px"}}>{cliLabel}</td>}
-                              <td style={{border:"1px solid #999",padding:"3px 6px"}}>{desc.length>60?desc.slice(0,57)+"…":desc}</td>
-                              <td style={{border:"1px solid #999",padding:"3px 6px",textAlign:"center"}}>{w.cajas||1}</td>
-                              {isAereo?(
-                                <>
-                                  <td style={{border:"1px solid #999",padding:"3px 6px",textAlign:"right",fontFamily:"monospace"}}>{(parseFloat(w.pesoLb)||0).toFixed(1)}</td>
-                                  <td style={{border:"1px solid #999",padding:"3px 6px",textAlign:"right",fontFamily:"monospace"}}>{(parseFloat(w.volLb)||0).toFixed(1)}</td>
-                                  <td style={{border:"1px solid #999",padding:"3px 6px",textAlign:"right",fontFamily:"monospace",fontWeight:700,background:"#FFF8E1"}}>{fact.valor.toFixed(1)}</td>
-                                </>
-                              ):(
-                                <>
-                                  <td style={{border:"1px solid #999",padding:"3px 6px",textAlign:"right",fontFamily:"monospace"}}>{(parseFloat(w.pesoLb)||0).toFixed(1)}</td>
-                                  <td style={{border:"1px solid #999",padding:"3px 6px",textAlign:"right",fontFamily:"monospace",fontWeight:700,background:"#FFF8E1"}}>{(parseFloat(w.ft3)||0).toFixed(2)}</td>
-                                  <td style={{border:"1px solid #999",padding:"3px 6px",textAlign:"right",fontFamily:"monospace",background:"#FFF8E1"}}>{(parseFloat(w.m3)||0).toFixed(3)}</td>
-                                </>
-                              )}
-                            </tr>
-                          );
-                        };
-                        let idx=0;
-                        if(esDespacho&&grupos&&grupos.length>0){
-                          grupos.forEach((g,gi)=>{
-                            rows.push(
-                              <tr key={`hdr-${gi}`} style={{background:"#F0F4FA"}}>
-                                <td colSpan={totCols} style={{border:"1px solid #999",padding:"4px 8px",fontWeight:700}}><Ico e="👤" sp/>{g.nombre}{g.casillero?` · ${g.casillero}`:""} ({g.wrs.length} WR)</td>
-                              </tr>
-                            );
-                            g.wrs.forEach(w=>{rows.push(renderRow(w,idx));idx++;});
-                          });
-                        }else{
-                          wrs.forEach(w=>{rows.push(renderRow(w,idx));idx++;});
-                        }
-                        if(wrs.length===0){
-                          rows.push(<tr key="empty"><td colSpan={totCols} style={{border:"1px solid #999",padding:"8px 6px",textAlign:"center",color:"#999"}}>(sin WR)</td></tr>);
-                        }
-                        // Totales
-                        rows.push(
-                          <tr key="tot" style={{background:"#F8F8F8",fontWeight:700}}>
-                            <td colSpan={esDespacho?4:3} style={{border:"1px solid #999",padding:"4px 6px",textAlign:"right"}}>TOTALES:</td>
-                            <td style={{border:"1px solid #999",padding:"4px 6px",textAlign:"center"}}>{totalCajas}</td>
-                            {isAereo?(
-                              <>
-                                <td style={{border:"1px solid #999",padding:"4px 6px",textAlign:"right",fontFamily:"monospace"}}>{totalRealLb.toFixed(1)}</td>
-                                <td style={{border:"1px solid #999",padding:"4px 6px",textAlign:"right",fontFamily:"monospace"}}>{totalVolLb.toFixed(1)}</td>
-                                <td style={{border:"1px solid #999",padding:"4px 6px",textAlign:"right",fontFamily:"monospace",fontWeight:900,background:"#FFE0B2",fontSize:13,color:"#BF360C"}}>{totalFact.toFixed(1)} lb</td>
-                              </>
-                            ):(
-                              <>
-                                <td style={{border:"1px solid #999",padding:"4px 6px",textAlign:"right",fontFamily:"monospace"}}>{totalRealLb.toFixed(1)}</td>
-                                <td style={{border:"1px solid #999",padding:"4px 6px",textAlign:"right",fontFamily:"monospace",fontWeight:900,background:"#FFE0B2",fontSize:13,color:"#BF360C"}}>{totalFt3.toFixed(2)} ft³</td>
-                                <td style={{border:"1px solid #999",padding:"4px 6px",textAlign:"right",fontFamily:"monospace",fontWeight:900,background:"#FFE0B2",fontSize:13,color:"#BF360C"}}>{totalM3.toFixed(3)} m³</td>
-                              </>
-                            )}
-                          </tr>
-                        );
-                        return rows;
-                      })()}
-                    </tbody>
-                  </table>
-
-                  <div style={{border:"1px solid #000",padding:"8px 10px",fontSize:12,background:"#FAFAFA",marginBottom:30}}>
-                    <b>DECLARACIÓN DE RECEPCIÓN:</b> El receptor declara haber recibido conforme, en buen estado y en la cantidad indicada, la mercancía descrita en esta nota. Cualquier discrepancia o daño visible debe ser reportado al momento de la firma. Una vez firmada, {empresaNombre} queda liberado de toda responsabilidad sobre la custodia de la mercancía listada.
-                  </div>
-
-                  <div style={{display:"flex",justifyContent:"space-between",gap:40,marginTop:40}}>
-                    <div style={{flex:1,textAlign:"center"}}>
-                      <div style={{borderTop:"1px solid #000",paddingTop:4,fontSize:12,fontWeight:700}}>{esDespacho?"Despacha":`Entrega ${empresaNombre}`}</div>
-                      <div style={{fontSize:11,color:"#555",marginTop:2}}>{esDespacho&&dn.receptorEntidad?.despacha?dn.receptorEntidad.despacha:"Firma y sello"}</div>
-                    </div>
-                    {esDespacho&&<div style={{flex:1,textAlign:"center"}}>
-                      <div style={{borderTop:"1px solid #000",paddingTop:4,fontSize:12,fontWeight:700}}>Transporta</div>
-                      <div style={{fontSize:11,color:"#555",marginTop:2}}>{dn.receptorEntidad?.chofer||"\u00a0"}{dn.receptorEntidad?.choferId?` · ${dn.receptorEntidad.choferId}`:""}</div>
-                    </div>}
-                    <div style={{flex:1,textAlign:"center"}}>
-                      <div style={{borderTop:"1px solid #000",paddingTop:4,fontSize:12,fontWeight:700}}>Recibe conforme</div>
-                      <div style={{fontSize:11,color:"#555",marginTop:2}}>{dn.receptorNombre||"—"}{dn.receptorDocumento?` · ${dn.receptorDocumento}`:""}</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
+      {dnPrint&&<PrnModal titulo={`Nota ${dnPrint.id}`} html={htmlNota(dnPrint)} onClose={()=>setDnPrint(null)}/>}
 
       {/* ── Factura Modal (borrador / editar / emitir) ── */}
       {facModal&&(()=>{
@@ -14842,47 +14288,7 @@ export default function SistemaCarga(){
       })()}
 
       {/* ── Factura Print Modal ── */}
-      {puPrint&&(()=>{const p=puPrint;const td={border:"1px solid #999",padding:"5px 8px",fontSize:13};return(
-        <div className="ov">
-          <div className="modal mlg">
-            <div className="mhd no-print">
-              <div className="mt"><Ico e="🖨️" sp/>Solicitud de Pick-up — {p.id}</div>
-              <div style={{display:"flex",gap:6}}>
-                <button className="btn-p" style={{fontSize:13,padding:"4px 12px"}} onClick={()=>window.print()}><Ico e="🖨️" sp/>Imprimir</button>
-                <button className="mcl" onClick={()=>setPuPrint(null)}>✕</button>
-              </div>
-            </div>
-            <div className="mbd" style={{maxHeight:"78vh",overflow:"auto"}}>
-              <div style={{background:"#fff",color:"#000",padding:"24px 28px",fontFamily:"Arial,Helvetica,sans-serif",fontSize:14}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",borderBottom:"2px solid #000",paddingBottom:10,marginBottom:14}}>
-                  <div><div style={{fontSize:22,fontWeight:800}}>{empresaNombre}</div><div style={{fontSize:16,fontWeight:700,marginTop:4}}>SOLICITUD DE PICK-UP</div>
-                    <div style={{fontSize:12,marginTop:4}}>Solicitado: {fmtDate(p.fecha)} {fmtTime(p.fecha)}{p.solicitanteNombre?` · por ${p.solicitanteNombre}`:""}</div></div>
-                  <div style={{textAlign:"right"}}><div style={{fontSize:24,fontWeight:800,fontFamily:"'DM Mono',monospace"}}>{p.id}</div>
-                    <div style={{display:"flex",justifyContent:"flex-end",marginTop:4}}><WRBarcode value={p.id} height={42} width={1.8}/></div>
-                    <div style={{fontSize:12,marginTop:4,fontWeight:700}}>{(PU_ST[p.status]||PU_ST.solicitado).l.toUpperCase()}</div></div>
-                </div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:14}}>
-                  <div><b>Para:</b> {p.clienteNombre}{p.casillero?` · Casillero ${p.casillero}`:""}<br/><b>Contacto:</b> {p.contacto||"—"} · {p.telefono||"—"}<br/><b>Dirección de recogida:</b> {p.direccion}</div>
-                  <div><b>Fecha preferida:</b> {p.fechaDeseada||"—"}{p.franja?` · ${p.franja}`:""}
-                    {p.fechaProgramada&&<><br/><b>Fecha programada:</b> {p.fechaProgramada}</>}
-                    {p.transportista&&<><br/><b>Empresa / carrier:</b> {p.transportista}</>}
-                    {p.chofer&&<><br/><b>Chofer:</b> {p.chofer}</>}
-                    {p.wrId&&<><br/><b>WR:</b> {p.wrId}</>}</div>
-                </div>
-                <table style={{width:"100%",borderCollapse:"collapse",marginBottom:12}}>
-                  <thead><tr>{["Cant.","Contenido aprox.","Peso c/u","Medidas c/u (in)","Peso total"].map(h=><th key={h} style={{...td,background:"#eee",textAlign:"left"}}>{h}</th>)}</tr></thead>
-                  <tbody>{(p.paquetes||[]).map((x,i)=><tr key={i}><td style={td}>{x.cantidad||1}</td><td style={td}>{x.descripcion||"—"}</td><td style={td}>{x.pesoLb?`${x.pesoLb} lb`:"—"}</td><td style={td}>{x.largo&&x.ancho&&x.alto?`${x.largo}×${x.ancho}×${x.alto}`:"—"}</td><td style={td}>{x.pesoLb?`${Math.round((parseFloat(x.pesoLb)||0)*(parseInt(x.cantidad)||1)*100)/100} lb`:"—"}</td></tr>)}
-                    {(()=>{const t=puTot(p);return <tr><td style={{...td,fontWeight:800}}>{t.bultos}</td><td style={{...td,fontWeight:800}}>Total aprox.</td><td style={td}/><td style={{...td,fontWeight:700}}>{t.ft3?`${t.ft3} ft³`:""}</td><td style={{...td,fontWeight:800}}>{t.lb?`${t.lb} lb`:"—"}</td></tr>;})()}</tbody>
-                </table>
-                {p.notas&&<div style={{marginBottom:12}}><b>Notas:</b> {p.notas}</div>}
-                <div style={{fontSize:12,marginBottom:28}}>Contenido, peso, medidas, fecha y horario son aproximados o preferidos. Los datos definitivos se registran al recibir la mercancía en el almacén.</div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:40}}>
-                  {["Entrega (nombre, ID y firma)","Recibe chofer / empresa (nombre y firma)"].map(l=><div key={l} style={{borderTop:"1px solid #000",paddingTop:4,fontSize:12,textAlign:"center"}}>{l}<br/>Fecha: ____/____/______</div>)}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>);})()}
+      {puPrint&&<PrnModal titulo={`Pick-up ${puPrint.id}`} html={htmlPickup(puPrint)} onClose={()=>setPuPrint(null)}/>}
       {docEd&&(()=>{const ed=docEd;const set=x=>setDocEd(d=>({...d,...x}));const fmt=fmtFCDe(ed.wr.destCountry);
         const setL=(i,x)=>set({lineas:ed.lineas.map((l,j)=>j===i?{...l,...x}:l)});
         const conLineas=["factura","declaracion"].includes(ed.tipo);const hs=fmt.hs==="si"&&ed.tipo==="factura",ori=fmt.origenMerc==="si"&&ed.tipo==="factura";
@@ -14931,43 +14337,9 @@ export default function SistemaCarga(){
             </div>
           </div>
         </div>);})()}
-      {reciboVer&&(
-        <div className="ov">
-          <div className="modal mlg">
-            <div className="mhd no-print">
-              <div className="mt"><Ico e="🖨️" sp/>Recibo de Cobro — {reciboVer}</div>
-              <div style={{display:"flex",gap:6}}>
-                <button className="btn-p" style={{fontSize:13,padding:"4px 12px"}} onClick={()=>printRecibo(reciboVer)}><Ico e="🖨️" sp/>Imprimir</button>
-                <button className="mcl" onClick={()=>setReciboVer(null)}>✕</button>
-              </div>
-            </div>
-            <div className="mbd" style={{maxHeight:"78vh",overflow:"hidden",padding:0}}>
-              <iframe title="Recibo" srcDoc={reciboHTML(reciboVer)||""} style={{width:"100%",height:"76vh",border:"none",background:"#fff",display:"block"}}/>
-            </div>
-          </div>
-        </div>
-      )}
-      {facPrint&&(()=>{
-        const f=facPrint;
-        const pagosAplic=pagos.filter(p=>p.facturaId===f.id&&!p.anulado);
-        return(
-          <div className="ov">
-            <div className="modal mlg">
-              <div className="mhd no-print">
-                <div className="mt"><Ico e="🖨️" sp/>{f.tipo==="nota_credito"?"Nota de Crédito":f.tipo==="proforma"?"Proforma":"Factura"} — {f.id}
-                  {f.status==="anulada"&&<span style={{marginLeft:10,color:"var(--red)",fontWeight:800}}>ANULADA</span>}</div>
-                <div style={{display:"flex",gap:6}}>
-                  {hasPerm("imp_factura")&&<button className="btn-p" style={{fontSize:13,padding:"4px 12px"}} onClick={()=>printFactura(f)}><Ico e="🖨️" sp/>Imprimir</button>}
-                  <button className="mcl" onClick={()=>setFacPrint(null)}>✕</button>
-                </div>
-              </div>
-              <div className="mbd" style={{maxHeight:"78vh",overflow:"hidden",padding:0}}>
-                <iframe title="Factura" srcDoc={facturaHTML(f)} style={{width:"100%",height:"76vh",border:"none",background:"#fff",display:"block"}}/>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
+      {reciboVer&&<PrnModal titulo={`Recibo ${reciboVer}`} html={reciboHTML(reciboVer)} onClose={()=>setReciboVer(null)}/>}
+      {facPrint&&<PrnModal titulo={`${facPrint.tipo==="nota_credito"?"Nota de crédito":facPrint.tipo==="proforma"?"Proforma":"Factura"} ${facPrint.id}`} html={facturaHTML(facPrint)} onClose={()=>setFacPrint(null)}/>}
+      {prnVista&&<PrnModal titulo={prnVista.titulo} html={prnVista.html} onClose={()=>setPrnVista(null)}/>}
     </div></>
   );
 }
