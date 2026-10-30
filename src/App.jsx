@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, Fragment } from "react";
 import { createPortal } from "react-dom";
 import { dbGetPickups, dbUpsertPickup } from './supabase'
 import { descargarXlsx } from './xlsx'
+import { dbGetActividadReporte } from './supabase'
 import { supabase, resolverLogin, cuentaGuardar, cuentaEliminar, dbGetClientes, dbUpsertCliente, dbDeleteCliente, dbGetWR, dbUpsertWR, dbDeleteWR, dbGetAgentes, dbUpsertAgente, dbDeleteAgente, dbGetOficinas, dbUpsertOficina, dbDeleteOficina, dbGetTarifas, dbUpsertTarifa, dbDeleteTarifa, dbGetConsolidaciones, dbUpsertConsolidacion, dbDeleteConsolidacion, dbGetCargoReleases, dbUpsertCargoRelease, dbDeleteCargoRelease, dbGetDeliveryNotes, dbUpsertDeliveryNote, dbDeleteDeliveryNote, dbGetFacturas, dbUpsertFactura, dbDeleteFactura, dbGetPagos, dbUpsertPago, dbDeletePago, storageUploadComprobante, dbLogActividad, dbGetActividad, dbGetConfig, dbSetConfig, dbGetScanLog, dbInsertScan, dbSetScanRegistered, dbDeleteScanIds, storageUploadFoto, storageDeleteFoto, dbGetFotosByWR, dbInsertFoto, dbDeleteFoto, storageUploadFotoConsol, storageDeleteFotoConsol, dbGetFotosByConsol, dbInsertFotoConsol, dbDeleteFotoConsol } from "./supabase";
 
 // ─── TEMA CLARO PROFESIONAL ───────────────────────────────────────────────────
@@ -2247,13 +2248,15 @@ export default function SistemaCarga(){
   //  empresa = datos de la empresa en ese país · exp = sale de ese país · imp = llega a ese país
   const [docPais,setDocPais]=useState({});
   const [docEd,setDocEd]=useState(null);
-  const [repSel,setRepSel]=useState("wr-estado");
-  const [repCfg,setRepCfg]=useState(null);
+  const [repModo,setRepModo]=useState("lista");   // lista | ver | diseño
+  const [repSel,setRepSel]=useState("");
+  const [repPar,setRepPar]=useState(null);        // parámetros al ver: fechas, filtros "preguntar", búsqueda, orden
+  const [repDis,setRepDis]=useState(null);        // reporte en diseño
   const [repPick,setRepPick]=useState(null);
-  const [repFEd,setRepFEd]=useState(null);
-  const [repFQ,setRepFQ]=useState("");
+  const [repFQ,setRepFQ]=useState({});
   const [repListaQ,setRepListaQ]=useState("");
-  const [repGuardados,setRepGuardados]=useState([]);
+  const [repGuardados,setRepGuardados]=useState(null); // null = aún no se guardó nada (se muestran los ejemplos)
+  const [repAct,setRepAct]=useState(null);
   const [paisSel,setPaisSel]=useState("_default");
   const [paisSec,setPaisSec]=useState("empresa");
   const [paisDraft,setPaisDraft]=useState(null);
@@ -6261,296 +6264,482 @@ export default function SistemaCarga(){
   };
 
   // ── REPORTES ──────────────────────────────────────────────────────────────────
-  // Motor único: cada reporte = fuente de datos + columnas + filtros + agrupación.
-  // Los reportes base vienen hechos; el usuario los ajusta y guarda los suyos.
+  // Diseñador de reportes: el usuario crea formatos (fuente + datos + filtros + agrupación)
+  // y los guarda con nombre. Al abrir un reporte solo pide fechas y los filtros marcados "preguntar".
   const repDias=(a,b=new Date())=>a?Math.max(0,Math.floor((b-new Date(a))/86400000)):null;
   const histPrimera=(w,codes)=>{const h=(w.historial||[]).find(x=>codes.includes(String(x.code)));return h?new Date(h.fecha):null;};
   const estTxt=c=>{const s=WR_STATUSES.find(x=>x.code===c);return s?`${s.code} · ${s.label}`:c;};
+  const siNo=v=>v?"Sí":"No";
+  const nomUsr=id=>{const c=clients.find(x=>x.id===id||x.email===id);return c?fullName(c):(id||"");};
+  const puedeFin=hasPerm("ver_factura")||hasPerm("ver_cuentas_cobrar");
   const repFuentes=()=>{
-    // Índices de guía/contenedor y factura por WR
-    const gi=new Map();consolList.forEach(g=>(g.containers||[]).forEach((ct,ci)=>(ct.wr||[]).forEach(x=>gi.set(x.id,{guia:g.id,cont:`${ci+1} · ${ct.tipo||""}`.trim()}))));
+    const ext=!!alcanceUsr;
+    const gi=new Map();consolList.forEach(g=>(g.containers||[]).forEach((ct,ci)=>(ct.wr||[]).forEach(x=>gi.set(x.id,{guia:g.id,cont:`${ci+1} · ${ct.tipo||""}`.trim(),g}))));
     const fi=new Map();facturas.filter(f=>f.tipo==="factura"&&f.status!=="anulada").forEach(f=>(f.wrIds||[]).forEach(id=>{if(!fi.has(id))fi.set(id,f);}));
+    const vis=wrList.filter(w=>!ext||alcanceUsr.wrOk(w));const visIds=new Set(vis.map(w=>w.id));
+    const facsVis=ext?facturas.filter(f=>(f.wrIds||[]).some(id=>visIds.has(id))||(f.receptorId&&[currentUser.id,currentUser.agenteId].includes(f.receptorId))):facturas;
+    const facVisIds=new Set(facsVis.map(f=>f.id));
     const ctx=w=>{const cli=cliDeWR(w);const dom=dnDominioDeCliente(cli);const g=gi.get(w.id)||{};const f=fi.get(w.id);
       const ult=(w.historial||[]).length?w.historial[w.historial.length-1]:null;const alerta=[...(w.historial||[])].reverse().find(h=>h.alerta);
-      const of=oficinas.find(o=>o.id===sucursalDeWR(w,cli));
-      return {w,cli,dom,g,f,ult,alerta,of,dims:w.dims||[]};};
+      const of=oficinas.find(o=>o.id===sucursalDeWR(w,cli));return {w,cli,dom,g,f,ult,alerta,of,dims:w.dims||[]};};
     const sumD=(r,k)=>r.dims.length?r.dims.reduce((t,d)=>t+(parseFloat(d[k])||0),0):null;
-    const wrCampos=[
-      {k:"id",l:"WR",t:"txt",v:r=>r.w.id},
-      {k:"fecha",l:"Fecha recepción",t:"fecha",v:r=>r.w.fecha},
-      {k:"estado",l:"Estado",t:"txt",v:r=>r.w.status?estTxt(r.w.status.code):"—"},
-      {k:"tipoEnvio",l:"Tipo de envío",t:"txt",v:r=>r.w.tipoEnvio||""},
-      {k:"tipoPago",l:"Tipo de pago",t:"txt",v:r=>r.w.tipoPago||""},
-      {k:"consignee",l:"Consignatario",t:"txt",v:r=>r.cli?fullName(r.cli):(r.w.consignee||"")},
-      {k:"casillero",l:"Casillero",t:"txt",v:r=>r.cli?.casillero||r.w.casillero||""},
-      {k:"idDest",l:"ID destinatario",t:"txt",v:r=>r.cli?.cedula||""},
-      {k:"telDest",l:"Teléfono destinatario",t:"txt",v:r=>r.cli?.tel1||""},
-      {k:"cuenta",l:"Cuenta (agente/autónomo)",t:"txt",v:r=>r.dom&&r.dom.tipo!=="oficina"?r.dom.nombre:"Directo"},
-      {k:"tipoCuenta",l:"Tipo de cuenta",t:"txt",v:r=>r.dom?.tipo==="agente"?"Agente":r.dom?.tipo==="autonomo"?"Autónomo":"Directo"},
-      {k:"remitente",l:"Remitente",t:"txt",v:r=>r.w.shipper||""},
-      {k:"paisOrig",l:"País origen",t:"txt",v:r=>nomPais(r.w.origCountry)},
-      {k:"ciudadOrig",l:"Ciudad origen",t:"txt",v:r=>ciudadNombre(r.w.origCity)},
-      {k:"paisDest",l:"País destino",t:"txt",v:r=>nomPais(r.w.destCountry)},
-      {k:"ciudadDest",l:"Ciudad destino",t:"txt",v:r=>ciudadNombre(r.w.destCity)},
-      {k:"ruta",l:"Ruta",t:"txt",v:r=>`${ciudadNombre(r.w.origCity)} → ${ciudadNombre(r.w.destCity)}`},
-      {k:"sucursal",l:"Sucursal de entrega",t:"txt",v:r=>r.of?.nombre||"Principal"},
-      {k:"guia",l:"Guía",t:"txt",v:r=>r.g.guia||""},
-      {k:"contenedor",l:"Contenedor",t:"txt",v:r=>r.g.cont||""},
-      {k:"cajas",l:"Cajas",t:"num",v:r=>r.dims.length||parseFloat(r.w.cajas)||0},
-      {k:"pesoKg",l:"Peso kg",t:"num",v:r=>r2(sumD(r,"pk")??parseFloat(r.w.pesoKg)??0)},
-      {k:"pesoLb",l:"Peso lb",t:"num",v:r=>r2(sumD(r,"pkLb")??parseFloat(r.w.pesoLb)??0)},
-      {k:"volKg",l:"Peso vol. kg",t:"num",v:r=>r2(sumD(r,"volKg")??parseFloat(r.w.volKg)??0)},
-      {k:"volLb",l:"Peso vol. lb",t:"num",v:r=>r2(sumD(r,"volLb")??parseFloat(r.w.volLb)??0)},
-      {k:"ft3",l:"Ft³",t:"num",v:r=>Math.round((sumD(r,"ft3")??parseFloat(r.w.ft3)??0)*1000)/1000},
-      {k:"m3",l:"M³",t:"num",v:r=>Math.round((sumD(r,"m3")??parseFloat(r.w.m3)??0)*10000)/10000},
-      {k:"valor",l:"Valor declarado",t:"num",v:r=>r2(r.w.valor)},
-      {k:"descripcion",l:"Descripción",t:"txt",v:r=>[...new Set(r.dims.map(d=>d.descripcion).filter(Boolean))].join(", ")||r.w.descripcion||""},
-      {k:"trackings",l:"Trackings",t:"txt",v:r=>[...new Set(r.dims.map(d=>d.tracking).filter(Boolean))].join(", ")||r.w.tracking||""},
-      {k:"factura",l:"Factura",t:"txt",v:r=>r.f?.id||""},
-      {k:"facturaEstado",l:"Estado factura",t:"txt",v:r=>r.f?(FAC_STATUS_LABEL[r.f.status]||r.f.status).replace(/^\S+\s/,""):"Sin factura"},
-      {k:"facturado",l:"Facturado",t:"money",v:r=>r.f?r2((r.f.total||0)/((r.f.wrIds||[]).length||1)):null,cur:r=>r.f?.moneda||"USD"},
-      {k:"diasEstado",l:"Días en estado actual",t:"dias",v:r=>repDias(r.ult?.fecha||r.w.fecha)},
-      {k:"diasRecepcion",l:"Días desde recepción",t:"dias",v:r=>repDias(r.w.fecha)},
-      {k:"fechaEntrega",l:"Fecha de entrega",t:"fecha",v:r=>histPrimera(r.w,["21"])},
-      {k:"diasTransito",l:"Días recepción → entrega",t:"dias",v:r=>{const e=histPrimera(r.w,["21"]);return e?repDias(r.w.fecha,e):null;}},
-      {k:"resolucion",l:"Resolución faltante/sobrante",t:"txt",v:r=>r.alerta?String(r.alerta.nota||"").split(" — ")[0]:""},
-      {k:"montoIndemnizado",l:"Monto indemnizado",t:"num",v:r=>r2((r.w.historial||[]).reduce((t,h)=>t+(parseFloat(h.montoCliente)||0),0))},
-      {k:"usuario",l:"Registrado por",t:"txt",v:r=>r.w.usuario||(r.w.historial?.[0]?.user)||""},
-      {k:"notas",l:"Notas",t:"txt",v:r=>r.w.notas||""},
+    const n3=v=>Math.round((parseFloat(v)||0)*1000)/1000;
+    const W=(g,k,l,t,v,extra={})=>({g,k,l,t,v,...extra});
+    const wrC=[
+      W("WR","id","N° WR","txt",r=>r.w.id),W("WR","fecha","Fecha de recepción","fecha",r=>r.w.fecha),
+      W("WR","estado","Estado","txt",r=>r.w.status?estTxt(r.w.status.code):"—"),W("WR","fechaEstado","Fecha del estado actual","fecha",r=>r.ult?.fecha||r.w.fecha),
+      W("WR","tipoEnvio","Tipo de envío","txt",r=>r.w.tipoEnvio||""),W("WR","tipoPago","Tipo de pago","txt",r=>r.w.tipoPago||""),
+      W("WR","descripcion","Descripción","txt",r=>[...new Set(r.dims.map(d=>d.descripcion).filter(Boolean))].join(", ")||r.w.descripcion||""),
+      W("WR","trackings","Trackings","txt",r=>[...new Set(r.dims.map(d=>d.tracking).filter(Boolean))].join(", ")||r.w.tracking||""),
+      W("WR","carriers","Carriers","txt",r=>[...new Set(r.dims.map(d=>d.carrier).filter(Boolean))].join(", ")||r.w.carrier||""),
+      W("WR","facturaProveedor","Factura del proveedor","txt",r=>[...new Set(r.dims.map(d=>d.factura).filter(Boolean))].join(", ")||r.w.factura||""),
+      W("WR","cargos","Servicios / cargos","txt",r=>(r.w.cargos||[]).map(c=>typeof c==="string"?c:c?.concepto||c?.nombre).filter(Boolean).join(", ")),
+      W("WR","usuario","Registrado por","txt",r=>nomUsr(r.w.usuario||r.w.historial?.[0]?.user)),W("WR","branch","Oficina que recibió","txt",r=>r.w.branch||""),
+      W("WR","notas","Notas","txt",r=>r.w.notas||""),W("WR","reempaque","Reempacado en / de","txt",r=>r.w.reempacadoEn||(r.w.reempaqueDe||[]).join(", ")||""),
+      W("Destinatario","consignee","Consignatario","txt",r=>r.cli?fullName(r.cli):(r.w.consignee||"")),
+      W("Destinatario","casillero","Casillero","txt",r=>r.cli?.casillero||r.w.casillero||""),
+      W("Destinatario","idDest","ID destinatario","txt",r=>r.cli?.cedula||""),W("Destinatario","telDest","Teléfono destinatario","txt",r=>r.cli?.tel1||""),
+      W("Destinatario","emailDest","Email destinatario","txt",r=>r.cli?.email||""),
+      W("Destinatario","dirDest","Dirección destinatario","txt",r=>r.cli?[r.cli.dir,r.cli.municipio,r.cli.estado,r.cli.pais].filter(Boolean).join(", "):""),
+      W("Destinatario","cuenta","Cuenta (agente / autónomo)","txt",r=>r.dom&&r.dom.tipo!=="oficina"?r.dom.nombre:"Directo"),
+      W("Destinatario","tipoCuenta","Tipo de cuenta","txt",r=>r.dom?.tipo==="agente"?"Agente":r.dom?.tipo==="autonomo"?"Autónomo":"Directo"),
+      W("Destinatario","sucursal","Sucursal de entrega","txt",r=>r.of?.nombre||"Principal"),
+      W("Remitente","remitente","Remitente","txt",r=>r.w.shipper||""),W("Remitente","idRem","ID remitente","txt",r=>r.w.remitenteDoc||""),
+      W("Remitente","telRem","Teléfono remitente","txt",r=>r.w.remitenteTel||""),W("Remitente","emailRem","Email remitente","txt",r=>r.w.remitenteEmail||""),
+      W("Remitente","dirRem","Dirección remitente","txt",r=>r.w.remitenteDir||""),
+      W("Ruta","paisOrig","País origen","txt",r=>nomPais(r.w.origCountry)),W("Ruta","ciudadOrig","Ciudad origen","txt",r=>ciudadNombre(r.w.origCity)),
+      W("Ruta","paisDest","País destino","txt",r=>nomPais(r.w.destCountry)),W("Ruta","ciudadDest","Ciudad destino","txt",r=>ciudadNombre(r.w.destCity)),
+      W("Ruta","ruta","Ruta","txt",r=>`${ciudadNombre(r.w.origCity)} → ${ciudadNombre(r.w.destCity)}`),
+      W("Guía","guia","Guía","txt",r=>r.g.guia||""),W("Guía","contenedor","Contenedor","txt",r=>r.g.cont||""),
+      W("Guía","awb","AWB / BL","txt",r=>r.g.g?(r.g.g.awb||r.g.g.bl||""):""),W("Guía","vuelo","Vuelo / viaje","txt",r=>r.g.g?.numVuelo||""),
+      W("Guía","fechaSalida","Fecha de salida","fecha",r=>r.g.g?.fechaSalida||null),
+      W("Medidas","cajas","Cajas","num",r=>r.dims.length||parseFloat(r.w.cajas)||0),
+      W("Medidas","pesoKg","Peso kg","num",r=>r2(sumD(r,"pk")??r.w.pesoKg)),W("Medidas","pesoLb","Peso lb","num",r=>r2(sumD(r,"pkLb")??r.w.pesoLb)),
+      W("Medidas","volKg","Peso vol. kg","num",r=>r2(sumD(r,"volKg")??r.w.volKg)),W("Medidas","volLb","Peso vol. lb","num",r=>r2(sumD(r,"volLb")??r.w.volLb)),
+      W("Medidas","ft3","Ft³","num",r=>n3(sumD(r,"ft3")??r.w.ft3)),W("Medidas","m3","M³","num",r=>Math.round((sumD(r,"m3")??parseFloat(r.w.m3)??0)*10000)/10000),
+      W("Medidas","valor","Valor declarado","num",r=>r2(r.w.valor)),
+      ...(puedeFin?[W("Facturación","factura","N° factura","txt",r=>r.f?.id||""),
+        W("Facturación","facturaEstado","Estado de la factura","txt",r=>r.f?(FAC_STATUS_LABEL[r.f.status]||r.f.status).replace(/^\S+\s/,""):"Sin factura"),
+        W("Facturación","facturado","Facturado","money",r=>r.f?r2((r.f.total||0)/((r.f.wrIds||[]).length||1)):null,{cur:r=>r.f?.moneda||"USD"}),
+        W("Facturación","saldoWR","Pendiente de cobro","money",r=>r.f?r2((r.f.saldo||0)/((r.f.wrIds||[]).length||1)):null,{cur:r=>r.f?.moneda||"USD"})]:[]),
+      W("Tiempos","diasEstado","Días en estado actual","dias",r=>repDias(r.ult?.fecha||r.w.fecha)),
+      W("Tiempos","diasRecepcion","Días desde recepción","dias",r=>repDias(r.w.fecha)),
+      W("Tiempos","fechaConsolidado","Fecha consolidado","fecha",r=>histPrimera(r.w,["4"])),
+      W("Tiempos","fechaAlmacenDest","Fecha en almacén destino","fecha",r=>histPrimera(r.w,["17"])),
+      W("Tiempos","fechaEntrega","Fecha de entrega","fecha",r=>histPrimera(r.w,["21"])),
+      W("Tiempos","diasTransito","Días recepción → entrega","dias",r=>{const e=histPrimera(r.w,["21"]);return e?repDias(r.w.fecha,e):null;}),
+      W("Faltantes","resolucion","Resolución faltante / sobrante","txt",r=>r.alerta?String(r.alerta.nota||"").split(" — ")[0]:""),
+      W("Faltantes","montoIndemnizado","Monto indemnizado","num",r=>r2((r.w.historial||[]).reduce((t,h)=>t+(parseFloat(h.montoCliente)||0),0))),
     ];
-    const vis=wrList.filter(w=>!alcanceUsr||alcanceUsr.wrOk(w));
-    const cajaCampos=[
-      {k:"wr",l:"WR",t:"txt",v:r=>r.w.id},
-      {k:"caja",l:"Caja",t:"txt",v:r=>`${r.i+1}/${r.n}`},
-      {k:"tracking",l:"Tracking",t:"txt",v:r=>r.d.tracking||""},
-      {k:"carrier",l:"Carrier",t:"txt",v:r=>r.d.carrier||""},
-      {k:"descripcion",l:"Descripción",t:"txt",v:r=>r.d.descripcion||r.w.descripcion||""},
-      {k:"medidasCm",l:"Medidas cm",t:"txt",v:r=>r.d.l?`${r2(r.d.l)}×${r2(r.d.a)}×${r2(r.d.h)}`:""},
-      {k:"medidasIn",l:"Medidas in",t:"txt",v:r=>r.d.l?`${r2(r.d.l/2.54)}×${r2(r.d.a/2.54)}×${r2(r.d.h/2.54)}`:""},
-      {k:"pesoKg",l:"Peso kg",t:"num",v:r=>r2(r.d.pk)},
-      {k:"pesoLb",l:"Peso lb",t:"num",v:r=>r2(r.d.pkLb||(parseFloat(r.d.pk)||0)*2.20462)},
-      {k:"volKg",l:"Peso vol. kg",t:"num",v:r=>r2(r.d.volKg)},
-      {k:"ft3",l:"Ft³",t:"num",v:r=>Math.round((parseFloat(r.d.ft3)||0)*1000)/1000},
-      {k:"m3",l:"M³",t:"num",v:r=>Math.round((parseFloat(r.d.m3)||0)*10000)/10000},
-      {k:"valor",l:"Valor",t:"num",v:r=>r2(r.d.valor)},
-      ...wrCampos.filter(c=>["fecha","estado","tipoEnvio","consignee","casillero","cuenta","paisDest","ciudadDest","guia","contenedor"].includes(c.k)).map(c=>({...c,v:r=>c.v(r)})),
+    const cajaC=[
+      W("Caja","caja","Caja","txt",r=>`${r.i+1}/${r.n}`),W("Caja","tracking","Tracking","txt",r=>r.d.tracking||""),W("Caja","carrier","Carrier","txt",r=>r.d.carrier||""),
+      W("Caja","descCaja","Descripción de la caja","txt",r=>r.d.descripcion||""),
+      W("Caja","medidasCm","Medidas cm","txt",r=>r.d.l?`${r2(r.d.l)}×${r2(r.d.a)}×${r2(r.d.h)}`:""),
+      W("Caja","medidasIn","Medidas in","txt",r=>r.d.l?`${r2(r.d.l/2.54)}×${r2(r.d.a/2.54)}×${r2(r.d.h/2.54)}`:""),
+      W("Caja","pesoCajaKg","Peso caja kg","num",r=>r2(r.d.pk)),W("Caja","pesoCajaLb","Peso caja lb","num",r=>r2(r.d.pkLb||(parseFloat(r.d.pk)||0)*2.20462)),
+      W("Caja","volCajaKg","Peso vol. caja kg","num",r=>r2(r.d.volKg)),W("Caja","ft3Caja","Ft³ caja","num",r=>n3(r.d.ft3)),
+      W("Caja","valorCaja","Valor caja","num",r=>r2(r.d.valor)),
+      ...wrC.filter(c=>!["Medidas","Facturación"].includes(c.g)),
     ];
-    return {
-      wr:{l:"WR",fecha:"fecha",campos:wrCampos,filas:()=>vis.map(ctx)},
-      caja:{l:"Cajas",fecha:"fecha",campos:cajaCampos,filas:()=>vis.flatMap(w=>{const c=ctx(w);const n=c.dims.length;return c.dims.map((d,i)=>({...c,d,i,n}));})},
+    const R2=(o)=>o;
+    // Cuentas: deuda y saldo a favor
+    let cuentas=null;const cta=()=>cuentas||(cuentas=new Map(resumenCuentas(true).map(r=>[pagKey(r.pg),r])));
+    const deudaDe=pg=>cta().get(pagKey(pg))?.debe||{};const favorDe=pg=>cta().get(pagKey(pg))?.favor||{};
+    const mObj=o=>Object.keys(o||{}).length?o:null;
+    const ROLN=Object.fromEntries(Object.values(ROLE_DEFS).map(r=>[r.code,r.name]));
+    const F={
+      wr:{l:"WR",ic:"📦",fecha:"fecha",campos:wrC,filas:()=>vis.map(ctx)},
+      caja:{l:"Cajas de los WR",ic:"🗃️",fecha:"fecha",campos:cajaC,filas:()=>vis.flatMap(w=>{const c=ctx(w);return c.dims.map((d,i)=>({...c,d,i,n:c.dims.length}));})},
+      guia:{l:"Guías",ic:"🚢",fecha:"fecha",campos:[
+        W("Guía","id","Guía","txt",r=>r.id),W("Guía","fecha","Fecha","fecha",r=>r.fecha),W("Guía","estado","Estado","txt",r=>{const s=WR_STATUSES.find(x=>x.code===String(r.status)||x.label===r.status);return s?estTxt(s.code):String(r.status||"");}),
+        W("Guía","tipoEnvio","Tipo de envío","txt",r=>r.tipoEnvio||""),W("Guía","destino","Destino","txt",r=>ciudadNombre(r.destino)||""),
+        W("Guía","awb","AWB","txt",r=>r.awb||""),W("Guía","bl","BL","txt",r=>r.bl||""),W("Guía","vuelo","Vuelo / viaje","txt",r=>r.numVuelo||""),
+        W("Guía","fechaSalida","Fecha de salida","fecha",r=>r.fechaSalida||null),W("Guía","fechaLlegada","Fecha de llegada","fecha",r=>r.fechaLlegada||null),
+        W("Guía","fechaAlmacen","Recibida en almacén","fecha",r=>r.fechaRecibidaAlmacen||null),W("Guía","cerrada","Recepción cerrada","txt",r=>siNo(r.archivada)),
+        W("Contenido","contenedores","Contenedores","num",r=>(r.containers||[]).length),W("Contenido","totalWR","WR","num",r=>parseFloat(r.totalWR)||0),
+        W("Contenido","totalCajas","Cajas","num",r=>parseFloat(r.totalCajas)||0),W("Contenido","totalLb","Peso lb","num",r=>r2(r.totalLb)),
+        W("Contenido","totalVolLb","Peso vol. lb","num",r=>r2(r.totalVolLb)),W("Contenido","totalFt3","Ft³","num",r=>n3(r.totalFt3)),W("Contenido","totalM3","M³","num",r=>Math.round((parseFloat(r.totalM3)||0)*10000)/10000),
+        W("Guía","usuario","Creada por","txt",r=>nomUsr(r.usuario)),W("Guía","notas","Notas","txt",r=>r.notas||"")],
+        filas:()=>ext?consolList.filter(g=>(g.containers||[]).some(ct=>(ct.wr||[]).some(x=>visIds.has(x.id)))):consolList},
+      cliente:{l:"Clientes",ic:"👤",fecha:"",campos:[
+        W("Cliente","casillero","Casillero","txt",r=>r.casillero||""),W("Cliente","nombre","Nombre","txt",r=>fullName(r)),W("Cliente","cedula","ID","txt",r=>r.cedula||""),
+        W("Cliente","email","Email","txt",r=>r.email||""),W("Cliente","tel1","Teléfono","txt",r=>r.tel1||""),W("Cliente","tel2","Teléfono 2","txt",r=>r.tel2||""),
+        W("Cliente","dir","Dirección","txt",r=>r.dir||""),W("Cliente","municipio","Municipio / ciudad","txt",r=>r.municipio||""),W("Cliente","estadoProv","Estado / provincia","txt",r=>r.estado||""),W("Cliente","pais","País","txt",r=>r.pais||""),
+        W("Cuenta","cuenta","Cuenta (agente / autónomo)","txt",r=>{const d=dnDominioDeCliente(r);return d&&d.tipo!=="oficina"?d.nombre:"Directo";}),
+        W("Cuenta","tipoCuenta","Tipo de cuenta","txt",r=>({agente:"Agente",vendedor_agente:"Agente (vendedor)",autonomo:"Autónomo"})[r.clienteTipo]||"Directo"),
+        W("Cuenta","sucursal","Sucursal de entrega","txt",r=>oficinas.find(o=>o.id===r.oficinaId)?.nombre||"Principal"),W("Cuenta","activo","Activo","txt",r=>siNo(r.activo!==false)),
+        W("Movimiento","nWR","WR","num",r=>wrList.filter(w=>w.clienteId===r.id||(r.casillero&&w.casillero===r.casillero)).length),
+        W("Movimiento","ultimoWR","Último WR","fecha",r=>{const ws=wrList.filter(w=>w.clienteId===r.id||(r.casillero&&w.casillero===r.casillero));return ws.length?ws.map(w=>new Date(w.fecha)).sort((a,b)=>b-a)[0]:null;}),
+        ...(puedeFin?[W("Dinero","deuda","Nos debe","money",r=>mObj(deudaDe({tipo:"cliente",id:r.id}))),W("Dinero","favor","Saldo a favor","money",r=>mObj(favorDe({tipo:"cliente",id:r.id})))]:[])],
+        filas:()=>clientesVisibles.filter(c=>c.tipo==="cliente")},
+      ...(ext?{}:{
+      usuario:{l:"Usuarios del sistema",ic:"🧑‍💼",fecha:"",campos:[
+        W("Usuario","id","N° usuario","txt",r=>r.id),W("Usuario","nombre","Nombre","txt",r=>fullName(r)),W("Usuario","rol","Rol","txt",r=>ROLN[r.rol]||r.rol||""),
+        W("Usuario","email","Email","txt",r=>r.email||""),W("Usuario","tel1","Teléfono","txt",r=>r.tel1||""),
+        W("Usuario","oficina","Oficina","txt",r=>oficinas.find(o=>o.id===r.oficinaId)?.nombre||""),W("Usuario","agente","Agente","txt",r=>agentes.find(a=>a.id===r.agenteId)?.nombre||""),
+        W("Usuario","activo","Activo","txt",r=>siNo(r.activo!==false))],filas:()=>clients.filter(c=>c.tipo==="usuario")},
+      agente:{l:"Agentes y autónomos",ic:"🤝",fecha:"",campos:[
+        W("Cuenta","tipo","Tipo","txt",r=>r.tipo==="agente"?"Agente":"Autónomo"),W("Cuenta","codigo","Código","txt",r=>r.codigo||""),W("Cuenta","nombre","Nombre","txt",r=>r.nombre),
+        W("Cuenta","ciudad","Ciudad","txt",r=>r.ciudad||""),W("Cuenta","pais","País","txt",r=>r.pais||""),W("Cuenta","tel","Teléfono","txt",r=>r.tel||""),W("Cuenta","email","Email","txt",r=>r.email||""),
+        W("Cuenta","activo","Activo","txt",r=>siNo(r.activo!==false)),
+        W("Movimiento","nClientes","Clientes","num",r=>clients.filter(c=>c.tipo==="cliente"&&(r.tipo==="agente"?["agente","vendedor_agente"].includes(c.clienteTipo)&&c.agenteId===r.id:c.clienteTipo==="autonomo"&&c.autonomoId===r.id)).length),
+        W("Movimiento","nWR","WR","num",r=>wrList.filter(w=>{const d=dnDominioDeCliente(cliDeWR(w));return d&&d.tipo===r.tipo&&d.id===r.id;}).length),
+        ...(puedeFin?[W("Dinero","deuda","Nos debe","money",r=>mObj(deudaDe(r))),W("Dinero","favor","Le debemos","money",r=>mObj(favorDe(r)))]:[])],
+        filas:()=>[...agentes.map(a=>({tipo:"agente",id:a.id,codigo:a.codigo,nombre:a.nombre||a.codigo,ciudad:a.ciudad,pais:a.pais,tel:a.tel,email:a.email,activo:a.activo})),
+          ...clients.filter(c=>c.tipo==="usuario"&&c.rol==="F").map(c=>({tipo:"autonomo",id:c.id,codigo:c.id,nombre:fullName(c),ciudad:c.municipio,pais:c.pais,tel:c.tel1,email:c.email,activo:c.activo}))]},
+      oficina:{l:"Oficinas",ic:"🏢",fecha:"",campos:[
+        W("Oficina","codigo","Código","txt",r=>r.codigo||""),W("Oficina","nombre","Nombre","txt",r=>r.nombre||""),W("Oficina","ciudad","Ciudad","txt",r=>r.ciudad||""),
+        W("Oficina","pais","País","txt",r=>r.pais||""),W("Oficina","tel","Teléfono","txt",r=>r.tel||""),W("Oficina","email","Email","txt",r=>r.email||""),W("Oficina","contacto","Contacto","txt",r=>r.contacto||""),
+        W("Oficina","activo","Activa","txt",r=>siNo(r.activo!==false))],filas:()=>oficinas},
+      }),
+      ...(puedeFin?{
+      factura:{l:"Facturas",ic:"🧾",fecha:"fechaEmision",campos:[
+        W("Factura","id","N° factura","txt",r=>r.id),W("Factura","tipo","Tipo","txt",r=>r.tipo==="nota_credito"?"Nota de crédito":r.tipo==="proforma"?"Proforma":"Factura"),
+        W("Factura","fechaEmision","Fecha de emisión","fecha",r=>r.fechaEmision||r.fecha),W("Factura","estado","Estado","txt",r=>(FAC_STATUS_LABEL[r.status]||r.status).replace(/^\S+\s/,"")),
+        W("Factura","ncOrigen","Factura de origen (NC / cargo)","txt",r=>r.ncFacturaOrigen||""),W("Factura","usuario","Emitida por","txt",r=>nomUsr(r.usuario)),
+        W("Receptor","receptorTipo","Tipo de receptor","txt",r=>({cliente:"Cliente",agente:"Agente",autonomo:"Autónomo"})[r.receptorTipo]||r.receptorTipo),
+        W("Receptor","receptor","Receptor","txt",r=>r.receptorNombre||""),W("Receptor","casillero","Casillero","txt",r=>r.receptorCasillero||""),W("Receptor","doc","ID receptor","txt",r=>r.receptorDoc||""),
+        W("Envío","wrs","WR","txt",r=>(r.wrIds||[]).join(", ")),W("Envío","nWR","Cantidad de WR","num",r=>(r.wrIds||[]).length),W("Envío","guias","Guías","txt",r=>(r.guiaIds||[]).join(", ")),
+        W("Envío","tipoEnvio","Tipo de envío","txt",r=>r.tipoEnvio||""),W("Envío","tipoPago","PREPAID / COD","txt",r=>{const w=wrList.find(x=>(r.wrIds||[]).includes(x.id));return w?.tipoPago||"";}),
+        W("Envío","destino","Destino","txt",r=>{const w=wrList.find(x=>(r.wrIds||[]).includes(x.id));return w?ciudadNombre(w.destCity):"";}),
+        W("Importes","moneda","Moneda","txt",r=>r.moneda||"USD"),W("Importes","subtotal","Subtotal","money",r=>r.subtotal,{cur:r=>r.moneda}),W("Importes","descuento","Descuento","money",r=>r.descuento||0,{cur:r=>r.moneda}),
+        W("Importes","total","Total","money",r=>r.total,{cur:r=>r.moneda}),W("Importes","pagado","Pagado","money",r=>r.pagado,{cur:r=>r.moneda}),W("Importes","saldo","Saldo pendiente","money",r=>r.saldo,{cur:r=>r.moneda}),
+        W("Cobro","dias","Días desde emisión","dias",r=>repDias(r.fechaEmision||r.fecha)),
+        W("Cobro","antiguedad","Antigüedad de la deuda","txt",r=>{if(!["emitida","pagada_parcial"].includes(r.status))return "Sin deuda";const d=repDias(r.fechaEmision||r.fecha)||0;return d<=30?"1. 0–30 días":d<=60?"2. 31–60 días":d<=90?"3. 61–90 días":"4. Más de 90 días";}),
+        W("Factura","notas","Notas","txt",r=>r.notas||"")],filas:()=>facsVis.filter(f=>f.status!=="borrador")},
+      lineaFactura:{l:"Líneas de factura",ic:"📃",fecha:"fecha",campos:[
+        W("Factura","factura","N° factura","txt",r=>r.f.id),W("Factura","fecha","Fecha","fecha",r=>r.f.fechaEmision||r.f.fecha),W("Factura","estado","Estado","txt",r=>(FAC_STATUS_LABEL[r.f.status]||r.f.status).replace(/^\S+\s/,"")),
+        W("Factura","receptor","Receptor","txt",r=>r.f.receptorNombre||""),
+        W("Línea","tipoLinea","Tipo de línea","txt",r=>({flete:"Flete",adicional:"Servicio / gasto",minimo:"Ajuste a mínimo",extra:"Otro"})[r.l.tipo||"extra"]),
+        W("Línea","concepto","Concepto","txt",r=>r.l.descripcion||""),W("Línea","wr","WR","txt",r=>r.l.wrId||""),W("Línea","cantidad","Cantidad","num",r=>parseFloat(r.l.cantidad)||0),
+        W("Línea","unidad","Unidad","txt",r=>r.l.unidad||""),W("Línea","precio","Precio","money",r=>parseFloat(r.l.precio)||0,{cur:r=>r.f.moneda}),W("Línea","totalLinea","Total línea","money",r=>parseFloat(r.l.total)||0,{cur:r=>r.f.moneda})],
+        filas:()=>facsVis.filter(f=>!["borrador","anulada"].includes(f.status)).flatMap(f=>(f.lineas||[]).map(l=>({f,l})))},
+      pago:{l:"Cobros, pagos y movimientos",ic:"💵",fecha:"fecha",campos:[
+        W("Movimiento","fecha","Fecha","fecha",r=>r.fecha),W("Movimiento","id","N° pago","txt",r=>r.id),W("Movimiento","recibo","Recibo","txt",r=>r.reciboId||""),
+        W("Movimiento","clase","Clase","txt",r=>!esDinero(r)?"Interno":r.monto<0?"Salida":"Entrada"),
+        W("Movimiento","forma","Forma de pago","txt",r=>metodoLbl(r.tipoPago).replace(/^\S+\s/,"")),W("Movimiento","factura","Factura","txt",r=>r.facturaId||"A favor"),
+        W("Movimiento","monto","Monto","money",r=>r.monto,{cur:r=>r.moneda}),W("Movimiento","moneda","Moneda","txt",r=>r.moneda||"USD"),
+        W("Movimiento","referencia","Referencia","txt",r=>r.referencia||""),W("Movimiento","nota","Nota","txt",r=>r.notaReferencial||""),
+        W("Movimiento","usuario","Registrado por","txt",r=>nomUsr(r.usuario)),W("Movimiento","anulado","Anulado","txt",r=>siNo(r.anulado)),
+        W("Pagador","pagadorTipo","Tipo de pagador","txt",r=>({cliente:"Cliente",agente:"Agente",autonomo:"Autónomo"})[(pagadorDePago(r)||{}).tipo]||"Cliente"),
+        W("Pagador","pagador","Pagador","txt",r=>(pagadorDePago(r)||{}).nombre||r.pagadorNombre||"")],
+        filas:()=>ext?pagos.filter(p=>facVisIds.has(p.facturaId)):pagos},
+      ...(ext?{}:{comision:{l:"Comisiones de agentes",ic:"🤝",fecha:"fecha",campos:[
+        W("Comisión","fecha","Fecha de la factura","fecha",r=>r.f.fechaEmision||r.f.fecha),W("Comisión","cuenta","Agente / autónomo","txt",r=>r.dom.nombre),
+        W("Comisión","tipo","Tipo","txt",r=>r.dom.tipo==="agente"?"Agente":"Autónomo"),W("Comisión","wr","WR","txt",r=>r.w.id),W("Comisión","factura","Factura","txt",r=>r.f.id),
+        W("Comisión","cliente","Cliente","txt",r=>{const c=cliDeWR(r.w);return c?fullName(c):r.w.consignee||"";}),
+        W("Comisión","cobrado","Cobrado","money",r=>r.cobrado,{cur:r=>r.moneda}),W("Comisión","costo","Costo (su tarifa)","money",r=>r.costo,{cur:r=>r.moneda}),
+        W("Comisión","comision","Comisión","money",r=>r.comision,{cur:r=>r.moneda}),W("Comisión","estado","Estado","txt",r=>r.acreditada?"Acreditada":"Pendiente"),
+        W("Comisión","tarifa","Tarifa usada","txt",r=>r.tf?`${r.tf.id}${r.tf._especial?" (especial)":""}`:"Sin tarifa")],filas:()=>comisionesPrepaid()}}),
+      }:{}),
+      entrega:{l:"Entregas y despachos",ic:"📝",fecha:"fecha",campos:[
+        W("Nota","id","N° nota","txt",r=>r.id),W("Nota","fecha","Fecha","fecha",r=>r.fecha),W("Nota","tipo","Tipo","txt",r=>r.tipo==="despacho"?"Despacho":"Entrega"),
+        W("Nota","guia","Guía","txt",r=>r.guiaId||""),W("Nota","destinoDe","Despachado a","txt",r=>r.receptorEntidad?.nombre||""),
+        W("Nota","recibe","Recibe","txt",r=>r.receptorNombre||r.consignatario||""),W("Nota","docRecibe","ID de quien recibe","txt",r=>r.receptorDocumento||""),
+        W("Nota","metodo","Método","txt",r=>r.metodoEntrega||""),W("Nota","transportista","Transportista","txt",r=>r.transportista||""),
+        W("Nota","nWR","WR","num",r=>(r.wrIds||[]).length),W("Nota","wrs","N° de WR","txt",r=>(r.wrIds||[]).join(", ")),
+        W("Nota","usuario","Registrada por","txt",r=>nomUsr(r.usuario)),W("Nota","anulada","Anulada","txt",r=>siNo(r.anulado))],
+        filas:()=>deliveryNotes.filter(n=>!ext||(n.wrIds||[]).some(id=>visIds.has(id)))},
+      egreso:{l:"Cargo Release (egresos)",ic:"🚚",fecha:"fecha",campos:[
+        W("Egreso","id","N°","txt",r=>r.id),W("Egreso","fecha","Fecha","fecha",r=>r.fecha),W("Egreso","agenteCarga","Agente de carga","txt",r=>r.agenteCarga||""),
+        W("Egreso","contacto","Contacto","txt",r=>r.contacto||""),W("Egreso","documento","Documento","txt",r=>r.documento||""),W("Egreso","vehiculo","Vehículo","txt",r=>r.vehiculo||""),
+        W("Egreso","nWR","WR","num",r=>(r.wrIds||[]).length),W("Egreso","wrs","N° de WR","txt",r=>(r.wrIds||[]).join(", ")),
+        W("Egreso","usuario","Registrado por","txt",r=>nomUsr(r.usuario)),W("Egreso","anulado","Anulado","txt",r=>siNo(r.anulado))],
+        filas:()=>cargoReleases.filter(c=>!ext||(c.wrIds||[]).some(id=>visIds.has(id)))},
+      pickup:{l:"Pick-ups",ic:"🚐",fecha:"fecha",campos:[
+        W("Pick-up","id","N°","txt",r=>r.id),W("Pick-up","fecha","Fecha de solicitud","fecha",r=>r.fecha),W("Pick-up","estado","Estado","txt",r=>(PU_ST[r.status]||{l:r.status}).l),
+        W("Pick-up","cliente","Para","txt",r=>r.clienteNombre||""),W("Pick-up","casillero","Casillero","txt",r=>r.casillero||""),W("Pick-up","solicitante","Solicitado por","txt",r=>r.solicitanteNombre||""),
+        W("Pick-up","direccion","Dirección de recogida","txt",r=>r.direccion||""),W("Pick-up","telefono","Teléfono","txt",r=>r.telefono||""),
+        W("Pick-up","fechaPref","Fecha preferida","fecha",r=>r.fechaDeseada||null),W("Pick-up","fechaProg","Fecha programada","fecha",r=>r.fechaProgramada||null),
+        W("Pick-up","empresa","Empresa / carrier","txt",r=>r.transportista||""),W("Pick-up","chofer","Chofer","txt",r=>r.chofer||""),
+        W("Pick-up","bultos","Bultos","num",r=>puBultos(r)),W("Pick-up","pesoAprox","Peso aprox. lb","num",r=>puTot(r).lb),
+        ...(ext?[]:[W("Pick-up","cargo","Cargo","money",r=>r.monto||0,{cur:r=>r.moneda||"USD"})]),W("Pick-up","wr","WR","txt",r=>r.wrId||"")],
+        filas:()=>pickupList.filter(p=>!ext||p.solicitanteId===currentUser.id||alcanceUsr.clienteOk(clients.find(c=>c.id===p.clienteId)))},
+      ...(ext?{}:{
+      puerta:{l:"Recepción en puerta",ic:"📡",fecha:"fecha",campos:[
+        W("Recepción","fecha","Fecha","fecha",r=>r.ts),W("Recepción","hora","Hora","txt",r=>fmtTime(r.ts)),W("Recepción","tracking","Tracking","txt",r=>r.tracking),
+        W("Recepción","carrier","Carrier","txt",r=>r.carrier||""),W("Recepción","registrado","Con WR","txt",r=>siNo(r.registered))],filas:()=>scanLog},
+      tarifa:{l:"Tarifas",ic:"💰",fecha:"",campos:[
+        W("Tarifa","id","N°","txt",r=>r.id),W("Tarifa","aplica","Aplica a","txt",r=>r.aplicaTipo?nombreAplica(r):"Predeterminada"),
+        W("Tarifa","origen","Origen","txt",r=>[r.paisOrig,r.ciudadOrig].filter(Boolean).join(" ")||"Cualquiera"),W("Tarifa","destino","Destino","txt",r=>[r.paisDest,r.ciudadDest].filter(Boolean).join(" ")||"Cualquiera"),
+        W("Tarifa","tipoEnvio","Tipo de envío","txt",r=>r.tipoEnvio||""),W("Tarifa","unidad","Unidad","txt",r=>r.unidad||""),
+        W("Tarifa","precio","Precio","money",r=>parseFloat(tipoEsMaritimoG(r.tipoEnvio)?r.porFt3:r.porLb)||0,{cur:r=>r.moneda}),W("Tarifa","minimo","Mínimo","money",r=>parseFloat(r.min)||0,{cur:r=>r.moneda}),
+        W("Tarifa","activa","Activa","txt",r=>siNo(r.activo!==false))],filas:()=>tarifas},
+      ...(hasPerm("registro_actividad")?{actividad:{l:"Actividad de usuarios",ic:"📋",fecha:"fecha",campos:[
+        W("Actividad","fecha","Fecha","fecha",r=>r.ts),W("Actividad","hora","Hora","txt",r=>fmtTime(r.ts)),W("Actividad","usuario","Usuario","txt",r=>nomUsr(r.user)),
+        W("Actividad","rol","Rol","txt",r=>ROLN[r.role]||r.role||""),W("Actividad","accion","Acción","txt",r=>r.action||""),W("Actividad","detalle","Detalle","txt",r=>r.detail||""),
+        W("Actividad","cantidad","Cantidad","num",()=>1)],filas:()=>repAct||[]}}:{}),
+      }),
     };
+    void R2;
+    return F;
   };
-  const REP_BASE=[
-    {id:"wr-estado",grupo:"Operación",nombre:"WR por estado",fuente:"wr",cols:["id","fecha","consignee","casillero","cuenta","ciudadDest","tipoEnvio","cajas","pesoKg","ft3"],agrupar:"estado",orden:{k:"fecha",dir:-1}},
-    {id:"por-consolidar",grupo:"Operación",nombre:"Confirmados por consolidar",fuente:"wr",filtros:[{k:"estado",vals:[estTxt("3")]}],cols:["id","fecha","consignee","casillero","cuenta","ciudadDest","cajas","pesoKg","volKg","ft3","valor"],agrupar:"tipoEnvio",orden:{k:"fecha",dir:1}},
-    {id:"manifiesto",grupo:"Operación",nombre:"Manifiesto de guía",fuente:"wr",filtros:[{k:"guia",conValor:true}],cols:["contenedor","id","remitente","consignee","idDest","ciudadDest","cajas","pesoKg","volKg","ft3","valor","descripcion"],agrupar:"guia",orden:{k:"contenedor",dir:1}},
-    {id:"packing",grupo:"Operación",nombre:"Packing list por guía",fuente:"caja",filtros:[{k:"guia",conValor:true}],cols:["contenedor","wr","caja","tracking","descripcion","medidasCm","pesoKg","volKg","ft3"],agrupar:"guia",orden:{k:"contenedor",dir:1}},
-    {id:"antiguedad",grupo:"Operación",nombre:"Antigüedad en almacén",fuente:"wr",filtros:[{k:"estado",vals:["1","2","3","17","19","20","20.2"].map(estTxt)}],cols:["id","estado","diasEstado","fecha","consignee","casillero","cuenta","ciudadDest"],agrupar:"",orden:{k:"diasEstado",dir:-1}},
-    {id:"faltantes",grupo:"Operación",nombre:"Faltantes y sobrantes",fuente:"wr",filtros:[{k:"estado",vals:["18","18.1","18.2","18.3","19"].map(estTxt)}],cols:["id","guia","consignee","casillero","cuenta","valor","resolucion","montoIndemnizado","diasEstado"],agrupar:"estado",orden:{k:"guia",dir:1}},
-  ];
-  const repCfgDe=b=>({fuente:b.fuente,cols:[...b.cols],filtros:(b.filtros||[]).map(f=>({...f})),agrupar:b.agrupar||"",soloTot:!!b.soloTot,orden:b.orden||{k:b.cols[0],dir:1},desde:b.desde||"",hasta:b.hasta||"",q:""});
-  // Aplica filtros, orden y agrupación
-  const repCalcular=cfg=>{
-    const F=repFuentes()[cfg.fuente];if(!F)return null;
+  // Reportes de ejemplo (el usuario los puede editar o borrar)
+  const REP_EJEMPLOS=[
+    {id:"ej-manifiesto",nombre:"Manifiesto de guía",fuente:"wr",cols:["contenedor","id","remitente","consignee","idDest","ciudadDest","cajas","pesoKg","volKg","ft3","valor","descripcion"],filtros:[{k:"guia",vals:[],preguntar:true}],agrupar:"guia",orden:{k:"contenedor",dir:1}},
+    {id:"ej-packing",nombre:"Packing list de guía",fuente:"caja",cols:["contenedor","id","caja","tracking","descCaja","medidasCm","pesoCajaKg","volCajaKg","ft3Caja"],filtros:[{k:"guia",vals:[],preguntar:true}],agrupar:"guia",orden:{k:"id",dir:1}},
+    {id:"ej-estado",nombre:"WR por estado",fuente:"wr",cols:["id","fecha","consignee","casillero","cuenta","ciudadDest","tipoEnvio","cajas","pesoKg","ft3"],filtros:[],agrupar:"estado",orden:{k:"fecha",dir:-1}},
+    {id:"ej-consolidar",nombre:"Confirmados por consolidar",fuente:"wr",cols:["id","fecha","consignee","casillero","cuenta","ciudadDest","cajas","pesoKg","volKg","ft3","valor"],filtros:[{k:"estado",vals:[estTxt("3")]}],agrupar:"tipoEnvio",orden:{k:"fecha",dir:1}},
+    {id:"ej-antiguedad",nombre:"Antigüedad en almacén",fuente:"wr",cols:["id","estado","diasEstado","fecha","consignee","casillero","cuenta","ciudadDest"],filtros:[{k:"estado",vals:["1","2","3","17","19","20","20.2"].map(estTxt)}],agrupar:"",orden:{k:"diasEstado",dir:-1}},
+    {id:"ej-faltantes",nombre:"Faltantes y sobrantes",fuente:"wr",cols:["id","guia","consignee","casillero","cuenta","valor","resolucion","montoIndemnizado","diasEstado"],filtros:[{k:"estado",vals:["18","18.1","18.2","18.3","19"].map(estTxt)}],agrupar:"estado",orden:{k:"guia",dir:1}},
+    {id:"ej-cxc",nombre:"Cuentas por cobrar por antigüedad",fuente:"factura",cols:["id","fechaEmision","receptor","receptorTipo","dias","total","saldo"],filtros:[{k:"estado",vals:["Emitida","Pago parcial"]},{k:"tipo",vals:["Factura"]}],agrupar:"antiguedad",orden:{k:"dias",dir:-1}},
+    {id:"ej-ventas",nombre:"Ventas por mes",fuente:"factura",cols:["id","receptor","total","pagado","saldo"],filtros:[{k:"tipo",vals:["Factura"]},{k:"estado",vals:["Emitida","Pago parcial","Pagada"]}],agrupar:"mes:fechaEmision",soloTot:true,orden:{k:"fechaEmision",dir:1}},
+    {id:"ej-cobros",nombre:"Cobros por forma de pago",fuente:"pago",cols:["fecha","recibo","pagador","factura","monto","referencia","usuario"],filtros:[{k:"clase",vals:["Entrada"]},{k:"anulado",vals:["No"]}],agrupar:"forma",orden:{k:"fecha",dir:-1}},
+    {id:"ej-agentes",nombre:"Volumen por cuenta",fuente:"wr",cols:["id","fecha","consignee","cajas","pesoKg","ft3","facturado"],filtros:[],agrupar:"cuenta",soloTot:true,orden:{k:"fecha",dir:-1}},
+    {id:"ej-comisiones",nombre:"Comisiones por agente",fuente:"comision",cols:["fecha","wr","factura","cliente","cobrado","costo","comision","estado"],filtros:[],agrupar:"cuenta",orden:{k:"fecha",dir:-1}},
+    {id:"ej-transito",nombre:"Tiempos de tránsito por ruta",fuente:"wr",cols:["id","tipoEnvio","fecha","fechaEntrega","diasTransito"],filtros:[{k:"fechaEntrega",conValor:true}],agrupar:"ruta",soloTot:true,orden:{k:"diasTransito",dir:-1}},
+    {id:"ej-productividad",nombre:"Productividad por usuario",fuente:"actividad",cols:["fecha","hora","accion","detalle","cantidad"],filtros:[],agrupar:"usuario",soloTot:true,orden:{k:"fecha",dir:-1}},
+  ].map(x=>({...x,owner:"",compartido:true}));
+  const repLista=()=>{const base=repGuardados??REP_EJEMPLOS;const fs=repFuentes();
+    return base.filter(r=>(r.compartido||r.owner===currentUser.id)&&fs[r.fuente]);};
+  // Ejecuta un reporte con sus parámetros: fechas y valores de filtros "preguntar"
+  const repCalcular=(rep,par={})=>{
+    const F=repFuentes()[rep.fuente];if(!F)return null;
     const C=Object.fromEntries(F.campos.map(c=>[c.k,c]));
-    const cols=cfg.cols.map(k=>C[k]).filter(Boolean);
+    const cols=(rep.cols||[]).map(k=>C[k]).filter(Boolean);
     let filas=F.filas();
-    const fc=C[F.fecha];const d0=cfg.desde?new Date(cfg.desde+"T00:00:00"):null,d1=cfg.hasta?new Date(cfg.hasta+"T23:59:59.999"):null;
+    const fc=C[F.fecha];const d0=par.desde?new Date(par.desde+"T00:00:00"):null,d1=par.hasta?new Date(par.hasta+"T23:59:59.999"):null;
     if(fc&&(d0||d1))filas=filas.filter(r=>{const v=fc.v(r);if(!v)return false;const d=new Date(v);return (!d0||d>=d0)&&(!d1||d<=d1);});
-    (cfg.filtros||[]).forEach(f=>{const c=C[f.k];if(!c)return;
+    (rep.filtros||[]).forEach((f0,i)=>{const f=f0.preguntar?{...f0,...(par.f?.[i]||{})}:f0;const c=C[f.k];if(!c)return;
       if(f.conValor)filas=filas.filter(r=>{const v=c.v(r);return v!=null&&v!=="";});
       else if(f.vals&&f.vals.length){const S=new Set(f.vals);filas=filas.filter(r=>S.has(String(c.v(r)??"")));}
-      else if(f.min!==""&&f.min!=null||f.max!==""&&f.max!=null){filas=filas.filter(r=>{const v=parseFloat(c.v(r));if(isNaN(v))return false;return (f.min===""||f.min==null||v>=parseFloat(f.min))&&(f.max===""||f.max==null||v<=parseFloat(f.max));});}
-    });
-    const Q=sinAcentos((cfg.q||"").trim());
+      else if((f.min!==""&&f.min!=null)||(f.max!==""&&f.max!=null))filas=filas.filter(r=>{const v=parseFloat(c.v(r));if(isNaN(v))return false;return (f.min===""||f.min==null||v>=parseFloat(f.min))&&(f.max===""||f.max==null||v<=parseFloat(f.max));});});
+    const Q=sinAcentos((par.q||"").trim());
     if(Q)filas=filas.filter(r=>sinAcentos(cols.map(c=>String(c.v(r)??"")).join(" ")).includes(Q));
-    const oc=C[cfg.orden?.k];
-    if(oc){const dir=cfg.orden.dir||1;const val=r=>{const v=oc.v(r);return oc.t==="fecha"?(v?new Date(v).getTime():-Infinity):["num","money","dias"].includes(oc.t)?(v==null?-Infinity:parseFloat(v)):String(v??"");};
+    const ord=par.orden||rep.orden;const oc=C[ord?.k];
+    if(oc){const dir=ord.dir||1;const val=r=>{const v=oc.v(r);return oc.t==="fecha"?(v?new Date(v).getTime():-Infinity):["num","dias"].includes(oc.t)?(v==null?-Infinity:parseFloat(v)):oc.t==="money"?(v==null?-Infinity:typeof v==="object"?Object.values(v).reduce((t,x)=>t+x,0):parseFloat(v)):String(v??"");};
       filas=[...filas].sort((a,b)=>{const x=val(a),y=val(b);return (typeof x==="string"?x.localeCompare(y,"es",{numeric:true}):x-y)*dir;});}
     const agg=rows=>{const o={};cols.forEach(c=>{
       if(c.t==="num")o[c.k]=r2(rows.reduce((t,r)=>t+(parseFloat(c.v(r))||0),0));
-      else if(c.t==="money"){const m={};rows.forEach(r=>{const v=c.v(r);if(v!=null){const k=c.cur(r);m[k]=r2((m[k]||0)+v);}});o[c.k]=m;}
+      else if(c.t==="money"){const m={};rows.forEach(r=>{const v=c.v(r);if(v==null)return;if(typeof v==="object")Object.entries(v).forEach(([k,x])=>{m[k]=r2((m[k]||0)+x);});else{const k=c.cur(r)||"USD";m[k]=r2((m[k]||0)+(parseFloat(v)||0));}});o[c.k]=m;}
       else if(c.t==="dias"){const vs=rows.map(r=>c.v(r)).filter(v=>v!=null);o[c.k]=vs.length?Math.round(vs.reduce((t,v)=>t+v,0)/vs.length*10)/10:null;}});return o;};
-    const gc=cfg.agrupar?(C[cfg.agrupar.replace(/^mes:/,"")]):null;
-    const gval=r=>{if(!gc)return "";const v=gc.v(r);if(cfg.agrupar.startsWith("mes:")){if(!v)return "Sin fecha";const d=new Date(v);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;}return v==null||v===""?"(vacío)":String(v);};
+    const ag=rep.agrupar||"";const gc=ag?C[ag.replace(/^mes:/,"")]:null;
+    const gval=r=>{const v=gc.v(r);if(ag.startsWith("mes:")){if(!v)return "Sin fecha";const d=new Date(v);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;}return v==null||v===""?"(vacío)":String(v);};
     let grupos=null;
     if(gc){const m=new Map();filas.forEach(r=>{const k=gval(r);if(!m.has(k))m.set(k,[]);m.get(k).push(r);});
       grupos=[...m.entries()].sort((a,b)=>a[0].localeCompare(b[0],"es",{numeric:true})).map(([k,rows])=>({k,rows,tot:agg(rows)}));}
-    return {F,C,cols,filas,grupos,tot:agg(filas),gc};
+    const gl=gc?(ag.startsWith("mes:")?`Mes (${gc.l.toLowerCase()})`:gc.l):"";
+    return {F,C,cols,filas,grupos,tot:agg(filas),gl};
   };
   const repFmt=(c,v,r)=>{if(v==null||v==="")return "";
     if(c.t==="fecha")return fmtDate(v);
     if(c.t==="money")return typeof v==="object"?Object.entries(v).map(([m,x])=>fmtMoney(x,m)).join(" / "):fmtMoney(v,r?c.cur(r):"USD");
     if(c.t==="num")return (Math.round(v*1000)/1000).toLocaleString("es",{maximumFractionDigits:3});
-    if(c.t==="dias")return String(v);
     return String(v);};
-  const repNombreAgr=cfg=>{if(!cfg.agrupar)return "";const F=repFuentes()[cfg.fuente];const k=cfg.agrupar.replace(/^mes:/,"");const c=F?.campos.find(x=>x.k===k);return cfg.agrupar.startsWith("mes:")?`Mes de ${c?.l||k}`:(c?.l||k);};
-  const repExcel=(nombre,cfg)=>{const R=repCalcular(cfg);if(!R)return;
-    const val=(c,v)=>v==null?"":c.t==="fecha"?(v?new Date(v):""):c.t==="money"?(typeof v==="object"?Object.entries(v).map(([m,x])=>`${m} ${x}`).join(" / "):v):v;
-    let filas;
-    if(R.grupos&&cfg.soloTot)filas=[[repNombreAgr(cfg),"Cantidad",...R.cols.filter(c=>["num","money","dias"].includes(c.t)).map(c=>c.l)],
-      ...R.grupos.map(g=>[g.k,g.rows.length,...R.cols.filter(c=>["num","money","dias"].includes(c.t)).map(c=>val(c,g.tot[c.k]))])];
-    else{const conG=R.grupos&&!R.cols.some(c=>c.k===cfg.agrupar);const lista=R.grupos?R.grupos.flatMap(g=>g.rows.map(r=>[g.k,r])):R.filas.map(r=>["",r]);
-      filas=[[...(conG?[repNombreAgr(cfg)]:[]),...R.cols.map(c=>c.l)],...lista.map(([gk,r])=>[...(conG?[gk]:[]),...R.cols.map(c=>val(c,c.t==="money"?c.v(r):c.v(r)))])];}
-    descargarXlsx(filas,`${nombre} ${hoyISO()}`.replace(/[\\/:*?"<>|]/g,"-"),nombre);
-    logAction("Exportó reporte",nombre);};
-  const repImprimir=(nombre,cfg)=>{const R=repCalcular(cfg);if(!R)return;
+  const repNum=c=>["num","money","dias"].includes(c.t);
+  const repTextoFiltros=(rep,par,C)=>[(par.desde||par.hasta)?`Fechas: ${par.desde||"…"} a ${par.hasta||"…"}`:"",
+    ...(rep.filtros||[]).map((f0,i)=>{const f=f0.preguntar?{...f0,...(par.f?.[i]||{})}:f0;const c=C[f.k];if(!c)return "";
+      const t=f.conValor?"con valor":f.vals?.length?f.vals.join(", "):((f.min??"")!==""||(f.max??"")!=="")?`${f.min||"…"} a ${f.max||"…"}`:"";return t?`${c.l}: ${t}`:"";})].filter(Boolean).join(" · ");
+  const repExcel=(rep,par)=>{const R=repCalcular(rep,par);if(!R)return;
+    const val=(c,v)=>v==null?"":c.t==="fecha"?(v?new Date(v):""):c.t==="money"?(typeof v==="object"?(Object.keys(v).length===1?Object.values(v)[0]:Object.entries(v).map(([m,x])=>`${m} ${x}`).join(" / ")):v):v;
+    const NC=R.cols.filter(repNum);let filas;
+    if(R.grupos&&rep.soloTot)filas=[[R.gl,"Cantidad",...NC.map(c=>c.l)],...R.grupos.map(g=>[g.k,g.rows.length,...NC.map(c=>val(c,g.tot[c.k]))]),["TOTAL",R.filas.length,...NC.map(c=>val(c,R.tot[c.k]))]];
+    else{const conG=!!R.grupos;const lista=R.grupos?R.grupos.flatMap(g=>g.rows.map(r=>[g.k,r])):R.filas.map(r=>["",r]);
+      filas=[[...(conG?[R.gl]:[]),...R.cols.map(c=>c.l)],...lista.map(([gk,r])=>[...(conG?[gk]:[]),...R.cols.map(c=>val(c,c.v(r)))])];}
+    descargarXlsx(filas,`${rep.nombre} ${hoyISO()}`.replace(/[\\/:*?"<>|]/g,"-"),rep.nombre);logAction("Exportó reporte",rep.nombre);};
+  const repImprimir=(rep,par)=>{const R=repCalcular(rep,par);if(!R)return;
     const e=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
-    const numC=c=>["num","money","dias"].includes(c.t);
-    const filaTot=(lbl,n,tot)=>`<tr class="t"><td colspan="${Math.max(1,R.cols.findIndex(numC))}">${e(lbl)} (${n})</td>${R.cols.slice(Math.max(1,R.cols.findIndex(numC))).map(c=>`<td class="${numC(c)?"r":""}">${numC(c)?e(repFmt(c,tot[c.k])):""}</td>`).join("")}</tr>`;
-    let cuerpo="";const NC=R.cols.filter(numC);
-    if(R.grupos&&cfg.soloTot){
+    const NC=R.cols.filter(repNum);let head,cuerpo="";
+    if(R.grupos&&rep.soloTot){head=[R.gl,"Cantidad",...NC.map(c=>c.l)].map((h,i)=>`<th class="${i?"r":""}">${e(h)}</th>`).join("");
       const fila=(k,n,t,cls="")=>`<tr class="${cls}"><td>${e(k)}</td><td class="r">${n}</td>${NC.map(c=>`<td class="r">${e(repFmt(c,t[c.k]))}</td>`).join("")}</tr>`;
-      cuerpo=R.grupos.map(g=>fila(g.k,g.rows.length,g.tot)).join("")+fila("TOTAL",R.filas.length,R.tot,"t");
-      const w=window.open("","_blank","width=1100,height=900");if(!w){window.alert("El navegador bloqueó la ventana de impresión.");return;}
-      w.document.write(`<html><head><meta charset="utf-8"><title>${e(nombre)}</title><style>body{font-family:Arial,Helvetica,sans-serif;font-size:11px;padding:18px;color:#111}h1{font-size:17px;margin:0}table{width:100%;border-collapse:collapse;margin-top:10px}th{background:#1A2B4A;color:#fff;padding:4px 5px;text-align:left}td{border-bottom:1px solid #ddd;padding:3px 5px}.r{text-align:right}.t td{font-weight:800;border-top:2px solid #1A2B4A;background:#f6f6f6}</style></head><body>
-        <h1>${e(empresaNombre)} · ${e(nombre)}</h1><div>${fmtDate(new Date())} ${fmtTime(new Date())}</div>
-        <table><thead><tr><th>${e(repNombreAgr(cfg))}</th><th class="r">Cantidad</th>${NC.map(c=>`<th class="r">${e(c.l)}</th>`).join("")}</tr></thead><tbody>${cuerpo}</tbody></table>
-        <script>window.addEventListener('load',()=>setTimeout(()=>window.print(),250));</script></body></html>`);w.document.close();return;}
-    if(R.grupos)R.grupos.forEach(g=>{if(!cfg.soloTot)cuerpo+=`<tr class="g"><td colspan="${R.cols.length}">${e(repNombreAgr(cfg))}: ${e(g.k)}</td></tr>`+g.rows.map(r=>`<tr>${R.cols.map(c=>`<td class="${numC(c)?"r":""}">${e(repFmt(c,c.v(r),r))}</td>`).join("")}</tr>`).join("");cuerpo+=filaTot(cfg.soloTot?g.k:`Subtotal ${g.k}`,g.rows.length,g.tot);});
-    else cuerpo=R.filas.map(r=>`<tr>${R.cols.map(c=>`<td class="${numC(c)?"r":""}">${e(repFmt(c,c.v(r),r))}</td>`).join("")}</tr>`).join("");
-    const filt=[(cfg.desde||cfg.hasta)?`Fechas: ${cfg.desde||"…"} a ${cfg.hasta||"…"}`:"",...(cfg.filtros||[]).map(f=>{const c=R.C[f.k];return c?`${c.l}: ${f.conValor?"con valor":f.vals?.length?f.vals.join(", "):`${f.min??""}–${f.max??""}`}`:"";})].filter(Boolean).join(" · ");
+      cuerpo=R.grupos.map(g=>fila(g.k,g.rows.length,g.tot)).join("")+fila("TOTAL",R.filas.length,R.tot,"t");}
+    else{head=R.cols.map(c=>`<th class="${repNum(c)?"r":""}">${e(c.l)}</th>`).join("");
+      const fd=r=>`<tr>${R.cols.map(c=>`<td class="${repNum(c)?"r":""}">${e(repFmt(c,c.v(r),r))}</td>`).join("")}</tr>`;
+      const ft=(l,n,t)=>`<tr class="t">${R.cols.map((c,i)=>`<td class="${repNum(c)?"r":""}">${i===0?e(`${l} (${n})`):repNum(c)?e(repFmt(c,t[c.k])):""}</td>`).join("")}</tr>`;
+      if(R.grupos)R.grupos.forEach(g=>{cuerpo+=`<tr class="g"><td colspan="${R.cols.length}">${e(R.gl)}: ${e(g.k)}</td></tr>`+g.rows.map(fd).join("")+ft("Subtotal",g.rows.length,g.tot);});
+      else cuerpo=R.filas.map(fd).join("");cuerpo+=ft("TOTAL",R.filas.length,R.tot);}
+    const filt=repTextoFiltros(rep,par,R.C);
     const w=window.open("","_blank","width=1100,height=900");if(!w){window.alert("El navegador bloqueó la ventana de impresión.");return;}
-    w.document.write(`<html><head><meta charset="utf-8"><title>${e(nombre)}</title><style>body{font-family:Arial,Helvetica,sans-serif;font-size:11px;padding:18px;color:#111}h1{font-size:17px;margin:0}table{width:100%;border-collapse:collapse;margin-top:10px}th{background:#1A2B4A;color:#fff;padding:4px 5px;text-align:left}td{border-bottom:1px solid #ddd;padding:3px 5px}.r{text-align:right}.g td{background:#EEF3FF;font-weight:700}.t td{font-weight:800;border-top:2px solid #1A2B4A;background:#f6f6f6}@page{size:landscape;margin:12mm}</style></head><body>
-      <h1>${e(empresaNombre)} · ${e(nombre)}</h1><div>${fmtDate(new Date())} ${fmtTime(new Date())}${filt?` · ${e(filt)}`:""}</div>
-      <table><thead><tr>${R.cols.map(c=>`<th class="${numC(c)?"r":""}">${e(c.l)}</th>`).join("")}</tr></thead><tbody>${cuerpo}${filaTot("TOTAL",R.filas.length,R.tot)}</tbody></table>
-      <script>window.addEventListener('load',()=>setTimeout(()=>window.print(),250));</script></body></html>`);w.document.close();};
+    w.document.write(`<html><head><meta charset="utf-8"><title>${e(rep.nombre)}</title><style>body{font-family:Arial,Helvetica,sans-serif;font-size:11px;padding:18px;color:#111}h1{font-size:17px;margin:0}table{width:100%;border-collapse:collapse;margin-top:10px}th{background:#1A2B4A;color:#fff;padding:4px 5px;text-align:left}td{border-bottom:1px solid #ddd;padding:3px 5px}.r{text-align:right}.g td{background:#EEF3FF;font-weight:700}.t td{font-weight:800;border-top:2px solid #1A2B4A;background:#f6f6f6}@page{size:landscape;margin:12mm}</style></head><body>
+      <h1>${e(empresaNombre)} · ${e(rep.nombre)}</h1><div>${fmtDate(new Date())} ${fmtTime(new Date())}${filt?` · ${e(filt)}`:""}</div>
+      <table><thead><tr>${head}</tr></thead><tbody>${cuerpo}</tbody></table><script>window.addEventListener('load',()=>setTimeout(()=>window.print(),250));</script></body></html>`);w.document.close();};
+  const repGuardarLista=async n=>{const ok=await dbSetConfig('reportes_guardados',n);if(ok===false){window.alert("No se pudo guardar.");return false;}setRepGuardados(n);return true;};
+  const repPuedeEditar=r=>(hasPerm("editar_reporte")||hasPerm("crear_reporte")||currentUser.rol==="A")&&(!r.owner||r.owner===currentUser.id||currentUser.rol==="A");
+  const repAbrir=r=>{setRepSel(r.id);setRepPar({desde:"",hasta:"",q:"",f:{}});setRepModo("ver");if(r.fuente==="actividad"&&repAct==null)dbGetActividadReporte().then(setRepAct);};
+  const repNuevo=()=>{setRepDis({id:"",nombre:"",fuente:"",cols:[],filtros:[],agrupar:"",soloTot:false,orden:null,compartido:true});setRepModo("diseño");setRepPick(null);};
+  const repEditar=r=>{setRepDis(JSON.parse(JSON.stringify({...r,compartido:r.compartido!==false})));setRepModo("diseño");setRepPick(null);if(r.fuente==="actividad"&&repAct==null)dbGetActividadReporte().then(setRepAct);};
 
   const renderReportes=()=>{
-    const mono={fontFamily:"'DM Mono',monospace"};
-    const propios=repGuardados.filter(g=>g.compartido||g.owner===currentUser.id);
-    const lista=[...REP_BASE.map(b=>({...b,tipo:"base"})),...propios.map(g=>({...g,grupo:"Guardados",tipo:"guardado"}))];
-    const sel=lista.find(x=>x.id===repSel)||lista[0];
-    const cfg=repCfg&&repCfg._id===sel.id?repCfg:{...repCfgDe(sel.tipo==="guardado"?sel.cfg:sel),_id:sel.id};
-    const setC=x=>setRepCfg({...cfg,...x});
-    const R=repCalcular(cfg);
-    const F=R?.F;const C=R?.C||{};
-    const numC=c=>["num","money","dias"].includes(c.t);
-    const LQ=sinAcentos(repListaQ.trim());
-    const grupos=["Operación","Guardados"].map(g=>({g,items:lista.filter(x=>x.grupo===g&&(!LQ||sinAcentos(x.nombre).includes(LQ)))})).filter(x=>x.items.length);
-    const abrir=x=>{setRepSel(x.id);setRepCfg(null);setRepPick(null);};
-    const guardar=async(como)=>{
-      let nombre=sel.nombre;let compartido=sel.compartido??true;
-      if(como){nombre=window.prompt("Nombre del reporte:",sel.tipo==="base"?`${sel.nombre} (mío)`:`${sel.nombre} (copia)`);if(!nombre)return;compartido=window.confirm("¿Compartirlo con todos los usuarios?\n\nAceptar = para todos · Cancelar = solo para mí");}
-      const {_id,q,...limpio}=cfg;void _id;void q;
-      const nuevo={id:como?`R-${Date.now()}`:sel.id,nombre:nombre.trim(),owner:como?currentUser.id:sel.owner,compartido,cfg:limpio};
-      const n=como?[...repGuardados,nuevo]:repGuardados.map(g=>g.id===sel.id?nuevo:g);
-      const ok=await dbSetConfig('reportes_guardados',n);if(ok===false){window.alert("No se pudo guardar.");return;}
-      setRepGuardados(n);setRepSel(nuevo.id);setRepCfg(null);logAction(como?"Guardó reporte":"Actualizó reporte",nuevo.nombre);};
-    const borrar=async()=>{if(!window.confirm(`¿Borrar el reporte "${sel.nombre}"?`))return;const n=repGuardados.filter(g=>g.id!==sel.id);
-      const ok=await dbSetConfig('reportes_guardados',n);if(ok===false){window.alert("No se pudo borrar.");return;}setRepGuardados(n);setRepSel(REP_BASE[0].id);setRepCfg(null);};
-    const esMio=sel.tipo==="guardado"&&(sel.owner===currentUser.id||currentUser.rol==="A");
-    const cambiado=sel.tipo==="guardado"&&repCfg&&repCfg._id===sel.id;
-    const chip=(contenido,onX,extra={})=><span style={{display:"inline-flex",alignItems:"center",gap:4,fontSize:12,fontWeight:700,padding:"3px 9px",borderRadius:12,background:"#EEF3FF",color:"var(--navy)",border:"1px solid #B8C8F0",...extra}}>{contenido}{onX&&<span style={{cursor:"pointer",color:"var(--red)"}} onClick={onX}>✕</span>}</span>;
-    const buscadorCampos=(modo,excluir,onPick)=>{const Qp=sinAcentos(repPick?.q||"");
-      const ops=(F?.campos||[]).filter(c=>!excluir.includes(c.k)&&(!Qp||sinAcentos(c.l).includes(Qp))).slice(0,25);
-      return repPick?.modo===modo?<div className="fi-search" style={{position:"relative",display:"inline-block",minWidth:220}}>
-          <input className="fi" autoFocus style={{fontSize:12,padding:"4px 8px"}} placeholder="Buscar campo…" value={repPick.q||""} onChange={e=>setRepPick({...repPick,q:e.target.value})} onBlur={()=>setTimeout(()=>setRepPick(p=>p?.modo===modo?null:p),150)}/>
-          {ops.length>0&&<div className="fi-search-res">{ops.map(c=><div key={c.k} className="fi-search-item" onMouseDown={e=>{e.preventDefault();onPick(c);setRepPick(null);}}>{c.l}</div>)}</div>}
-        </div>:<button className="btn-s" style={{fontSize:12,padding:"3px 10px"}} onClick={()=>setRepPick({modo,q:""})}>+ {modo==="col"?"Columna":"Filtro"}</button>;};
-    // Editor del filtro activo
-    const fEd=repFEd!=null?cfg.filtros[repFEd]:null;const fEdC=fEd?C[fEd.k]:null;
-    const setF=(i,x)=>setC({filtros:cfg.filtros.map((f,j)=>j===i?{...f,...x}:f)});
-    const valoresDe=k=>{const c=C[k];if(!c||!F)return [];const m=new Map();F.filas().forEach(r=>{const v=String(c.v(r)??"");m.set(v,(m.get(v)||0)+1);});return [...m.entries()].sort((a,b)=>a[0].localeCompare(b[0],"es",{numeric:true}));};
-    const MAXF=1000;let mostradas=0;
+    const fs=repFuentes();const mono={fontFamily:"'DM Mono',monospace"};
+    const puedeCrear=hasPerm("crear_reporte")||currentUser.rol==="A";
+    const seg=(ops,val,set)=><div style={{display:"inline-flex",gap:3,background:"var(--bg4)",borderRadius:7,padding:3,border:"1px solid var(--b1)"}}>{ops.map(([k,l])=><button key={String(k)} onClick={()=>set(k)} style={{padding:"4px 12px",borderRadius:5,border:"none",cursor:"pointer",fontSize:13,fontWeight:600,background:val===k?"var(--navy)":"transparent",color:val===k?"#fff":"var(--t2)"}}>{l}</button>)}</div>;
+    // Elegir valores de un filtro (sin casillas: se tocan los valores)
+    const valoresDe=(F,k)=>{const c=F.campos.find(x=>x.k===k);if(!c)return [];const m=new Map();F.filas().forEach(r=>{const v=String(c.v(r)??"");m.set(v,(m.get(v)||0)+1);});return [...m.entries()].sort((a,b)=>a[0].localeCompare(b[0],"es",{numeric:true}));};
+    const editorFiltro=(F,f,onChange,q,setQ)=>{const c=F.campos.find(x=>x.k===f.k);if(!c)return null;
+      if(c.t==="txt"){const Qv=sinAcentos((q||"").trim());const vals=valoresDe(F,f.k).filter(([v])=>!Qv||sinAcentos(v).includes(Qv));const S=new Set(f.vals||[]);
+        return <div><div style={{display:"flex",gap:6,marginBottom:6,flexWrap:"wrap"}}>
+            <input className="fi" style={{fontSize:12,padding:"4px 8px",maxWidth:240}} placeholder="Buscar valor…" value={q||""} onChange={e=>setQ(e.target.value)}/>
+            {(f.vals||[]).length>0&&<button className="btn-s" style={{fontSize:12,padding:"3px 10px"}} onClick={()=>onChange({vals:[]})}>Quitar selección</button>}</div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:5,maxHeight:140,overflowY:"auto"}}>{vals.slice(0,150).map(([v,n])=>{const on=S.has(v);return(
+            <span key={v} onClick={()=>onChange({conValor:false,vals:on?f.vals.filter(x=>x!==v):[...(f.vals||[]),v]})} style={{cursor:"pointer",fontSize:12,fontWeight:600,padding:"3px 9px",borderRadius:12,border:"1px solid",borderColor:on?"var(--navy)":"var(--b1)",background:on?"var(--navy)":"var(--bg2)",color:on?"#fff":"var(--t2)"}}>{v||"(vacío)"} <span style={{opacity:.6}}>{n}</span></span>);})}</div></div>;}
+      return <div style={{display:"flex",gap:8,alignItems:"center"}}>
+        <input className="fi" type={c.t==="fecha"?"date":"number"} style={{width:150,fontSize:13,padding:"4px 6px"}} value={f.min??""} onChange={e=>onChange({min:e.target.value})}/>
+        <span>a</span><input className="fi" type={c.t==="fecha"?"date":"number"} style={{width:150,fontSize:13,padding:"4px 6px"}} value={f.max??""} onChange={e=>onChange({max:e.target.value})}/></div>;};
+
+    // ── LISTA
+    if(repModo==="lista"||!repModo){
+      const Q=sinAcentos(repListaQ.trim());const lista=repLista().filter(r=>!Q||sinAcentos(`${r.nombre} ${fs[r.fuente]?.l||""}`).includes(Q));
+      return(
+      <div className="page-scroll">
+        <div className="card" style={{marginBottom:12,display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
+          <input className="fi" style={{flex:1,minWidth:240,fontSize:15,padding:"9px 12px"}} placeholder="Buscar reporte…" value={repListaQ} onChange={e=>setRepListaQ(e.target.value)}/>
+          {puedeCrear&&<button className="btn-p" onClick={repNuevo}>➕ Crear reporte</button>}
+        </div>
+        {lista.length===0?<div className="card" style={{textAlign:"center",padding:40,color:"var(--t3)"}}>{Q?"Sin coincidencias.":"No hay reportes."}</div>:
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:12}}>
+          {lista.map(r=>(
+            <div key={r.id} className="card" style={{cursor:"pointer",padding:14,display:"flex",gap:12,alignItems:"flex-start"}} onClick={()=>repAbrir(r)}>
+              <div style={{fontSize:26}}>{fs[r.fuente]?.ic||"📈"}</div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:15,fontWeight:700,color:"var(--navy)"}}>{r.nombre}</div>
+                <div style={{fontSize:12,color:"var(--t3)"}}>{fs[r.fuente]?.l}{r.compartido===false?" · 🔒 solo para mí":""}</div>
+              </div>
+              {repPuedeEditar(r)&&<div style={{display:"flex",gap:4}} onClick={e=>e.stopPropagation()}>
+                <span className="ic-b" title="Editar" onClick={()=>repEditar(r)}>✏️</span>
+                <span className="ic-b" title="Duplicar" onClick={()=>repEditar({...r,id:"",nombre:`${r.nombre} (copia)`,owner:currentUser.id})}>⧉</span>
+                <span className="ic-b" style={{color:"var(--red)"}} title="Borrar" onClick={async()=>{if(!window.confirm(`¿Borrar el reporte "${r.nombre}"?`))return;if(await repGuardarLista((repGuardados??REP_EJEMPLOS).filter(x=>x.id!==r.id)))logAction("Borró reporte",r.nombre);}}>🗑</span>
+              </div>}
+            </div>))}
+        </div>}
+      </div>);
+    }
+
+    // ── VER
+    if(repModo==="ver"){
+      const rep=repLista().find(x=>x.id===repSel);if(!rep){setTimeout(()=>setRepModo("lista"),0);return null;}
+      const par=repPar||{};const setP=x=>setRepPar({...par,...x});
+      const R=repCalcular(rep,par);const F=fs[rep.fuente];const fc=F.campos.find(c=>c.k===F.fecha);
+      const preg=(rep.filtros||[]).map((f,i)=>({f,i})).filter(x=>x.f.preguntar);
+      const MAXF=1000;let mostradas=0;
+      const NC=R.cols.filter(repNum);
+      return(
+      <div className="page-scroll">
+        <div className="card" style={{marginBottom:10}}>
+          <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:10}}>
+            <button className="btn-s" style={{fontSize:13}} onClick={()=>setRepModo("lista")}>← Reportes</button>
+            <div style={{flex:1}}><div style={{fontSize:18,fontWeight:700,color:"var(--navy)"}}>{F.ic} {rep.nombre}</div><div style={{fontSize:12,color:"var(--t3)"}}>{F.l}</div></div>
+            <button className="btn-s" style={{fontSize:13}} onClick={()=>repExcel(rep,par)}>⬇️ Excel</button>
+            <button className="btn-s" style={{fontSize:13}} onClick={()=>repImprimir(rep,par)}>🖨️ Imprimir</button>
+            {repPuedeEditar(rep)&&<button className="btn-s" style={{fontSize:13}} onClick={()=>repEditar(rep)}>✏️ Editar</button>}
+          </div>
+          <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
+            {fc&&<><span style={{fontSize:13,color:"var(--t2)"}}>{fc.l}</span>
+              <input className="fi" type="date" style={{width:150,fontSize:13,padding:"4px 6px"}} value={par.desde||""} onChange={e=>setP({desde:e.target.value})}/>
+              <span style={{fontSize:13}}>a</span><input className="fi" type="date" style={{width:150,fontSize:13,padding:"4px 6px"}} value={par.hasta||""} onChange={e=>setP({hasta:e.target.value})}/></>}
+            <input className="fi" style={{marginLeft:"auto",width:220,fontSize:13,padding:"4px 8px"}} placeholder="Buscar en el reporte…" value={par.q||""} onChange={e=>setP({q:e.target.value})}/>
+          </div>
+          {preg.map(({f,i})=>{const c=F.campos.find(x=>x.k===f.k);const cur={...f,...(par.f?.[i]||{})};return c&&(
+            <div key={i} style={{marginTop:10}}><div style={{fontSize:13,fontWeight:700,marginBottom:4}}>{c.l}</div>
+              {editorFiltro(F,cur,x=>setP({f:{...(par.f||{}),[i]:{...(par.f?.[i]||{}),...x}}}),repFQ[i],v=>setRepFQ({...repFQ,[i]:v}))}</div>);})}
+        </div>
+        <div className="card" style={{padding:0,overflow:"auto",maxHeight:"64vh"}}>
+          {R.filas.length===0?<div style={{textAlign:"center",padding:40,color:"var(--t3)"}}>Sin resultados.</div>:(
+          <table className="ct" style={{fontSize:13}}>
+            <thead style={{position:"sticky",top:0,zIndex:1}}><tr>
+              {rep.soloTot&&R.grupos?<><th>{R.gl}</th><th style={{textAlign:"right"}}>Cantidad</th>{NC.map(c=><th key={c.k} style={{textAlign:"right"}}>{c.l}</th>)}</>
+                :R.cols.map(c=>{const o=par.orden||rep.orden;return <th key={c.k} style={{cursor:"pointer",whiteSpace:"nowrap",textAlign:repNum(c)?"right":"left"}} onClick={()=>setP({orden:{k:c.k,dir:o?.k===c.k?-(o.dir||1):1}})}>{c.l}{o?.k===c.k?(o.dir>0?" ▲":" ▼"):""}</th>;})}
+            </tr></thead>
+            <tbody>{(()=>{const out=[];
+              const fila=(r,key)=><tr key={key}>{R.cols.map(c=><td key={c.k} style={{textAlign:repNum(c)?"right":"left",...(repNum(c)?mono:{}),whiteSpace:["descripcion","notas","detalle","dirDest","dirRem","direccion"].includes(c.k)?"normal":"nowrap"}}>{repFmt(c,c.v(r),r)}</td>)}</tr>;
+              const tot=(l,n,t,key)=>rep.soloTot&&R.grupos
+                ?<tr key={key} style={l==="TOTAL"?{background:"var(--bg3)",fontWeight:800}:{}}><td style={{fontWeight:700}}>{l}</td><td style={{textAlign:"right",...mono}}>{n}</td>{NC.map(c=><td key={c.k} style={{textAlign:"right",...mono}}>{repFmt(c,t[c.k])}</td>)}</tr>
+                :<tr key={key} style={{background:"var(--bg3)",fontWeight:800}}>{R.cols.map((c,i)=><td key={c.k} style={{textAlign:repNum(c)?"right":"left",...(repNum(c)?mono:{})}}>{i===0?`${l} (${n})`:repNum(c)?repFmt(c,t[c.k]):""}</td>)}</tr>;
+              if(R.grupos)R.grupos.forEach((g,gi)=>{
+                if(rep.soloTot)out.push(tot(g.k,g.rows.length,g.tot,"s"+gi));
+                else{out.push(<tr key={"g"+gi}><td colSpan={R.cols.length} style={{background:"#EEF3FF",fontWeight:800,color:"var(--navy)"}}>{R.gl}: {g.k} · {g.rows.length}</td></tr>);
+                  g.rows.forEach((r,i)=>{if(mostradas++<MAXF)out.push(fila(r,`${gi}-${i}`));});out.push(tot("Subtotal",g.rows.length,g.tot,"s"+gi));}});
+              else R.filas.forEach((r,i)=>{if(i<MAXF)out.push(fila(r,i));});
+              out.push(tot("TOTAL",R.filas.length,R.tot,"T"));return out;})()}</tbody>
+          </table>)}
+          {R.filas.length>MAXF&&!rep.soloTot&&<div style={{padding:10,textAlign:"center",fontSize:13,color:"var(--t3)"}}>Se muestran {MAXF} de {R.filas.length}. Excel e Imprimir incluyen todos.</div>}
+        </div>
+      </div>);
+    }
+
+    // ── DISEÑAR
+    const d=repDis||{};const setD=x=>setRepDis({...d,...x});const F=fs[d.fuente];
+    const paso=(n,t,cont)=><div className="card" style={{marginBottom:12}}><div style={{fontSize:15,fontWeight:800,color:"var(--navy)",marginBottom:10}}><span style={{display:"inline-flex",width:24,height:24,borderRadius:12,background:"var(--navy)",color:"#fff",alignItems:"center",justifyContent:"center",fontSize:13,marginRight:8}}>{n}</span>{t}</div>{cont}</div>;
+    const guardar=async()=>{
+      if(!d.nombre?.trim()){window.alert("Ponle un nombre al reporte.");return;}
+      if(!d.fuente){window.alert("Elige de qué trata el reporte.");return;}
+      if(!d.cols.length){window.alert("Agrega al menos un dato a mostrar.");return;}
+      const rep={...d,nombre:d.nombre.trim(),id:d.id||`R-${Date.now()}`,owner:d.owner||currentUser.id,compartido:d.compartido!==false};
+      const base=repGuardados??REP_EJEMPLOS;const n=base.some(x=>x.id===rep.id)?base.map(x=>x.id===rep.id?rep:x):[...base,rep];
+      if(await repGuardarLista(n)){logAction(d.id?"Editó reporte":"Creó reporte",rep.nombre);repAbrir(rep);}};
+    const Qc=sinAcentos(repPick?.q||"");
+    const disp=F?F.campos.filter(c=>!d.cols.includes(c.k)&&(!Qc||sinAcentos(`${c.l} ${c.g}`).includes(Qc))):[];
+    const gruposDisp=[...new Set(disp.map(c=>c.g))];
+    const C=F?Object.fromEntries(F.campos.map(c=>[c.k,c])):{};
+    const prev=F&&d.cols.length?repCalcular({...d,soloTot:d.soloTot},{}):null;
     return(
     <div className="page-scroll">
-      <div style={{display:"grid",gridTemplateColumns:"250px minmax(0,1fr)",gap:14,alignItems:"start"}}>
-        <div className="card" style={{padding:0,overflow:"hidden"}}>
-          <div style={{padding:8,borderBottom:"1px solid var(--b1)",background:"var(--bg3)"}}><input className="fi" style={{fontSize:13,padding:"6px 8px"}} placeholder="Buscar reporte…" value={repListaQ} onChange={e=>setRepListaQ(e.target.value)}/></div>
-          <div style={{maxHeight:"75vh",overflowY:"auto"}}>{grupos.map(g=>(
-            <div key={g.g}><div style={{fontSize:11,fontWeight:800,color:"var(--t3)",padding:"8px 12px 4px",textTransform:"uppercase",letterSpacing:1}}>{g.g}</div>
-              {g.items.map(x=>{const on=x.id===sel.id;return <div key={x.id} onClick={()=>abrir(x)} style={{padding:"8px 12px",cursor:"pointer",fontSize:14,fontWeight:on?700:500,background:on?"var(--navy)":"transparent",color:on?"#fff":"var(--t1)"}}>{x.nombre}{x.tipo==="guardado"&&!x.compartido&&<span style={{fontSize:11,opacity:.7}}> · 🔒</span>}</div>;})}</div>))}</div>
+      <div style={{maxWidth:1100,margin:"0 auto"}}>
+        <div className="card" style={{marginBottom:12,display:"flex",alignItems:"center",gap:10}}>
+          <button className="btn-s" style={{fontSize:13}} onClick={()=>{if(window.confirm("¿Salir sin guardar?"))setRepModo(d.id?"ver":"lista");}}>← Cancelar</button>
+          <div style={{fontSize:18,fontWeight:700,color:"var(--navy)",flex:1}}>{d.id?"✏️ Editar reporte":"➕ Crear reporte"}</div>
+          <button className="btn-p" onClick={guardar}>💾 Guardar</button>
         </div>
-        <div>
-          <div className="card" style={{marginBottom:10}}>
-            <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:10}}>
-              <div style={{fontSize:17,fontWeight:700,color:"var(--navy)",flex:1}}>📈 {sel.nombre}</div>
-              {cambiado&&esMio&&<button className="btn-p" style={{fontSize:13}} onClick={()=>guardar(false)}>💾 Guardar</button>}
-              <button className="btn-s" style={{fontSize:13}} onClick={()=>guardar(true)}>💾 Guardar como…</button>
-              {esMio&&<button className="btn-s" style={{fontSize:13,color:"var(--red)",borderColor:"var(--red)"}} onClick={borrar}>🗑</button>}
-              <button className="btn-s" style={{fontSize:13}} onClick={()=>repExcel(sel.nombre,cfg)}>⬇️ Excel</button>
-              <button className="btn-s" style={{fontSize:13}} onClick={()=>repImprimir(sel.nombre,cfg)}>🖨️ Imprimir</button>
-              {repCfg&&repCfg._id===sel.id&&<button className="btn-s" style={{fontSize:13}} onClick={()=>{setRepCfg(null);setRepFEd(null);}}>↺ Restablecer</button>}
-            </div>
-            <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",marginBottom:8}}>
-              <span style={{fontSize:12,fontWeight:700,color:"var(--t3)",width:70}}>FECHAS</span>
-              <input className="fi" type="date" style={{width:150,fontSize:13,padding:"4px 6px"}} value={cfg.desde} onChange={e=>setC({desde:e.target.value})}/>
-              <span style={{fontSize:13}}>a</span>
-              <input className="fi" type="date" style={{width:150,fontSize:13,padding:"4px 6px"}} value={cfg.hasta} onChange={e=>setC({hasta:e.target.value})}/>
-              <span style={{fontSize:12,color:"var(--t3)"}}>({C[F?.fecha]?.l||"fecha"})</span>
-              <input className="fi" style={{marginLeft:"auto",width:220,fontSize:13,padding:"4px 8px"}} placeholder="Buscar en el reporte…" value={cfg.q||""} onChange={e=>setC({q:e.target.value})}/>
-            </div>
-            <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap",marginBottom:8}}>
-              <span style={{fontSize:12,fontWeight:700,color:"var(--t3)",width:70}}>FILTROS</span>
-              {cfg.filtros.map((f,i)=>{const c=C[f.k];if(!c)return null;
-                const txt=f.conValor?"con valor":f.vals?.length?(f.vals.length>2?`${f.vals.slice(0,2).join(", ")} +${f.vals.length-2}`:f.vals.join(", ")):(f.min!=null&&f.min!==""||f.max!=null&&f.max!=="")?`${f.min||"…"} a ${f.max||"…"}`:"(todos)";
-                return <span key={i} onClick={()=>setRepFEd(repFEd===i?null:i)} style={{cursor:"pointer"}}>{chip(<>{c.l}: <b>{txt}</b></>,e=>{e.stopPropagation();setC({filtros:cfg.filtros.filter((_,j)=>j!==i)});setRepFEd(null);},repFEd===i?{background:"var(--navy)",color:"#fff"}:{})}</span>;})}
-              {buscadorCampos("filtro",[],c=>{setC({filtros:[...cfg.filtros,c.t==="txt"?{k:c.k,vals:[]}:{k:c.k,min:"",max:""}]});setRepFEd(cfg.filtros.length);})}
-            </div>
-            {fEd&&fEdC&&(
-              <div style={{background:"var(--bg4)",border:"1px solid var(--b1)",borderRadius:8,padding:10,marginBottom:8}}>
-                <div style={{fontSize:13,fontWeight:700,marginBottom:6}}>{fEdC.l}</div>
-                {fEdC.t==="txt"?(()=>{const Qv=sinAcentos(repFQ.trim());const vals=valoresDe(fEd.k).filter(([v])=>!Qv||sinAcentos(v).includes(Qv));const S=new Set(fEd.vals||[]);
-                  return <><div style={{display:"flex",gap:6,marginBottom:6}}>
-                      <input className="fi" style={{fontSize:12,padding:"4px 8px",maxWidth:260}} placeholder="Buscar valor…" value={repFQ} onChange={e=>setRepFQ(e.target.value)}/>
-                      <button className={fEd.conValor?"btn-p":"btn-s"} style={{fontSize:12,padding:"3px 10px"}} onClick={()=>setF(repFEd,{conValor:!fEd.conValor,vals:[]})}>Solo con valor</button>
-                      {(fEd.vals||[]).length>0&&<button className="btn-s" style={{fontSize:12,padding:"3px 10px"}} onClick={()=>setF(repFEd,{vals:[]})}>Quitar todos</button>}
-                    </div>
-                    <div style={{display:"flex",flexWrap:"wrap",gap:5,maxHeight:150,overflowY:"auto"}}>{vals.slice(0,200).map(([v,n])=>{const on=S.has(v);return(
-                      <span key={v} onClick={()=>setF(repFEd,{conValor:false,vals:on?fEd.vals.filter(x=>x!==v):[...(fEd.vals||[]),v]})} style={{cursor:"pointer",fontSize:12,fontWeight:600,padding:"3px 9px",borderRadius:12,border:"1px solid",borderColor:on?"var(--navy)":"var(--b1)",background:on?"var(--navy)":"var(--bg2)",color:on?"#fff":"var(--t2)"}}>{v||"(vacío)"} <span style={{opacity:.6}}>{n}</span></span>);})}</div></>;})()
-                :<div style={{display:"flex",gap:8,alignItems:"center"}}>
-                  <input className="fi" type="number" style={{width:120,fontSize:13,padding:"4px 6px"}} placeholder="Desde" value={fEd.min??""} onChange={e=>setF(repFEd,{min:e.target.value})}/>
-                  <span>a</span><input className="fi" type="number" style={{width:120,fontSize:13,padding:"4px 6px"}} placeholder="Hasta" value={fEd.max??""} onChange={e=>setF(repFEd,{max:e.target.value})}/></div>}
-              </div>)}
-            <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap",marginBottom:8}}>
-              <span style={{fontSize:12,fontWeight:700,color:"var(--t3)",width:70}}>COLUMNAS</span>
-              {cfg.cols.map((k,i)=>{const c=C[k];if(!c)return null;return <span key={k}>{chip(<>
-                {i>0&&<span style={{cursor:"pointer",opacity:.6}} onClick={()=>{const a=[...cfg.cols];[a[i-1],a[i]]=[a[i],a[i-1]];setC({cols:a});}}>◀</span>}
-                {c.l}
-                {i<cfg.cols.length-1&&<span style={{cursor:"pointer",opacity:.6}} onClick={()=>{const a=[...cfg.cols];[a[i+1],a[i]]=[a[i],a[i+1]];setC({cols:a});}}>▶</span>}</>,
-                cfg.cols.length>1?()=>setC({cols:cfg.cols.filter(x=>x!==k)}):null)}</span>;})}
-              {buscadorCampos("col",cfg.cols,c=>setC({cols:[...cfg.cols,c.k]}))}
-            </div>
-            <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-              <span style={{fontSize:12,fontWeight:700,color:"var(--t3)",width:70}}>AGRUPAR</span>
-              <select className="fs" style={{width:240,fontSize:13}} value={cfg.agrupar} onChange={e=>setC({agrupar:e.target.value,soloTot:e.target.value?cfg.soloTot:false})}>
-                <option value="">Sin agrupar</option>
-                {(F?.campos||[]).filter(c=>c.t==="txt").map(c=><option key={c.k} value={c.k}>{c.l}</option>)}
-                {(F?.campos||[]).filter(c=>c.t==="fecha").map(c=><option key={"mes:"+c.k} value={"mes:"+c.k}>Mes de {c.l.toLowerCase()}</option>)}
-              </select>
-              {cfg.agrupar&&<button className={cfg.soloTot?"btn-p":"btn-s"} style={{fontSize:12,padding:"4px 10px"}} onClick={()=>setC({soloTot:!cfg.soloTot})}>Solo totales</button>}
-              <span style={{marginLeft:"auto",fontSize:13,fontWeight:700,color:"var(--navy)"}}>{R?.filas.length||0} registro{R?.filas.length===1?"":"s"}</span>
+        {paso(1,"Nombre",<div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"center"}}>
+          <input className="fi" style={{flex:1,minWidth:260,fontSize:15}} placeholder="Ej: Manifiesto Venezuela aéreo" value={d.nombre||""} onChange={e=>setD({nombre:e.target.value})}/>
+          {seg([[true,"👥 Para todos"],[false,"🔒 Solo para mí"]],d.compartido!==false,v=>setD({compartido:v}))}</div>)}
+        {paso(2,"¿De qué trata?",<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(190px,1fr))",gap:8}}>
+          {Object.entries(fs).map(([k,f])=>{const on=d.fuente===k;return(
+            <div key={k} onClick={()=>{if(on)return;if(d.cols.length&&!window.confirm("Al cambiar se borran los datos y filtros elegidos. ¿Continuar?"))return;
+              setD({fuente:k,cols:[],filtros:[],agrupar:"",soloTot:false,orden:null});if(k==="actividad"&&repAct==null)dbGetActividadReporte().then(setRepAct);}}
+              style={{cursor:"pointer",padding:"10px 12px",borderRadius:8,border:"2px solid",borderColor:on?"var(--navy)":"var(--b1)",background:on?"#EEF3FF":"var(--bg2)",display:"flex",gap:8,alignItems:"center"}}>
+              <span style={{fontSize:20}}>{f.ic}</span><span style={{fontSize:14,fontWeight:on?800:600,color:"var(--navy)"}}>{f.l}</span></div>);})}</div>)}
+        {F&&paso(3,"Datos a mostrar",<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
+          <div>
+            <input className="fi" style={{fontSize:13,marginBottom:8}} placeholder="Buscar dato…" value={repPick?.q||""} onChange={e=>setRepPick({q:e.target.value})}/>
+            <div style={{maxHeight:320,overflowY:"auto",border:"1px solid var(--b1)",borderRadius:8}}>
+              {gruposDisp.map(g=><div key={g}><div style={{fontSize:11,fontWeight:800,color:"var(--t3)",padding:"6px 10px",background:"var(--bg3)",textTransform:"uppercase",letterSpacing:1}}>{g}</div>
+                {disp.filter(c=>c.g===g).map(c=><div key={c.k} onClick={()=>setD({cols:[...d.cols,c.k],orden:d.orden||{k:c.k,dir:1}})} style={{padding:"6px 12px",cursor:"pointer",fontSize:13,borderBottom:"1px solid var(--b2)",display:"flex",justifyContent:"space-between"}}>
+                  <span>{c.l}</span><span style={{color:"var(--cyan)",fontWeight:800}}>+</span></div>)}</div>)}
+              {disp.length===0&&<div style={{padding:14,textAlign:"center",color:"var(--t3)",fontSize:13}}>—</div>}
             </div>
           </div>
-
-          {R&&(
-          <div className="card" style={{padding:0,overflow:"auto",maxHeight:"62vh"}}>
-            {R.filas.length===0?<div style={{textAlign:"center",padding:40,color:"var(--t3)"}}>Sin resultados.</div>:(
-            <table className="ct" style={{fontSize:13}}>
-              <thead style={{position:"sticky",top:0,zIndex:1}}><tr>
-                {cfg.soloTot&&R.grupos&&<th>{repNombreAgr(cfg)}</th>}{cfg.soloTot&&R.grupos&&<th style={{textAlign:"right"}}>Cantidad</th>}
-                {(cfg.soloTot&&R.grupos?R.cols.filter(numC):R.cols).map(c=><th key={c.k} style={{cursor:"pointer",whiteSpace:"nowrap",textAlign:numC(c)?"right":"left"}} onClick={()=>setC({orden:{k:c.k,dir:cfg.orden?.k===c.k?-cfg.orden.dir:1}})}>
-                  {c.l}{cfg.orden?.k===c.k?(cfg.orden.dir>0?" ▲":" ▼"):""}</th>)}
-              </tr></thead>
-              <tbody>
-                {(()=>{const fila=(r,key)=><tr key={key}>{R.cols.map(c=><td key={c.k} style={{textAlign:numC(c)?"right":"left",...(numC(c)?mono:{}),whiteSpace:c.k==="descripcion"||c.k==="notas"?"normal":"nowrap"}}>{repFmt(c,c.v(r),r)}</td>)}</tr>;
-                  const tot=(lbl,n,t,key)=><tr key={key} style={{background:"var(--bg3)",fontWeight:800}}>
-                    {cfg.soloTot&&R.grupos?<><td>{lbl}</td><td style={{textAlign:"right",...mono}}>{n}</td>{R.cols.filter(numC).map(c=><td key={c.k} style={{textAlign:"right",...mono}}>{repFmt(c,t[c.k])}</td>)}</>
-                      :R.cols.map((c,i)=><td key={c.k} style={{textAlign:numC(c)?"right":"left",...(numC(c)?mono:{})}}>{i===0?`${lbl} (${n})`:numC(c)?repFmt(c,t[c.k]):""}</td>)}</tr>;
-                  const out=[];
-                  if(R.grupos)R.grupos.forEach((g,gi)=>{
-                    if(!cfg.soloTot){out.push(<tr key={"g"+gi}><td colSpan={R.cols.length} style={{background:"#EEF3FF",fontWeight:800,color:"var(--navy)"}}>{repNombreAgr(cfg)}: {g.k} · {g.rows.length}</td></tr>);
-                      g.rows.forEach((r,i)=>{if(mostradas++<MAXF)out.push(fila(r,`${gi}-${i}`));});out.push(tot(`Subtotal`,g.rows.length,g.tot,"s"+gi));}
-                    else out.push(tot(g.k,g.rows.length,g.tot,"s"+gi));});
-                  else R.filas.forEach((r,i)=>{if(i<MAXF)out.push(fila(r,i));});
-                  out.push(tot("TOTAL",R.filas.length,R.tot,"T"));
-                  return out;})()}
-              </tbody>
-            </table>)}
-            {R.filas.length>MAXF&&!cfg.soloTot&&<div style={{padding:10,textAlign:"center",fontSize:13,color:"var(--t3)"}}>Se muestran {MAXF} de {R.filas.length}. Excel e Imprimir incluyen todos.</div>}
-          </div>)}
-        </div>
+          <div>
+            <div style={{fontSize:13,fontWeight:700,color:"var(--t2)",marginBottom:8}}>En el reporte, en este orden ({d.cols.length})</div>
+            <div style={{maxHeight:350,overflowY:"auto",border:"1px solid var(--b1)",borderRadius:8}}>
+              {d.cols.length===0&&<div style={{padding:14,textAlign:"center",color:"var(--t3)",fontSize:13}}>Toca los datos de la izquierda para agregarlos.</div>}
+              {d.cols.map((k,i)=><div key={k} style={{padding:"6px 10px",fontSize:13,borderBottom:"1px solid var(--b2)",display:"flex",gap:8,alignItems:"center"}}>
+                <span style={{...mono,color:"var(--t3)",width:22}}>{i+1}</span><span style={{flex:1,fontWeight:600}}>{C[k]?.l||k}</span>
+                <span className="ic-b" style={{opacity:i?1:.3}} onClick={()=>{if(!i)return;const a=[...d.cols];[a[i-1],a[i]]=[a[i],a[i-1]];setD({cols:a});}}>▲</span>
+                <span className="ic-b" style={{opacity:i<d.cols.length-1?1:.3}} onClick={()=>{if(i>=d.cols.length-1)return;const a=[...d.cols];[a[i+1],a[i]]=[a[i],a[i+1]];setD({cols:a});}}>▼</span>
+                <span className="ic-b" style={{color:"var(--red)"}} onClick={()=>setD({cols:d.cols.filter(x=>x!==k)})}>✕</span></div>)}
+            </div>
+          </div></div>)}
+        {F&&paso(4,"Filtros",<div>
+          {(d.filtros||[]).map((f,i)=>{const c=C[f.k];if(!c)return null;const setF=x=>setD({filtros:d.filtros.map((y,j)=>j===i?{...y,...x}:y)});return(
+            <div key={i} style={{border:"1px solid var(--b1)",borderRadius:8,padding:10,marginBottom:8}}>
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:6,flexWrap:"wrap"}}>
+                <b style={{fontSize:14}}>{c.l}</b>
+                {seg([[false,"Fijo"],[true,"Preguntar al abrir"]],!!f.preguntar,v=>setF({preguntar:v}))}
+                {c.t==="txt"&&!f.preguntar&&seg([[false,"Valores elegidos"],[true,"Solo con valor"]],!!f.conValor,v=>setF({conValor:v,vals:[]}))}
+                <span className="ic-b" style={{marginLeft:"auto",color:"var(--red)"}} onClick={()=>setD({filtros:d.filtros.filter((_,j)=>j!==i)})}>✕</span>
+              </div>
+              {f.preguntar?<div style={{fontSize:13,color:"var(--t3)"}}>Se elige al abrir el reporte.</div>:!f.conValor&&editorFiltro(F,f,setF,repFQ["d"+i],v=>setRepFQ({...repFQ,["d"+i]:v}))}
+            </div>);})}
+          {repPick?.modo==="filtro"?<div className="fi-search" style={{position:"relative",maxWidth:320}}>
+              <input className="fi" autoFocus style={{fontSize:13}} placeholder="Buscar dato para filtrar…" value={repPick.fq||""} onChange={e=>setRepPick({...repPick,fq:e.target.value})} onBlur={()=>setTimeout(()=>setRepPick(p=>p?.modo==="filtro"?{q:p.q}:p),150)}/>
+              {(()=>{const Qf=sinAcentos(repPick.fq||"");const ops=F.campos.filter(c=>!Qf||sinAcentos(c.l).includes(Qf)).slice(0,25);
+                return ops.length>0&&<div className="fi-search-res">{ops.map(c=><div key={c.k} className="fi-search-item" onMouseDown={e=>{e.preventDefault();setD({filtros:[...(d.filtros||[]),c.t==="txt"?{k:c.k,vals:[]}:{k:c.k,min:"",max:""}]});setRepPick({q:repPick.q});}}>{c.l}<span style={{fontSize:11,color:"var(--t3)",marginLeft:6}}>{c.g}</span></div>)}</div>;})()}
+            </div>:<button className="btn-s" style={{fontSize:13}} onClick={()=>setRepPick({...(repPick||{}),modo:"filtro",fq:""})}>+ Agregar filtro</button>}
+          {F.fecha&&<div style={{fontSize:13,color:"var(--t3)",marginTop:8}}>Al abrir el reporte siempre se puede elegir el rango de {C[F.fecha]?.l.toLowerCase()}.</div>}
+        </div>)}
+        {F&&paso(5,"Agrupar y ordenar",<div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"flex-end"}}>
+          <div className="fg"><div className="fl">Agrupar por</div><select className="fs" style={{minWidth:240}} value={d.agrupar||""} onChange={e=>setD({agrupar:e.target.value,soloTot:e.target.value?d.soloTot:false})}>
+            <option value="">Sin agrupar</option>{F.campos.filter(c=>c.t==="txt").map(c=><option key={c.k} value={c.k}>{c.l}</option>)}
+            {F.campos.filter(c=>c.t==="fecha").map(c=><option key={"mes:"+c.k} value={"mes:"+c.k}>Mes ({c.l.toLowerCase()})</option>)}</select></div>
+          {d.agrupar&&<div className="fg"><div className="fl">Mostrar</div>{seg([[false,"Detalle y subtotales"],[true,"Solo totales por grupo"]],!!d.soloTot,v=>setD({soloTot:v}))}</div>}
+          <div className="fg"><div className="fl">Ordenar por</div><select className="fs" style={{minWidth:200}} value={d.orden?.k||""} onChange={e=>setD({orden:e.target.value?{k:e.target.value,dir:d.orden?.dir||1}:null})}>
+            <option value="">—</option>{d.cols.map(k=><option key={k} value={k}>{C[k]?.l}</option>)}</select></div>
+          {d.orden&&<div className="fg"><div className="fl">&nbsp;</div>{seg([[1,"Ascendente"],[-1,"Descendente"]],d.orden.dir||1,v=>setD({orden:{...d.orden,dir:v}}))}</div>}
+          <div style={{fontSize:13,color:"var(--t3)",alignSelf:"center"}}>Los números se suman y los días se promedian.</div></div>)}
+        {prev&&paso(6,`Vista previa (${prev.filas.length} registros)`,<div style={{overflow:"auto",maxHeight:300}}>
+          <table className="ct" style={{fontSize:12}}><thead><tr>{d.soloTot&&prev.grupos?<><th>{prev.gl}</th><th>Cantidad</th>{prev.cols.filter(repNum).map(c=><th key={c.k}>{c.l}</th>)}</>:prev.cols.map(c=><th key={c.k}>{c.l}</th>)}</tr></thead>
+            <tbody>{d.soloTot&&prev.grupos?prev.grupos.slice(0,15).map(g=><tr key={g.k}><td>{g.k}</td><td>{g.rows.length}</td>{prev.cols.filter(repNum).map(c=><td key={c.k}>{repFmt(c,g.tot[c.k])}</td>)}</tr>)
+              :(prev.grupos?prev.grupos.flatMap(g=>g.rows):prev.filas).slice(0,15).map((r,i)=><tr key={i}>{prev.cols.map(c=><td key={c.k}>{repFmt(c,c.v(r),r)}</td>)}</tr>)}</tbody></table></div>)}
       </div>
     </div>);
   };

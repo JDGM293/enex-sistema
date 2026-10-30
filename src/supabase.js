@@ -218,6 +218,13 @@ export const dbGetActividad = async () => {
   return data.map(r => ({ ts: new Date(r.ts), user: r.user_id, role: r.user_role, action: r.action, detail: r.detail }))
 }
 
+// Actividad completa para reportes (hasta 10.000 registros más recientes)
+export const dbGetActividadReporte = async () => {
+  const { data, error } = await supabase.from('actividad').select('*').order('ts', {ascending:false}).limit(10000)
+  if (error) { console.error('getActividadReporte:', error); return [] }
+  return data.map(r => ({ ts: new Date(r.ts), user: r.user_id, role: r.user_role, action: r.action, detail: r.detail }))
+}
+
 // ── CONSOLIDACIONES ──────────────────────────────────────────
 export const dbGetConsolidaciones = async () => {
   const { data, error } = await supabase.from('consolidaciones').select('*').order('created_at', {ascending:false})
