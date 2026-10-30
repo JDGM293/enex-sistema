@@ -863,7 +863,7 @@ const tipoEsMaritimoG=(te)=>{const t=(te||"").toLowerCase().replace(/í/g,"i");r
 
 // ─── INITIAL DATA — VACÍO (solo usuario Administrador) ────────────────────────
 const CLIENTS_INIT=[
-  {id:"U-001",tipo:"usuario",primerNombre:"Administrador",segundoNombre:"",primerApellido:"ENEX",segundoApellido:"",cedula:"V-00000001",dir:"",municipio:"",estado:"",pais:"",cp:"",tel1:"",tel2:"",email:"admin@enex.com",casillero:"",rol:"A",password:"admin123"},
+  {id:"U-001",tipo:"usuario",primerNombre:"Administrador",segundoNombre:"",primerApellido:"",segundoApellido:"",cedula:"V-00000001",dir:"",municipio:"",estado:"",pais:"",cp:"",tel1:"",tel2:"",email:"admin@enex.com",casillero:"",rol:"A",password:"admin123"},
 ];
 const CONS_POOL=[];
 
@@ -989,7 +989,7 @@ const elegirDeVarios=(varios,etiqueta)=>{
   const i=parseInt(sel,10)-1;
   return (!isNaN(i)&&i>=0&&i<Math.min(varios.length,15))?varios[i]:null;
 };
-const CU=CLIENTS_INIT.find(c=>c.rol==="A")||CLIENTS_INIT[0]||{id:"admin",rol:"A",primerNombre:"Admin",primerApellido:"ENEX",email:"admin@enex.com"};
+const CU=CLIENTS_INIT.find(c=>c.rol==="A")||CLIENTS_INIT[0]||{id:"admin",rol:"A",primerNombre:"Admin",primerApellido:"",email:""};
 
 const StBadge=({st})=>{if(!st||!st.cls)return <span className="st s1"><span className="st-dot"/>—</span>;return <span className={`st ${st.cls}`}><span className="st-dot"/>{st.label}</span>;};
 const CarBadge=({c})=><span className={`car ${CAR_CLS[c]||"car-def"}`}>{c}</span>;
@@ -2055,7 +2055,7 @@ function PhotoGalleryModal({ wrId, currentUser, onClose }){
 }
 
 // ─── MAIN APP ──────────────────────────────────────────────────────────────────
-export default function ENEXSystem(){
+export default function SistemaCarga(){
   // ── LOGIN STATE ────────────────────────────────────────────────────────────
   const [currentUser,setCurrentUser]=useState(null);
   // Sesión de Supabase Auth: contraseñas cifradas y login en el servidor
@@ -2128,7 +2128,13 @@ export default function ENEXSystem(){
   const [consolSecInicio,setConsolSecInicio]=useState(1);
   const [labelWRTipo,setLabelWRTipo]=useState(1);   // 1=4×6 Básica, 2=4×6 Completa, 3=4×2 Básica, 4=4×2 Completa
   const [labelCSATipo,setLabelCSATipo]=useState(1); // 1=4×6 Grande, 2=4×2 Compacta
-  const [empresaNombre,setEmpresaNombre]=useState("ENEX");
+  // Marca: el nombre y el logo de la empresa que usa el sistema. Se cambia en un solo lugar (Configuración › Empresa)
+  const MARCA_VACIA={nombre:"",subtitulo:"",iniciales:"",logo:""};
+  const [marca,setMarca]=useState(()=>{try{return {...MARCA_VACIA,...(JSON.parse(localStorage.getItem("marca")||"null")||{})};}catch{return MARCA_VACIA;}});
+  const [marcaDraft,setMarcaDraft]=useState(null);
+  const empresaNombre=marca.nombre||"";
+  useEffect(()=>{dbGetConfig('marca').then(v=>{if(v&&typeof v==="object"){const m={...MARCA_VACIA,...v};setMarca(m);try{localStorage.setItem("marca",JSON.stringify(m));}catch{/* sin almacenamiento */}}}).catch(()=>{});},[]);
+  useEffect(()=>{document.title=[marca.nombre,marca.subtitulo].filter(Boolean).join(" · ")||"Sistema de carga";},[marca]);
   const [empresaSlug,setEmpresaSlug]=useState("1N");
 
   // ── CONFIGURACIÓN — listas editables ──────────────────────────────────────
@@ -2236,21 +2242,17 @@ export default function ENEXSystem(){
   const [actFilter,setActFilter]=useState("");
   const [cfgTab,setCfgTab]=useState("numeracion");
   const [cfgSelPais,setCfgSelPais]=useState(0);
-  // Notas legales por país: {_default:"...", "Venezuela 🇻🇪":"...", ...}
-  const [notasLegales,setNotasLegales]=useState({});
-  const [fmtFC,setFmtFC]=useState({});            // formatos de factura comercial/proforma por país
-  const [docTextos,setDocTextos]=useState({});    // datos de empresa y textos de declaración/autorización
-  const [docTxtDraft,setDocTxtDraft]=useState(null);
-  const [docsTab,setDocsTab]=useState("generar");
+  // Datos por país: {_default:{empresa,exp,imp}, "VENEZUELA":{empresa,exp,imp}}
+  //  empresa = datos de la empresa en ese país · exp = sale de ese país · imp = llega a ese país
+  const [docPais,setDocPais]=useState({});
   const [docEd,setDocEd]=useState(null);
-  const [fmtSel,setFmtSel]=useState("_default");
-  const [fmtDraft,setFmtDraft]=useState(null);
-  const [notaDraft,setNotaDraft]=useState(null); // {pais, texto} mientras se edita
+  const [paisSel,setPaisSel]=useState("_default");
+  const [paisSec,setPaisSec]=useState("empresa");
+  const [paisDraft,setPaisDraft]=useState(null);
+  const [paisQ,setPaisQ]=useState("");
   useEffect(()=>{
     if(!authUid)return;
-    dbGetConfig('formatos_factura').then(v=>{if(v&&typeof v==="object"&&!Array.isArray(v))setFmtFC(v);}).catch(()=>{});
-    dbGetConfig('documentos_textos').then(v=>{if(v&&typeof v==="object"&&!Array.isArray(v))setDocTextos(v);}).catch(()=>{});
-    dbGetConfig('notas_legales').then(v=>{if(v&&typeof v==="object"&&!Array.isArray(v))setNotasLegales(v);}).catch(e=>console.error("notas_legales:",e));
+    dbGetConfig('documentos_pais').then(v=>{if(v&&typeof v==="object"&&!Array.isArray(v))setDocPais(v);}).catch(()=>{});
   },[authUid]);
   const [cfgNewCity,setCfgNewCity]=useState("");
   const [cfgNewPais,setCfgNewPais]=useState("");
@@ -2544,8 +2546,9 @@ export default function ENEXSystem(){
       <style>{S}</style>
       <div style={{background:"white",borderRadius:16,padding:40,width:340,boxShadow:"0 8px 40px rgba(0,0,0,.3)"}}>
         <div style={{textAlign:"center",marginBottom:24}}>
-          <div style={{fontSize:30,fontWeight:800,color:"var(--navy)"}}>ENEX</div>
-          <div style={{fontSize:15,color:"var(--t3)"}}>International Courier — Sistema</div>
+          {marca.logo&&<img src={marca.logo} alt="" style={{maxHeight:70,maxWidth:200,marginBottom:8}}/>}
+          <div style={{fontSize:30,fontWeight:800,color:"var(--navy)"}}>{marca.nombre||"Iniciar sesión"}</div>
+          {marca.subtitulo&&<div style={{fontSize:15,color:"var(--t3)"}}>{marca.subtitulo}</div>}
         </div>
         <div style={{display:"flex",flexDirection:"column",gap:12}}>
           <input className="fi" placeholder="Email o usuario" autoComplete="username" value={loginEmail} onChange={e=>setLoginEmail(e.target.value)} onKeyDown={e=>e.key==="Enter"&&doLogin()} style={{textTransform:"none"}}/>
@@ -2585,7 +2588,7 @@ export default function ENEXSystem(){
   })();
   // Nota legal según el país de origen del WR (o la predeterminada)
   const notaLegalWR=w=>{
-    const t=(w&&notasLegales[w.origCountry])||notasLegales._default||NOTA_LEGAL_DEFAULT;
+    const t=docCfg(w?.origCountry,"exp").notaLegal||NOTA_LEGAL_DEFAULT;
     return String(t).split("{EMPRESA}").join(empresaNombre||"");
   };
   const canAdmin=currentUser.rol==="A";
@@ -2929,7 +2932,7 @@ export default function ENEXSystem(){
     let _remitenteId=wrf.remitenteId||"";
     {
       const rem=String(wrf.remitente||"").trim();
-      const esEmpresa=!rem||[empresaNombre,"ENEX"].filter(Boolean).some(x=>sinAcentos(x)===sinAcentos(rem));
+      const esEmpresa=!rem||[empresaNombre].filter(Boolean).some(x=>sinAcentos(x)===sinAcentos(rem));
       if(!_remitenteId&&!esEmpresa){
         const lista=[...clients,...(_clienteId&&!clients.some(c=>c.id===_clienteId)?[{id:_clienteId,casillero:_casillero,...parseNombreCompleto(wrf.consignee),cedula:"",email:""}]:[])];
         const doc=String(wrf.remitenteDoc||"").trim().toUpperCase(), em=String(wrf.remitenteEmail||"").trim().toLowerCase();
@@ -4138,9 +4141,9 @@ export default function ENEXSystem(){
             <div>
               <div className="wr-co">{getHeaderName(selWR,clients,agentes,oficinas,empresaNombre)}</div>
               <div className="wr-co-info">
-                International Courier · {selWR.branch||_oc?.nombre||"Casa Matriz"}<br/>
+                {[marca.subtitulo,selWR.branch||_oc?.nombre||"Casa Matriz"].filter(Boolean).join(" · ")}<br/>
                 {_oc?.ciudad||selWR.origCity||"Miami"}{_oc?.pais?`, ${_oc.pais}`:""}<br/>
-                {[_oc?.tel,_oc?.email].filter(Boolean).join(" · ")||"ops@enex.com"}
+                {[_oc?.tel,_oc?.email].filter(Boolean).join(" · ")}
               </div>
             </div>
             <div style={{textAlign:"right"}}>
@@ -4703,7 +4706,7 @@ export default function ENEXSystem(){
   @media print{body{padding:0}}
 </style></head><body>
   <div class="hd">
-    <h1>${escapeHtml(empresaNombre||"ENEX")} — RECEPCIÓN EN ALMACÉN</h1>
+    <h1>${escapeHtml(empresaNombre)} — RECEPCIÓN EN ALMACÉN</h1>
     <div class="sub">Generado: ${fechaImp}</div>
   </div>
   <div class="info">
@@ -4727,7 +4730,7 @@ export default function ENEXSystem(){
     <div><div class="lbl">Peso total</div>${(totalLb||0).toFixed?totalLb.toFixed(1):totalLb}lb</div>
     <div><div class="lbl">Ft³ total</div>${(totalFt3||0).toFixed?totalFt3.toFixed(2):totalFt3}</div>
   </div>
-  <div class="ft">Documento de archivo de recepción — ${escapeHtml(empresaNombre||"ENEX")} International Courier</div>
+  <div class="ft">Documento de archivo de recepción — ${escapeHtml([empresaNombre,marca.subtitulo].filter(Boolean).join(" "))}</div>
   <script>window.addEventListener('load',()=>setTimeout(()=>window.print(),250));</script>
 </body></html>`;
     const w=window.open("","_blank","width=900,height=1200");
@@ -4783,7 +4786,7 @@ export default function ENEXSystem(){
   @media print{body{padding:0}}
 </style></head><body>
   <div class="hd">
-    <h1>${empresaNombre||"ENEX"} — ESTADO DE CUENTA</h1>
+    <h1>${empresaNombre} — ESTADO DE CUENTA</h1>
     <div class="sub">Generado: ${fechaImp}</div>
   </div>
   ${grupo?`<div class="cli-box">
@@ -4827,7 +4830,7 @@ export default function ENEXSystem(){
       </tr>
     </tfoot>`:""}
   </table>
-  <div class="ft">Documento generado por ${empresaNombre||"ENEX"} · Este estado refleja únicamente los movimientos del filtro seleccionado.</div>
+  <div class="ft">Documento generado por ${empresaNombre} · Este estado refleja únicamente los movimientos del filtro seleccionado.</div>
 </body></html>`;
     const w=window.open("","_blank","width=900,height=1100");
     if(!w){window.alert("El navegador bloqueó la ventana de impresión.");return;}
@@ -5538,7 +5541,7 @@ export default function ENEXSystem(){
     setShowConsolLabels({
       guia:n,
       containers:cf.containers||[],
-      remitente:empresaNombre||"ENEX",
+      remitente:empresaNombre,
     });
   };
 
@@ -5569,9 +5572,9 @@ export default function ENEXSystem(){
   const guiaEtiquetas=(c)=>setShowLabels({
                         wr:{id:c.id,origCity:OFFICE_CONFIG.origCity,origCountry:"USA 🇺🇸",destCity:c.destino,destCountry:"Venezuela 🇻🇪",
                           consignee:"CONSOLIDADO",casillero:"—",fecha:c.fecha,branch:OFFICE_CONFIG.branch,tipoEnvio:c.tipoEnvio,
-                          shipper:"ENEX",cajas:c.totalCajas,pesoLb:c.totalLb,volLb:c.totalVolLb,ft3:c.totalFt3,m3:c.totalM3},
+                          shipper:empresaNombre,cajas:c.totalCajas,pesoLb:c.totalLb,volLb:c.totalVolLb,ft3:c.totalFt3,m3:c.totalM3},
                         dims:c.containers.map((ct,i)=>({l:0,a:0,h:0,pk:0,pkLb:parseFloat(ct.pesoLb)||0,volLb:0,ft3:0,m3:0,tracking:`Cont. ${i+1} · ${ct.tipo} · Sello: ${ct.sello||"—"}`})),
-                        remitente:"ENEX",tipoEnvio:c.tipoEnvio,
+                        remitente:empresaNombre,tipoEnvio:c.tipoEnvio,
                       });
   const guiaEditar=async(c)=>{
     // Cargar fotos guardadas del bucket consol-fotos para esta guía
@@ -6025,7 +6028,7 @@ export default function ENEXSystem(){
       .sort((a,b)=>String(b.id).localeCompare(String(a.id))).slice(0,MAX).map(g=>({k:g.id,
         izq:<><span style={{...mono,color:"var(--purple)"}}>{g.id}</span><div style={{fontSize:13,color:"var(--t3)"}}>{g.destino||"—"} · {g.tipoEnvio||"—"} · {(g.containers||[]).length} cont. · {g.totalWR||0} WR</div></>,
         estado:<span style={{fontSize:12,color:"var(--t2)",fontWeight:600}}>{g.status||"—"}</span>,
-        acc:<>{btn("📄 Guía",()=>printGuiaArchivada(g))}{btn("🏷️ Etiquetas",()=>setShowConsolLabels({guia:g,containers:g.containers||[],remitente:empresaNombre||"ENEX"}))}</>}));
+        acc:<>{btn("📄 Guía",()=>printGuiaArchivada(g))}{btn("🏷️ Etiquetas",()=>setShowConsolLabels({guia:g,containers:g.containers||[],remitente:empresaNombre}))}</>}));
     if(tipo==="entrega")filas=deliveryNotes.filter(n=>tocaVis(n.wrIds)&&hay(`${n.id} ${n.receptorNombre||""} ${n.consignatario||""} ${n.guiaId||""} ${(n.wrIds||[]).join(" ")}`))
       .sort(porFecha).slice(0,MAX).map(n=>({k:n.id,
         izq:<><span style={{...mono,color:"var(--navy)"}}>{n.id}</span><div style={{fontSize:13,color:"var(--t3)"}}>{fmtDate(n.fecha)} · {n.receptorEntidad?.nombre||n.receptorNombre||n.consignatario||"—"} · {(n.wrIds||[]).length} WR{n.guiaId?` · guía ${n.guiaId}`:""}</div></>,
@@ -6079,19 +6082,24 @@ export default function ENEXSystem(){
   // ── DOCUMENTOS ────────────────────────────────────────────────────────────────
   // Factura comercial / proforma (formato por país de destino), declaración de contenido,
   // lista de empaque y autorización de inspección / carta de instrucciones, a partir de un WR.
-  const FC_DEFAULT={tituloPro:"FACTURA PROFORMA",tituloCom:"FACTURA COMERCIAL",idioma:"bi",idLabel:"ID / Tax ID",hs:"si",origenMerc:"si",incoterm:"DAP",moneda:"USD",
-    declaracion:"Declaro que la información contenida en esta factura es verdadera y correcta, y que el contenido de este envío es el aquí indicado."};
-  const DOC_TXT_DEFAULT={
-    declaracion:"Yo, {REMITENTE}, declaro bajo fe de juramento que el contenido de este envío corresponde a lo descrito en este documento, que es de lícita procedencia y que no contiene dinero en efectivo, armas, municiones, explosivos, drogas o sustancias controladas, materiales peligrosos, mercancía perecedera ni ningún otro artículo prohibido o restringido por las leyes del país de origen, de tránsito o de destino. Asumo toda la responsabilidad legal por la veracidad de esta declaración.",
-    autorizacion:"Yo, {REMITENTE}, autorizo a {EMPRESA} y a sus agentes a abrir, inspeccionar y verificar el contenido de mis envíos, y a preparar y presentar en mi nombre la documentación de exportación, aduana y transporte que sea necesaria. Instruyo a {EMPRESA} a transportar mis envíos según el servicio contratado y declaro conocer y aceptar sus términos y condiciones. Esta autorización es válida para todos mis envíos hasta que la revoque por escrito.",
+  const DOC_DEF={
+    empresa:{razon:"",dir:"",tel:"",email:"",idFiscal:""},
+    exp:{notaLegal:"",
+      declaracion:"Yo, {REMITENTE}, declaro bajo fe de juramento que el contenido de este envío corresponde a lo descrito en este documento, que es de lícita procedencia y que no contiene dinero en efectivo, armas, municiones, explosivos, drogas o sustancias controladas, materiales peligrosos, mercancía perecedera ni ningún otro artículo prohibido o restringido por las leyes del país de origen, de tránsito o de destino. Asumo toda la responsabilidad legal por la veracidad de esta declaración.",
+      autorizacion:"Yo, {REMITENTE}, autorizo a {EMPRESA} y a sus agentes a abrir, inspeccionar y verificar el contenido de mis envíos, y a preparar y presentar en mi nombre la documentación de exportación, aduana y transporte que sea necesaria. Instruyo a {EMPRESA} a transportar mis envíos según el servicio contratado y declaro conocer y aceptar sus términos y condiciones. Esta autorización es válida para todos mis envíos hasta que la revoque por escrito."},
+    imp:{tituloPro:"FACTURA PROFORMA",tituloCom:"FACTURA COMERCIAL",idioma:"bi",idLabel:"ID / Tax ID",hs:"si",origenMerc:"si",incoterm:"DAP",moneda:"USD",
+      declaracion:"Declaro que la información contenida en esta factura es verdadera y correcta, y que el contenido de este envío es el aquí indicado."},
   };
+  const docPaisKey=pais=>{const P=paisCanon(pais);return P?Object.keys(docPais).find(x=>x!=="_default"&&paisCanon(x)===P)||"":"";};
+  const sinVacios=o=>Object.fromEntries(Object.entries(o||{}).filter(([,v])=>v!==""&&v!=null));
+  // Valores efectivos de una sección para un país: base del sistema → predeterminado → país
+  const docCfg=(pais,sec)=>{const k=docPaisKey(pais);
+    const base={...DOC_DEF[sec],...(sec==="exp"?{notaLegal:NOTA_LEGAL_DEFAULT}:{})};
+    return {...base,...sinVacios(docPais._default?.[sec]),...sinVacios(k?docPais[k]?.[sec]:null),_pais:k};};
+  const fmtFCDe=pais=>docCfg(pais,"imp");
   const MOTIVOS_FC=["Venta","Regalo","Muestra sin valor comercial","Efectos personales","Uso personal","Devolución / reparación"];
   const INCOTERMS=["DAP","DDP","EXW","FCA","FOB","CPT","CIF"];
   const nomPais=v=>String(v||"").replace(/[^\p{L}\s.-]/gu,"").trim();
-  const fmtFCDe=pais=>{const P=paisCanon(pais);const k=Object.keys(fmtFC).find(x=>x!=="_default"&&paisCanon(x)===P);
-    const fmt={...FC_DEFAULT,...Object.fromEntries(Object.entries(fmtFC._default||{}).filter(([,v])=>v!==""&&v!=null)),
-      ...Object.fromEntries(Object.entries(k?fmtFC[k]:{}).filter(([,v])=>v!==""&&v!=null))};
-    return {...fmt,_pais:k||""};};
   const guiaDeWR=w=>consolList.find(g=>(g.containers||[]).some(ct=>(ct.wr||[]).some(x=>x.id===w.id)));
   const docLineasDeWR=w=>{
     const dims=w.dims||[];const m=new Map();
@@ -6104,8 +6112,8 @@ export default function ENEXSystem(){
     return lineas.map(x=>({cantidad:String(x.cantidad),descripcion:x.descripcion,hs:"",origen:x.origen,pesoKg:String(r2(x.pesoKg)),valorUnit:String(r2(x.cantidad?x.valor/x.cantidad:0))}));
   };
   const docRemitente=w=>{
-    const rem=String(w.shipper||"").trim();const esEmp=!rem||sinAcentos(rem)===sinAcentos(empresaNombre||"");const E=docTextos.empresa||{};
-    if(esEmp)return {nombre:empresaNombre||"",dir:E.dir||"",tel:E.tel||"",email:E.email||"",doc:E.idFiscal||""};
+    const rem=String(w.shipper||"").trim();const esEmp=!rem||sinAcentos(rem)===sinAcentos(empresaNombre||"");const E=docCfg(w.origCountry,"empresa");
+    if(esEmp)return {nombre:E.razon||empresaNombre||"",dir:E.dir||"",tel:E.tel||"",email:E.email||"",doc:E.idFiscal||""};
     const c=w.remitenteId?clients.find(x=>x.id===w.remitenteId):null;
     return {nombre:rem,dir:w.remitenteDir||(c?[c.dir,c.municipio,c.estado,c.pais].filter(Boolean).join(", "):""),tel:w.remitenteTel||c?.tel1||"",email:w.remitenteEmail||c?.email||"",doc:w.remitenteDoc||c?.cedula||""};
   };
@@ -6118,7 +6126,7 @@ export default function ENEXSystem(){
   };
   const docHTML=ed=>{
     const w=ed.wr;const e=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
-    const fmt=fmtFCDe(w.destCountry);const R=docRemitente(w),D=docDestinatario(w);const g=guiaDeWR(w);const E=docTextos.empresa||{};
+    const fmt=fmtFCDe(w.destCountry);const R=docRemitente(w),D=docDestinatario(w);const g=guiaDeWR(w);const E=docCfg(w.origCountry,"empresa");const X=docCfg(w.origCountry,"exp");
     const T=(es,en)=>fmt.idioma==="en"&&ed.tipo==="factura"?en:fmt.idioma==="bi"&&ed.tipo==="factura"?`${es} / <i>${en}</i>`:es;
     const reemp=t=>String(t||"").split("{EMPRESA}").join(empresaNombre||"").split("{REMITENTE}").join(R.nombre||"________________");
     const css=`*{box-sizing:border-box}body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:0;padding:24px;font-size:12px}
@@ -6129,7 +6137,7 @@ export default function ENEXSystem(){
       table{width:100%;border-collapse:collapse;margin-bottom:10px}th{background:#1A2B4A;color:#fff;padding:5px 6px;text-align:left;font-size:11px}td{border-bottom:1px solid #ccc;padding:5px 6px}
       .tot td{font-weight:800;border-top:2px solid #1A2B4A}.firma{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:40px}.firma div{border-top:1px solid #000;padding-top:4px;text-align:center;font-size:11px}
       .nota{font-size:11px;margin:8px 0;text-align:justify}`;
-    const cab=(titulo,num)=>`<div class="hd"><div><h1>${e(empresaNombre||"")}</h1><div>${e([E.dir,E.tel,E.email].filter(Boolean).join(" · "))}</div>${E.idFiscal?`<div>${e(E.idFiscal)}</div>`:""}</div>
+    const cab=(titulo,num)=>`<div class="hd"><div><h1>${e(E.razon||empresaNombre||"")}</h1><div>${e([E.dir,E.tel,E.email].filter(Boolean).join(" · "))}</div>${E.idFiscal?`<div>${e(E.idFiscal)}</div>`:""}</div>
       <div><h2>${titulo}</h2><div class="r">${num?`N° <b>${e(num)}</b><br>`:""}${T("Fecha","Date")}: ${fmtDate(new Date())}<br>WR: <b>${e(w.id)}</b>${g?`<br>${T("Guía","Airway bill")}: ${e(g.id)}${g.awb?` · AWB ${e(g.awb)}`:""}${g.bl?` · BL ${e(g.bl)}`:""}`:""}</div></div></div>`;
     const partes=`<div class="g2"><div class="box"><b class="t">${T("Remitente","Shipper")}</b><b>${e(R.nombre)}</b><br>${e(R.dir)}<br>${e([R.tel,R.email].filter(Boolean).join(" · "))}${R.doc?`<br>ID: ${e(R.doc)}`:""}</div>
       <div class="box"><b class="t">${T("Destinatario","Consignee")}</b><b>${e(D.nombre)}</b>${D.casillero?` · #${e(D.casillero)}`:""}<br>${e(D.dir)}<br>${e([D.tel,D.email].filter(Boolean).join(" · "))}<br>${e(fmt.idLabel)}: ${e(D.doc||"________________")}</div></div>`;
@@ -6168,13 +6176,13 @@ export default function ENEXSystem(){
         <table><thead><tr><th>Cant.</th><th>Descripción del contenido</th><th class="r">Valor</th></tr></thead><tbody>
         ${L.map(x=>`<tr><td>${e(x.cantidad)}</td><td>${e(x.descripcion)}</td><td class="r">${fmtMoney((parseFloat(x.cantidad)||0)*(parseFloat(x.valorUnit)||0),mon)}</td></tr>`).join("")}
         <tr class="tot"><td colspan="2" class="r">Valor total declarado</td><td class="r">${fmtMoney(sum,mon)}</td></tr></tbody></table>
-        <div class="nota" style="font-size:13px">${e(reemp(docTextos.declaracion||DOC_TXT_DEFAULT.declaracion))}</div>
+        <div class="nota" style="font-size:13px">${e(reemp(X.declaracion))}</div>
         <div class="firma"><div>Firma del remitente<br>${e(R.nombre)}</div><div>ID: ${e(R.doc||"________________")}<br>Fecha: ____/____/______</div></div>${pie}</body></html>`;
     }
     return `<html><head><meta charset="utf-8"><title>Autorización ${e(R.nombre)}</title><style>${css}</style></head><body>
       ${cab("AUTORIZACIÓN DE INSPECCIÓN<br><span style='font-size:13px'>Y CARTA DE INSTRUCCIONES</span>","")}
       <div class="box" style="margin-bottom:12px"><b class="t">Remitente</b><b>${e(R.nombre)}</b><br>${e(R.dir)}<br>${e([R.tel,R.email].filter(Boolean).join(" · "))}<br>ID: ${e(R.doc||"________________")}</div>
-      <div class="nota" style="font-size:14px;line-height:1.6">${e(reemp(docTextos.autorizacion||DOC_TXT_DEFAULT.autorizacion))}</div>
+      <div class="nota" style="font-size:14px;line-height:1.6">${e(reemp(X.autorizacion))}</div>
       <div class="firma"><div>Firma del remitente<br>${e(R.nombre)}</div><div>Fecha: ____/____/______</div></div>${pie}</body></html>`;
   };
   const docImprimir=ed=>{const w=window.open("","_blank","width=900,height=1100");if(!w){window.alert("El navegador bloqueó la ventana de impresión.");return;}
@@ -6182,85 +6190,64 @@ export default function ENEXSystem(){
   const DOC_TIPOS=[["factura","🧾 Factura comercial / proforma"],["declaracion","📝 Declaración de contenido"],["empaque","📦 Lista de empaque"],["autorizacion","✍️ Autorización e instrucciones"]];
 
   const renderDocs=()=>{
-    const puedeFmt=hasPerm("editar_documento")||hasPerm("configuracion");
-    const TABS=puedeFmt?[["formatos","🌎 Formatos por país"],["textos","⚙️ Empresa y textos"]]:[];
-    if(!TABS.length)return <div className="page-scroll"><div className="card" style={{textAlign:"center",padding:40,color:"var(--t3)"}}>Tu rol no tiene permiso para editar formatos.</div></div>;
-    const tab=TABS.some(t=>t[0]===docsTab)?docsTab:"formatos";
+    const puede=hasPerm("editar_documento")||hasPerm("configuracion");
+    if(!puede)return <div className="page-scroll"><div className="card" style={{textAlign:"center",padding:40,color:"var(--t3)"}}>Tu rol no tiene permiso para editar documentos.</div></div>;
+    const Q=sinAcentos(paisQ.trim());
+    const lista=[{k:"_default",l:"Predeterminado (todos los países)"},...COUNTRIES.map(c=>({k:c.name,l:c.name}))].filter(o=>o.k==="_default"||!Q||sinAcentos(o.l).includes(Q));
+    const sel=paisSel, sec=paisSec;
+    const guardado=docPais[sel]||{};
+    const v=paisDraft&&paisDraft.pais===sel?paisDraft.v:guardado;
+    const vs=v[sec]||{};
+    const setV=x=>setPaisDraft({pais:sel,v:{...v,[sec]:{...vs,...x}}});
+    // Lo que se hereda si se deja vacío
+    const heredado=sel==="_default"?{...DOC_DEF[sec],...(sec==="exp"?{notaLegal:NOTA_LEGAL_DEFAULT}:{}),...(sec==="empresa"?{razon:empresaNombre}:{})}
+      :{...DOC_DEF[sec],...(sec==="exp"?{notaLegal:NOTA_LEGAL_DEFAULT}:{}),...(sec==="empresa"?{razon:empresaNombre}:{}),...sinVacios(docPais._default?.[sec])};
+    const inp=(k,l)=><div className="fg"><div className="fl">{l}</div><input className="fi" style={{textTransform:"none"}} value={vs[k]??""} placeholder={String(heredado[k]??"")} onChange={e=>setV({[k]:e.target.value})}/></div>;
+    const area=(k,l,rows=5)=><div className="fg full" style={{marginBottom:10}}><div className="fl">{l}</div><textarea className="fi" rows={rows} style={{width:"100%",resize:"vertical",textTransform:"none"}} value={vs[k]??""} placeholder={String(heredado[k]??"")} onChange={e=>setV({[k]:e.target.value})}/></div>;
+    const selF=(k,l,ops)=><div className="fg"><div className="fl">{l}</div><select className="fs" value={vs[k]??""} onChange={e=>setV({[k]:e.target.value})}>
+      <option value="">{`Igual a ${sel==="_default"?"la base":"el predeterminado"} (${(ops.find(o=>o[0]===heredado[k])||[0,heredado[k]||"—"])[1]})`}</option>{ops.map(([a,b])=><option key={a} value={a}>{b}</option>)}</select></div>;
+    const limpiar=o=>Object.fromEntries(Object.entries(o||{}).map(([s2,x])=>[s2,sinVacios(x)]).filter(([,x])=>Object.keys(x).length));
+    const cambiado=JSON.stringify(limpiar(v))!==JSON.stringify(limpiar(guardado));
+    const guardar=async()=>{const n={...docPais};const lv=limpiar(v);if(Object.keys(lv).length)n[sel]=lv;else delete n[sel];
+      const ok=await dbSetConfig('documentos_pais',n);if(ok===false){window.alert("No se pudo guardar.");return;}
+      setDocPais(n);setPaisDraft(null);logAction("Editó documentos por país",sel==="_default"?"Predeterminado":sel);};
+    const SECS=[["empresa","🏢 Empresa en el país"],["exp","📤 Exportación (sale de aquí)"],["imp","📥 Importación (llega aquí)"]];
+    const tiene=k=>docPais[k]?SECS.filter(([s2])=>docPais[k][s2]&&Object.keys(docPais[k][s2]).length).map(([s2])=>s2.toUpperCase()).join(" · "):"";
     return(
     <div className="page-scroll">
-      <div style={{display:"flex",gap:3,background:"var(--bg4)",borderRadius:8,padding:3,border:"1px solid var(--b1)",marginBottom:12}}>
-        {TABS.map(([k,l])=><button key={k} onClick={()=>setDocsTab(k)} style={{flex:1,padding:"8px 10px",borderRadius:6,border:"none",cursor:"pointer",fontSize:14,fontWeight:600,background:tab===k?"var(--navy)":"transparent",color:tab===k?"#fff":"var(--t2)"}}>{l}</button>)}
+      <div style={{display:"grid",gridTemplateColumns:"280px minmax(0,1fr)",gap:14,alignItems:"start"}}>
+        <div className="card" style={{padding:0,overflow:"hidden"}}>
+          <div style={{padding:8,borderBottom:"1px solid var(--b1)",background:"var(--bg3)"}}><input className="fi" style={{fontSize:13,padding:"6px 8px"}} placeholder="Buscar país…" value={paisQ} onChange={e=>setPaisQ(e.target.value)}/></div>
+          <div style={{maxHeight:560,overflowY:"auto"}}>{lista.map(o=>{const on=o.k===sel;const t=tiene(o.k);return(
+            <div key={o.k} onClick={()=>{if(cambiado&&!window.confirm("Hay cambios sin guardar. ¿Descartarlos?"))return;setPaisSel(o.k);setPaisDraft(null);}} style={{padding:"9px 12px",cursor:"pointer",borderBottom:"1px solid var(--b2)",background:on?"var(--navy)":"transparent",color:on?"#fff":"var(--t1)"}}>
+              <div style={{fontSize:14,fontWeight:on?700:600}}>{o.l}</div>{t&&<div style={{fontSize:11,opacity:.75}}>✓ {t}</div>}</div>);})}</div>
+        </div>
+        <div className="card">
+          <div style={{fontSize:17,fontWeight:700,color:"var(--navy)",marginBottom:10}}>🌎 {sel==="_default"?"Predeterminado":sel}</div>
+          <div style={{display:"flex",gap:3,background:"var(--bg4)",borderRadius:8,padding:3,border:"1px solid var(--b1)",marginBottom:12,flexWrap:"wrap"}}>
+            {SECS.map(([k,l])=><button key={k} onClick={()=>setPaisSec(k)} style={{flex:"1 1 160px",padding:"7px 10px",borderRadius:6,border:"none",cursor:"pointer",fontSize:13,fontWeight:600,background:sec===k?"var(--navy)":"transparent",color:sec===k?"#fff":"var(--t2)"}}>{l}</button>)}
+          </div>
+          {sec==="empresa"&&<div className="fgrid g2" style={{gap:10}}>{inp("razon","Razón social")}{inp("idFiscal","ID fiscal")}{inp("dir","Dirección")}{inp("tel","Teléfono")}{inp("email","Email")}</div>}
+          {sec==="exp"&&<>{area("notaLegal","Nota legal del WR",4)}{area("declaracion","Declaración de contenido")}{area("autorizacion","Autorización de inspección y carta de instrucciones")}
+            <div style={{fontSize:13,color:"var(--t3)"}}>{"{EMPRESA}"} · {"{REMITENTE}"}</div></>}
+          {sec==="imp"&&<>
+            <div className="fgrid g2" style={{gap:10,marginBottom:10}}>
+              {inp("tituloPro","Título proforma")}{inp("tituloCom","Título comercial (venta)")}
+              {selF("idioma","Idioma de la factura",[["es","Español"],["en","Inglés"],["bi","Bilingüe"]])}
+              {inp("idLabel","Documento del destinatario")}
+              {selF("hs","Código arancelario",[["si","Mostrar"],["no","No mostrar"]])}
+              {selF("origenMerc","País de origen de la mercancía",[["si","Mostrar"],["no","No mostrar"]])}
+              {selF("incoterm","Incoterm",INCOTERMS.map(x=>[x,x]))}
+              {selF("moneda","Moneda",[["USD","USD"],["EUR","EUR"]])}
+            </div>
+            {area("declaracion","Declaración al pie de la factura",3)}</>}
+          <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:6}}>
+            {sel!=="_default"&&docPais[sel]&&<button className="btn-s" onClick={()=>{if(window.confirm(`¿Quitar todo lo propio de ${sel} y usar el predeterminado?`))setPaisDraft({pais:sel,v:{}});}}>Usar el predeterminado</button>}
+            {cambiado&&<button className="btn-s" onClick={()=>setPaisDraft(null)}>Descartar</button>}
+            <button className="btn-p" disabled={!cambiado} onClick={guardar}>💾 Guardar</button>
+          </div>
+        </div>
       </div>
-
-      {tab==="formatos"&&(()=>{
-        const Q=sinAcentos((fmtDraft?.q||"").trim());
-        const paises=[{k:"_default",l:"Predeterminado (todos los países)"},...COUNTRIES.map(c=>({k:c.name,l:c.name}))].filter(o=>o.k==="_default"||!Q||sinAcentos(o.l).includes(Q));
-        const sel=fmtSel;const guardado=fmtFC[sel]||{};
-        const v=fmtDraft&&fmtDraft.pais===sel?fmtDraft.v:guardado;
-        const set=x=>setFmtDraft(d=>({...(d||{}),pais:sel,v:{...v,...x}}));
-        const base=sel==="_default"?FC_DEFAULT:{...FC_DEFAULT,...Object.fromEntries(Object.entries(fmtFC._default||{}).filter(([,x])=>x!==""))};
-        const campo=(k,l,tipo="text")=>(<div className="fg"><div className="fl">{l}</div>
-          {tipo==="sel"?null:<input className="fi" value={v[k]??""} placeholder={String(base[k]??"")} onChange={e=>set({[k]:e.target.value})}/>}</div>);
-        const selF=(k,l,ops)=>(<div className="fg"><div className="fl">{l}</div><select className="fs" value={v[k]??""} onChange={e=>set({[k]:e.target.value})}>
-          <option value="">{sel==="_default"?"—":`Igual al predeterminado (${(ops.find(o=>o[0]===base[k])||[0,base[k]])[1]})`}</option>{ops.map(([a,b])=><option key={a} value={a}>{b}</option>)}</select></div>);
-        const cambiado=JSON.stringify(v)!==JSON.stringify(guardado);
-        const guardar=async()=>{const limpio=Object.fromEntries(Object.entries(v).filter(([,x])=>x!==""&&x!=null));const n={...fmtFC};
-          if(Object.keys(limpio).length)n[sel]=limpio;else delete n[sel];
-          const ok=await dbSetConfig('formatos_factura',n);if(ok===false){window.alert("No se pudo guardar.");return;}
-          setFmtFC(n);setFmtDraft(null);logAction("Editó formato de factura",sel==="_default"?"Predeterminado":sel);};
-        return(
-          <div style={{display:"grid",gridTemplateColumns:"280px minmax(0,1fr)",gap:14,alignItems:"start"}}>
-            <div className="card" style={{padding:0,overflow:"hidden"}}>
-              <div style={{padding:8,borderBottom:"1px solid var(--b1)",background:"var(--bg3)"}}><input className="fi" style={{fontSize:13,padding:"6px 8px"}} placeholder="Buscar país…" value={fmtDraft?.q||""} onChange={e=>setFmtDraft(d=>({...(d||{}),q:e.target.value}))}/></div>
-              <div style={{maxHeight:520,overflowY:"auto"}}>{paises.map(o=>{const on=o.k===sel;return(
-                <div key={o.k} onClick={()=>{setFmtSel(o.k);setFmtDraft(d=>({q:d?.q||""}));}} style={{padding:"9px 12px",cursor:"pointer",borderBottom:"1px solid var(--b2)",display:"flex",justifyContent:"space-between",gap:8,background:on?"var(--navy)":"transparent",color:on?"#fff":"var(--t1)",fontWeight:on?700:500,fontSize:14}}>
-                  <span>{o.l}</span>{o.k!=="_default"&&fmtFC[o.k]&&<span style={{fontSize:12,opacity:.8}}>✓ propio</span>}</div>);})}</div>
-            </div>
-            <div className="card">
-              <div style={{fontSize:16,fontWeight:700,color:"var(--navy)",marginBottom:10}}>🧾 {sel==="_default"?"Formato predeterminado":sel}</div>
-              <div className="fgrid g2" style={{gap:10,marginBottom:10}}>
-                {campo("tituloPro","Título proforma")}{campo("tituloCom","Título comercial (venta)")}
-                {selF("idioma","Idioma",[["es","Español"],["en","Inglés"],["bi","Bilingüe"]])}
-                {campo("idLabel","Documento del destinatario")}
-                {selF("hs","Código arancelario",[["si","Mostrar"],["no","No mostrar"]])}
-                {selF("origenMerc","País de origen de la mercancía",[["si","Mostrar"],["no","No mostrar"]])}
-                {selF("incoterm","Incoterm",INCOTERMS.map(x=>[x,x]))}
-                {selF("moneda","Moneda",[["USD","USD"],["EUR","EUR"]])}
-              </div>
-              <div className="fg"><div className="fl">Declaración al pie</div><textarea className="fi" rows={4} value={v.declaracion??""} placeholder={base.declaracion} onChange={e=>set({declaracion:e.target.value})} style={{resize:"vertical",textTransform:"none"}}/></div>
-              <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:10}}>
-                {sel!=="_default"&&fmtFC[sel]&&<button className="btn-s" onClick={()=>{if(window.confirm(`¿Quitar el formato propio de ${sel}?`)){setFmtDraft({pais:sel,v:{},q:fmtDraft?.q||""});}}}>Usar el predeterminado</button>}
-                {cambiado&&<button className="btn-s" onClick={()=>setFmtDraft(d=>({q:d?.q||""}))}>Descartar</button>}
-                <button className="btn-p" disabled={!cambiado} onClick={guardar}>💾 Guardar</button>
-              </div>
-            </div>
-          </div>);
-      })()}
-
-      {tab==="textos"&&(()=>{
-        const D=docTxtDraft||{empresa:{...(docTextos.empresa||{})},declaracion:docTextos.declaracion||"",autorizacion:docTextos.autorizacion||""};
-        const set=x=>setDocTxtDraft({...D,...x});
-        const guardar=async()=>{const n={empresa:D.empresa,declaracion:D.declaracion.trim(),autorizacion:D.autorizacion.trim()};
-          const ok=await dbSetConfig('documentos_textos',n);if(ok===false){window.alert("No se pudo guardar.");return;}
-          setDocTextos(n);setDocTxtDraft(null);logAction("Editó textos de documentos","");};
-        return(
-          <div className="card">
-            <div className="sdiv" style={{marginTop:0}}>DATOS DE LA EMPRESA EN LOS DOCUMENTOS</div>
-            <div className="fgrid g2" style={{gap:10,marginBottom:14}}>
-              {[["dir","Dirección"],["tel","Teléfono"],["email","Email"],["idFiscal","ID fiscal (RIF, EIN, NIF…)"]].map(([k,l])=>(
-                <div key={k} className="fg"><div className="fl">{l}</div><input className="fi" value={D.empresa[k]||""} onChange={e=>set({empresa:{...D.empresa,[k]:e.target.value}})} style={{textTransform:"none"}}/></div>))}
-            </div>
-            <div className="sdiv">DECLARACIÓN DE CONTENIDO</div>
-            <textarea className="fi" rows={5} value={D.declaracion} placeholder={DOC_TXT_DEFAULT.declaracion} onChange={e=>set({declaracion:e.target.value})} style={{width:"100%",resize:"vertical",textTransform:"none",marginBottom:12}}/>
-            <div className="sdiv">AUTORIZACIÓN DE INSPECCIÓN Y CARTA DE INSTRUCCIONES</div>
-            <textarea className="fi" rows={5} value={D.autorizacion} placeholder={DOC_TXT_DEFAULT.autorizacion} onChange={e=>set({autorizacion:e.target.value})} style={{width:"100%",resize:"vertical",textTransform:"none"}}/>
-            <div style={{fontSize:13,color:"var(--t3)",marginTop:6}}>{"{EMPRESA}"} = nombre de la empresa · {"{REMITENTE}"} = nombre del remitente</div>
-            <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:10}}>
-              {docTxtDraft&&<button className="btn-s" onClick={()=>setDocTxtDraft(null)}>Descartar</button>}
-              <button className="btn-p" disabled={!docTxtDraft} onClick={guardar}>💾 Guardar</button>
-            </div>
-          </div>);
-      })()}
     </div>);
   };
 
@@ -6270,6 +6257,7 @@ export default function ENEXSystem(){
     if(!canAdmin)return <div className="page-scroll"><div className="card" style={{textAlign:"center",padding:60,color:"var(--t3)"}}>Solo Administradores pueden acceder a Configuración.</div></div>;
 
     const CFG_TABS=[
+      {k:"empresa",l:"Empresa",ic:"🏢"},
       {k:"numeracion",l:"Numeración",ic:"🔢"},
       {k:"tipoenvio",l:"Tipo de Envío",ic:"✈️"},
       {k:"servicios",l:"Servicios Adicionales",ic:"⚡"},
@@ -6277,7 +6265,6 @@ export default function ENEXSystem(){
       {k:"pagos",l:"Tipos de Pago",ic:"💳"},
       {k:"contenedores",l:"Tipos de Contenedor",ic:"📦"},
       {k:"paises",l:"Países y Ciudades",ic:"🌎"},
-      {k:"notas",l:"Notas Legales",ic:"📜"},
       {k:"agentes",l:"Agentes",ic:"🤝"},
       {k:"oficinas",l:"Oficinas",ic:"🏢"},
       {k:"tarifas",l:"Tarifas",ic:"💰"},
@@ -6299,6 +6286,37 @@ export default function ENEXSystem(){
         </div>
 
         {/* ── NUMERACIÓN ── */}
+        {cfgTab==="empresa"&&(()=>{
+          const m=marcaDraft||marca;const set=x=>setMarcaDraft({...m,...x});
+          const subirLogo=f=>{if(!f)return;const rd=new FileReader();rd.onload=()=>{const img=new Image();img.onload=()=>{
+            const k=Math.min(1,240/Math.max(img.width,img.height));const c=document.createElement("canvas");c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);
+            c.getContext("2d").drawImage(img,0,0,c.width,c.height);set({logo:c.toDataURL("image/png")});};img.src=rd.result;};rd.readAsDataURL(f);};
+          const guardar=async()=>{const n={nombre:(m.nombre||"").trim(),subtitulo:(m.subtitulo||"").trim(),iniciales:(m.iniciales||"").trim().toUpperCase(),logo:m.logo||""};
+            if(!n.nombre){window.alert("Escribe el nombre de la empresa.");return;}
+            const ok=await dbSetConfig('marca',n);if(ok===false){window.alert("No se pudo guardar.");return;}
+            setMarca(n);setMarcaDraft(null);try{localStorage.setItem("marca",JSON.stringify(n));}catch{/* sin almacenamiento */}logAction("Editó datos de la empresa",n.nombre);};
+          return(
+            <div className="card" style={{maxWidth:720}}>
+              <div style={{display:"flex",gap:20,alignItems:"flex-start",flexWrap:"wrap"}}>
+                <div style={{textAlign:"center"}}>
+                  <div style={{width:120,height:120,border:"1px dashed var(--b1)",borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",background:"var(--bg3)",overflow:"hidden"}}>
+                    {m.logo?<img src={m.logo} alt="" style={{maxWidth:"100%",maxHeight:"100%"}}/>:<span style={{fontSize:32,fontWeight:900,color:"var(--navy)"}}>{(m.iniciales||String(m.nombre||"?").slice(0,2)).toUpperCase()}</span>}
+                  </div>
+                  <label className="btn-s" style={{display:"inline-block",marginTop:8,fontSize:13,cursor:"pointer"}}>📷 Logo<input type="file" accept="image/*" style={{display:"none"}} onChange={e=>subirLogo(e.target.files?.[0])}/></label>
+                  {m.logo&&<div><span style={{fontSize:12,color:"var(--red)",cursor:"pointer"}} onClick={()=>set({logo:""})}>Quitar logo</span></div>}
+                </div>
+                <div style={{flex:1,minWidth:260}}>
+                  <div className="fg" style={{marginBottom:10}}><div className="fl">Nombre de la empresa *</div><input className="fi" value={m.nombre} onChange={e=>set({nombre:e.target.value.toUpperCase()})}/></div>
+                  <div className="fg" style={{marginBottom:10}}><div className="fl">Subtítulo</div><input className="fi" style={{textTransform:"none"}} value={m.subtitulo} placeholder="International Courier" onChange={e=>set({subtitulo:e.target.value})}/></div>
+                  <div className="fg" style={{marginBottom:10,maxWidth:160}}><div className="fl">Iniciales (sin logo)</div><input className="fi" maxLength={4} value={m.iniciales} onChange={e=>set({iniciales:e.target.value.toUpperCase()})}/></div>
+                </div>
+              </div>
+              <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:10}}>
+                {marcaDraft&&<button className="btn-s" onClick={()=>setMarcaDraft(null)}>Descartar</button>}
+                <button className="btn-p" disabled={!marcaDraft} onClick={guardar}>💾 Guardar</button>
+              </div>
+            </div>);
+        })()}
         {cfgTab==="numeracion"&&(
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
             {/* WR */}
@@ -6379,10 +6397,6 @@ export default function ENEXSystem(){
                     </div>
                   ))}
                 </div>
-              </div>
-              <div className="fg" style={{marginTop:12,maxWidth:300}}>
-                <div className="fl">Nombre de la Empresa / Agente en etiquetas</div>
-                <input className="fi" value={empresaNombre} onChange={e=>setEmpresaNombre(e.target.value.toUpperCase())} placeholder="ENEX"/>
               </div>
             </div>
             <div style={{display:"flex",justifyContent:"flex-end",marginTop:16}}>
@@ -6478,47 +6492,6 @@ export default function ENEXSystem(){
         )}
 
         {/* ── PAÍSES Y CIUDADES ── */}
-        {cfgTab==="notas"&&(()=>{
-          const opciones=[{k:"_default",l:"Predeterminada (todos los países)"},...COUNTRIES.map(c=>({k:c.name,l:c.name}))];
-          const sel=notaDraft?.pais||"_default";
-          const guardado=notasLegales[sel]||"";
-          const texto=notaDraft&&notaDraft.pais===sel&&notaDraft.texto!==undefined?notaDraft.texto:(guardado||(sel==="_default"?NOTA_LEGAL_DEFAULT:""));
-          const cambiado=texto!==(guardado||(sel==="_default"?NOTA_LEGAL_DEFAULT:""));
-          const guardar=async(valor)=>{
-            const n={...notasLegales};
-            if(valor&&valor.trim())n[sel]=valor.trim();else delete n[sel];
-            const ok=await dbSetConfig('notas_legales',n);
-            if(ok===false){window.alert("No se pudo guardar la nota. Inténtalo de nuevo.");return;}
-            setNotasLegales(n);setNotaDraft({pais:sel});
-            logAction("Editó nota legal",sel==="_default"?"Predeterminada":sel);
-          };
-          return (
-            <div style={{display:"grid",gridTemplateColumns:"260px minmax(0,1fr)",gap:14}}>
-              <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,overflow:"hidden"}}>
-                {opciones.map(o=>(
-                  <div key={o.k} onClick={()=>setNotaDraft({pais:o.k})}
-                    style={{padding:"10px 14px",cursor:"pointer",borderBottom:"1px solid var(--b2)",fontSize:14,fontWeight:sel===o.k?700:500,
-                      background:sel===o.k?"var(--navy)":"transparent",color:sel===o.k?"#fff":"var(--t1)",display:"flex",justifyContent:"space-between",gap:8}}>
-                    <span>{o.l}</span>
-                    {o.k!=="_default"&&notasLegales[o.k]&&<span style={{fontSize:12,opacity:.8}}>✓ propia</span>}
-                  </div>
-                ))}
-              </div>
-              <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,padding:"14px 16px"}}>
-                <div style={{fontSize:16,fontWeight:700,color:"var(--navy)",marginBottom:4}}>📜 {sel==="_default"?"Nota predeterminada":sel}</div>
-                <div style={{fontSize:13,color:"var(--t3)",marginBottom:10}}>{"{EMPRESA}"} = nombre de la empresa</div>
-                <textarea className="fi" rows={12} value={texto} onChange={e=>setNotaDraft({pais:sel,texto:e.target.value})}
-                  placeholder={notasLegales._default||NOTA_LEGAL_DEFAULT}
-                  style={{width:"100%",resize:"vertical",fontFamily:"inherit",fontSize:14,lineHeight:1.5,textTransform:"none"}}/>
-                <div style={{display:"flex",gap:8,marginTop:10,justifyContent:"flex-end",flexWrap:"wrap"}}>
-                  {sel!=="_default"&&guardado&&<button className="btn-s" onClick={()=>{if(window.confirm(`¿Quitar la nota propia de ${sel}? Usará la predeterminada.`))guardar("");}}>Usar la predeterminada</button>}
-                  {cambiado&&<button className="btn-s" onClick={()=>setNotaDraft({pais:sel})}>Descartar</button>}
-                  <button className="btn-p" disabled={!cambiado} onClick={()=>guardar(texto)}>💾 Guardar</button>
-                </div>
-              </div>
-            </div>
-          );
-        })()}
         {cfgTab==="paises"&&(
           <div style={{display:"grid",gridTemplateColumns:"300px 1fr",gap:14}}>
             {/* Lista de países */}
@@ -7197,7 +7170,7 @@ export default function ENEXSystem(){
         <div style={{background:"var(--navy)",display:"flex",flexDirection:"column",overflow:"hidden"}}>
           <div style={{padding:"14px 12px",borderBottom:"1px solid rgba(255,255,255,.1)"}}>
             <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:18,fontWeight:700,color:"#E5AE3A",letterSpacing:1}}>💬 CHAT INTERNO</div>
-            <div style={{fontSize:13,color:"rgba(255,255,255,.4)",marginTop:2}}>ENEX · {empresaNombre}</div>
+            <div style={{fontSize:13,color:"rgba(255,255,255,.4)",marginTop:2}}>{empresaNombre}</div>
           </div>
           <div style={{flex:1,padding:"8px 6px",overflowY:"auto"}}>
             <div style={{fontSize:11,letterSpacing:2,textTransform:"uppercase",color:"rgba(255,255,255,.3)",padding:"8px 8px 4px",fontWeight:700}}>Canales</div>
@@ -7702,7 +7675,7 @@ export default function ENEXSystem(){
     if(esPrepaid){
       // PREPAID paga el remitente. Si el remitente es la propia empresa (reempaque) o está vacío, paga el dueño de la carga.
       const rem=String(w.remitente||w.shipper||"").trim();
-      const esEmpresa=!rem||[empresaNombre,"ENEX"].filter(Boolean).some(n=>sinAcentos(n)===sinAcentos(rem));
+      const esEmpresa=!rem||[empresaNombre].filter(Boolean).some(n=>sinAcentos(n)===sinAcentos(rem));
       if(!esEmpresa){
         if(w.remitenteId&&!clients.some(c=>c.id===w.remitenteId))return {tipo:"cliente",id:w.remitenteId,snapshot:{nombre:rem,doc:w.remitenteDoc||"",dir:w.remitenteDir||"",tel:w.remitenteTel||"",email:w.remitenteEmail||"",casillero:w._remitenteCas||""}};
         if(w.remitenteId&&clients.some(c=>c.id===w.remitenteId)){const sn=lookupReceptor("cliente",w.remitenteId);
@@ -7858,7 +7831,7 @@ export default function ENEXSystem(){
       @media print{body{padding:0}@page{size:letter portrait;margin:.45in}}
     </style></head><body>
       ${f.status==="anulada"?`<div class="anul">ANULADA${f.motivoAnulacion?` — ${e(f.motivoAnulacion)}`:""}</div>`:""}
-      <div class="hd"><div><div class="emp">${e(empresaNombre||"ENEX")}</div><div>International Courier</div></div>
+      <div class="hd"><div><div class="emp">${e(empresaNombre)}</div><div>${e(marca.subtitulo||"")}</div></div>
         <div style="text-align:right"><div style="font-weight:800">${titulo}</div><div class="num">Nº ${e(f.id)}</div>
           <div>Fecha: ${fmtDate(f.fecha)}</div>${f.fechaEmision?`<div>Emisión: ${fmtDate(f.fechaEmision)}</div>`:""}
           <div>Moneda: ${e(f.moneda)}</div>${f.ncFacturaOrigen?`<div>Ref. factura: ${e(f.ncFacturaOrigen)}</div>`:""}</div></div>
@@ -8260,7 +8233,7 @@ export default function ENEXSystem(){
       @media print{body{padding:0}@page{size:letter portrait;margin:.45in}}
     </style></head><body>
       ${anulado?`<div class="anul">ANULADO</div>`:""}
-      <div class="hd"><div><div class="emp">${e(empresaNombre||"ENEX")}</div><div>International Courier</div></div>
+      <div class="hd"><div><div class="emp">${e(empresaNombre)}</div><div>${e(marca.subtitulo||"")}</div></div>
         <div style="text-align:right"><div style="font-weight:800">RECIBO DE PAGO</div><div class="num">Nº ${e(reciboId)}</div>
           <div>Fecha: ${fmtDate(p0.fecha)} ${fmtTime(p0.fecha)}</div><div>Moneda: ${e(mon)}</div></div></div>
       <div class="box">
@@ -8676,7 +8649,7 @@ export default function ENEXSystem(){
             const st=v=>v>0.004?fmtMoney(v,mon):v<-0.004?`${fmtMoney(-v,mon)} a favor`:"0";
             const w=window.open("","_blank","width=900,height=1100");if(!w){window.alert("El navegador bloqueó la ventana de impresión.");return;}
             w.document.write(`<html><head><title>Estado de cuenta ${e(pg.nombre)}</title><style>body{font-family:Arial,Helvetica,sans-serif;font-size:12px;padding:24px;color:#111}h1{font-size:18px;margin:0}table{width:100%;border-collapse:collapse;margin-top:12px}th,td{border-bottom:1px solid #ddd;padding:5px 6px;text-align:left}th{background:#1A2B4A;color:#fff}.r{text-align:right}.hd{border-bottom:3px solid #1A2B4A;padding-bottom:8px;display:flex;justify-content:space-between}</style></head><body>
-              <div class="hd"><div><h1>${e(empresaNombre||"ENEX")}</h1><div>Estado de cuenta · ${mon}</div></div><div class="r"><b>${e(pg.nombre)}</b><br>${e(TL[pg.tipo]||"Cliente")}${pg.casillero?` · #${e(pg.casillero)}`:""}<br>${fmtDate(new Date())}${ctaDesde||ctaHasta?`<br>Periodo: ${e(ctaDesde||"inicio")} a ${e(ctaHasta||"hoy")}`:""}</div></div>
+              <div class="hd"><div><h1>${e(empresaNombre)}</h1><div>Estado de cuenta · ${mon}</div></div><div class="r"><b>${e(pg.nombre)}</b><br>${e(TL[pg.tipo]||"Cliente")}${pg.casillero?` · #${e(pg.casillero)}`:""}<br>${fmtDate(new Date())}${ctaDesde||ctaHasta?`<br>Periodo: ${e(ctaDesde||"inicio")} a ${e(ctaHasta||"hoy")}`:""}</div></div>
               <table><thead><tr><th>Fecha</th><th>Documento</th><th>Detalle</th><th class="r">Debe</th><th class="r">Haber</th><th class="r">Saldo</th></tr></thead><tbody>
               ${d0?`<tr><td></td><td colspan="4"><b>Saldo anterior</b></td><td class="r">${st(anterior)}</td></tr>`:""}
               ${vis.map(x=>`<tr><td>${fmtDate(x.fecha)}</td><td>${e(x.doc)}</td><td>${e(x.det)}</td><td class="r">${x.debe?fmtMoney(x.debe,mon):""}</td><td class="r">${x.haber?fmtMoney(x.haber,mon):""}</td><td class="r">${st(x.saldo)}</td></tr>`).join("")}
@@ -9043,7 +9016,7 @@ export default function ENEXSystem(){
             const e=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
             const w=window.open("","_blank","width=900,height=1100");if(!w){window.alert("El navegador bloqueó la ventana de impresión.");return;}
             w.document.write(`<html><head><title>Cierre de caja</title><style>body{font-family:Arial,Helvetica,sans-serif;font-size:12px;padding:24px;color:#111}h1{font-size:18px;margin:0}table{width:100%;border-collapse:collapse;margin-top:12px}th,td{border-bottom:1px solid #ddd;padding:5px 6px;text-align:left}th{background:#1A2B4A;color:#fff}.r{text-align:right}</style></head><body>
-              <h1>${e(empresaNombre||"ENEX")} · Cierre de caja</h1><div>${e(cajaDesde)}${cajaHasta&&cajaHasta!==cajaDesde?` a ${e(cajaHasta)}`:""}${cajaUsr?` · ${e(nombreUsr(cajaUsr))}`:""}</div>
+              <h1>${e(empresaNombre)} · Cierre de caja</h1><div>${e(cajaDesde)}${cajaHasta&&cajaHasta!==cajaDesde?` a ${e(cajaHasta)}`:""}${cajaUsr?` · ${e(nombreUsr(cajaUsr))}`:""}</div>
               <table><thead><tr><th>Forma de pago</th><th>Moneda</th><th class="r">Entró</th><th class="r">Salió</th><th class="r">Neto</th></tr></thead><tbody>
               ${filasR.map(r=>`<tr><td>${e(ml(r.metodo))}</td><td>${r.moneda}</td><td class="r">${fmtMoney(r.entra,r.moneda)}</td><td class="r">${fmtMoney(r.sale,r.moneda)}</td><td class="r"><b>${fmtMoney(r.entra-r.sale,r.moneda)}</b></td></tr>`).join("")}
               ${Object.entries(porMon).map(([mn,v])=>`<tr><td><b>TOTAL</b></td><td>${mn}</td><td class="r"><b>${fmtMoney(v.entra,mn)}</b></td><td class="r"><b>${fmtMoney(v.sale,mn)}</b></td><td class="r"><b>${fmtMoney(v.entra-v.sale,mn)}</b></td></tr>`).join("")}
@@ -12011,8 +11984,9 @@ export default function ENEXSystem(){
       {/* SIDEBAR */}
       <div className="sb">
         <div className="sb-logo">
-          <div className="sb-mark">N/X</div>
-          <div><div className="sb-name">E<span>N</span>E<span>X</span></div><div className="sb-sub">Int&apos;l Courier</div></div>
+          {marca.logo?<img src={marca.logo} alt="" style={{width:34,height:34,objectFit:"contain",borderRadius:8,background:"#fff",flexShrink:0}}/>
+            :<div className="sb-mark">{marca.iniciales||String(marca.nombre||"?").slice(0,2).toUpperCase()}</div>}
+          <div style={{minWidth:0}}><div className="sb-name" style={{fontSize:marca.nombre.length>10?15:20,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{marca.nombre||"—"}</div>{marca.subtitulo&&<div className="sb-sub">{marca.subtitulo}</div>}</div>
         </div>
         <nav className="sb-nav">
           {navGroups.map(g=>({...g,items:g.items.filter(navVisible)})).filter(g=>g.items.length>0).map(g=>(
@@ -12249,7 +12223,7 @@ export default function ENEXSystem(){
               </div>
               <div id="cr-recibo-print" style={{padding:24,background:"#fff",color:"#000",fontFamily:"Arial,Helvetica,sans-serif",fontSize:13,lineHeight:1.5}}>
                 <div style={{textAlign:"center",borderBottom:"2px solid #000",paddingBottom:10,marginBottom:14}}>
-                  <div style={{fontSize:22,fontWeight:900,letterSpacing:2}}>{empresaNombre||"ENEX"}</div>
+                  <div style={{fontSize:22,fontWeight:900,letterSpacing:2}}>{empresaNombre}</div>
                   <div style={{fontSize:12,marginTop:4,color:"#444"}}>CARGO RELEASE — COMPROBANTE DE EGRESO</div>
                   <div style={{fontFamily:"'DM Mono',monospace",fontSize:15,fontWeight:700,marginTop:6}}>{_cr.id}</div>
                 </div>
@@ -12280,10 +12254,10 @@ export default function ENEXSystem(){
                 </div>
                 <div style={{marginTop:22,display:"flex",gap:30,paddingTop:20}}>
                   <div style={{flex:1,borderTop:"1px solid #000",paddingTop:6,textAlign:"center",fontSize:11,fontWeight:700}}>Firma del Receptor</div>
-                  <div style={{flex:1,borderTop:"1px solid #000",paddingTop:6,textAlign:"center",fontSize:11,fontWeight:700}}>Firma / Sello ENEX</div>
+                  <div style={{flex:1,borderTop:"1px solid #000",paddingTop:6,textAlign:"center",fontSize:11,fontWeight:700}}>Firma / Sello {empresaNombre}</div>
                 </div>
                 <div style={{marginTop:18,fontSize:10,color:"#666",textAlign:"center",borderTop:"1px dashed #999",paddingTop:8}}>
-                  El receptor certifica haber recibido la mercancía descrita en buenas condiciones. Este documento es comprobante de egreso y libera de responsabilidad a {empresaNombre||"ENEX"}.
+                  El receptor certifica haber recibido la mercancía descrita en buenas condiciones. Este documento es comprobante de egreso y libera de responsabilidad a {empresaNombre}.
                 </div>
               </div>
               <div className="mft no-print">
@@ -12586,7 +12560,7 @@ export default function ENEXSystem(){
       {showConsolLabels&&(()=>{
         const _g=showConsolLabels.guia;
         const _conts=showConsolLabels.containers||[];
-        const _rem=showConsolLabels.remitente||empresaNombre||"ENEX";
+        const _rem=showConsolLabels.remitente||empresaNombre;
         const _total=_conts.length||1;
         const _totalWR=_conts.reduce((s,c)=>s+(c.wr?.length||0),0);
         const _totalCajas=_conts.reduce((s,c)=>s+(c.wr||[]).reduce((a,w)=>a+(w.cajas||1),0),0);
@@ -12858,7 +12832,7 @@ export default function ENEXSystem(){
                 <div className="cr-print" style={{background:"#fff",color:"#000",padding:"24px 28px",fontFamily:"Arial,Helvetica,sans-serif",fontSize:14}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",borderBottom:"2px solid #000",paddingBottom:10,marginBottom:14}}>
                     <div>
-                      <div style={{fontSize:22,fontWeight:900,letterSpacing:2}}>ENEX</div>
+                      <div style={{fontSize:22,fontWeight:900,letterSpacing:2}}>{empresaNombre}</div>
                       <div style={{fontSize:12}}>{empresaNombre||"Int'l Courier"}</div>
                       <div style={{fontSize:11,color:"#555"}}>Nota de Egreso / Cargo Release</div>
                     </div>
@@ -12919,7 +12893,7 @@ export default function ENEXSystem(){
 
                   <div style={{display:"flex",justifyContent:"space-between",gap:40,marginTop:40}}>
                     <div style={{flex:1,textAlign:"center"}}>
-                      <div style={{borderTop:"1px solid #000",paddingTop:4,fontSize:12,fontWeight:700}}>Entrega ENEX</div>
+                      <div style={{borderTop:"1px solid #000",paddingTop:4,fontSize:12,fontWeight:700}}>Entrega {empresaNombre}</div>
                       <div style={{fontSize:11,color:"#555",marginTop:2}}>Firma y sello</div>
                     </div>
                     <div style={{flex:1,textAlign:"center"}}>
@@ -13384,7 +13358,7 @@ export default function ENEXSystem(){
                 <div className="dn-print" style={{background:"#fff",color:"#000",padding:"24px 28px",fontFamily:"Arial,Helvetica,sans-serif",fontSize:14}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",borderBottom:"2px solid #000",paddingBottom:10,marginBottom:14}}>
                     <div>
-                      <div style={{fontSize:22,fontWeight:900,letterSpacing:2}}>ENEX</div>
+                      <div style={{fontSize:22,fontWeight:900,letterSpacing:2}}>{empresaNombre}</div>
                       <div style={{fontSize:12}}>{empresaNombre||"Int'l Courier"}</div>
                       <div style={{fontSize:11,color:"#555"}}>Nota de {esDespacho?"Despacho a Agente / Oficina / Autónomo":"Entrega al Cliente"}</div>
                     </div>
@@ -13517,12 +13491,12 @@ export default function ENEXSystem(){
                   </table>
 
                   <div style={{border:"1px solid #000",padding:"8px 10px",fontSize:12,background:"#FAFAFA",marginBottom:30}}>
-                    <b>DECLARACIÓN DE RECEPCIÓN:</b> El receptor declara haber recibido conforme, en buen estado y en la cantidad indicada, la mercancía descrita en esta nota. Cualquier discrepancia o daño visible debe ser reportado al momento de la firma. Una vez firmada, ENEX queda liberado de toda responsabilidad sobre la custodia de la mercancía listada.
+                    <b>DECLARACIÓN DE RECEPCIÓN:</b> El receptor declara haber recibido conforme, en buen estado y en la cantidad indicada, la mercancía descrita en esta nota. Cualquier discrepancia o daño visible debe ser reportado al momento de la firma. Una vez firmada, {empresaNombre} queda liberado de toda responsabilidad sobre la custodia de la mercancía listada.
                   </div>
 
                   <div style={{display:"flex",justifyContent:"space-between",gap:40,marginTop:40}}>
                     <div style={{flex:1,textAlign:"center"}}>
-                      <div style={{borderTop:"1px solid #000",paddingTop:4,fontSize:12,fontWeight:700}}>{esDespacho?"Despacha":"Entrega ENEX"}</div>
+                      <div style={{borderTop:"1px solid #000",paddingTop:4,fontSize:12,fontWeight:700}}>{esDespacho?"Despacha":`Entrega ${empresaNombre}`}</div>
                       <div style={{fontSize:11,color:"#555",marginTop:2}}>{esDespacho&&dn.receptorEntidad?.despacha?dn.receptorEntidad.despacha:"Firma y sello"}</div>
                     </div>
                     {esDespacho&&<div style={{flex:1,textAlign:"center"}}>
@@ -13995,7 +13969,7 @@ export default function ENEXSystem(){
             <div className="mbd" style={{maxHeight:"78vh",overflow:"auto"}}>
               <div style={{background:"#fff",color:"#000",padding:"24px 28px",fontFamily:"Arial,Helvetica,sans-serif",fontSize:14}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",borderBottom:"2px solid #000",paddingBottom:10,marginBottom:14}}>
-                  <div><div style={{fontSize:22,fontWeight:800}}>{empresaNombre||"ENEX"}</div><div style={{fontSize:16,fontWeight:700,marginTop:4}}>SOLICITUD DE PICK-UP</div>
+                  <div><div style={{fontSize:22,fontWeight:800}}>{empresaNombre}</div><div style={{fontSize:16,fontWeight:700,marginTop:4}}>SOLICITUD DE PICK-UP</div>
                     <div style={{fontSize:12,marginTop:4}}>Solicitado: {fmtDate(p.fecha)} {fmtTime(p.fecha)}{p.solicitanteNombre?` · por ${p.solicitanteNombre}`:""}</div></div>
                   <div style={{textAlign:"right"}}><div style={{fontSize:24,fontWeight:800,fontFamily:"'DM Mono',monospace"}}>{p.id}</div>
                     <div style={{display:"flex",justifyContent:"flex-end",marginTop:4}}><WRBarcode value={p.id} height={42} width={1.8}/></div>
