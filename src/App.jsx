@@ -7,6 +7,10 @@ import { supabase, resolverLogin, cuentaGuardar, cuentaEliminar, dbGetClientes, 
 
 // ─── TEMA CLARO PROFESIONAL ───────────────────────────────────────────────────
 const S = `
+.ico{width:1.05em;height:1.05em;display:inline-block;vertical-align:-.16em;flex-shrink:0}
+.ico-sp{margin-right:.4em}
+.ico-solo{vertical-align:-.18em}
+
 @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500;600&display=swap');
 *{box-sizing:border-box;margin:0;padding:0;font-family:Arial,Helvetica,sans-serif}
 :root{
@@ -556,31 +560,31 @@ const PERM_LBL={
 
 // Tabla de Roles & Permisos: cada módulo con sus 4 acciones
 const PERM_MODULES=[
-  {m:"Usuarios",ic:"👤",ver:"ver_usuarios",crear:"crear_usuario",editar:"editar_usuario",borrar:"borrar_usuario"},
-  {m:"Clientes",ic:"👥",ver:"ver_bd_clientes",crear:"crear_cliente",editar:"editar_cliente",borrar:"borrar_cliente"},
-  {m:"Agentes",ic:"🤝",ver:"ver_agente",crear:"crear_agente",editar:"editar_agente",borrar:"borrar_agente"},
-  {m:"Autónomos",ic:"🧑‍💻",ver:"ver_autonomo",crear:"crear_autonomo",editar:"editar_autonomo",borrar:"borrar_autonomo"},
-  {m:"Oficinas",ic:"🏢",ver:"ver_oficina",crear:"crear_oficina",editar:"editar_oficina",borrar:"borrar_oficina"},
-  {m:"Recepción en Puerta",ic:"📡",ver:"ver_rp",crear:"hacer_rp",editar:"editar_rp",borrar:"borrar_rp"},
-  {m:"WR (Warehouse Receipt)",ic:"📦",ver:"ver_wr",crear:"crear_wr",editar:"editar_wr",borrar:"borrar_wr"},
-  {m:"Booking",ic:"📑",ver:"ver_booking",crear:"crear_booking",editar:"editar_booking",borrar:"borrar_booking"},
-  {m:"Reempaque",ic:"🔁",ver:"ver_reempaque",crear:"crear_reempaque",editar:"editar_reempaque",borrar:"borrar_reempaque"},
-  {m:"Guías / Consolidación",ic:"🚢",ver:"ver_guia",crear:"crear_guia",editar:"editar_guia",borrar:"borrar_guia"},
-  {m:"Confirmación",ic:"✅",ver:"ver_confirmacion",crear:"confirmar",editar:"editar_confirmacion",borrar:"desconfirmar"},
-  {m:"Cargo Release (Egreso)",ic:"🚀",ver:"ver_egreso",crear:"hacer_egreso",editar:"editar_egreso",borrar:"borrar_egreso"},
-  {m:"Recepción en Almacén",ic:"📥",ver:"ver_recepcion_dest",crear:"hacer_recepcion_dest",editar:"editar_recepcion_dest",borrar:"borrar_recepcion_dest"},
-  {m:"Entregas",ic:"📝",ver:"ver_entrega",crear:"entregar",editar:"editar_entrega",borrar:"borrar_entrega"},
-  {m:"Alertas",ic:"🔔",ver:"ver_alertas",crear:"crear_alerta",editar:"editar_alerta",borrar:"borrar_alerta"},
-  {m:"Facturas",ic:"🧾",ver:"ver_factura",crear:"crear_factura",editar:"editar_factura",borrar:"borrar_factura"},
-  {m:"Pagos y Cobros",ic:"💰",ver:"ver_cuentas_cobrar",crear:"registrar_pago",editar:"editar_pago",borrar:"anular_pago"},
-  {m:"Tarifas",ic:"💲",ver:"ver_tarifas",crear:"crear_tarifa",editar:"editar_tarifa",borrar:"borrar_tarifa"},
-  {m:"Servicios",ic:"🛠️",ver:"ver_servicios",crear:"crear_servicio",editar:"editar_servicio",borrar:"borrar_servicio"},
-  {m:"Adicionales",ic:"➕",ver:"ver_adicionales",crear:"crear_adicional",editar:"editar_adicional",borrar:"borrar_adicional"},
-  {m:"Pick-up",ic:"🚐",ver:"ver_pickup",crear:"solicitar_pickup",editar:"editar_pickup",borrar:"borrar_pickup"},
-  {m:"Pre-alertas",ic:"📨",ver:"ver_prealerta",crear:"pre_tracking",editar:"editar_prealerta",borrar:"borrar_prealerta"},
-  {m:"Fotos",ic:"📷",ver:"ver_fotos",crear:"subir_foto",editar:"editar_foto",borrar:"borrar_foto"},
-  {m:"Documentos",ic:"📋",ver:"ver_documentos",crear:"crear_documento",editar:"editar_documento",borrar:"borrar_documento"},
-  {m:"Reportes",ic:"📈",ver:"ver_reportes",crear:"crear_reporte",editar:"editar_reporte",borrar:"borrar_reporte"},
+  {m:"Usuarios",ic:<Ico e="👤"/>,ver:"ver_usuarios",crear:"crear_usuario",editar:"editar_usuario",borrar:"borrar_usuario"},
+  {m:"Clientes",ic:<Ico e="👥"/>,ver:"ver_bd_clientes",crear:"crear_cliente",editar:"editar_cliente",borrar:"borrar_cliente"},
+  {m:"Agentes",ic:<Ico e="🤝"/>,ver:"ver_agente",crear:"crear_agente",editar:"editar_agente",borrar:"borrar_agente"},
+  {m:"Autónomos",ic:<Ico e="🧑‍💻"/>,ver:"ver_autonomo",crear:"crear_autonomo",editar:"editar_autonomo",borrar:"borrar_autonomo"},
+  {m:"Oficinas",ic:<Ico e="🏢"/>,ver:"ver_oficina",crear:"crear_oficina",editar:"editar_oficina",borrar:"borrar_oficina"},
+  {m:"Recepción en Puerta",ic:<Ico e="📡"/>,ver:"ver_rp",crear:"hacer_rp",editar:"editar_rp",borrar:"borrar_rp"},
+  {m:"WR (Warehouse Receipt)",ic:<Ico e="📦"/>,ver:"ver_wr",crear:"crear_wr",editar:"editar_wr",borrar:"borrar_wr"},
+  {m:"Booking",ic:<Ico e="📑"/>,ver:"ver_booking",crear:"crear_booking",editar:"editar_booking",borrar:"borrar_booking"},
+  {m:"Reempaque",ic:<Ico e="🔁"/>,ver:"ver_reempaque",crear:"crear_reempaque",editar:"editar_reempaque",borrar:"borrar_reempaque"},
+  {m:"Guías / Consolidación",ic:<Ico e="🚢"/>,ver:"ver_guia",crear:"crear_guia",editar:"editar_guia",borrar:"borrar_guia"},
+  {m:"Confirmación",ic:<Ico e="✅"/>,ver:"ver_confirmacion",crear:"confirmar",editar:"editar_confirmacion",borrar:"desconfirmar"},
+  {m:"Cargo Release (Egreso)",ic:<Ico e="🚀"/>,ver:"ver_egreso",crear:"hacer_egreso",editar:"editar_egreso",borrar:"borrar_egreso"},
+  {m:"Recepción en Almacén",ic:<Ico e="📥"/>,ver:"ver_recepcion_dest",crear:"hacer_recepcion_dest",editar:"editar_recepcion_dest",borrar:"borrar_recepcion_dest"},
+  {m:"Entregas",ic:<Ico e="📝"/>,ver:"ver_entrega",crear:"entregar",editar:"editar_entrega",borrar:"borrar_entrega"},
+  {m:"Alertas",ic:<Ico e="🔔"/>,ver:"ver_alertas",crear:"crear_alerta",editar:"editar_alerta",borrar:"borrar_alerta"},
+  {m:"Facturas",ic:<Ico e="🧾"/>,ver:"ver_factura",crear:"crear_factura",editar:"editar_factura",borrar:"borrar_factura"},
+  {m:"Pagos y Cobros",ic:<Ico e="💰"/>,ver:"ver_cuentas_cobrar",crear:"registrar_pago",editar:"editar_pago",borrar:"anular_pago"},
+  {m:"Tarifas",ic:<Ico e="💲"/>,ver:"ver_tarifas",crear:"crear_tarifa",editar:"editar_tarifa",borrar:"borrar_tarifa"},
+  {m:"Servicios",ic:<Ico e="🛠️"/>,ver:"ver_servicios",crear:"crear_servicio",editar:"editar_servicio",borrar:"borrar_servicio"},
+  {m:"Adicionales",ic:<Ico e="➕"/>,ver:"ver_adicionales",crear:"crear_adicional",editar:"editar_adicional",borrar:"borrar_adicional"},
+  {m:"Pick-up",ic:<Ico e="🚐"/>,ver:"ver_pickup",crear:"solicitar_pickup",editar:"editar_pickup",borrar:"borrar_pickup"},
+  {m:"Pre-alertas",ic:<Ico e="📨"/>,ver:"ver_prealerta",crear:"pre_tracking",editar:"editar_prealerta",borrar:"borrar_prealerta"},
+  {m:"Fotos",ic:<Ico e="📷"/>,ver:"ver_fotos",crear:"subir_foto",editar:"editar_foto",borrar:"borrar_foto"},
+  {m:"Documentos",ic:<Ico e="📋"/>,ver:"ver_documentos",crear:"crear_documento",editar:"editar_documento",borrar:"borrar_documento"},
+  {m:"Reportes",ic:<Ico e="📈"/>,ver:"ver_reportes",crear:"crear_reporte",editar:"editar_reporte",borrar:"borrar_reporte"},
 ];
 const PERM_ACTIONS=[{k:"ver",l:"Ver"},{k:"crear",l:"Crear"},{k:"editar",l:"Editar"},{k:"borrar",l:"Borrar"}];
 const PERMS_EN_TABLA=new Set(PERM_MODULES.flatMap(m=>PERM_ACTIONS.map(a=>m[a.k])));
@@ -600,55 +604,147 @@ const PERM_GROUPS=[
   {label:"Administración",perms:["configuracion","gestionar_roles","registro_actividad","envio_masivo","ver_bd_clientes","ver_bd_usuarios","paquetes_sin_reclamo","ver_fotos","subir_foto","borrar_foto","todas_sucursales","override_estado","saltar_bloqueos"]},
 ];
 
+// ─── ÍCONOS DE LÍNEA ─────────────────────────────────────────────────────────
+// Reemplazan a los emojis en toda la interfaz. <Ico e="📦"/> o <Ico n="package"/>.
+const ICO_SVG={
+  package:'<path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>',
+  checkCircle:'<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
+  alert:'<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+  handshake:'<path d="m11 17 2 2a1 1 0 1 0 3-3"/><path d="m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4"/><path d="m21 3 1 11h-2"/><path d="M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3"/><path d="M3 4h8"/>',
+  printer:'<path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8" rx="1"/>',
+  building:'<rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01M16 6h.01M12 6h.01M12 10h.01M12 14h.01M16 10h.01M16 14h.01M8 10h.01M8 14h.01"/>',
+  pencil:'<path d="M21.17 6.81a1 1 0 0 0-3.98-3.98L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z"/><path d="m15 5 4 4"/>',
+  banknote:'<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/>',
+  user:'<circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/>',
+  userCheck:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="m16 11 2 2 4-4"/>',
+  filePen:'<path d="M12 22h6a2 2 0 0 0 2-2V7l-5-5H6a2 2 0 0 0-2 2v10"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10.4 12.6a2 2 0 1 1 3 3L8 21l-4 1 1-4Z"/>',
+  truck:'<path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.62l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/>',
+  plus:'<path d="M5 12h14M12 5v14"/>',
+  send:'<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>',
+  clipboard:'<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>',
+  trash:'<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+  wallet:'<path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/>',
+  landmark:'<path d="M3 22h18"/><path d="M6 18v-7M10 18v-7M14 18v-7M18 18v-7"/><path d="m12 2 8 5H4z"/>',
+  repeat:'<path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/>',
+  inbox:'<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',
+  receipt:'<path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 17.5v-11"/>',
+  folder:'<path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>',
+  upload:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/>',
+  search:'<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+  clock:'<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+  save:'<path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/>',
+  card:'<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>',
+  star:'<path d="M11.5 2.3a.5.5 0 0 1 1 0l2.3 4.7a2 2 0 0 0 1.5 1.1l5.2.8a.5.5 0 0 1 .3.9l-3.8 3.6a2 2 0 0 0-.6 1.8l.9 5.2a.5.5 0 0 1-.8.6l-4.6-2.5a2 2 0 0 0-1.9 0l-4.6 2.5a.5.5 0 0 1-.8-.6l.9-5.2a2 2 0 0 0-.6-1.8L1.2 9.8a.5.5 0 0 1 .3-.9l5.2-.8a2 2 0 0 0 1.5-1.1z"/>',
+  users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+  xCircle:'<circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/>',
+  scan:'<path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/>',
+  briefcase:'<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>',
+  plane:'<path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/>',
+  bell:'<path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>',
+  camera:'<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>',
+  calendar:'<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+  home:'<path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .7-1.5l7-6a2 2 0 0 1 2.6 0l7 6a2 2 0 0 1 .7 1.5v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+  arrowOut:'<path d="M7 17 17 7"/><path d="M7 7h10v10"/>',
+  undo:'<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
+  pin:'<path d="M20 10c0 4.99-5.54 10.19-7.4 11.8a1 1 0 0 1-1.2 0C9.54 20.19 4 14.99 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/>',
+  ship:'<path d="M2 21c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1 .6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M19.38 20A11.6 11.6 0 0 0 21 14l-9-4-9 4c0 2.9.94 5.34 2.81 7.76"/><path d="M19 13V7a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v6"/><path d="M12 10v4M12 2v3"/>',
+  chart:'<path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9M13 17V5M8 17v-3"/>',
+  zap:'<path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/>',
+  tag:'<path d="M12.6 2.6A2 2 0 0 0 11.2 2H4a2 2 0 0 0-2 2v7.2a2 2 0 0 0 .6 1.4l8.7 8.7a2.4 2.4 0 0 0 3.4 0l6.6-6.6a2.4 2.4 0 0 0 0-3.4z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/>',
+  file:'<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M16 13H8M16 17H8M10 9H8"/>',
+  dollar:'<path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>',
+  cart:'<circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>',
+  lock:'<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+  link:'<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
+  eye:'<path d="M2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 19.88 0 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-19.88 0"/><circle cx="12" cy="12" r="3"/>',
+  eyeOff:'<path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.53 13.53 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><path d="m2 2 20 20"/>',
+  globe:'<circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/>',
+  settings:'<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>',
+  wrench:'<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>',
+  ruler:'<path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0Z"/><path d="m14.5 12.5 2-2M11.5 9.5l2-2M8.5 6.5l2-2M17.5 15.5l2-2"/>',
+  paperclip:'<path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/>',
+  mail:'<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>',
+  message:'<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>',
+  phone:'<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/>',
+  shield:'<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>',
+  crown:'<path d="M11.56 3.27a.5.5 0 0 1 .88 0l2.95 5.6a1 1 0 0 0 1.52.29L21.18 5.3a.5.5 0 0 1 .8.52l-2.83 10.25a1 1 0 0 1-.95.74H5.8a1 1 0 0 1-.96-.73L2.02 5.81a.5.5 0 0 1 .8-.52l4.27 3.86a1 1 0 0 0 1.52-.29z"/><path d="M5 21h14"/>',
+  maximize:'<path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/>',
+  scale:'<path d="M12 3v18M3 7h18M6 7l-3 7a3 3 0 0 0 6 0zM18 7l-3 7a3 3 0 0 0 6 0z"/>',
+  hash:'<path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18"/>',
+  pause:'<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>',
+  eraser:'<path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7M5 11l9 9"/>',
+  calculator:'<rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 6h8M16 14v4M16 10h.01M12 10h.01M8 10h.01M12 14h.01M8 14h.01M12 18h.01M8 18h.01"/>',
+  logout:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5M21 12H9"/>',
+  key:'<circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6M15.5 7.5l3 3L22 7l-3-3"/>',
+  ban:'<circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/>',
+  dotY:'<circle cx="12" cy="12" r="6" fill="#E5AE3A" stroke="none"/>',
+  dotG:'<circle cx="12" cy="12" r="6" fill="#1A8A4A" stroke="none"/>',
+  dotB:'<circle cx="12" cy="12" r="6" fill="#0080CC" stroke="none"/>',
+};
+const ICO_MAP={"📦":"package","✅":"checkCircle","⚠":"alert","🤝":"handshake","🖨":"printer","🏢":"building","🏙":"building","✏":"pencil","✍":"pencil",
+  "💵":"banknote","👤":"user","🧑‍💻":"userCheck","🧑‍💼":"briefcase","🧑‍🤝‍🧑":"users","📝":"filePen","🚚":"truck","🚐":"truck","🚛":"truck","➕":"plus","🚀":"send",
+  "📋":"clipboard","🗑":"trash","💰":"wallet","🏛":"landmark","🏦":"landmark","🔁":"repeat","🔄":"repeat","📥":"inbox","📬":"inbox","📭":"inbox","🧾":"receipt",
+  "🗂":"folder","📁":"folder","🗃":"folder","🗄":"folder","📤":"upload","🔍":"search","🔎":"search","⏳":"clock","💾":"save","💳":"card","⭐":"star","👥":"users",
+  "❌":"xCircle","🚫":"ban","📡":"scan","📶":"scan","💼":"briefcase","✈":"plane","🛫":"plane","🔔":"bell","📷":"camera","📸":"camera","📅":"calendar","🏠":"home",
+  "💸":"arrowOut","↩":"undo","📍":"pin","🚢":"ship","📊":"chart","📈":"chart","⚡":"zap","🏷":"tag","📄":"file","📑":"file","📃":"file","📜":"file","📒":"file",
+  "💲":"dollar","🛒":"cart","🔒":"lock","🔐":"lock","🔑":"key","🔗":"link","👁":"eye","🙈":"eyeOff","🌎":"globe","🌐":"globe","⚙":"settings","🛠":"wrench",
+  "📐":"ruler","📏":"ruler","📎":"paperclip","📧":"mail","📨":"mail","💬":"message","📞":"phone","📲":"phone","🛃":"shield","🛂":"shield","👑":"crown",
+  "⛶":"maximize","🗗":"maximize","⚖":"scale","🔢":"hash","⏸":"pause","🧹":"eraser","🧮":"calculator","🚪":"logout","🟡":"dotY","🟢":"dotG","🔵":"dotB"};
+const Ico=({e,n,solo,sp,style})=>{
+  const k=n||ICO_MAP[String(e||"").replace(/️/g,"")];
+  if(!k||!ICO_SVG[k]){const t=String(e||"");return /[☀-➿\u{1F000}-\u{1FAFF}]/u.test(t)?null:(t?<span style={style}>{t}</span>:null);}
+  return <svg className={`ico${solo?" ico-solo":""}${sp?" ico-sp":""}`} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" dangerouslySetInnerHTML={{__html:ICO_SVG[k]}}/>;
+};
+
 // ─── ROLE DEFINITIONS ────────────────────────────────────────────────────────
 const ROLE_DEFS={
-  A:{code:"A",name:"Administrador",color:"rA",icon:"👑",
+  A:{code:"A",name:"Administrador",color:"rA",icon:<Ico e="👑"/>,
     desc:"Control total del sistema. Acceso a todo sin restricciones.",
     perms:ALL_PERMS},
 
-  B:{code:"B",name:"Gerente",color:"rB",icon:"🏛️",
+  B:{code:"B",name:"Gerente",color:"rB",icon:<Ico e="🏛️"/>,
     desc:"Gestión general. Todo menos borrar registros y registro de actividad.",
     perms:ALL_PERMS.filter(p=>!["borrar_usuario","borrar_cliente","borrar_agente","borrar_autonomo","borrar_oficina","borrar_wr","borrar_rp","borrar_booking","borrar_reempaque","borrar_guia","borrar_egreso","borrar_recepcion_dest","borrar_entrega","borrar_alerta","borrar_pickup","borrar_prealerta","borrar_documento","borrar_reporte","registro_actividad","configuracion","gestionar_roles","saltar_bloqueos"].includes(p))},
 
-  C:{code:"C",name:"Auxiliar",color:"rC",icon:"🗂️",
+  C:{code:"C",name:"Auxiliar",color:"rC",icon:<Ico e="🗂️"/>,
     desc:"Apoyo operativo. Crear y editar WR, reportes, confirmaciones.",
     perms:["ver_usuarios","crear_cliente","editar_cliente","crear_wr","editar_wr","ver_wr","ver_rp","hacer_rp","editar_rp","ver_reempaque","ver_booking","ver_guia","editar_guia","ver_confirmacion","confirmar","desconfirmar","ver_egreso","hacer_egreso","editar_egreso","ver_reportes","rep_confirmados","rep_guia_op","rep_postal","rep_packing","imp_wr","imp_guia","imp_etiq_caja","imp_etiq_guia","imp_rp","imp_lista_conf","imp_guia_op","imp_postal","imp_packing","imp_recibo_entrega","imp_factura","ver_estado_cuenta","ver_estado_cliente","ver_tracking","rastrear","ver_prealerta","pre_tracking","pre_factura","status_origen","status_destino","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_tarifas","ver_factura","ver_bd_clientes","paquetes_sin_reclamo","ver_fotos","subir_foto","chat_admin","chat_gerencia","chat_auxiliar","chat_operaciones"]},
 
-  D:{code:"D",name:"Jefe de Operaciones",color:"rD",icon:"⚙️",
+  D:{code:"D",name:"Jefe de Operaciones",color:"rD",icon:<Ico e="⚙️"/>,
     desc:"Supervisa y ejecuta operaciones completas — origen + destino.",
     subs:["D1","D2"],
     perms:["ver_wr","crear_wr","editar_wr","ver_rp","hacer_rp","editar_rp","ver_booking","crear_booking","editar_booking","solicitar_reempaque","ver_reempaque","crear_reempaque","editar_reempaque","ver_guia","crear_guia","editar_guia","ver_confirmacion","confirmar","desconfirmar","ver_egreso","hacer_egreso","editar_egreso","ver_recepcion_dest","hacer_recepcion_dest","editar_recepcion_dest","ver_entrega","entregar","revertir_entrega","editar_entrega","status_origen","status_destino","ver_reportes","rep_confirmados","rep_guia_op","rep_postal","rep_packing","imp_wr","imp_guia","imp_etiq_caja","imp_etiq_guia","imp_rp","imp_booking","imp_reempaque","imp_lista_conf","imp_guia_op","imp_postal","imp_packing","imp_recibo_entrega","ver_estado_cuenta","ver_estado_cliente","ver_tracking","rastrear","ver_prealerta","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_tarifas","ver_bd_clientes","ver_fotos","subir_foto","borrar_foto","chat_admin","chat_gerencia","chat_auxiliar","chat_operaciones","todas_sucursales"]},
 
-  D1:{code:"D1",name:"Operaciones Origen",color:"rD1",icon:"📤",
+  D1:{code:"D1",name:"Operaciones Origen",color:"rD1",icon:<Ico e="📤"/>,
     desc:"Ejecuta operaciones de origen: RP, WR, guías, consolidación, egreso. Estados 1→7.",
     perms:["ver_wr","crear_wr","editar_wr","ver_rp","hacer_rp","editar_rp","ver_booking","crear_booking","editar_booking","solicitar_reempaque","ver_reempaque","crear_reempaque","editar_reempaque","ver_guia","crear_guia","editar_guia","ver_confirmacion","confirmar","desconfirmar","ver_egreso","hacer_egreso","editar_egreso","status_origen","ver_reportes","rep_confirmados","rep_guia_op","rep_postal","rep_packing","imp_wr","imp_guia","imp_etiq_caja","imp_etiq_guia","imp_rp","imp_booking","imp_reempaque","imp_lista_conf","imp_guia_op","imp_postal","imp_packing","ver_tracking","rastrear","ver_prealerta","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","ver_bd_clientes","ver_fotos","subir_foto","borrar_foto","chat_admin","chat_gerencia","chat_auxiliar","chat_operaciones"]},
 
-  D2:{code:"D2",name:"Operaciones Destino",color:"rD2",icon:"📥",
+  D2:{code:"D2",name:"Operaciones Destino",color:"rD2",icon:<Ico e="📥"/>,
     desc:"Ejecuta operaciones de destino: recepción, entrega. Estados 8→12P.",
     perms:["ver_wr","ver_rp","ver_guia","ver_recepcion_dest","hacer_recepcion_dest","editar_recepcion_dest","ver_entrega","entregar","revertir_entrega","editar_entrega","status_destino","ver_reportes","rep_confirmados","rep_guia_op","imp_wr","imp_guia","imp_etiq_caja","imp_lista_conf","imp_guia_op","imp_recibo_entrega","ver_tracking","rastrear","ver_estado_cliente","ver_bd_clientes","ver_fotos","subir_foto","chat_admin","chat_gerencia","chat_auxiliar","chat_operaciones"]},
 
-  E:{code:"E",name:"Agente",color:"rE",icon:"🤝",
+  E:{code:"E",name:"Agente",color:"rE",icon:<Ico e="🤝"/>,
     desc:"Agente externo. Gestiona sus clientes y WR propios.",
     subs:["E1"],
     perms:["crear_cliente","editar_cliente","crear_wr","editar_wr","ver_wr","ver_booking","ver_confirmacion","imp_wr","imp_factura","ver_estado_cuenta","ver_estado_agente","ver_tracking","rastrear","ver_prealerta","pre_tracking","pre_factura","ver_pickup","solicitar_pickup","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_factura","ver_fotos","subir_foto","chat_admin","chat_gerencia","chat_agente"]},
 
-  E1:{code:"E1",name:"Vendedor / Agente",color:"rE1",icon:"💼",
+  E1:{code:"E1",name:"Vendedor / Agente",color:"rE1",icon:<Ico e="💼"/>,
     desc:"Vendedor bajo un agente. Solo sus clientes.",
     perms:["crear_cliente","editar_cliente","crear_wr","ver_wr","ver_booking","imp_wr","imp_factura","ver_estado_cuenta","ver_estado_agente","ver_tracking","rastrear","ver_prealerta","pre_tracking","pre_factura","ver_pickup","solicitar_pickup","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_factura","ver_fotos","subir_foto","chat_agente"]},
 
-  F:{code:"F",name:"Autónomo",color:"rF",icon:"🧑‍💻",
+  F:{code:"F",name:"Autónomo",color:"rF",icon:<Ico e="🧑‍💻"/>,
     desc:"Operador independiente. Gestiona sus propios clientes.",
     perms:["crear_cliente","editar_cliente","crear_wr","editar_wr","ver_wr","ver_confirmacion","imp_wr","imp_factura","ver_estado_cuenta","ver_estado_cliente","ver_tracking","rastrear","ver_prealerta","pre_tracking","pre_factura","ver_pickup","solicitar_pickup","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_factura","ver_fotos","subir_foto","chat_admin","chat_gerencia"]},
 
-  G:{code:"G",name:"Oficina",color:"rG",icon:"🏢",
+  G:{code:"G",name:"Oficina",color:"rG",icon:<Ico e="🏢"/>,
     desc:"Sucursal de la empresa. Ve la carga que recibe o que se envió por ella.",
     perms:["crear_cliente","editar_cliente","crear_wr","editar_wr","ver_wr","ver_rp","hacer_rp","editar_rp","ver_booking","crear_booking","editar_booking","ver_reempaque","ver_guia","crear_guia","ver_confirmacion","ver_entrega","entregar","ver_reportes","rep_confirmados","imp_wr","imp_guia","imp_etiq_caja","imp_etiq_guia","imp_rp","imp_lista_conf","imp_recibo_entrega","imp_factura","ver_estado_cuenta","ver_estado_oficina","ver_tracking","rastrear","ver_prealerta","pre_tracking","pre_factura","ver_pickup","solicitar_pickup","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_tarifas","ver_factura","registrar_cobro","ver_cuentas_cobrar","ver_bd_clientes","paquetes_sin_reclamo","ver_fotos","subir_foto","chat_admin","chat_gerencia","chat_auxiliar","chat_operaciones"]},
 
-  H:{code:"H",name:"Usuario Sistema",color:"rH1",icon:"👤",
+  H:{code:"H",name:"Usuario Sistema",color:"rH1",icon:<Ico e="👤"/>,
     desc:"Usuario interno al que se le asigna un rol específico (A-G).",
     perms:["ver_wr","ver_tracking","rastrear","ver_estado_cuenta","ver_servicios","calculadora"]},
 
-  I:{code:"I",name:"Cliente",color:"rH2",icon:"📦",
+  I:{code:"I",name:"Cliente",color:"rH2",icon:<Ico e="📦"/>,
     desc:"Cliente externo. Solo ve sus propios envíos, estado de cuenta, tracking y factura.",
     perms:["ver_wr","ver_tracking","rastrear","ver_prealerta","pre_tracking","pre_factura","ver_estado_cuenta","ver_estado_cliente","ver_factura","imp_factura","ver_pickup","solicitar_pickup","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_fotos","subir_foto","chat_agente"]},
 };
@@ -781,21 +877,21 @@ const RECEP_STATUSES  =WR_STATUSES.filter(s=>s.channels?.includes("recepcion"));
 // Una vez se fija la última (Tránsito 2 / 13), la guía queda lista para Recepción en
 // Almacén y NO puede retroceder a fases anteriores.
 const GUIDE_PHASES=[
-  {key:"linea",   label:"Entregado Línea",  short:"Línea",     codes:["5"],  advance:"5",  icon:"🛫"},
-  {key:"adsal",   label:"Aduana Salida",    short:"Ad. Sal.",  codes:["6"],  advance:"6",  icon:"🛃"},
-  {key:"aud1",    label:"Auditoría 1",      short:"Auditoria", codes:["7"],  advance:"7",  icon:"🔍"},
-  {key:"lib1",    label:"Liberado 1",       short:"Liberado 1",codes:["8"],  advance:"8",  icon:"✅"},
-  {key:"trans1",  label:"Tránsito 1",       short:"Tránsito 1",codes:["9"],  advance:"9",  icon:"✈️"},
-  {key:"adtrans", label:"Aduana Tránsito",  short:"Ad. Trans.",codes:["10"], advance:"10", icon:"🛂"},
-  {key:"aud2",    label:"Auditoría 2",      short:"Auditoría 2",codes:["11"],advance:"11", icon:"🔍"},
-  {key:"lib2",    label:"Liberado 2",       short:"Liberado 2",codes:["12"], advance:"12", icon:"✅"},
-  {key:"trans2",  label:"Tránsito 2",       short:"Tránsito 2",codes:["13"], advance:"13", icon:"🚛"},
+  {key:"linea",   label:"Entregado Línea",  short:"Línea",     codes:["5"],  advance:"5",  icon:<Ico e="🛫"/>},
+  {key:"adsal",   label:"Aduana Salida",    short:"Ad. Sal.",  codes:["6"],  advance:"6",  icon:<Ico e="🛃"/>},
+  {key:"aud1",    label:"Auditoría 1",      short:"Auditoria", codes:["7"],  advance:"7",  icon:<Ico e="🔍"/>},
+  {key:"lib1",    label:"Liberado 1",       short:"Liberado 1",codes:["8"],  advance:"8",  icon:<Ico e="✅"/>},
+  {key:"trans1",  label:"Tránsito 1",       short:"Tránsito 1",codes:["9"],  advance:"9",  icon:<Ico e="✈️"/>},
+  {key:"adtrans", label:"Aduana Tránsito",  short:"Ad. Trans.",codes:["10"], advance:"10", icon:<Ico e="🛂"/>},
+  {key:"aud2",    label:"Auditoría 2",      short:"Auditoría 2",codes:["11"],advance:"11", icon:<Ico e="🔍"/>},
+  {key:"lib2",    label:"Liberado 2",       short:"Liberado 2",codes:["12"], advance:"12", icon:<Ico e="✅"/>},
+  {key:"trans2",  label:"Tránsito 2",       short:"Tránsito 2",codes:["13"], advance:"13", icon:<Ico e="🚛"/>},
 ];
 // Fases manejables desde Recepción en Almacén (NO desde Consolidación)
 const RECEP_PHASES=[
-  {key:"addest",  label:"Aduana Destino",   short:"Ad. Dest.", codes:["14"], advance:"14", icon:"🛂"},
-  {key:"aud3",    label:"Auditoría 3",      short:"Auditoría 3",codes:["15"],advance:"15", icon:"🔍"},
-  {key:"lib3",    label:"Liberado 3",       short:"Liberado 3",codes:["16"], advance:"16", icon:"✅"},
+  {key:"addest",  label:"Aduana Destino",   short:"Ad. Dest.", codes:["14"], advance:"14", icon:<Ico e="🛂"/>},
+  {key:"aud3",    label:"Auditoría 3",      short:"Auditoría 3",codes:["15"],advance:"15", icon:<Ico e="🔍"/>},
+  {key:"lib3",    label:"Liberado 3",       short:"Liberado 3",codes:["16"], advance:"16", icon:<Ico e="✅"/>},
 ];
 const currentGuidePhaseIdx=(code)=>{
   const idx=GUIDE_PHASES.findIndex(p=>p.codes.includes(String(code)));
@@ -1152,7 +1248,7 @@ const TxtCell=({value,titulo,tdStyle={},txtClass,txtStyle={},mono=false,color="v
 };
 
 // ─── WR ROW ────────────────────────────────────────────────────────────────────
-const CT_LABEL_WR={agente:"🤝 Agente",vendedor_agente:"💼 Vend. Agente",autonomo:"🧑‍💻 Autónomo",oficina:"🏢 Oficina",vendedor_oficina:"🛒 Vend. Oficina",matriz:"🏛️ Matriz"};
+const CT_LABEL_WR={agente:"Agente",vendedor_agente:"Vend. Agente",autonomo:"Autónomo",oficina:"Oficina",vendedor_oficina:"Vend. Oficina",matriz:"Matriz"};
 const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[],oficinas=[],empresaNombre="Casa Matriz",sendTypes=[],onAssignTipo,onFotoClick,onTimelineClick,consolList=[],onGuiaClick,canBypass=false})=>{
   const isIn=unitL==="in";
   const isLb=unitW==="lb";
@@ -1217,11 +1313,11 @@ const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[
   ):(
     <div className="pos-rel">
       <button ref={dimBtnRef} className="dim-btn" style={{padding:"4px 10px",fontSize:13,fontWeight:600,background:"#E8F0FE",borderColor:"#90B8F0",color:"var(--navy)"}} onClick={e=>{e.stopPropagation();onDimToggle();}}>
-        📦 {w.dims.length} cajas {dimOpen?"▲":"▼"}
+        <Ico e="📦" sp/>{w.dims.length} cajas {dimOpen?"▲":"▼"}
       </button>
       {dimOpen&&dimPos&&createPortal(
         <div ref={dimPopRef} className="dim-pop" style={{position:"fixed",top:dimPos.top,left:dimPos.left,maxHeight:"70vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
-          <div className="dim-pop-ttl">📐 Detalle — {w.dims.length} cajas · {isIn?"Pulgadas":"Centímetros"} · {isLb?"Libras":"Kilos"}</div>
+          <div className="dim-pop-ttl"><Ico e="📐" sp/>Detalle — {w.dims.length} cajas · {isIn?"Pulgadas":"Centímetros"} · {isLb?"Libras":"Kilos"}</div>
           <div className="dr">
             {["#","Largo","Ancho","Alto","Peso","Peso Vol."].map(h=><span key={h} className="dh">{h}</span>)}
           </div>
@@ -1267,10 +1363,10 @@ const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[
         <div className="c-wr" style={{display:"inline-flex",alignItems:"center",gap:6}}>
           {w.id}
           {onTimelineClick&&(
-            <span onClick={e=>{e.stopPropagation();onTimelineClick(w);}} title="📅 Historia y fechas del WR"
+            <span onClick={e=>{e.stopPropagation();onTimelineClick(w);}} title="Historia y fechas del WR"
               style={{cursor:"pointer",fontSize:12,opacity:.7,transition:"opacity .12s"}}
               onMouseEnter={e=>e.currentTarget.style.opacity=1}
-              onMouseLeave={e=>e.currentTarget.style.opacity=.7}>📅</span>
+              onMouseLeave={e=>e.currentTarget.style.opacity=.7}><Ico e="📅" solo/></span>
           )}
         </div>
         <div className="c-route">{w.origCity} → {w.destCity}</div>
@@ -1330,10 +1426,10 @@ const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[
         const cl=clients.find(c=>c.id===w.clienteId)||clients.find(c=>c.casillero===w.casillero);
         const ct=cl?.clienteTipo||"";
         let label="—", sub="";
-        if(ct==="matriz"){label="🏛️ "+empresaNombre;}
-        else if(ct==="agente"||ct==="vendedor_agente"){const ag=agentes.find(a=>a.id===cl?.agenteId);label=(ct==="agente"?"🤝":"💼")+" "+(ag?.nombre||ag?.codigo||"⚠️ Sin agente");sub=ct==="vendedor_agente"?"Vend. Agente":"Agente";}
-        else if(ct==="oficina"||ct==="vendedor_oficina"){const of=oficinas.find(o=>o.id===cl?.oficinaId);label=(ct==="oficina"?"🏢":"🛒")+" "+(of?.nombre||of?.codigo||"⚠️ Sin oficina");sub=ct==="vendedor_oficina"?"Vend. Oficina":"Oficina";}
-        else if(ct==="autonomo"){const au=clients.find(c=>c.id===cl?.autonomoId);label="🧑‍💻 "+(au?`${au.primerNombre} ${au.primerApellido}`:"⚠️ Sin autónomo");sub="Autónomo";}
+        if(ct==="matriz"){label=empresaNombre;}
+        else if(ct==="agente"||ct==="vendedor_agente"){const ag=agentes.find(a=>a.id===cl?.agenteId);label=(ag?.nombre||ag?.codigo||"Sin agente");sub=ct==="vendedor_agente"?"Vend. Agente":"Agente";}
+        else if(ct==="oficina"||ct==="vendedor_oficina"){const of=oficinas.find(o=>o.id===cl?.oficinaId);label=(of?.nombre||of?.codigo||"Sin oficina");sub=ct==="vendedor_oficina"?"Vend. Oficina":"Oficina";}
+        else if(ct==="autonomo"){const au=clients.find(c=>c.id===cl?.autonomoId);label=(au?`${au.primerNombre} ${au.primerApellido}`:"Sin autónomo");sub="Autónomo";}
         else{label=w.branch||"—";}
         return <div><div style={{fontSize:12,fontWeight:700,color:"var(--navy)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:120}}>{label}</div>{sub&&<div style={{fontSize:11,color:"var(--t3)"}}>{sub}</div>}</div>;
       })()}</td>
@@ -1344,17 +1440,17 @@ const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[
       </td>
       {trkDist.length>1
         ? <MultiCell dims={dimsArr} tdStyle={{maxWidth:190}} color="var(--cyan)"
-            btn={`📦 ${trkDist.length} seguimientos`}
-            titulo={`🔗 Seguimiento por caja — ${dimsArr.length} cajas · ${trkDist.length} números distintos`}
+            btn={`${trkDist.length} seguimientos`}
+            titulo={`Seguimiento por caja — ${dimsArr.length} cajas · ${trkDist.length} números distintos`}
             columnas={[{h:"Transp.",w:"78px",get:d=>d.carrier},{h:"Nº de seguimiento",w:"1fr",mono:true,get:d=>d.tracking}]}/>
-        : <TxtCell value={w.tracking} titulo="🔗 Nº de seguimiento" mono
+        : <TxtCell value={w.tracking} titulo="Nº de seguimiento" mono
             tdStyle={{maxWidth:170,overflow:"hidden"}} txtClass="c-trk"/>}
       {descDist.length>1
         ? <MultiCell dims={dimsArr} tdStyle={{minWidth:200,maxWidth:260}} color="var(--navy)"
-            btn={`📦 ${descDist.length} descripciones`}
-            titulo={`📝 Descripción por caja — ${dimsArr.length} cajas · ${descDist.length} descripciones distintas`}
+            btn={`${descDist.length} descripciones`}
+            titulo={`Descripción por caja — ${dimsArr.length} cajas · ${descDist.length} descripciones distintas`}
             columnas={[{h:"Descripción",w:"1fr",get:d=>cleanReempaqueDesc(d.descripcion)},{h:"Factura",w:"88px",get:d=>d.factura}]}/>
-        : <TxtCell value={cleanReempaqueDesc(w.descripcion)} titulo="📝 Descripción de la mercancía"
+        : <TxtCell value={cleanReempaqueDesc(w.descripcion)} titulo="Descripción de la mercancía"
             tdStyle={{minWidth:200,maxWidth:260,overflow:"hidden"}} color="var(--navy)"/>}
       <td style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--t1)",maxWidth:100,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={w.factura||""}>{w.factura?w.factura:"—"}</td>
       <td style={{textAlign:"right"}}><span className="c-val">${w.valor?.toFixed(2)||"0.00"}</span></td>
@@ -1368,10 +1464,10 @@ const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[
       <td style={{textAlign:"center"}} onClick={e=>e.stopPropagation()}>
         {w.foto
           ?<button type="button" title="Ver fotos del paquete" onClick={()=>onFotoClick&&onFotoClick(w)}
-             style={{background:"transparent",border:"none",fontSize:18,cursor:"pointer",padding:0,lineHeight:1}}>📷</button>
+             style={{background:"transparent",border:"none",fontSize:18,cursor:"pointer",padding:0,lineHeight:1}}><Ico e="📷" solo/></button>
           :<span className="ic-b" style={{color:"var(--t4)"}}>—</span>}
       </td>
-      <td style={{textAlign:"center"}}><span className={`ic-b ${w.prealerta?"has":""}`}>{w.prealerta?"📎":"—"}</span></td>
+      <td style={{textAlign:"center"}}><span className={`ic-b ${w.prealerta?"has":""}`}>{w.prealerta?<Ico e="📎"/>:"—"}</span></td>
     </tr>
   );
 };
@@ -1411,7 +1507,7 @@ const WRTable=({rows,selId,onSelect,unitL,unitW,onSort,sortCol,sortDir,dimOpen,o
               <th style={{textAlign:"right",minWidth:60}}>Ft³</th>
               <th style={{textAlign:"right",minWidth:60}}>M³</th>
               <th style={{minWidth:200}}>Notas</th>
-              <th style={{textAlign:"center",width:48}}>📷 Foto</th>
+              <th style={{textAlign:"center",width:48}}><Ico e="📷" sp/>Foto</th>
               <th style={{textAlign:"center",width:65}}>Pre-Alerta</th>
             </tr>
           </thead>
@@ -1564,7 +1660,7 @@ const PwInput=({style,...props})=>{
       <input {...props} type={ver?"text":"password"} style={{...(style||{}),width:"100%",paddingRight:38,textTransform:"none"}}/>
       <button type="button" tabIndex={-1} onClick={()=>setVer(v=>!v)} title={ver?"Ocultar":"Mostrar"}
         style={{position:"absolute",right:6,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:16,padding:4,lineHeight:1,opacity:ver?1:.6}}>
-        {ver?"🙈":"👁️"}
+        {ver?<Ico e="🙈"/>:<Ico e="👁️"/>}
       </button>
     </div>
   );
@@ -1595,7 +1691,7 @@ const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomo
         <div className="mhd"><div className="mt">{title}</div><button className="mcl" onClick={onClose}>✕</button></div>
         <div className="sdiv">TIPO DE REGISTRO</div>
         <div style={{display:"flex",gap:8,marginBottom:14}}>
-          {[["cliente","🏠 Cliente"],["usuario","👤 Usuario Sistema"]].map(([v,l])=>
+          {[["cliente","Cliente"],["usuario","Usuario Sistema"]].map(([v,l])=>
             <button key={v} className={`btn-${f.tipo===v?"p":"s"}`} onClick={()=>ff("tipo",v)}>{l}</button>)}
         </div>
         {/* Pertenece a — solo clientes (los usuarios lo toman de su rol) */}
@@ -1604,10 +1700,10 @@ const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomo
             <div className="sdiv">PERTENECE A</div>
             <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:f.clienteTipo&&f.clienteTipo!=="matriz"?10:0}}>
               {[
-                {v:"agente",l:"🤝 Agente"},
-                {v:"vendedor_agente",l:"💼 Vendedor de Agente"},
-                {v:"autonomo",l:"🧑‍💻 Autónomo"},
-                {v:"matriz",l:"🏛️ Casa Matriz"},
+                {v:"agente",l:"Agente"},
+                {v:"vendedor_agente",l:"Vendedor de Agente"},
+                {v:"autonomo",l:"Autónomo"},
+                {v:"matriz",l:"Casa Matriz"},
               ].map(op=>(
                 <button key={op.v} className={`btn-${(f.clienteTipo||"matriz")===op.v?"p":"s"}`}
                   style={{fontSize:13,padding:"5px 10px"}}
@@ -1641,8 +1737,8 @@ const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomo
             )}
             <div className="fg" style={{marginTop:10}}><div className="fl">Sucursal de entrega</div>
               <select className="fs" value={f.oficinaId||""} onChange={e=>ff("oficinaId",e.target.value)}>
-                <option value="">🏛️ Principal</option>
-                {oficinas.map(o=><option key={o.id} value={o.id}>🏢 {o.nombre}{o.ciudad?` — ${o.ciudad}`:""}{o.pais?`, ${o.pais}`:""}</option>)}
+                <option value="">Principal</option>
+                {oficinas.map(o=><option key={o.id} value={o.id}>{o.nombre}{o.ciudad?` — ${o.ciudad}`:""}{o.pais?`, ${o.pais}`:""}</option>)}
               </select>
             </div>
           </div>
@@ -1700,7 +1796,7 @@ const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomo
           <div className="fg"><div className="fl">Teléfono 2</div><input className="fi" value={f.tel2} onChange={e=>ff("tel2",e.target.value)}/></div>
           <div className="fg"><div className="fl">Email *</div><input className="fi" type="email" value={f.email} onChange={e=>ff("email",e.target.value)} placeholder="correo@email.com"/></div>
         </div>
-        {emailErr&&<div style={{background:"#FEE2E2",border:"1px solid #FCA5A5",borderRadius:6,padding:"8px 12px",marginBottom:8,color:"#DC2626",fontSize:14,fontWeight:600}}>⚠️ {emailErr}</div>}
+        {emailErr&&<div style={{background:"#FEE2E2",border:"1px solid #FCA5A5",borderRadius:6,padding:"8px 12px",marginBottom:8,color:"#DC2626",fontSize:14,fontWeight:600}}><Ico e="⚠️" sp/>{emailErr}</div>}
         <div className="mft"><button className="btn-s" onClick={onClose}>Cancelar</button><button className="btn-p" onClick={()=>{
           // Validar email duplicado
           const emailLower=(f.email||"").trim().toLowerCase();
@@ -1714,7 +1810,7 @@ const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomo
           if(f.tipo==="usuario"&&(!f.rol||["H","I"].includes(f.rol))){setEmailErr("Selecciona el rol del usuario.");return;}
           setEmailErr("");
           onSave(f);
-        }}>Guardar ✅</button></div>
+        }}>Guardar <Ico e="✅"/></button></div>
       </div>
     </div>
   );
@@ -1914,7 +2010,7 @@ function WebcamCaptureModal({ onCapture, onClose }){
         {/* Header */}
         <div style={{padding:"14px 18px",borderBottom:"1px solid var(--b1)",background:"var(--navy)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <div style={{fontSize:15,fontWeight:700,display:"flex",alignItems:"center",gap:8}}>
-            <span style={{fontSize:18}}>📸</span> Capturar foto del paquete
+            <span style={{fontSize:18}}><Ico e="📸" solo/></span> Capturar foto del paquete
           </div>
           <button onClick={onClose} style={{width:28,height:28,borderRadius:"50%",border:"none",background:"rgba(255,255,255,0.12)",color:"#fff",fontSize:18,fontWeight:700,cursor:"pointer",lineHeight:1}}>×</button>
         </div>
@@ -1922,7 +2018,7 @@ function WebcamCaptureModal({ onCapture, onClose }){
         <div style={{padding:16,flex:1,overflow:"auto",background:"#000"}}>
           {err ? (
             <div style={{background:"rgba(204,34,51,0.15)",color:"#fff",padding:"16px 18px",borderRadius:8,border:"1px solid rgba(204,34,51,0.4)",textAlign:"center"}}>
-              <div style={{fontSize:32,marginBottom:8}}>⚠️</div>
+              <div style={{fontSize:32,marginBottom:8}}><Ico e="⚠️" solo/></div>
               <div style={{fontSize:14,lineHeight:1.5}}>{err}</div>
             </div>
           ) : shot ? (
@@ -1944,7 +2040,7 @@ function WebcamCaptureModal({ onCapture, onClose }){
           <div>
             {!shot && !err && (
               <button type="button" className="btn-s" style={{fontSize:12,padding:"6px 10px"}} onClick={()=>setFacing(f=>f==="user"?"environment":"user")}>
-                🔄 {facing==="user"?"Cámara trasera":"Cámara frontal"}
+                <Ico e="🔄" sp/>{facing==="user"?"Cámara trasera":"Cámara frontal"}
               </button>
             )}
           </div>
@@ -1953,11 +2049,11 @@ function WebcamCaptureModal({ onCapture, onClose }){
             {shot ? (
               <>
                 <button className="btn-s" onClick={retry}>↻ Tomar otra</button>
-                <button className="btn-p" onClick={confirm}>✅ Usar esta foto</button>
+                <button className="btn-p" onClick={confirm}><Ico e="✅" sp/>Usar esta foto</button>
               </>
             ) : (
               <button className="btn-p" disabled={!ready||!!err} onClick={capture} style={!ready||!!err?{opacity:.5,cursor:"not-allowed"}:{}}>
-                📸 Capturar
+                <Ico e="📸" sp/>Capturar
               </button>
             )}
           </div>
@@ -2008,7 +2104,7 @@ function PhotoGalleryModal({ wrId, currentUser, onClose }){
       <div style={{background:"var(--bg2)",borderRadius:12,overflow:"hidden",width:"100%",maxWidth:900,boxShadow:"var(--shadow2)",display:"flex",flexDirection:"column",maxHeight:"92vh"}}>
         <div style={{padding:"14px 18px",borderBottom:"1px solid var(--b1)",background:"var(--navy)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <div style={{fontSize:15,fontWeight:700,display:"flex",alignItems:"center",gap:8}}>
-            <span style={{fontSize:18}}>📷</span> Fotos del WR {wrId}
+            <span style={{fontSize:18}}><Ico e="📷" solo/></span> Fotos del WR {wrId}
             {!loading && <span style={{background:"var(--gold)",fontSize:12,padding:"2px 8px",borderRadius:10}}>{fotos.length}</span>}
           </div>
           <button onClick={onClose} style={{width:28,height:28,borderRadius:"50%",border:"none",background:"rgba(255,255,255,0.12)",color:"#fff",fontSize:18,fontWeight:700,cursor:"pointer",lineHeight:1}}>×</button>
@@ -2018,14 +2114,14 @@ function PhotoGalleryModal({ wrId, currentUser, onClose }){
             <div style={{textAlign:"center",padding:"40px 16px",color:"var(--t3)"}}>Cargando fotos…</div>
           ) : fotos.length===0 ? (
             <div style={{textAlign:"center",padding:"40px 16px",color:"var(--t3)",fontSize:14}}>
-              <div style={{fontSize:40,marginBottom:10}}>📭</div>
+              <div style={{fontSize:40,marginBottom:10}}><Ico e="📭" solo/></div>
               Este WR aún no tiene fotos cargadas.
             </div>
           ) : (
             cajaKeys.map(k=>(
               <div key={k} style={{marginBottom:20}}>
                 <div style={{fontSize:13,fontWeight:700,color:"var(--navy)",textTransform:"uppercase",letterSpacing:1,marginBottom:8,borderBottom:"1px solid var(--b1)",paddingBottom:5}}>
-                  📦 Caja {Number(k)+1} <span style={{color:"var(--t3)",fontWeight:500,marginLeft:6}}>({grupos[k].length} {grupos[k].length===1?"foto":"fotos"})</span>
+                  <Ico e="📦" sp/>Caja {Number(k)+1} <span style={{color:"var(--t3)",fontWeight:500,marginLeft:6}}>({grupos[k].length} {grupos[k].length===1?"foto":"fotos"})</span>
                 </div>
                 <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(140px, 1fr))",gap:10}}>
                   {grupos[k].map(foto=>(
@@ -2035,7 +2131,7 @@ function PhotoGalleryModal({ wrId, currentUser, onClose }){
                         <button type="button" title="Borrar foto" onClick={e=>{e.stopPropagation();handleDelete(foto);}} style={{position:"absolute",top:5,right:5,width:24,height:24,borderRadius:"50%",border:"none",background:"rgba(204,34,51,0.95)",color:"#fff",fontSize:15,fontWeight:900,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}}>×</button>
                       )}
                       <div style={{position:"absolute",bottom:0,left:0,right:0,background:"linear-gradient(to top, rgba(0,0,0,0.75), transparent)",color:"#fff",fontSize:10,padding:"10px 5px 4px",textAlign:"center",fontWeight:600}}>
-                        {foto.source==='webcam'?'📸':'📁'} {new Date(foto.createdAt).toLocaleDateString("es-VE")}
+                        {foto.source==='webcam'?<Ico e="📸"/>:<Ico e="📁"/>} {new Date(foto.createdAt).toLocaleDateString("es-VE")}
                       </div>
                     </div>
                   ))}
@@ -3048,7 +3144,7 @@ export default function SistemaCarga(){
       setShowLabels({wr:n,dims,remitente:wrf.remitente,tipoEnvio:wrf.tipoEnvio});
       // PREPAID: abrir su factura al guardar (si se marcó la opción)
       if(String(n.tipoPago||"").toLowerCase().includes("prepa")&&wrf.facturarPrepaid!==false&&(hasPerm("crear_factura")||hasPerm("facturar"))){
-        if(!n.tipoEnvio)window.alert(`WR ${n.id} guardado.\nPara facturarlo como PREPAID asigna el tipo de envío; luego usa «💰 Facturar PREPAID» en el WR.`);
+        if(!n.tipoEnvio)window.alert(`WR ${n.id} guardado.\nPara facturarlo como PREPAID asigna el tipo de envío; luego usa «Facturar PREPAID» en el WR.`);
         else facOpenNew(facConstruirWR(n));
       }
     }
@@ -3149,7 +3245,7 @@ export default function SistemaCarga(){
       {/* Nuevo WR — IZQUIERDA */}
       {hasPerm("crear_wr")&&<button className="btn-p" onClick={()=>{setWrf(emptyWRF(PAY_TYPES[0]));setShowNewWR(true);}}>+ Nuevo WR</button>}
       {/* ATAJOS — abren el módulo en una ventana encima, sin salir de esta pantalla */}
-      {[{id:"reempaque",ic:"🔁",l:"Reempaque",c:"#5B3FB5"},{id:"cargorelease",ic:"🚀",l:"Cargo Release",c:"#0080CC"}].map(a=>(
+      {[{id:"reempaque",ic:<Ico e="🔁"/>,l:"Reempaque",c:"#5B3FB5"},{id:"cargorelease",ic:<Ico e="🚀"/>,l:"Cargo Release",c:"#0080CC"}].map(a=>(
         <button key={a.id} type="button" className="btn-s" title={`Abrir ${a.l} en una ventana, sin salir de esta pantalla`}
           onClick={()=>setQuickTab(a.id)}
           style={{color:a.c,borderColor:`${a.c}55`,background:`${a.c}12`,fontWeight:700}}>
@@ -3180,7 +3276,7 @@ export default function SistemaCarga(){
       <button type="button" className="btn-s" onClick={()=>setDashWide(v=>!v)}
         title={dashWide?"Volver a mostrar estadísticas y panel lateral":"Ocultar estadísticas y panel lateral para ver más filas y columnas"}
         style={{fontWeight:700,whiteSpace:"nowrap"}}>
-        {dashWide?"🗗 Reducir tabla":"⛶ Ampliar tabla"}
+        {dashWide?"Reducir tabla":"Ampliar tabla"}
       </button>
     </div>
   );
@@ -3190,14 +3286,14 @@ export default function SistemaCarga(){
   // de WR_STATUSES. Filtros y conteos comparten códigos con el objeto `stats`
   // de más arriba (única fuente de verdad por estado).
   const STAT_DEFS=[
-    {key:"total",          ic:"📦", label:"Total WR",        d:"Todos los WR del sistema",            cls:"up", filter:()=>wrList, color:"#1A2B4A"},
+    {key:"total",          ic:<Ico e="📦"/>, label:"Total WR",        d:"Todos los WR del sistema",            cls:"up", filter:()=>wrList, color:"#1A2B4A"},
     {key:"porConfirmar",   ic:"🆕", label:"Por Confirmar",    d:"Recibido / Origen — falta tipo",       cls:"dn", filter:()=>wrList.filter(w=>w.status&&["1","2"].includes(w.status.code)), color:"#C05800"},
-    {key:"confirmed",      ic:"✅", label:"Confirmados",      d:"Listos para consolidar",               cls:"up", filter:()=>wrList.filter(w=>w.status&&w.status.code==="3"), color:"#1A8A4A"},
-    {key:"consolidados",   ic:"🗂️", label:"Consolidados",     d:"Asignados a una guía",                 cls:"up", filter:()=>wrList.filter(w=>w.status&&w.status.code==="4"), color:"#2A6FA0"},
-    {key:"transit",        ic:"✈️", label:"En Tránsito",      d:"Viajando origen → destino",            cls:"up", filter:()=>wrList.filter(w=>w.status&&["5","6","6.2","7","8","9","10","11","12","13"].includes(w.status.code)), color:"#0080CC"},
-    {key:"almacenDestino", ic:"📥", label:"Almacén Destino",  d:"Llegaron al almacén",                   cls:"up", filter:()=>wrList.filter(w=>w.status&&w.status.code==="17"), color:"#6A4FB0"},
-    {key:"porEntrega",     ic:"🚚", label:"Por Entrega",      d:"Listos para retiro / envío",            cls:"up", filter:()=>wrList.filter(w=>w.status&&w.status.code==="20"), color:"#1A6040"},
-    {key:"porCobrar",      ic:"💸", label:"Por Cobrar",       d:"Entregados sin pago",                   cls:"dn", filter:()=>wrList.filter(w=>w.status&&w.status.code==="22"), color:"#CC2233"},
+    {key:"confirmed",      ic:<Ico e="✅"/>, label:"Confirmados",      d:"Listos para consolidar",               cls:"up", filter:()=>wrList.filter(w=>w.status&&w.status.code==="3"), color:"#1A8A4A"},
+    {key:"consolidados",   ic:<Ico e="🗂️"/>, label:"Consolidados",     d:"Asignados a una guía",                 cls:"up", filter:()=>wrList.filter(w=>w.status&&w.status.code==="4"), color:"#2A6FA0"},
+    {key:"transit",        ic:<Ico e="✈️"/>, label:"En Tránsito",      d:"Viajando origen → destino",            cls:"up", filter:()=>wrList.filter(w=>w.status&&["5","6","6.2","7","8","9","10","11","12","13"].includes(w.status.code)), color:"#0080CC"},
+    {key:"almacenDestino", ic:<Ico e="📥"/>, label:"Almacén Destino",  d:"Llegaron al almacén",                   cls:"up", filter:()=>wrList.filter(w=>w.status&&w.status.code==="17"), color:"#6A4FB0"},
+    {key:"porEntrega",     ic:<Ico e="🚚"/>, label:"Por Entrega",      d:"Listos para retiro / envío",            cls:"up", filter:()=>wrList.filter(w=>w.status&&w.status.code==="20"), color:"#1A6040"},
+    {key:"porCobrar",      ic:<Ico e="💸"/>, label:"Por Cobrar",       d:"Entregados sin pago",                   cls:"dn", filter:()=>wrList.filter(w=>w.status&&w.status.code==="22"), color:"#CC2233"},
   ];
 
   const renderDash=()=>(
@@ -3233,12 +3329,12 @@ export default function SistemaCarga(){
 
         {!dashWide&&<div className="rp">
           <div className="card">
-            <div className="card-tt" onClick={()=>setTab("alerts")} title="Ver faltantes y sobrantes en Alertas" style={{cursor:"pointer"}}>🔔 Alertas <span className="card-sub">{stats.excepciones} excepciones ›</span></div>
+            <div className="card-tt" onClick={()=>setTab("alerts")} title="Ver faltantes y sobrantes en Alertas" style={{cursor:"pointer"}}><Ico e="🔔" sp/>Alertas <span className="card-sub">{stats.excepciones} excepciones ›</span></div>
             {[
-              stats.customs>0&&{cls:"alt-e",ic:"🛃",t:"En Aduana / Retención",b:`${stats.customs} envío${stats.customs!==1?"s":""} en proceso aduanal`},
-              stats.excepciones>0&&{cls:"alt-w",ic:"⚠️",t:"Excepciones",b:`${stats.excepciones} WR en Faltante / Investigación / Sobrante`},
-              stats.porEntrega>0&&{cls:"alt-i",ic:"🚚",t:"Por Entrega",b:`${stats.porEntrega} envío${stats.porEntrega!==1?"s":""} esperan al cliente`},
-              stats.porCobrar>0&&{cls:"alt-ok",ic:"💸",t:"Por Cobrar",b:`${stats.porCobrar} envío${stats.porCobrar!==1?"s":""} pendientes de cobro`},
+              stats.customs>0&&{cls:"alt-e",ic:<Ico e="🛃"/>,t:"En Aduana / Retención",b:`${stats.customs} envío${stats.customs!==1?"s":""} en proceso aduanal`},
+              stats.excepciones>0&&{cls:"alt-w",ic:<Ico e="⚠️"/>,t:"Excepciones",b:`${stats.excepciones} WR en Faltante / Investigación / Sobrante`},
+              stats.porEntrega>0&&{cls:"alt-i",ic:<Ico e="🚚"/>,t:"Por Entrega",b:`${stats.porEntrega} envío${stats.porEntrega!==1?"s":""} esperan al cliente`},
+              stats.porCobrar>0&&{cls:"alt-ok",ic:<Ico e="💸"/>,t:"Por Cobrar",b:`${stats.porCobrar} envío${stats.porCobrar!==1?"s":""} pendientes de cobro`},
             ].filter(Boolean).map((a,i)=>(
               <div key={i} className={`alt-row ${a.cls}`}>
                 <div className="alt-ic">{a.ic}</div>
@@ -3247,7 +3343,7 @@ export default function SistemaCarga(){
             ))}
           </div>
           <div className="card">
-            <div className="card-tt">📊 Distribución</div>
+            <div className="card-tt"><Ico e="📊" sp/>Distribución</div>
             {[
               {l:"Por Confirmar", v:stats.porConfirmar,   c:"#C05800"},
               {l:"Confirmados",   v:stats.confirmed,       c:"#1A8A4A"},
@@ -3274,11 +3370,11 @@ export default function SistemaCarga(){
           {/* ACCESOS DIRECTOS — atajos a los modulos que no tienen cuadro de stat
               propio arriba. Ocupa el slot que estaba reservado en el panel derecho. */}
           <div className="card">
-            <div className="card-tt">⚡ Accesos Directos</div>
+            <div className="card-tt"><Ico e="⚡" sp/>Accesos Directos</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
               {[
-                {id:"reempaque",    ic:"🔁", l:"Reempaque",     n:wrList.filter(w=>w.status?.code==="2.3").length, sub:"reempacados", c:"#5B3FB5"},
-                {id:"cargorelease", ic:"🚀", l:"Cargo Release", n:wrList.filter(w=>w.status?.code==="25").length,  sub:"egresados",   c:"#0080CC"},
+                {id:"reempaque",    ic:<Ico e="🔁"/>, l:"Reempaque",     n:wrList.filter(w=>w.status?.code==="2.3").length, sub:"reempacados", c:"#5B3FB5"},
+                {id:"cargorelease", ic:<Ico e="🚀"/>, l:"Cargo Release", n:wrList.filter(w=>w.status?.code==="25").length,  sub:"egresados",   c:"#0080CC"},
               ].map(b=>(
                 <button key={b.id} type="button" title={`Abrir ${b.l} en una ventana, sin salir del Dashboard`} onClick={()=>setQuickTab(b.id)}
                   style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,padding:"11px 6px",
@@ -3312,7 +3408,7 @@ export default function SistemaCarga(){
     return (
     <div className="page-scroll">
       <div className="card" style={{marginBottom:14}}>
-        <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:16,fontWeight:700,color:"var(--navy)",marginBottom:12}}>📡 Recepción en Puerta — Control de Paquetería</div>
+        <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:16,fontWeight:700,color:"var(--navy)",marginBottom:12}}><Ico e="📡" sp/>Recepción en Puerta — Control de Paquetería</div>
         <div style={{display:"grid",gridTemplateColumns:"220px 1fr auto",gap:8,marginBottom:8}}>
           <div className="fg">
             <div className="fl">Carrier / Transportista</div>
@@ -3326,7 +3422,7 @@ export default function SistemaCarga(){
           </div>
           <div className="fg">
             <div className="fl">&nbsp;</div>
-            <button className="scan-btn" onClick={doScan}>📡 Registrar</button>
+            <button className="scan-btn" onClick={doScan}><Ico e="📡" sp/>Registrar</button>
           </div>
         </div>
       </div>
@@ -3335,11 +3431,11 @@ export default function SistemaCarga(){
         {/* IZQUIERDA — PENDIENTES */}
         <div className="card">
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
-            <span style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:15,fontWeight:700,color:"var(--navy)"}}>⏳ Pendientes de WR</span>
+            <span style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:15,fontWeight:700,color:"var(--navy)"}}><Ico e="⏳" sp/>Pendientes de WR</span>
             {pending.length>0&&<span style={{fontSize:12,background:"#FDE8EA",padding:"2px 8px",borderRadius:4,border:"1px solid #F0A0A8",color:"var(--red)",fontWeight:700}}>{pending.length}</span>}
           </div>
           {pending.length===0
-            ?<div style={{textAlign:"center",padding:"24px 0",color:"var(--t3)",fontSize:13}}>Sin pendientes ✅</div>
+            ?<div style={{textAlign:"center",padding:"24px 0",color:"var(--t3)",fontSize:13}}>Sin pendientes <Ico e="✅"/></div>
             :<table className="ct">
               <thead><tr><th>#</th><th>Carrier</th><th>Tracking</th><th>Hora</th><th></th></tr></thead>
               <tbody>{pending.map((s,i)=>(
@@ -3360,7 +3456,7 @@ export default function SistemaCarga(){
         {/* DERECHA — HISTORIAL COLAPSABLE POR DÍA */}
         <div className="card">
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
-            <span style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:15,fontWeight:700,color:"var(--navy)"}}>✅ Historial por Día</span>
+            <span style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:15,fontWeight:700,color:"var(--navy)"}}><Ico e="✅" sp/>Historial por Día</span>
             {history.length>0&&<span style={{fontSize:12,background:"#E8F8EE",padding:"2px 8px",borderRadius:4,border:"1px solid #80D0A0",color:"var(--green)",fontWeight:700}}>{history.length} registrados</span>}
           </div>
           {Object.keys(histByDay).length===0
@@ -3372,9 +3468,9 @@ export default function SistemaCarga(){
                   {/* Header clickeable */}
                   <div onClick={()=>toggleDay(day)} style={{background:"var(--bg4)",padding:"8px 12px",display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer",borderBottom:open?"1px solid var(--b1)":"none"}}>
                     <span style={{fontWeight:700,fontSize:14,color:"var(--navy)"}}>
-                      📅 {day} — {items.length} paquetes {open?"▲":"▼"}
+                      <Ico e="📅" sp/>{day} — {items.length} paquetes {open?"▲":"▼"}
                     </span>
-                    {hasPerm("borrar_rp")&&<button className="btn-d" style={{fontSize:11,padding:"2px 8px"}} onClick={e=>{e.stopPropagation();const ids=items.map(s=>s.id).filter(Boolean);setScanLog(p=>p.filter(s=>fmtDate(s.ts)!==day||!s.registered));dbDeleteScanIds(ids);}}>🗑 Borrar día</button>}
+                    {hasPerm("borrar_rp")&&<button className="btn-d" style={{fontSize:11,padding:"2px 8px"}} onClick={e=>{e.stopPropagation();const ids=items.map(s=>s.id).filter(Boolean);setScanLog(p=>p.filter(s=>fmtDate(s.ts)!==day||!s.registered));dbDeleteScanIds(ids);}}><Ico e="🗑" sp/>Borrar día</button>}
                   </div>
                   {open&&(
                     <table className="ct" style={{fontSize:12}}>
@@ -3407,14 +3503,14 @@ export default function SistemaCarga(){
       const totalCli=clients.filter(c=>c.tipo==="cliente").length;
       const totalUsr=clients.filter(c=>c.tipo==="usuario").length;
       const cards=[
-        {v:"clientes",ic:"🏠",l:"Clientes",d:"Personas y empresas que envían/reciben paquetes.",n:totalCli,c1:"#E8F8EE",c2:"var(--green)"},
-        {v:"usuarios",ic:"👤",l:"Usuarios del Sistema",d:"Empleados, agentes, oficinas y roles internos.",n:totalUsr,c1:"#F0EAFE",c2:"var(--purple)"},
-        {v:"todos",   ic:"👥",l:"Todos",                d:"Lista combinada de Clientes y Usuarios.",       n:clients.length,c1:"#EEF3FF",c2:"var(--navy)"},
+        {v:"clientes",ic:<Ico e="🏠"/>,l:"Clientes",d:"Personas y empresas que envían/reciben paquetes.",n:totalCli,c1:"#E8F8EE",c2:"var(--green)"},
+        {v:"usuarios",ic:<Ico e="👤"/>,l:"Usuarios del Sistema",d:"Empleados, agentes, oficinas y roles internos.",n:totalUsr,c1:"#F0EAFE",c2:"var(--purple)"},
+        {v:"todos",   ic:<Ico e="👥"/>,l:"Todos",                d:"Lista combinada de Clientes y Usuarios.",       n:clients.length,c1:"#EEF3FF",c2:"var(--navy)"},
       ];
       return(
         <div className="page-scroll">
           <div className="card" style={{textAlign:"center",padding:"40px 24px",marginBottom:14}}>
-            <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:22,fontWeight:700,color:"var(--navy)",marginBottom:6}}>👥 Clientes & Usuarios</div>
+            <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:22,fontWeight:700,color:"var(--navy)",marginBottom:6}}><Ico e="👥" sp/>Clientes & Usuarios</div>
           </div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:14,maxWidth:1080,margin:"0 auto"}}>
             {cards.map(card=>(
@@ -3441,13 +3537,13 @@ export default function SistemaCarga(){
     <div className="page-scroll">
       <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
         <div className="tabs" style={{flex:1}}>
-          {[["todos","👥 Todos"],["clientes","🏠 Clientes"],["usuarios","👤 Usuarios"]].map(([v,l])=>(
+          {[["todos","Todos"],["clientes","Clientes"],["usuarios","Usuarios"]].map(([v,l])=>(
             <div key={v} className={`tab ${clFilter===v?"on":""}`} onClick={()=>setClFilter(v)}>{l}
               <span className="t-cnt">{v==="todos"?clients.length:clients.filter(c=>c.tipo===(v==="clientes"?"cliente":"usuario")).length}</span>
             </div>
           ))}
           <div className="tab" onClick={()=>setClFilter("")} title="Volver al selector"
-            style={{marginLeft:"auto",color:"var(--t3)",cursor:"pointer"}}>↩ Cambiar</div>
+            style={{marginLeft:"auto",color:"var(--t3)",cursor:"pointer"}}><Ico e="↩" sp/>Cambiar</div>
         </div>
         {hasPerm("crear_cliente")&&<button className="btn-p" onClick={()=>setShowNewCl(true)}>+ Agregar</button>}
       </div>
@@ -3463,22 +3559,22 @@ export default function SistemaCarga(){
             </tr></thead>
             <tbody>
               {filteredCl.map(c=>{
-                const CT_LABEL={agente:"🤝 Agente",vendedor_agente:"💼 Vend. Agente",autonomo:"🧑‍💻 Autónomo",oficina:"🏢 Oficina",vendedor_oficina:"🛒 Vend. Oficina",matriz:"🏛️ Matriz"};
+                const CT_LABEL={agente:"Agente",vendedor_agente:"Vend. Agente",autonomo:"Autónomo",oficina:"Oficina",vendedor_oficina:"Vend. Oficina",matriz:"Matriz"};
                 const CT_COLOR={agente:"#E8F0FE",vendedor_agente:"#FFF0E8",autonomo:"#E8FEF0",oficina:"#F0E8FE",vendedor_oficina:"#FEF0E8",matriz:"#EEF0F4"};
                 const CT_TEXT={agente:"var(--cyan)",vendedor_agente:"var(--gold2)",autonomo:"var(--green)",oficina:"var(--purple)",vendedor_oficina:"#D0700A",matriz:"var(--t3)"};
                 const ct=c.clienteTipo||"";
                 const ctLabel=CT_LABEL[ct]||"—";
                 const parentAut=c.autonomoId?clients.find(x=>x.id===c.autonomoId):null;
                 const parentName=
-                  ct==="matriz"?`🏛️ ${empresaNombre||"Casa Matriz"}`:
-                  ct==="agente"||ct==="vendedor_agente"?(agentes.find(a=>a.id===c.agenteId)?.nombre||"⚠️ Sin agente asignado"):
-                  ct==="autonomo"?(parentAut?`${parentAut.primerNombre} ${parentAut.primerApellido}`:"⚠️ Sin autónomo asignado"):
-                  ct==="oficina"||ct==="vendedor_oficina"?(oficinas.find(o=>o.id===c.oficinaId)?.nombre||"⚠️ Sin oficina asignada"):
+                  ct==="matriz"?`${empresaNombre||"Casa Matriz"}`:
+                  ct==="agente"||ct==="vendedor_agente"?(agentes.find(a=>a.id===c.agenteId)?.nombre||"Sin agente asignado"):
+                  ct==="autonomo"?(parentAut?`${parentAut.primerNombre} ${parentAut.primerApellido}`:"Sin autónomo asignado"):
+                  ct==="oficina"||ct==="vendedor_oficina"?(oficinas.find(o=>o.id===c.oficinaId)?.nombre||"Sin oficina asignada"):
                   "—";
                 return (
                 <tr key={c.id}>
                   <td><span className="cid">{c.id}</span></td>
-                  <td><span style={{fontSize:11,padding:"2px 6px",borderRadius:4,fontWeight:700,background:c.tipo==="usuario"?"#F0EAFE":"#E8F8EE",color:c.tipo==="usuario"?"var(--purple)":"var(--green)",border:"1px solid",borderColor:c.tipo==="usuario"?"#C0A0F0":"#80D0A0"}}>{c.tipo==="usuario"?"👤 Sistema":"🏠 Cliente"}</span></td>
+                  <td><span style={{fontSize:11,padding:"2px 6px",borderRadius:4,fontWeight:700,background:c.tipo==="usuario"?"#F0EAFE":"#E8F8EE",color:c.tipo==="usuario"?"var(--purple)":"var(--green)",border:"1px solid",borderColor:c.tipo==="usuario"?"#C0A0F0":"#80D0A0"}}>{c.tipo==="usuario"?"Sistema":"Cliente"}</span></td>
                   <td><span className="cn">{fullName(c)}</span></td>
                   <td style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--gold2)",fontWeight:600}}>{c.cedula}</td>
                   <td style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--gold2)",fontWeight:700}}>{c.casillero||"—"}</td>
@@ -3492,10 +3588,10 @@ export default function SistemaCarga(){
                   <td style={{fontSize:12,color:"var(--cyan)"}}>{c.email}</td>
                   <td><RoleBadge code={c.rol}/></td>
                   <td>{ct?<span style={{fontSize:11,padding:"2px 7px",borderRadius:4,fontWeight:700,background:CT_COLOR[ct]||"var(--bg4)",color:CT_TEXT[ct]||"var(--t2)",border:"1px solid currentColor",whiteSpace:"nowrap"}}>{ctLabel}</span>:<span style={{color:"var(--t4)",fontSize:12}}>—</span>}</td>
-                  <td style={{fontSize:12,color:parentName&&parentName.startsWith("⚠️")?"var(--red)":ct==="matriz"?"var(--t3)":"var(--t1)",fontWeight:ct==="matriz"?400:600,whiteSpace:"nowrap"}}>{parentName}</td>
+                  <td style={{fontSize:12,color:parentName&&parentName.startsWith("Sin ")?"var(--red)":ct==="matriz"?"var(--t3)":"var(--t1)",fontWeight:ct==="matriz"?400:600,whiteSpace:"nowrap"}}>{parentName}</td>
                   {(hasPerm("editar_cliente")||hasPerm("borrar_cliente"))&&<td><div style={{display:"flex",gap:3}}>
-                    {hasPerm("editar_cliente")&&<span className="ic-b" onClick={()=>setShowEditCl(c)}>✏️</span>}
-                    {hasPerm("borrar_cliente")&&<span className="ic-b" style={{color:"var(--red)"}} onClick={()=>{if(window.confirm(`¿Borrar "${fullName(c)}"? Esta acción no se puede deshacer.`)){setClients(p=>p.filter(x=>x.id!==c.id));(async()=>{if(c.authId)await cuentaEliminar(c.id);await dbDeleteCliente(c.id);})();logAction("Borró registro",`${c.id} — ${fullName(c)}`);}}}>🗑</span>}
+                    {hasPerm("editar_cliente")&&<span className="ic-b" onClick={()=>setShowEditCl(c)}><Ico e="✏️" solo/></span>}
+                    {hasPerm("borrar_cliente")&&<span className="ic-b" style={{color:"var(--red)"}} onClick={()=>{if(window.confirm(`¿Borrar "${fullName(c)}"? Esta acción no se puede deshacer.`)){setClients(p=>p.filter(x=>x.id!==c.id));(async()=>{if(c.authId)await cuentaEliminar(c.id);await dbDeleteCliente(c.id);})();logAction("Borró registro",`${c.id} — ${fullName(c)}`);}}}><Ico e="🗑" solo/></span>}
                   </div></td>}
                 </tr>
                 );
@@ -3587,7 +3683,7 @@ export default function SistemaCarga(){
               <div style={{marginLeft:"auto",display:"flex",gap:6,flexWrap:"wrap"}}>
                 {editable&&<button className="btn-s" style={{fontSize:12,padding:"5px 10px",background:"#fff"}} onClick={restaurar}>↺ Predeterminados</button>}
                 {hayCambios&&<button className="btn-s" style={{fontSize:12,padding:"5px 10px",background:"#fff"}} onClick={()=>setRoleDraft({})}>Descartar</button>}
-                {puedeEditar&&<button className="btn-p" style={{fontSize:12,padding:"5px 12px"}} disabled={!hayCambios||roleSaving} onClick={guardar}>{roleSaving?"Guardando…":"💾 Guardar cambios"}</button>}
+                {puedeEditar&&<button className="btn-p" style={{fontSize:12,padding:"5px 12px"}} disabled={!hayCambios||roleSaving} onClick={guardar}>{roleSaving?"Guardando…":"Guardar cambios"}</button>}
               </div>
             </div>
             {!puedeEditar&&<div style={{padding:"8px 16px",background:"var(--bg4)",color:"var(--t2)",fontSize:13,borderBottom:"1px solid var(--b1)"}}>Solo lectura: tu rol no tiene el permiso "Gestionar Roles".</div>}
@@ -3656,7 +3752,7 @@ export default function SistemaCarga(){
           </div>
         ):(
           <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:8,color:"var(--t3)",padding:60}}>
-            <span style={{fontSize:42}}>🔐</span>
+            <span style={{fontSize:42}}><Ico e="🔐" solo/></span>
             <div style={{fontSize:16,fontWeight:600}}>Selecciona un rol para ver y editar sus permisos</div>
           </div>
         )}
@@ -3671,7 +3767,7 @@ export default function SistemaCarga(){
     <div className="ov">
       <div className="modal mxl" onClick={e=>e.stopPropagation()}>
         <div className="mhd">
-          <div className="mt">{editWR?"✏️ Editar WR — "+editWR.id:"📦 Nuevo Warehouse Receipt"} — {wrf.cajas.length} {wrf.cajas.length===1?"caja":"cajas"}</div>
+          <div className="mt">{editWR?"Editar WR — "+editWR.id:"Nuevo Warehouse Receipt"} — {wrf.cajas.length} {wrf.cajas.length===1?"caja":"cajas"}</div>
           <button className="mcl" onClick={()=>{setShowNewWR(false);setEditWR(null);setWrf(emptyWRF(PAY_TYPES[0]));setClientSearch("");}}>✕</button>
         </div>
 
@@ -3701,11 +3797,11 @@ export default function SistemaCarga(){
               <span className="seg sn">{seqPrev}</span>
             </>)}
           </div>
-          {wrNumTipo===1&&<div className="seg-leg"><span>🟡 Secuencia</span></div>}
-          {wrNumTipo===2&&<div className="seg-leg"><span>🟢 Empresa</span><span>🔵 Oficina Origen</span><span>🔵 Oficina Destino</span><span>🟡 Secuencia</span></div>}
-          {(wrNumTipo===3||!wrNumTipo)&&<div className="seg-leg"><span>🔵 País Origen</span><span>🟢 Ciudad Origen</span><span>🔵 País Destino</span><span>🟢 Ciudad Destino</span><span>🟡 Secuencia</span></div>}
+          {wrNumTipo===1&&<div className="seg-leg"><span><Ico e="🟡" sp/>Secuencia</span></div>}
+          {wrNumTipo===2&&<div className="seg-leg"><span><Ico e="🟢" sp/>Empresa</span><span><Ico e="🔵" sp/>Oficina Origen</span><span><Ico e="🔵" sp/>Oficina Destino</span><span><Ico e="🟡" sp/>Secuencia</span></div>}
+          {(wrNumTipo===3||!wrNumTipo)&&<div className="seg-leg"><span><Ico e="🔵" sp/>País Origen</span><span><Ico e="🟢" sp/>Ciudad Origen</span><span><Ico e="🔵" sp/>País Destino</span><span><Ico e="🟢" sp/>Ciudad Destino</span><span><Ico e="🟡" sp/>Secuencia</span></div>}
           <div style={{display:"flex",gap:8,justifyContent:"center",fontSize:13,color:"var(--t2)",marginTop:4}}>
-            <span>🏢 <strong>{OFFICE_CONFIG.branch}</strong></span>
+            <span><Ico e="🏢" sp/><strong>{OFFICE_CONFIG.branch}</strong></span>
           </div>
         </div>
 
@@ -3747,7 +3843,7 @@ export default function SistemaCarga(){
                 </>;
               })()}
               {!wrf.remitenteId&&String(wrf.remitente||"").trim()&&hasPerm("crear_cliente")&&<div className="fg" style={{alignSelf:"end"}}>
-                <button type="button" className="btn-s" style={{fontSize:13,padding:"7px 12px",width:"100%",borderColor:"var(--green)",color:"var(--green)",fontWeight:700}} onClick={registrarRemitenteCliente}>➕ Registrar como cliente</button></div>}
+                <button type="button" className="btn-s" style={{fontSize:13,padding:"7px 12px",width:"100%",borderColor:"var(--green)",color:"var(--green)",fontWeight:700}} onClick={registrarRemitenteCliente}><Ico e="➕" sp/>Registrar como cliente</button></div>}
             </div>
           </div>
           <div>
@@ -3772,8 +3868,8 @@ export default function SistemaCarga(){
               <div className="fg"><div className="fl">N° Casillero</div><input className="fi" value={wrf.casillero} onChange={e=>sw("casillero",e.target.value)} placeholder="NX-0000" style={{fontFamily:"'DM Mono',monospace",fontWeight:800,fontSize:16,color:"var(--navy)",letterSpacing:1,background:"#EEF3FF",border:"2px solid #B8C8F0"}}/></div>
               <div className="fg"><div className="fl">Sucursal de entrega</div>
                 <select className="fs" value={wrf.sucursalEntrega||""} onChange={e=>sw("sucursalEntrega",e.target.value)}>
-                  <option value="">🏛️ Principal</option>
-                  {oficinas.map(o=><option key={o.id} value={o.id}>🏢 {o.nombre}{o.ciudad?` — ${o.ciudad}`:""}{o.pais?`, ${o.pais}`:""}</option>)}
+                  <option value="">Principal</option>
+                  {oficinas.map(o=><option key={o.id} value={o.id}>{o.nombre}{o.ciudad?` — ${o.ciudad}`:""}{o.pais?`, ${o.pais}`:""}</option>)}
                 </select>
               </div>
             </div>
@@ -3792,7 +3888,7 @@ export default function SistemaCarga(){
           <div className="fg"><div className="fl">Tipo de Pago
             {!editWR&&String(wrf.tipoPago||"").toLowerCase().includes("prepa")&&(hasPerm("crear_factura")||hasPerm("facturar"))&&(
               <label style={{marginLeft:10,fontWeight:700,color:"var(--navy)",textTransform:"none",letterSpacing:0,cursor:"pointer"}}>
-                <input type="checkbox" checked={wrf.facturarPrepaid!==false} onChange={e=>sw("facturarPrepaid",e.target.checked)} style={{marginRight:4}}/>🧾 Facturar al guardar
+                <input type="checkbox" checked={wrf.facturarPrepaid!==false} onChange={e=>sw("facturarPrepaid",e.target.checked)} style={{marginRight:4}}/><Ico e="🧾" sp/>Facturar al guardar
               </label>)}
           </div><select className="fs" value={wrf.tipoPago} onChange={e=>sw("tipoPago",e.target.value)}>{PAY_TYPES.map(t=><option key={t}>{t}</option>)}</select></div>
           <div className="fg">
@@ -3802,10 +3898,10 @@ export default function SistemaCarga(){
                 const cl=wrf.clienteId?clients.find(c=>c.id===wrf.clienteId):null;
                 const ct=cl?.clienteTipo||"";
                 if(!cl)return<span style={{color:"var(--t3)"}}>Casa Matriz (por defecto)</span>;
-                if(ct==="matriz")return<span>🏛️ Casa Matriz</span>;
-                if(ct==="agente"||ct==="vendedor_agente"){const ag=agentes.find(a=>a.id===cl.agenteId);return<span>{ct==="agente"?"🤝":"💼"} {ag?.nombre||ag?.codigo||"Agente"}</span>;}
-                if(ct==="oficina"||ct==="vendedor_oficina"){const of=oficinas.find(o=>o.id===cl.oficinaId);return<span>{ct==="oficina"?"🏢":"🛒"} {of?.nombre||of?.codigo||"Oficina"}</span>;}
-                if(ct==="autonomo"){const au=clients.find(c=>c.id===cl.autonomoId);return<span>🧑‍💻 {au?`${au.primerNombre} ${au.primerApellido}`:"Autónomo"}</span>;}
+                if(ct==="matriz")return<span><Ico e="🏛️" sp/>Casa Matriz</span>;
+                if(ct==="agente"||ct==="vendedor_agente"){const ag=agentes.find(a=>a.id===cl.agenteId);return<span>{ct==="agente"?<Ico e="🤝"/>:<Ico e="💼"/>} {ag?.nombre||ag?.codigo||"Agente"}</span>;}
+                if(ct==="oficina"||ct==="vendedor_oficina"){const of=oficinas.find(o=>o.id===cl.oficinaId);return<span>{ct==="oficina"?<Ico e="🏢"/>:<Ico e="🛒"/>} {of?.nombre||of?.codigo||"Oficina"}</span>;}
+                if(ct==="autonomo"){const au=clients.find(c=>c.id===cl.autonomoId);return<span><Ico e="🧑‍💻" sp/>{au?`${au.primerNombre} ${au.primerApellido}`:"Autónomo"}</span>;}
                 return<span style={{color:"var(--t3)"}}>Casa Matriz</span>;
               })()}
             </div>
@@ -3845,12 +3941,12 @@ export default function SistemaCarga(){
               {/* Header registro */}
               <div style={{background:"var(--navy)",padding:"8px 14px",display:"flex",alignItems:"center",gap:10}}>
                 <span style={{color:"#E5AE3A",fontFamily:"'DM Mono',monospace",fontWeight:800,fontSize:15}}>
-                  📦 REGISTRO {idx+1} {wrf.cajas.length>1?`de ${wrf.cajas.length}`:""}
+                  <Ico e="📦" sp/>REGISTRO {idx+1} {wrf.cajas.length>1?`de ${wrf.cajas.length}`:""}
                 </span>
                 <div style={{flex:1}}/>
                 {wrf.cajas.length>1&&(
                   <button onClick={()=>removeCaja(idx)} style={{background:"rgba(204,34,51,0.3)",border:"1px solid rgba(204,34,51,0.5)",color:"#FF8888",borderRadius:5,padding:"3px 10px",cursor:"pointer",fontSize:13,fontWeight:600}}>
-                    🗑 Eliminar registro
+                    <Ico e="🗑" sp/>Eliminar registro
                   </button>
                 )}
               </div>
@@ -3876,7 +3972,7 @@ export default function SistemaCarga(){
                             <div className="fl" style={{marginBottom:2,fontSize:10}}>Tracking {ti+1}</div>
                             <div style={{display:"flex",gap:4}}>
                               <input className="fi" style={{padding:"4px 6px",fontFamily:"'DM Mono',monospace",fontSize:12,flex:1}} value={caja[tfield]||""} onChange={e=>swCaja(idx,tfield,e.target.value.toUpperCase())} placeholder="Escanear…"/>
-                              {ti===0&&<button type="button" className="scan-btn" style={{padding:"4px 8px",fontSize:13}} title="Escanear código de barras (requiere lector USB)">📡</button>}
+                              {ti===0&&<button type="button" className="scan-btn" style={{padding:"4px 8px",fontSize:13}} title="Escanear código de barras (requiere lector USB)"><Ico e="📡" solo/></button>}
                             </div>
                           </div>
                         </Fragment>
@@ -3906,9 +4002,9 @@ export default function SistemaCarga(){
                   <div className="fg"><div className="fl">Ancho</div><input className="fi" type="number" value={caja.ancho} onChange={e=>swCaja(idx,"ancho",e.target.value)}/></div>
                   <div className="fg"><div className="fl">Alto</div><input className="fi" type="number" value={caja.alto} onChange={e=>swCaja(idx,"alto",e.target.value)}/></div>
                   <div className="fg"><div className="fl">Peso ({wrf.unitPeso})</div><input className="fi" type="number" value={caja.pesoLb} onChange={e=>swCaja(idx,"pesoLb",e.target.value)}/></div>
-                  <div className="fg"><div className="fl">P.Vol.lb 🔄</div><div className="fi ro" style={{color:"var(--orange)",fontWeight:700,fontSize:14}}>{hasVol?cc.volLb:"—"}</div></div>
-                  <div className="fg"><div className="fl">P.Vol.kg 🔄</div><div className="fi ro" style={{color:"var(--orange)",fontSize:13}}>{hasVol?cc.volKg:"—"}</div></div>
-                  <div className="fg"><div className="fl">Ft³ 🔄</div><div className="fi ro" style={{color:"var(--sky)",fontWeight:600,fontSize:13}}>{hasVol?cc.ft3:"—"}</div></div>
+                  <div className="fg"><div className="fl">P.Vol.lb <Ico e="🔄"/></div><div className="fi ro" style={{color:"var(--orange)",fontWeight:700,fontSize:14}}>{hasVol?cc.volLb:"—"}</div></div>
+                  <div className="fg"><div className="fl">P.Vol.kg <Ico e="🔄"/></div><div className="fi ro" style={{color:"var(--orange)",fontSize:13}}>{hasVol?cc.volKg:"—"}</div></div>
+                  <div className="fg"><div className="fl">Ft³ <Ico e="🔄"/></div><div className="fi ro" style={{color:"var(--sky)",fontWeight:600,fontSize:13}}>{hasVol?cc.ft3:"—"}</div></div>
                 </div>
 
                 {/* Descripción */}
@@ -3922,18 +4018,18 @@ export default function SistemaCarga(){
                   <div style={{marginTop:12,paddingTop:10,borderTop:"1px dashed var(--b1)"}}>
                     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
                       <div style={{fontSize:13,fontWeight:700,color:"var(--navy)",textTransform:"uppercase",letterSpacing:.8,display:"flex",alignItems:"center",gap:7}}>
-                        <span style={{fontSize:15}}>📷</span> Fotos del paquete
+                        <span style={{fontSize:15}}><Ico e="📷" solo/></span> Fotos del paquete
                         {(caja.fotos||[]).length>0 && (
                           <span style={{background:"var(--gold)",color:"#fff",fontSize:11,padding:"2px 8px",borderRadius:10,fontWeight:700}}>{caja.fotos.length}</span>
                         )}
                       </div>
                       <div style={{display:"flex",gap:6}}>
                         <label className="btn-s" style={{fontSize:12,padding:"5px 10px",cursor:"pointer",margin:0,display:"inline-flex",alignItems:"center",gap:5}}>
-                          <span>📁</span> Subir archivo
+                          <span><Ico e="📁" solo/></span> Subir archivo
                           <input type="file" accept="image/*" multiple style={{display:"none"}} onChange={e=>{addFotosToCaja(idx,e.target.files,"upload");e.target.value="";}}/>
                         </label>
                         <button type="button" className="btn-s" style={{fontSize:12,padding:"5px 10px",display:"inline-flex",alignItems:"center",gap:5}} onClick={()=>setWebcamOpen({cajaIdx:idx})}>
-                          <span>📸</span> Cámara web
+                          <span><Ico e="📸" solo/></span> Cámara web
                         </button>
                       </div>
                     </div>
@@ -3950,7 +4046,7 @@ export default function SistemaCarga(){
                               <button type="button" title="Quitar foto" onClick={()=>removeFotoFromCaja(idx,fi)} style={{width:22,height:22,borderRadius:"50%",border:"none",background:"rgba(204,34,51,0.95)",color:"#fff",fontSize:14,fontWeight:900,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}}>×</button>
                             </div>
                             <div style={{position:"absolute",bottom:0,left:0,right:0,background:"linear-gradient(to top, rgba(0,0,0,0.7), transparent)",color:"#fff",fontSize:10,padding:"8px 4px 3px",textAlign:"center",fontWeight:600}}>
-                              {foto.source==='webcam'?'📸 Cámara':'📁 Archivo'}
+                              {foto.source==='webcam'?'Cámara':'Archivo'}
                             </div>
                           </div>
                         ))}
@@ -3965,7 +4061,7 @@ export default function SistemaCarga(){
 
         {/* BOTÓN NUEVA CAJA */}
         <button onClick={addCaja} style={{width:"100%",padding:"12px",border:"2px dashed var(--navy)",borderRadius:10,background:"rgba(26,43,74,0.04)",color:"var(--navy)",fontSize:15,fontWeight:700,cursor:"pointer",marginBottom:14,transition:"all .15s",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
-          <span style={{fontSize:20}}>📦</span> + Agregar
+          <span style={{fontSize:20}}><Ico e="📦" solo/></span> + Agregar
         </button>
 
         {/* TOTALES */}
@@ -4000,8 +4096,8 @@ export default function SistemaCarga(){
 
         <div className="mft">
           <button className="btn-s" onClick={()=>{setShowNewWR(false);setEditWR(null);setWrf(emptyWRF(PAY_TYPES[0]));setClientSearch("");}}>Cancelar</button>
-          <button className="btn-c">👁 Vista Previa</button>
-          <button className="btn-p" onClick={submitWR}>{editWR?"Guardar Cambios ✅":"Registrar WR ✅"}</button>
+          <button className="btn-c"><Ico e="👁" sp/>Vista Previa</button>
+          <button className="btn-p" onClick={submitWR}>{editWR?"Guardar Cambios ":"Registrar WR "}</button>
         </div>
       </div>
     </div>
@@ -4020,7 +4116,7 @@ export default function SistemaCarga(){
     <div className="ov">
       <div className="modal mlg" onClick={e=>e.stopPropagation()}>
         <div className="mhd">
-          <div className="mt">📋 Warehouse Receipt</div>
+          <div className="mt"><Ico e="📋" sp/>Warehouse Receipt</div>
           <div style={{display:"flex",gap:6}}>
             {hasPerm("editar_wr")&&<button className="btn-s" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>{
               setEditWR(selWR);
@@ -4045,11 +4141,11 @@ export default function SistemaCarga(){
                 notas:selWR.notas||"",cargos:selWR.cargos||[],
               });
               setShowNewWR(true);setSelWR(null);
-            }}>✏️ Editar</button>}
-            {(hasPerm("ver_documentos")||hasPerm("imp_wr"))&&<button className="btn-s" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>docAbrir(selWR)}>📑 Documentos</button>}
-            {hasPerm("borrar_wr")&&<button className="btn-s" style={{fontSize:12,padding:"4px 10px",color:"var(--red)",borderColor:"var(--red)"}} onClick={()=>{if(window.confirm(`¿Borrar WR ${selWR.id}? Esta acción no se puede deshacer.`)){setWrList(p=>p.filter(x=>x.id!==selWR.id));dbDeleteWR(selWR.id);logAction("Borró WR",selWR.id);setSelWR(null);}}}>🗑 Borrar</button>}
-            {crElegible(selWR)&&hasPerm("hacer_egreso")&&<button className="btn-s" style={{fontSize:12,padding:"4px 10px",background:"#E8F5E9",borderColor:"#81C784",color:"#2E7D32",fontWeight:700}} onClick={()=>{crOpenNew([selWR.id]);setSelWR(null);}} title="Registrar egreso individual de este WR">🚀 Egresar</button>}
-            {dnElegible(selWR)&&hasPerm("entregar")&&<button className="btn-s" style={{fontSize:12,padding:"4px 10px",background:"#E3F2FD",borderColor:"#64B5F6",color:"#1565C0",fontWeight:700}} onClick={()=>{const w=selWR;setSelWR(null);dnEntregarDesdeWR(w);}}>📝 Entregar</button>}
+            }}><Ico e="✏️" sp/>Editar</button>}
+            {(hasPerm("ver_documentos")||hasPerm("imp_wr"))&&<button className="btn-s" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>docAbrir(selWR)}><Ico e="📑" sp/>Documentos</button>}
+            {hasPerm("borrar_wr")&&<button className="btn-s" style={{fontSize:12,padding:"4px 10px",color:"var(--red)",borderColor:"var(--red)"}} onClick={()=>{if(window.confirm(`¿Borrar WR ${selWR.id}? Esta acción no se puede deshacer.`)){setWrList(p=>p.filter(x=>x.id!==selWR.id));dbDeleteWR(selWR.id);logAction("Borró WR",selWR.id);setSelWR(null);}}}><Ico e="🗑" sp/>Borrar</button>}
+            {crElegible(selWR)&&hasPerm("hacer_egreso")&&<button className="btn-s" style={{fontSize:12,padding:"4px 10px",background:"#E8F5E9",borderColor:"#81C784",color:"#2E7D32",fontWeight:700}} onClick={()=>{crOpenNew([selWR.id]);setSelWR(null);}} title="Registrar egreso individual de este WR"><Ico e="🚀" sp/>Egresar</button>}
+            {dnElegible(selWR)&&hasPerm("entregar")&&<button className="btn-s" style={{fontSize:12,padding:"4px 10px",background:"#E3F2FD",borderColor:"#64B5F6",color:"#1565C0",fontWeight:700}} onClick={()=>{const w=selWR;setSelWR(null);dnEntregarDesdeWR(w);}}><Ico e="📝" sp/>Entregar</button>}
             {/* Facturar — visible si el rol tiene permiso, el WR no está bloqueado
                 (no Reempacado 2.3 ni Egresado 25) y no tiene factura activa.
                 Para PREPAID factura al remitente; para COD al receptor según clienteTipo. */}
@@ -4062,10 +4158,10 @@ export default function SistemaCarga(){
                     if(!selWR.tipoEnvio){window.alert("Asigna primero el tipo de envío del WR para poder calcular la tarifa.");return;}
                     facOpenNew(facConstruirWR(selWR));
                     setSelWR(null);
-                  }}>💰 Facturar {esPrepaid?"PREPAID":"COD"}</button>
+                  }}><Ico e="💰" sp/>Facturar {esPrepaid?"PREPAID":"COD"}</button>
               );
             })()}
-            <button className="btn-p" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>window.print()}>🖨 Imprimir</button>
+            <button className="btn-p" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>window.print()}><Ico e="🖨" sp/>Imprimir</button>
             <button className="mcl" onClick={()=>setSelWR(null)}>✕</button>
           </div>
         </div>
@@ -4074,18 +4170,18 @@ export default function SistemaCarga(){
           const dnsRel=deliveryNotes.filter(n=>!n.anulado&&Array.isArray(n.wrIds)&&n.wrIds.includes(selWR.id));
           const facsRel=facturas.filter(f=>f.status!=="anulada"&&Array.isArray(f.wrIds)&&f.wrIds.includes(selWR.id));
           if(dnsRel.length===0&&facsRel.length===0)return null;
-          const statusFacLabel={borrador:"📝 Borrador",emitida:"📤 Emitida",pagada_parcial:"💵 Parcial",pagada:"✅ Pagada"};
+          const statusFacLabel={borrador:"Borrador",emitida:"Emitida",pagada_parcial:"Parcial",pagada:"Pagada"};
           const statusFacColor=(s)=>s==="pagada"?"var(--green)":s==="pagada_parcial"?"var(--orange)":s==="emitida"?"var(--cyan)":"var(--t3)";
           return (
             <div className="no-print" style={{padding:"10px 14px",background:"#F5F7FB",borderBottom:"1px solid var(--b1)",display:"flex",gap:18,flexWrap:"wrap",fontSize:13}}>
               <div style={{display:"flex",alignItems:"center",gap:6}}>
-                <span style={{fontWeight:700,color:"var(--t3)",textTransform:"uppercase",fontSize:11,letterSpacing:.5}}>📝 Entrega:</span>
+                <span style={{fontWeight:700,color:"var(--t3)",textTransform:"uppercase",fontSize:11,letterSpacing:.5}}><Ico e="📝" sp/>Entrega:</span>
                 {dnsRel.length===0
                   ?<span style={{color:"var(--t4)"}}>sin nota</span>
                   :dnsRel.map(n=>(<span key={n.id} style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",background:"#E8F0FE",padding:"2px 6px",borderRadius:4,border:"1px solid #B8C8F0"}}>{n.id}</span>))}
               </div>
               <div style={{display:"flex",alignItems:"center",gap:6}}>
-                <span style={{fontWeight:700,color:"var(--t3)",textTransform:"uppercase",fontSize:11,letterSpacing:.5}}>💰 Facturación:</span>
+                <span style={{fontWeight:700,color:"var(--t3)",textTransform:"uppercase",fontSize:11,letterSpacing:.5}}><Ico e="💰" sp/>Facturación:</span>
                 {facsRel.length===0
                   ?<span style={{color:"var(--t4)"}}>sin factura</span>
                   :facsRel.map(f=>(
@@ -4096,7 +4192,7 @@ export default function SistemaCarga(){
                     ))}
               </div>
               <div style={{display:"flex",alignItems:"center",gap:6}}>
-                <span style={{fontWeight:700,color:"var(--t3)",textTransform:"uppercase",fontSize:11,letterSpacing:.5}}>💳 Tipo Pago:</span>
+                <span style={{fontWeight:700,color:"var(--t3)",textTransform:"uppercase",fontSize:11,letterSpacing:.5}}><Ico e="💳" sp/>Tipo Pago:</span>
                 <span style={{fontWeight:700,color:(selWR.tipoPago||"").toLowerCase().includes("prepa")?"#1A6090":"var(--orange)"}}>{selWR.tipoPago||"—"}</span>
               </div>
             </div>
@@ -4105,7 +4201,7 @@ export default function SistemaCarga(){
         {/* Bloque F — Banner cuando el WR fue REEMPACADO (queda fijo en estado 2.3) */}
         {selWR.status?.code==="2.3"&&(
           <div className="no-print" style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:"#FFF8E1",borderBottom:"2px solid #FFC107",flexWrap:"wrap"}}>
-            <span style={{fontSize:18}}>🔁</span>
+            <span style={{fontSize:18}}><Ico e="🔁" solo/></span>
             <div style={{flex:1,minWidth:200}}>
               <div style={{fontSize:13,fontWeight:700,color:"#7A5C00"}}>WR Reempacado — estado fijo</div>
               <div style={{fontSize:12,color:"#7A5C00"}}>
@@ -4140,11 +4236,11 @@ export default function SistemaCarga(){
             </select>
             {selWR.tipoEnvio
               ?<span style={{fontSize:12,color:"var(--teal)",fontWeight:600}}>✓ {selWR.status?.code==="3"?"Confirmado":"Tipo asignado"}</span>
-              :<span style={{fontSize:12,color:"var(--orange)",fontWeight:600}}>⚠️ Asigna un tipo para confirmar el WR</span>}
+              :<span style={{fontSize:12,color:"var(--orange)",fontWeight:600}}><Ico e="⚠️" sp/>Asigna un tipo para confirmar el WR</span>}
             {selWR.status?.code==="3"&&hasPerm("desconfirmar")&&(
               <button className="btn-s" style={{fontSize:12,padding:"4px 10px",color:"var(--orange)",borderColor:"var(--orange)",marginLeft:"auto"}}
                 onClick={()=>revertirConfirmacion(selWR)}
-                title="Devolver este WR al estado anterior (antes de confirmar)">↩️ Revertir Confirmación</button>
+                title="Devolver este WR al estado anterior (antes de confirmar)"><Ico e="↩️" sp/>Revertir Confirmación</button>
             )}
           </div>
         )}
@@ -4163,7 +4259,7 @@ export default function SistemaCarga(){
               <div style={{display:"flex",alignItems:"flex-end",justifyContent:"flex-end",marginBottom:2}}><WRBarcode value={selWR.id} height={24} width={1.4}/></div>
               <div className="wr-num-d">{selWR.id}</div>
               <div className="wr-num-meta">
-                📍 {selWR.origCity||"—"} → {selWR.destCity||"—"}<br/>
+                <Ico e="📍" sp/>{selWR.origCity||"—"} → {selWR.destCity||"—"}<br/>
                 {fmtDate(selWR.fecha)} {fmtTime(selWR.fecha)}<br/>
                 Recibió: {_usuarioNombre}
               </div>
@@ -4172,7 +4268,7 @@ export default function SistemaCarga(){
           </div>
           <div className="w2c wr-partes">
             <div className="wb">
-              <div className="wb-t">📤 Remitente / Shipper</div>
+              <div className="wb-t"><Ico e="📤" sp/>Remitente / Shipper</div>
               <div className="wf"><div className="wfl">Nombre / Empresa</div><div className="wfv" style={{fontWeight:800,fontSize:20}}>{selWR.shipper||"—"}</div></div>
               <div className="wf"><div className="wfl">Recibido en</div><div className="wfv" style={{fontWeight:600}}>{_oc?.nombre||selWR.branch||"Casa Matriz"}{_oc?.ciudad?` — ${_oc.ciudad}`:""}</div></div>
               <div className="wf"><div className="wfl">Procedencia</div><div className="wfv">{selWR.remitenteDir||""}</div></div>
@@ -4180,11 +4276,11 @@ export default function SistemaCarga(){
               {(selWR.remitenteTel||selWR.remitenteEmail)&&<div className="wf"><div className="wfl">Contacto</div><div className="wfv">{[selWR.remitenteTel,selWR.remitenteEmail].filter(Boolean).join(" · ")}</div></div>}
             </div>
             <div className="wb">
-              <div className="wb-t">📥 Consignatario / Consignee</div>
+              <div className="wb-t"><Ico e="📥" sp/>Consignatario / Consignee</div>
               <div className="wf"><div className="wfl">Nombre</div><div className="wfv" style={{fontWeight:800,fontSize:20}}>{selWR.consignee||"—"}</div></div>
               <div className="wf"><div className="wfl">Casillero</div><div className="wfv" style={{color:"var(--gold2)",fontWeight:800,fontSize:20}}>#{selWR.casillero||"—"}</div></div>
               {_destAddr&&<div className="wf"><div className="wfl">Dirección</div><div className="wfv">{_destAddr}</div></div>}
-              <div className="wf"><div className="wfl">Sucursal de entrega</div><div className="wfv" style={{fontWeight:600}}>{(()=>{const id=sucursalDeWR(selWR,cliDeWRCon(selWR,clients));const o=oficinas.find(x=>x.id===id);return o?`🏢 ${o.nombre}${o.ciudad?` — ${o.ciudad}`:""}`:"🏛️ Principal";})()}</div></div>
+              <div className="wf"><div className="wfl">Sucursal de entrega</div><div className="wfv" style={{fontWeight:600}}>{(()=>{const id=sucursalDeWR(selWR,cliDeWRCon(selWR,clients));const o=oficinas.find(x=>x.id===id);return o?`${o.nombre}${o.ciudad?` — ${o.ciudad}`:""}`:"Principal";})()}</div></div>
               <div className="wf"><div className="wfl">Ciudad Destino</div><div className="wfv" style={{fontWeight:600,color:"var(--navy)"}}>{selWR.destCity||"—"} · {selWR.destCountry||"—"}</div></div>
               {_cl?.tel1&&<div className="wf"><div className="wfl">Teléfono</div><div className="wfv">{_cl.tel1}</div></div>}
               {_cl?.email&&<div className="wf"><div className="wfl">Email</div><div className="wfv">{_cl.email}</div></div>}
@@ -4194,25 +4290,25 @@ export default function SistemaCarga(){
           <div className="wb" style={{marginBottom:12}}>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 2fr",gap:12}}>
               <div>
-                <div className="wb-t">💳 Tipo de Pago</div>
+                <div className="wb-t"><Ico e="💳" sp/>Tipo de Pago</div>
                 <div style={{fontWeight:600,fontSize:14,color:"var(--t1)"}}>{selWR.tipoPago||"—"}</div>
               </div>
               <div>
-                <div className="wb-t">✈️ Tipo de Envío</div>
+                <div className="wb-t"><Ico e="✈️" sp/>Tipo de Envío</div>
                 <div><TypeBadge t={selWR.tipoEnvio}/></div>
               </div>
               <div>
-                <div className="wb-t">⚡ Cargos Aplicables</div>
+                <div className="wb-t"><Ico e="⚡" sp/>Cargos Aplicables</div>
                 <div style={{fontSize:13,color:"var(--t2)"}}>{selWR.cargos&&selWR.cargos.length>0?selWR.cargos.join(", "):"—"}</div>
               </div>
               <div>
-                <div className="wb-t">📝 Notas y Observaciones</div>
+                <div className="wb-t"><Ico e="📝" sp/>Notas y Observaciones</div>
                 <div style={{fontSize:14,color:"var(--orange)",fontWeight:500,minHeight:32}}>{selWR.notas||"—"}</div>
               </div>
             </div>
           </div>
           <div className="wb" style={{marginBottom:12}}>
-            <div className="wb-t" style={{fontSize:16}}>📐 Dimensiones y Peso — {selWR.cajas} {selWR.cajas===1?"caja":"cajas"}</div>
+            <div className="wb-t" style={{fontSize:16}}><Ico e="📐" sp/>Dimensiones y Peso — {selWR.cajas} {selWR.cajas===1?"caja":"cajas"}</div>
             {selWR.dims&&selWR.dims.length>0&&(
               <>
                 <div style={{display:"grid",gridTemplateColumns:"30px 1.4fr 1fr 1fr 1fr 1fr 1fr 1fr 2fr 1fr",gap:6,marginBottom:4,padding:"4px 0",borderBottom:"2px solid var(--navy)"}}>
@@ -4238,7 +4334,7 @@ export default function SistemaCarga(){
                         <div style={{fontFamily:"'DM Mono',monospace",fontSize:16,color:"var(--cyan)",fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{trk}</div>
                         <div style={{fontWeight:700,fontSize:16,color:"var(--navy)"}}>{car}</div>
                       </div>
-                      {(()=>{const _dDesc=cleanReempaqueDesc(d.descripcion);return _dDesc&&<div style={{fontSize:16,color:"var(--t2)",paddingLeft:28,marginTop:2}}>📦 {_dDesc}</div>;})()}
+                      {(()=>{const _dDesc=cleanReempaqueDesc(d.descripcion);return _dDesc&&<div style={{fontSize:16,color:"var(--t2)",paddingLeft:28,marginTop:2}}><Ico e="📦" sp/>{_dDesc}</div>;})()}
                       {d.factura&&<div style={{fontSize:16,color:"var(--t3)",paddingLeft:28}}>Factura: {d.factura}</div>}
                     </div>
                   );
@@ -4255,12 +4351,12 @@ export default function SistemaCarga(){
           {hasPerm("override_estado")&&(
             <div className="no-print" style={{marginBottom:12,display:"flex",justifyContent:"flex-end"}}>
               <button className="btn-s" style={{fontSize:13,padding:"5px 12px",borderColor:"var(--orange)",color:"var(--orange)",fontWeight:700}}
-                onClick={()=>setOverrideModal({wr:selWR,codigoDestino:selWR.status?.code||"",motivo:""})}>🛠 Forzar Estado</button>
+                onClick={()=>setOverrideModal({wr:selWR,codigoDestino:selWR.status?.code||"",motivo:""})}><Ico e="🛠" sp/>Forzar Estado</button>
             </div>
           )}
           {/* 📅 HISTORIA Y FECHAS — línea de tiempo de hitos del WR */}
           <div className="wb" style={{marginBottom:12}}>
-            <div className="wb-t">📅 Historia y Fechas</div>
+            <div className="wb-t"><Ico e="📅" sp/>Historia y Fechas</div>
             <div style={{padding:"6px 4px"}}>
               {renderWRTimeline(selWR)}
             </div>
@@ -4446,7 +4542,7 @@ export default function SistemaCarga(){
 
         <div className="mft">
           <button className="btn-s" onClick={()=>setSelWR(null)}>Cerrar</button>
-          <button className="btn-g" style={{fontSize:12,padding:"4px 10px"}}>📧 Enviar al Cliente</button>
+          <button className="btn-g" style={{fontSize:12,padding:"4px 10px"}}><Ico e="📧" sp/>Enviar al Cliente</button>
         </div>
       </div>
     </div>
@@ -4459,7 +4555,7 @@ export default function SistemaCarga(){
         <div className="mhd">
           <div className="mt">{showStatModal.ic} {showStatModal.label} — {showStatModal.rows.length} registros</div>
           <div style={{display:"flex",gap:6}}>
-            <button className="btn-p" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>window.print()}>🖨 Imprimir lista</button>
+            <button className="btn-p" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>window.print()}><Ico e="🖨" sp/>Imprimir lista</button>
             <button className="mcl" onClick={()=>setShowStatModal(null)}>✕</button>
           </div>
         </div>
@@ -4525,10 +4621,10 @@ export default function SistemaCarga(){
   // Branch al que pertenece un cliente — misma regla que la columna "Branch" del Dashboard.
   const branchDeCliente=(cl)=>{
     const ct=cl?.clienteTipo||"";
-    if(ct==="matriz")return{ic:"🏛️",nombre:empresaNombre||"Casa Matriz",tipo:"Casa Matriz"};
-    if(ct==="agente"||ct==="vendedor_agente"){const ag=agentes.find(a=>a.id===cl.agenteId);return{ic:ct==="agente"?"🤝":"💼",nombre:ag?.nombre||ag?.codigo||"⚠️ Sin agente",tipo:ct==="agente"?"Agente":"Vend. Agente"};}
-    if(ct==="oficina"||ct==="vendedor_oficina"){const of=oficinas.find(o=>o.id===cl.oficinaId);return{ic:ct==="oficina"?"🏢":"🛒",nombre:of?.nombre||of?.codigo||"⚠️ Sin oficina",tipo:ct==="oficina"?"Oficina":"Vend. Oficina"};}
-    if(ct==="autonomo"){const au=clients.find(c=>c.id===cl.autonomoId);return{ic:"🧑‍💻",nombre:au?`${au.primerNombre||""} ${au.primerApellido||""}`.trim():"⚠️ Sin autónomo",tipo:"Autónomo"};}
+    if(ct==="matriz")return{ic:<Ico e="🏛️"/>,nombre:empresaNombre||"Casa Matriz",tipo:"Casa Matriz"};
+    if(ct==="agente"||ct==="vendedor_agente"){const ag=agentes.find(a=>a.id===cl.agenteId);return{ic:ct==="agente"?<Ico e="🤝"/>:<Ico e="💼"/>,nombre:ag?.nombre||ag?.codigo||"Sin agente",tipo:ct==="agente"?"Agente":"Vend. Agente"};}
+    if(ct==="oficina"||ct==="vendedor_oficina"){const of=oficinas.find(o=>o.id===cl.oficinaId);return{ic:ct==="oficina"?<Ico e="🏢"/>:<Ico e="🛒"/>,nombre:of?.nombre||of?.codigo||"Sin oficina",tipo:ct==="oficina"?"Oficina":"Vend. Oficina"};}
+    if(ct==="autonomo"){const au=clients.find(c=>c.id===cl.autonomoId);return{ic:<Ico e="🧑‍💻"/>,nombre:au?`${au.primerNombre||""} ${au.primerApellido||""}`.trim():"Sin autónomo",tipo:"Autónomo"};}
     return null;
   };
   // Carga de una oficina: lo que recibe como sucursal de entrega y lo que envía como oficina de salida
@@ -4687,7 +4783,7 @@ export default function SistemaCarga(){
       return `
         <div style="border:2px solid #1A2B4A;border-radius:6px;margin-bottom:10px;overflow:hidden">
           <div style="background:#1A2B4A;color:#fff;padding:6px 10px;display:flex;justify-content:space-between;align-items:center">
-            <span style="font-weight:700">📦 Contenedor ${i+1}${ct.tipo?` — ${escapeHtml(ct.tipo)}`:""}</span>
+            <span style="font-weight:700">Contenedor ${i+1}${ct.tipo?` — ${escapeHtml(ct.tipo)}`:""}</span>
             <span style="font-size:11px;color:#E5AE3A">${dimsTxt?escapeHtml(dimsTxt)+" in":""}${ct.sello?` · Sello: ${escapeHtml(ct.sello)}`:""}${ct.pesoLb?` · ${ct.pesoLb}lb`:""}</span>
           </div>
           <table style="width:100%;border-collapse:collapse;font-size:11px">
@@ -4932,11 +5028,11 @@ export default function SistemaCarga(){
         {/* BÚSQUEDA */}
         <div className="card" style={{marginBottom:14,maxWidth:700}}>
           <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:16,fontWeight:700,color:"var(--navy)",marginBottom:12}}>
-            👤 Estado de Cuenta — Búsqueda
+            <Ico e="👤" sp/>Estado de Cuenta — Búsqueda
           </div>
           {/* Buscar por: cliente / agente / oficina / autónomo */}
           <div style={{display:"flex",gap:3,background:"var(--bg4)",borderRadius:7,padding:3,border:"1px solid var(--b1)",marginBottom:10,width:"fit-content",flexWrap:"wrap"}}>
-            {[["cliente","👤 Cliente"],["agente","🤝 Agente"],["oficina","🏢 Oficina"],["autonomo","🧑‍💻 Autónomo"]].map(([k,l])=>(
+            {[["cliente","Cliente"],["agente","Agente"],["oficina","Oficina"],["autonomo","Autónomo"]].map(([k,l])=>(
               <button key={k} type="button" onClick={()=>ecCambiarModo(k)}
                 style={{padding:"5px 12px",borderRadius:5,border:"none",cursor:"pointer",fontSize:13,fontWeight:600,
                   background:ecModo===k?"var(--navy)":"transparent",color:ecModo===k?"#fff":"var(--t2)"}}>{l}</button>
@@ -4974,7 +5070,7 @@ export default function SistemaCarga(){
                     style={{padding:"10px 14px",cursor:"pointer",borderBottom:"1px solid var(--b2)",display:"flex",alignItems:"center",gap:10}}
                     onMouseEnter={e=>e.currentTarget.style.background="#EEF3FF"}
                     onMouseLeave={e=>e.currentTarget.style.background=""}>
-                    <div style={{width:32,height:32,borderRadius:8,background:"var(--navy)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>{g.tipo==="agente"?"🤝":g.tipo==="oficina"?"🏢":"🧑‍💻"}</div>
+                    <div style={{width:32,height:32,borderRadius:8,background:"var(--navy)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>{g.tipo==="agente"?<Ico e="🤝"/>:g.tipo==="oficina"?<Ico e="🏢"/>:<Ico e="🧑‍💻"/>}</div>
                     <div style={{flex:1}}>
                       <div style={{fontWeight:600,color:"var(--t1)",fontSize:15}}>{g.nombre}</div>
                       <div style={{fontSize:13,color:"var(--t3)"}}>{g.sub||"—"}</div>
@@ -4996,18 +5092,18 @@ export default function SistemaCarga(){
             {ecGrupo?(
               /* HEADER GRUPO — agente / oficina / autónomo */
               <div style={{display:"grid",gridTemplateColumns:"auto 1fr auto",gap:16,marginBottom:14,background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:12,padding:"16px 20px",boxShadow:"var(--shadow)",alignItems:"center"}}>
-                <div style={{width:56,height:56,borderRadius:12,background:"var(--navy)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:26}}>{ecGrupo.tipo==="agente"?"🤝":ecGrupo.tipo==="oficina"?"🏢":"🧑‍💻"}</div>
+                <div style={{width:56,height:56,borderRadius:12,background:"var(--navy)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:26}}>{ecGrupo.tipo==="agente"?<Ico e="🤝"/>:ecGrupo.tipo==="oficina"?<Ico e="🏢"/>:<Ico e="🧑‍💻"/>}</div>
                 <div>
                   <div style={{fontSize:12,fontWeight:700,color:"var(--t3)",letterSpacing:.8,textTransform:"uppercase"}}>{ecGrupo.tipo==="agente"?"Agente":ecGrupo.tipo==="oficina"?"Oficina":"Autónomo"}</div>
                   <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:22,fontWeight:700,color:"var(--navy)"}}>{ecGrupo.nombre}</div>
                   <div style={{display:"flex",gap:16,marginTop:4,fontSize:13,color:"var(--t2)",flexWrap:"wrap"}}>
-                    {ecGrupo.sub&&<span>🏷️ {ecGrupo.sub}</span>}
-                    {ecGrupo.email&&<span>📧 {ecGrupo.email}</span>}
-                    {ecGrupo.tel&&<span>📞 {ecGrupo.tel}</span>}
-                    <span>👥 <strong>{ecCliGrupo.length}</strong> cliente{ecCliGrupo.length!==1?"s":""}{ecGrupo?.tipo==="oficina"?" con carga en esta oficina":" bajo su dominio"}</span>
+                    {ecGrupo.sub&&<span><Ico e="🏷️" sp/>{ecGrupo.sub}</span>}
+                    {ecGrupo.email&&<span><Ico e="📧" sp/>{ecGrupo.email}</span>}
+                    {ecGrupo.tel&&<span><Ico e="📞" sp/>{ecGrupo.tel}</span>}
+                    <span><Ico e="👥" sp/><strong>{ecCliGrupo.length}</strong> cliente{ecCliGrupo.length!==1?"s":""}{ecGrupo?.tipo==="oficina"?" con carga en esta oficina":" bajo su dominio"}</span>
                   </div>
                 </div>
-                <div>{ecGrupo.tipo!=="oficina"&&(hasPerm("registrar_pago")||hasPerm("cobrar"))&&<button className="btn-p" style={{fontSize:13,padding:"6px 12px",background:"#2E7D32",borderColor:"#2E7D32"}} onClick={()=>cobroAbrir({tipo:ecGrupo.tipo,id:ecGrupo.id,nombre:ecGrupo.nombre})}>💵 Cobrar</button>}</div>
+                <div>{ecGrupo.tipo!=="oficina"&&(hasPerm("registrar_pago")||hasPerm("cobrar"))&&<button className="btn-p" style={{fontSize:13,padding:"6px 12px",background:"#2E7D32",borderColor:"#2E7D32"}} onClick={()=>cobroAbrir({tipo:ecGrupo.tipo,id:ecGrupo.id,nombre:ecGrupo.nombre})}><Ico e="💵" sp/>Cobrar</button>}</div>
               </div>
             ):(<>
             {/* HEADER CLIENTE */}
@@ -5024,17 +5120,17 @@ export default function SistemaCarga(){
                       : <span style={{fontSize:12,color:"var(--t3)",background:"var(--bg4)",border:"1px solid var(--b1)",borderRadius:14,padding:"3px 10px"}}>Sin branch asignado</span>;})()}
                 </div>
                 <div style={{display:"flex",gap:16,marginTop:4,fontSize:13,color:"var(--t2)",flexWrap:"wrap"}}>
-                  <span>📦 Casillero: <strong style={{color:"var(--gold2)",fontFamily:"'DM Mono',monospace"}}>{ecCliente.casillero}</strong></span>
-                  <span>📧 {ecCliente.email}</span>
-                  <span>📞 {ecCliente.tel1}</span>
-                  <span>📍 {ecCliente.municipio}, {ecCliente.estado}</span>
+                  <span><Ico e="📦" sp/>Casillero: <strong style={{color:"var(--gold2)",fontFamily:"'DM Mono',monospace"}}>{ecCliente.casillero}</strong></span>
+                  <span><Ico e="📧" sp/>{ecCliente.email}</span>
+                  <span><Ico e="📞" sp/>{ecCliente.tel1}</span>
+                  <span><Ico e="📍" sp/>{ecCliente.municipio}, {ecCliente.estado}</span>
                 </div>
               </div>
               <div style={{display:"flex",gap:8,flexShrink:0}}>
                 {hasPerm("crear_wr")&&<button className="btn-p" style={{fontSize:13,padding:"6px 12px"}} onClick={()=>openWRModalForClient(ecCliente)}>+ Nuevo WR</button>}
-                {hasPerm("crear_reempaque")&&<button className="btn-s" style={{fontSize:13,padding:"6px 12px"}} onClick={()=>setRpqCliModal({cliente:ecCliente,selectedIds:[]})}>🔁 Reempaque</button>}
-                {hasPerm("hacer_egreso")&&<button className="btn-s" style={{fontSize:13,padding:"6px 12px"}} onClick={()=>setCrCliModal({cliente:ecCliente,selectedIds:[]})}>🚀 Cargo Release</button>}
-                {(hasPerm("registrar_pago")||hasPerm("cobrar"))&&<button className="btn-p" style={{fontSize:13,padding:"6px 12px",background:"#2E7D32",borderColor:"#2E7D32"}} onClick={()=>cobroAbrir({tipo:"cliente",id:ecCliente.id,nombre:fullName(ecCliente)})}>💵 Cobrar</button>}
+                {hasPerm("crear_reempaque")&&<button className="btn-s" style={{fontSize:13,padding:"6px 12px"}} onClick={()=>setRpqCliModal({cliente:ecCliente,selectedIds:[]})}><Ico e="🔁" sp/>Reempaque</button>}
+                {hasPerm("hacer_egreso")&&<button className="btn-s" style={{fontSize:13,padding:"6px 12px"}} onClick={()=>setCrCliModal({cliente:ecCliente,selectedIds:[]})}><Ico e="🚀" sp/>Cargo Release</button>}
+                {(hasPerm("registrar_pago")||hasPerm("cobrar"))&&<button className="btn-p" style={{fontSize:13,padding:"6px 12px",background:"#2E7D32",borderColor:"#2E7D32"}} onClick={()=>cobroAbrir({tipo:"cliente",id:ecCliente.id,nombre:fullName(ecCliente)})}><Ico e="💵" sp/>Cobrar</button>}
               </div>
             </div>
 
@@ -5043,12 +5139,12 @@ export default function SistemaCarga(){
             {/* MINI STATS */}
             <div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:8,marginBottom:14}}>
               {[
-                {ic:"📦",v:wrCliente.length,l:"Total WR"},
-                {ic:"⚖️",v:`${totalPesoLbC}lb`,l:"Peso Total"},
-                {ic:"📐",v:`${totalVolLbC}lb`,l:"Peso Vol. Total"},
-                {ic:"📏",v:totalFt3C,l:"Ft³ Total"},
-                {ic:"🌐",v:totalM3C,l:"M³ Total"},
-                {ic:"💵",v:`$${totalValorC}`,l:"Valor Total"},
+                {ic:<Ico e="📦"/>,v:wrCliente.length,l:"Total WR"},
+                {ic:<Ico e="⚖️"/>,v:`${totalPesoLbC}lb`,l:"Peso Total"},
+                {ic:<Ico e="📐"/>,v:`${totalVolLbC}lb`,l:"Peso Vol. Total"},
+                {ic:<Ico e="📏"/>,v:totalFt3C,l:"Ft³ Total"},
+                {ic:<Ico e="🌐"/>,v:totalM3C,l:"M³ Total"},
+                {ic:<Ico e="💵"/>,v:`$${totalValorC}`,l:"Valor Total"},
               ].map((s,i)=>(
                 <div key={i} style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,padding:"10px 13px",boxShadow:"var(--shadow)"}}>
                   <div style={{fontSize:17,marginBottom:4}}>{s.ic}</div>
@@ -5096,7 +5192,7 @@ export default function SistemaCarga(){
                   <span style={{fontSize:12,color:"var(--t3)",padding:"2px 8px",background:"var(--bg4)",border:"1px solid var(--b1)",borderRadius:4}}>{wrCliente.length} registros</span>
                   <button className="btn-p" style={{fontSize:12,padding:"4px 10px"}}
                     onClick={()=>printEstadoCuenta(ecCliente,wrCliente,{tab:ecFiltro,mes:ecMes,anio:ecAnio},{pesoLb:totalPesoLbC,volLb:totalVolLbC,ft3:totalFt3C,m3:totalM3C,valor:totalValorC},ecGrupo?{...ecGrupo,nClientes:ecCliGrupo.length,cliDe:ecCliDeWR}:null)}>
-                    🖨 Imprimir Estado
+                    <Ico e="🖨" sp/>Imprimir Estado
                   </button>
                 </div>
               </div>
@@ -5216,10 +5312,10 @@ export default function SistemaCarga(){
                           const trkDist=[...new Set(dimsArr.map(d=>String(d?.tracking??"").trim()).filter(Boolean))];
                           return trkDist.length>1
                             ? <MultiCell dims={dimsArr} tdStyle={{padding:"7px 8px",maxWidth:190}} color="var(--cyan)"
-                                btn={`📦 ${trkDist.length} seguimientos`}
-                                titulo={`🔗 Seguimiento por caja — ${dimsArr.length} cajas · ${trkDist.length} números distintos`}
+                                btn={`${trkDist.length} seguimientos`}
+                                titulo={`Seguimiento por caja — ${dimsArr.length} cajas · ${trkDist.length} números distintos`}
                                 columnas={[{h:"Transp.",w:"78px",get:d=>d.carrier},{h:"Nº de seguimiento",w:"1fr",mono:true,get:d=>d.tracking}]}/>
-                            : <TxtCell value={w.tracking} titulo="🔗 Nº de seguimiento" mono
+                            : <TxtCell value={w.tracking} titulo="Nº de seguimiento" mono
                                 tdStyle={{padding:"7px 8px",maxWidth:170,overflow:"hidden"}} txtClass="c-trk"/>;
                         })()}
                         {/* Contenido / Valor — movidas aquí (antes estaban al final). */}
@@ -5302,7 +5398,7 @@ export default function SistemaCarga(){
             <div className="ov" onClick={()=>setCrCliModal(null)}>
               <div className="modal" style={{maxWidth:820}} onClick={e=>e.stopPropagation()}>
                 <div className="mhd">
-                  <div className="mt">🚀 Cargo Release — {fullName(cli)}</div>
+                  <div className="mt"><Ico e="🚀" sp/>Cargo Release — {fullName(cli)}</div>
                   <button className="mcl" onClick={()=>setCrCliModal(null)}>✕</button>
                 </div>
                 <div style={{maxHeight:"55vh",overflow:"auto",margin:"0 14px",border:"1px solid var(--b1)",borderRadius:8}}>
@@ -5354,7 +5450,7 @@ export default function SistemaCarga(){
             <div className="ov" onClick={()=>setRpqCliModal(null)}>
               <div className="modal" style={{maxWidth:820}} onClick={e=>e.stopPropagation()}>
                 <div className="mhd">
-                  <div className="mt">🔁 Reempaque — {fullName(cli)}</div>
+                  <div className="mt"><Ico e="🔁" sp/>Reempaque — {fullName(cli)}</div>
                   <button className="mcl" onClick={()=>setRpqCliModal(null)}>✕</button>
                 </div>
                 <div style={{maxHeight:"55vh",overflow:"auto",margin:"0 14px",border:"1px solid var(--b1)",borderRadius:8}}>
@@ -5485,8 +5581,8 @@ export default function SistemaCarga(){
 
   const submitConsol=async()=>{
     // Validaciones — destino y tipoEnvio son obligatorios
-    if(!cf.destino){window.alert("⚠️ Debes seleccionar la Ciudad Destino antes de cerrar el embarque.");return;}
-    if(!cf.tipoEnvio){window.alert("⚠️ Debes seleccionar el Tipo de Envío antes de cerrar el embarque.");return;}
+    if(!cf.destino){window.alert("Debes seleccionar la Ciudad Destino antes de cerrar el embarque.");return;}
+    if(!cf.tipoEnvio){window.alert("Debes seleccionar el Tipo de Envío antes de cerrar el embarque.");return;}
     const now=new Date();
     const allWR=(cf.containers||[]).flatMap(c=>c.wr||[]);
     const totalLb=parseFloat(allWR.reduce((s,w)=>s+(w.pesoLb||0),0).toFixed(1));
@@ -5618,8 +5714,8 @@ export default function SistemaCarga(){
     const wrsBloqueados=wrList.filter(w=>allWrIds.includes(w.id)&&w.status?.code&&w.status.code!=="4");
     if(!window.confirm(
       `¿Borrar guía consolidada ${c.id}?\n`+
-      `↩️ ${wrsEnConsolidado.length} WR en Consolidado volverán a Confirmado (3)\n`+
-      (wrsBloqueados.length>0?`🔒 ${wrsBloqueados.length} WR ya avanzaron (tránsito/almacén/entrega) y NO se tocarán\n`:"")+
+      `${wrsEnConsolidado.length} WR en Consolidado volverán a Confirmado (3)\n`+
+      (wrsBloqueados.length>0?`${wrsBloqueados.length} WR ya avanzaron (tránsito/almacén/entrega) y NO se tocarán\n`:"")+
       `\nLa guía se elimina del sistema.`
     ))return;
     if(allWrIds.length>0&&stConf){
@@ -5649,7 +5745,7 @@ export default function SistemaCarga(){
       {/* HEADER */}
       <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
         <div style={{flex:1}}>
-          <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:18,fontWeight:700,color:"var(--navy)"}}>🗂️ Master de Guías</div>
+          <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:18,fontWeight:700,color:"var(--navy)"}}><Ico e="🗂️" sp/>Master de Guías</div>
         </div>
         <button className="btn-p" onClick={()=>{setCf(emptyConsol());setEditConsolId(null);setContScanVal({});setContScanErr({});setShowNewConsol(true);}}>+ Nuevo Embarque</button>
       </div>
@@ -5658,11 +5754,11 @@ export default function SistemaCarga(){
       {consolList.length>0&&(
         <div className="stats stats-5" style={{padding:0,marginBottom:14}}>
           {[
-            {k:"todas",      ic:"📦", l:"Total Guías",    d:"Todas, abiertas y cerradas",       c:"#1A2B4A"},
-            {k:"preparacion",ic:"🗂️", l:"En Preparación", d:"Consolidadas, sin despachar",       c:"#C05800"},
-            {k:"transito",   ic:"✈️", l:"En Tránsito",    d:"Línea → Liberado 2",                c:"#0080CC"},
-            {k:"recepcion",  ic:"📬", l:"En Recepción",   d:"Tránsito 2 en adelante",            c:"#6A4FB0"},
-            {k:"cerradas",   ic:"🗄️", l:"Cerradas",       d:"Recepción cerrada / archivadas",    c:"#1A6040"},
+            {k:"todas",      ic:<Ico e="📦"/>, l:"Total Guías",    d:"Todas, abiertas y cerradas",       c:"#1A2B4A"},
+            {k:"preparacion",ic:<Ico e="🗂️"/>, l:"En Preparación", d:"Consolidadas, sin despachar",       c:"#C05800"},
+            {k:"transito",   ic:<Ico e="✈️"/>, l:"En Tránsito",    d:"Línea → Liberado 2",                c:"#0080CC"},
+            {k:"recepcion",  ic:<Ico e="📬"/>, l:"En Recepción",   d:"Tránsito 2 en adelante",            c:"#6A4FB0"},
+            {k:"cerradas",   ic:<Ico e="🗄️"/>, l:"Cerradas",       d:"Recepción cerrada / archivadas",    c:"#1A6040"},
           ].map(t=>{
             const n=consolList.filter(c=>guiaEnFiltro(c,t.k)).length;
             const on=lmFilter===t.k;
@@ -5722,7 +5818,7 @@ export default function SistemaCarga(){
                   {/* Estado — solo informativo; se cambia en la pestaña Status */}
                   <td style={{whiteSpace:"nowrap"}}>
                     {c.archivada
-                      ? <span style={{fontSize:12,fontWeight:700,color:"#1A6040",background:"#E8F5E9",padding:"3px 10px",borderRadius:10,border:"1px solid #A5D6A7"}}>🗄️ Cerrada</span>
+                      ? <span style={{fontSize:12,fontWeight:700,color:"#1A6040",background:"#E8F5E9",padding:"3px 10px",borderRadius:10,border:"1px solid #A5D6A7"}}><Ico e="🗄️" sp/>Cerrada</span>
                       : <StBadge st={st||{cls:"s3",label:c.status||"En preparación"}}/>}
                   </td>
                 </tr>
@@ -5738,7 +5834,7 @@ export default function SistemaCarga(){
         <div className="ov">
           <div className="modal mxl" onClick={e=>e.stopPropagation()}>
             <div className="mhd">
-              <div className="mt">🗂️ {editConsolId?`Editar Embarque ${editConsolId}`:"Nuevo Embarque Consolidado"}</div>
+              <div className="mt"><Ico e="🗂️" sp/>{editConsolId?`Editar Embarque ${editConsolId}`:"Nuevo Embarque Consolidado"}</div>
               <button className="mcl" onClick={()=>{setShowNewConsol(false);setEditConsolId(null);setCf(emptyConsol());setContScanVal({});setContScanErr({});}}>✕</button>
             </div>
 
@@ -5787,7 +5883,7 @@ export default function SistemaCarga(){
             <div className="sdiv">WR CONFIRMADOS DISPONIBLES{cf.tipoEnvio?` — ${cf.tipoEnvio} (clic para agregar al contenedor activo)`:" — selecciona primero el Tipo de Envío"}</div>
             <div style={{background:"var(--bg4)",border:"1px solid var(--b1)",borderRadius:8,padding:"8px 12px",marginBottom:14,maxHeight:"40vh",overflowY:"auto"}}>
               {!cf.tipoEnvio?(
-                <div style={{color:"var(--orange)",fontSize:13,padding:"8px 0",fontWeight:600}}>⚠️ Selecciona el Tipo de Envío.</div>
+                <div style={{color:"var(--orange)",fontSize:13,padding:"8px 0",fontWeight:600}}><Ico e="⚠️" sp/>Selecciona el Tipo de Envío.</div>
               ):(()=>{
                 // WR ya metidos en OTRA guía (la que se edita no cuenta)
                 const enOtraGuia=new Set(consolList.filter(g=>g.id!==editConsolId).flatMap(g=>(g.containers||[]).flatMap(ct=>(ct.wr||[]).map(r=>r.id))));
@@ -5831,7 +5927,7 @@ export default function SistemaCarga(){
                   {/* Header container */}
                   <div style={{background:"var(--navy)",padding:"8px 14px",display:"flex",alignItems:"center",gap:10}}>
                     <span style={{color:"#E5AE3A",fontFamily:"Arial,Helvetica,sans-serif",fontWeight:800,fontSize:16}}>
-                      📦 CONTENEDOR {ci+1}
+                      <Ico e="📦" sp/>CONTENEDOR {ci+1}
                     </span>
                     {/* Input + datalist: permite elegir un tipo registrado en Configuración
                         o escribir uno libre si el tipo no existe aún. */}
@@ -5856,7 +5952,7 @@ export default function SistemaCarga(){
                     <div style={{flex:1}}/>
                     <span style={{fontSize:13,color:"#E5AE3A",fontWeight:600}}>{cont.wr.length} WR · {contWRCajas} cajas · {contWRPeso}lb</span>
                     {cf.containers.length>1&&(
-                      <button onClick={()=>removeContainer(ci)} style={{background:"rgba(204,34,51,.3)",border:"1px solid rgba(204,34,51,.5)",color:"#FF8888",borderRadius:5,padding:"2px 8px",cursor:"pointer",fontSize:13}}>🗑</button>
+                      <button onClick={()=>removeContainer(ci)} style={{background:"rgba(204,34,51,.3)",border:"1px solid rgba(204,34,51,.5)",color:"#FF8888",borderRadius:5,padding:"2px 8px",cursor:"pointer",fontSize:13}}><Ico e="🗑" solo/></button>
                     )}
                   </div>
 
@@ -5878,7 +5974,7 @@ export default function SistemaCarga(){
                       <div className="fg"><div className="fl">Ancho (in)</div><input className="fi" type="number" value={cont.ancho} onChange={e=>scCont(ci,"ancho",e.target.value)}/></div>
                       <div className="fg"><div className="fl">Alto (in)</div><input className="fi" type="number" value={cont.alto} onChange={e=>scCont(ci,"alto",e.target.value)}/></div>
                       <div className="fg"><div className="fl">Peso Real (lb)</div><input className="fi" type="number" value={cont.pesoLb} onChange={e=>scCont(ci,"pesoLb",e.target.value)}/></div>
-                      <div className="fg"><div className="fl">Ft³ 🔄</div><div className="fi ro" style={{color:"var(--sky)",fontWeight:600}}>
+                      <div className="fg"><div className="fl">Ft³ <Ico e="🔄"/></div><div className="fi ro" style={{color:"var(--sky)",fontWeight:600}}>
                         {cont.largo&&cont.ancho&&cont.alto?parseFloat(((parseFloat(cont.largo)*parseFloat(cont.ancho)*parseFloat(cont.alto))/1728).toFixed(2)):"—"}
                       </div></div>
                       <div className="fg"><div className="fl">N° Sello / Precinto</div><input className="fi" style={{fontFamily:"'DM Mono',monospace",fontWeight:700}} value={cont.sello} onChange={e=>scCont(ci,"sello",e.target.value)} placeholder="SL-000000"/></div>
@@ -5894,9 +5990,9 @@ export default function SistemaCarga(){
                           onChange={e=>handleContScan(ci,e.target.value)}
                           onKeyDown={e=>{if(e.key==="Enter")doContScan(ci);}}
                           placeholder="Escanear o escribir N° WR…"/>
-                        <button className="scan-btn" onClick={()=>doContScan(ci)}>📡 Agregar</button>
+                        <button className="scan-btn" onClick={()=>doContScan(ci)}><Ico e="📡" sp/>Agregar</button>
                       </div>
-                      {contScanErr[ci]&&<div style={{fontSize:12,color:"var(--red)",marginTop:4}}>⚠️ {contScanErr[ci]}</div>}
+                      {contScanErr[ci]&&<div style={{fontSize:12,color:"var(--red)",marginTop:4}}><Ico e="⚠️" sp/>{contScanErr[ci]}</div>}
                     </div>
 
                     {/* WR en este contenedor */}
@@ -5930,18 +6026,18 @@ export default function SistemaCarga(){
                       <div style={{marginTop:12,paddingTop:10,borderTop:"1px dashed var(--b1)"}}>
                         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
                           <div style={{fontSize:13,fontWeight:700,color:"var(--navy)",textTransform:"uppercase",letterSpacing:.8,display:"flex",alignItems:"center",gap:7}}>
-                            <span style={{fontSize:15}}>📷</span> Fotos del contenedor
+                            <span style={{fontSize:15}}><Ico e="📷" solo/></span> Fotos del contenedor
                             {(cont.fotos||[]).length>0 && (
                               <span style={{background:"var(--gold)",color:"#fff",fontSize:11,padding:"2px 8px",borderRadius:10,fontWeight:700}}>{cont.fotos.length}</span>
                             )}
                           </div>
                           <div style={{display:"flex",gap:6}}>
                             <label className="btn-s" style={{fontSize:12,padding:"5px 10px",cursor:"pointer",margin:0,display:"inline-flex",alignItems:"center",gap:5}}>
-                              <span>📁</span> Subir archivo
+                              <span><Ico e="📁" solo/></span> Subir archivo
                               <input type="file" accept="image/*" multiple style={{display:"none"}} onChange={e=>{addFotosToContainer(ci,e.target.files,"upload");e.target.value="";}}/>
                             </label>
                             <button type="button" className="btn-s" style={{fontSize:12,padding:"5px 10px",display:"inline-flex",alignItems:"center",gap:5}} onClick={()=>setWebcamOpen({containerIdx:ci})}>
-                              <span>📸</span> Cámara web
+                              <span><Ico e="📸" solo/></span> Cámara web
                             </button>
                           </div>
                         </div>
@@ -5958,7 +6054,7 @@ export default function SistemaCarga(){
                                   <button type="button" title="Quitar foto" onClick={()=>removeFotoFromContainer(ci,fi)} style={{width:22,height:22,borderRadius:"50%",border:"none",background:"rgba(204,34,51,0.95)",color:"#fff",fontSize:14,fontWeight:900,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}}>×</button>
                                 </div>
                                 <div style={{position:"absolute",bottom:0,left:0,right:0,background:"linear-gradient(to top, rgba(0,0,0,0.7), transparent)",color:"#fff",fontSize:10,padding:"8px 4px 3px",textAlign:"center",fontWeight:600}}>
-                                  {foto.source==='webcam'?'📸 Cámara':'📁 Archivo'}
+                                  {foto.source==='webcam'?'Cámara':'Archivo'}
                                 </div>
                               </div>
                             ))}
@@ -5973,7 +6069,7 @@ export default function SistemaCarga(){
 
             {/* BOTÓN AGREGAR CONTENEDOR */}
             <button onClick={addContainer} style={{width:"100%",padding:"10px",border:"2px dashed var(--navy)",borderRadius:10,background:"rgba(26,43,74,.04)",color:"var(--navy)",fontSize:15,fontWeight:700,cursor:"pointer",marginBottom:14,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
-              <span style={{fontSize:18}}>📦</span> + Agregar
+              <span style={{fontSize:18}}><Ico e="📦" solo/></span> + Agregar
             </button>
 
             {/* TOTALES */}
@@ -6001,7 +6097,7 @@ export default function SistemaCarga(){
               <button className="btn-p" onClick={submitConsol}
                 disabled={cf.containers.every(c=>c.wr.length===0)}
                 style={{opacity:cf.containers.every(c=>c.wr.length===0)?0.5:1}}>
-                ✅ Cerrar Embarque y Generar Etiquetas
+                <Ico e="✅" sp/>Cerrar Embarque y Generar Etiquetas
               </button>
             </div>
           </div>
@@ -6020,7 +6116,7 @@ export default function SistemaCarga(){
     const btn=(l,fn,extra={})=><button className="btn-s" style={{fontSize:13,padding:"5px 12px",whiteSpace:"nowrap",...extra}} onClick={fn}>{l}</button>;
     const mono={fontFamily:"'DM Mono',monospace",fontWeight:700};
     const imprimirWR=w=>{setSelWR(w);setTimeout(()=>window.print(),600);};
-    const verImp=(ver,imp)=><>{btn("👁️ Ver",ver)}{btn("🖨️ Imprimir",imp)}</>;
+    const verImp=(ver,imp)=><>{btn("Ver",ver)}{btn("Imprimir",imp)}</>;
     const verRecibo=rid=>setReciboVer(rid);
     // Usuarios externos: solo documentos de su carga
     const idsVis=new Set(wrList.map(w=>w.id));
@@ -6029,18 +6125,18 @@ export default function SistemaCarga(){
     const facIdsVis=new Set(facsVis.map(f=>f.id));
     const pagosVis=alcanceUsr?pagos.filter(p=>facIdsVis.has(p.facturaId)):pagos;
     const guiasVis=alcanceUsr?consolList.filter(g=>tocaVis((g.containers||[]).flatMap(c=>(c.wr||[]).map(w=>w.id)))):consolList;
-    const TIPOS=[["wr","📦 WR"],["guia","🗂️ Guía"],["entrega","📝 Nota de entrega"],["egreso","🚚 Cargo Release"],["factura","🧾 Factura"],["recibo","💵 Recibo"],["pickup","🚐 Pick-up"]];
+    const TIPOS=[["wr","WR"],["guia","Guía"],["entrega","Nota de entrega"],["egreso","Cargo Release"],["factura","Factura"],["recibo","Recibo"],["pickup","Pick-up"]];
     let filas=[];
     if(tipo==="wr")filas=wrList.filter(w=>hay(`${w.id} ${w.consignee||""} ${w.casillero||""} ${w.shipper||""} ${(w.dims||[]).map(d=>d.tracking).join(" ")} ${w.tracking||""}`))
       .sort((a,b)=>String(b.id).localeCompare(String(a.id))).slice(0,MAX).map(w=>({k:w.id,
         izq:<><span style={{...mono,color:"var(--navy)"}}>{w.id}</span><div style={{fontSize:13,color:"var(--t3)"}}>{w.consignee||"—"}{w.casillero?` · #${w.casillero}`:""} · {w.cajas||1} caja{(w.cajas||1)===1?"":"s"}</div></>,
         estado:<StBadge st={w.status}/>,
-        acc:<>{btn("📄 WR",()=>imprimirWR(w))}{btn("🏷️ Etiquetas",()=>setShowLabels({wr:w,dims:w.dims||[],remitente:w.shipper||"",tipoEnvio:w.tipoEnvio||""}))}{btn("📑 Documentos",()=>docAbrir(w))}</>}));
+        acc:<>{btn("WR",()=>imprimirWR(w))}{btn("Etiquetas",()=>setShowLabels({wr:w,dims:w.dims||[],remitente:w.shipper||"",tipoEnvio:w.tipoEnvio||""}))}{btn("Documentos",()=>docAbrir(w))}</>}));
     if(tipo==="guia")filas=guiasVis.filter(g=>hay(`${g.id} ${g.destino||""} ${g.tipoEnvio||""} ${g.awb||""} ${g.bl||""}`))
       .sort((a,b)=>String(b.id).localeCompare(String(a.id))).slice(0,MAX).map(g=>({k:g.id,
         izq:<><span style={{...mono,color:"var(--purple)"}}>{g.id}</span><div style={{fontSize:13,color:"var(--t3)"}}>{g.destino||"—"} · {g.tipoEnvio||"—"} · {(g.containers||[]).length} cont. · {g.totalWR||0} WR</div></>,
         estado:<span style={{fontSize:12,color:"var(--t2)",fontWeight:600}}>{g.status||"—"}</span>,
-        acc:<>{btn("📄 Guía",()=>printGuiaArchivada(g))}{btn("🏷️ Etiquetas",()=>setShowConsolLabels({guia:g,containers:g.containers||[],remitente:empresaNombre}))}</>}));
+        acc:<>{btn("Guía",()=>printGuiaArchivada(g))}{btn("Etiquetas",()=>setShowConsolLabels({guia:g,containers:g.containers||[],remitente:empresaNombre}))}</>}));
     if(tipo==="entrega")filas=deliveryNotes.filter(n=>tocaVis(n.wrIds)&&hay(`${n.id} ${n.receptorNombre||""} ${n.consignatario||""} ${n.guiaId||""} ${(n.wrIds||[]).join(" ")}`))
       .sort(porFecha).slice(0,MAX).map(n=>({k:n.id,
         izq:<><span style={{...mono,color:"var(--navy)"}}>{n.id}</span><div style={{fontSize:13,color:"var(--t3)"}}>{fmtDate(n.fecha)} · {n.receptorEntidad?.nombre||n.receptorNombre||n.consignatario||"—"} · {(n.wrIds||[]).length} WR{n.guiaId?` · guía ${n.guiaId}`:""}</div></>,
@@ -6085,7 +6181,7 @@ export default function SistemaCarga(){
             {f.estado}
             <div style={{display:"flex",gap:6}}>{f.acc}</div>
           </div>))}
-        {!Q&&filas.length===MAX&&<div style={{padding:10,textAlign:"center",fontSize:13,color:"var(--t3)"}}>Últimos {MAX}. Usa el buscador para encontrar otros.</div>}
+        {!Q&&filas.length===MAX&&<div style={{padding:10,textAlign:"center",fontSize:13,color:"var(--t3)"}}>Últimos {MAX}</div>}
       </div>
     </div>
     );
@@ -6199,7 +6295,7 @@ export default function SistemaCarga(){
   };
   const docImprimir=ed=>{const w=window.open("","_blank","width=900,height=1100");if(!w){window.alert("El navegador bloqueó la ventana de impresión.");return;}
     w.__print=true;w.document.write(docHTML(ed));w.document.close();logAction("Imprimió documento",`${({factura:"Factura comercial/proforma",declaracion:"Declaración de contenido",empaque:"Lista de empaque",autorizacion:"Autorización"})[ed.tipo]} · WR ${ed.wr.id}`);};
-  const DOC_TIPOS=[["factura","🧾 Factura comercial / proforma"],["declaracion","📝 Declaración de contenido"],["empaque","📦 Lista de empaque"],["autorizacion","✍️ Autorización e instrucciones"]];
+  const DOC_TIPOS=[["factura","Factura comercial / proforma"],["declaracion","Declaración de contenido"],["empaque","Lista de empaque"],["autorizacion","Autorización e instrucciones"]];
 
   const renderDocs=()=>{
     const puede=hasPerm("editar_documento")||hasPerm("configuracion");
@@ -6223,7 +6319,7 @@ export default function SistemaCarga(){
     const guardar=async()=>{const n={...docPais};const lv=limpiar(v);if(Object.keys(lv).length)n[sel]=lv;else delete n[sel];
       const ok=await dbSetConfig('documentos_pais',n);if(ok===false){window.alert("No se pudo guardar.");return;}
       setDocPais(n);setPaisDraft(null);logAction("Editó documentos por país",sel==="_default"?"Predeterminado":sel);};
-    const SECS=[["empresa","🏢 Empresa en el país"],["exp","📤 Exportación (sale de aquí)"],["imp","📥 Importación (llega aquí)"]];
+    const SECS=[["empresa","Empresa en el país"],["exp","Exportación (sale de aquí)"],["imp","Importación (llega aquí)"]];
     const tiene=k=>docPais[k]?SECS.filter(([s2])=>docPais[k][s2]&&Object.keys(docPais[k][s2]).length).map(([s2])=>s2.toUpperCase()).join(" · "):"";
     return(
     <div>
@@ -6235,7 +6331,7 @@ export default function SistemaCarga(){
               <div style={{fontSize:14,fontWeight:on?700:600}}>{o.l}</div>{t&&<div style={{fontSize:11,opacity:.75}}>✓ {t}</div>}</div>);})}</div>
         </div>
         <div className="card">
-          <div style={{fontSize:17,fontWeight:700,color:"var(--navy)",marginBottom:10}}>🌎 {sel==="_default"?"Predeterminado":sel}</div>
+          <div style={{fontSize:17,fontWeight:700,color:"var(--navy)",marginBottom:10}}><Ico e="🌎" sp/>{sel==="_default"?"Predeterminado":sel}</div>
           <div style={{display:"flex",gap:3,background:"var(--bg4)",borderRadius:8,padding:3,border:"1px solid var(--b1)",marginBottom:12,flexWrap:"wrap"}}>
             {SECS.map(([k,l])=><button key={k} onClick={()=>setPaisSec(k)} style={{flex:"1 1 160px",padding:"7px 10px",borderRadius:6,border:"none",cursor:"pointer",fontSize:13,fontWeight:600,background:sec===k?"var(--navy)":"transparent",color:sec===k?"#fff":"var(--t2)"}}>{l}</button>)}
           </div>
@@ -6256,7 +6352,7 @@ export default function SistemaCarga(){
           <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:6}}>
             {sel!=="_default"&&docPais[sel]&&<button className="btn-s" onClick={()=>{if(window.confirm(`¿Quitar todo lo propio de ${sel} y usar el predeterminado?`))setPaisDraft({pais:sel,v:{}});}}>Usar el predeterminado</button>}
             {cambiado&&<button className="btn-s" onClick={()=>setPaisDraft(null)}>Descartar</button>}
-            <button className="btn-p" disabled={!cambiado} onClick={guardar}>💾 Guardar</button>
+            <button className="btn-p" disabled={!cambiado} onClick={guardar}><Ico e="💾" sp/>Guardar</button>
           </div>
         </div>
       </div>
@@ -6348,9 +6444,9 @@ export default function SistemaCarga(){
     const mObj=o=>Object.keys(o||{}).length?o:null;
     const ROLN=Object.fromEntries(Object.values(ROLE_DEFS).map(r=>[r.code,r.name]));
     const F={
-      wr:{l:"WR",ic:"📦",fecha:"fecha",campos:wrC,filas:()=>vis.map(ctx)},
-      caja:{l:"Cajas de los WR",ic:"🗃️",fecha:"fecha",campos:cajaC,filas:()=>vis.flatMap(w=>{const c=ctx(w);return c.dims.map((d,i)=>({...c,d,i,n:c.dims.length}));})},
-      guia:{l:"Guías",ic:"🚢",fecha:"fecha",campos:[
+      wr:{l:"WR",ic:<Ico e="📦"/>,fecha:"fecha",campos:wrC,filas:()=>vis.map(ctx)},
+      caja:{l:"Cajas de los WR",ic:<Ico e="🗃️"/>,fecha:"fecha",campos:cajaC,filas:()=>vis.flatMap(w=>{const c=ctx(w);return c.dims.map((d,i)=>({...c,d,i,n:c.dims.length}));})},
+      guia:{l:"Guías",ic:<Ico e="🚢"/>,fecha:"fecha",campos:[
         W("Guía","id","Guía","txt",r=>r.id),W("Guía","fecha","Fecha","fecha",r=>r.fecha),W("Guía","estado","Estado","txt",r=>{const s=WR_STATUSES.find(x=>x.code===String(r.status)||x.label===r.status);return s?estTxt(s.code):String(r.status||"");}),
         W("Guía","tipoEnvio","Tipo de envío","txt",r=>r.tipoEnvio||""),W("Guía","destino","Destino","txt",r=>ciudadNombre(r.destino)||""),
         W("Guía","awb","AWB","txt",r=>r.awb||""),W("Guía","bl","BL","txt",r=>r.bl||""),W("Guía","vuelo","Vuelo / viaje","txt",r=>r.numVuelo||""),
@@ -6361,7 +6457,7 @@ export default function SistemaCarga(){
         W("Contenido","totalVolLb","Peso vol. lb","num",r=>r2(r.totalVolLb)),W("Contenido","totalFt3","Ft³","num",r=>n3(r.totalFt3)),W("Contenido","totalM3","M³","num",r=>Math.round((parseFloat(r.totalM3)||0)*10000)/10000),
         W("Guía","usuario","Creada por","txt",r=>nomUsr(r.usuario)),W("Guía","notas","Notas","txt",r=>r.notas||"")],
         filas:()=>ext?consolList.filter(g=>(g.containers||[]).some(ct=>(ct.wr||[]).some(x=>visIds.has(x.id)))):consolList},
-      cliente:{l:"Clientes",ic:"👤",fecha:"",campos:[
+      cliente:{l:"Clientes",ic:<Ico e="👤"/>,fecha:"",campos:[
         W("Cliente","casillero","Casillero","txt",r=>r.casillero||""),W("Cliente","nombre","Nombre","txt",r=>fullName(r)),W("Cliente","cedula","ID","txt",r=>r.cedula||""),
         W("Cliente","email","Email","txt",r=>r.email||""),W("Cliente","tel1","Teléfono","txt",r=>r.tel1||""),W("Cliente","tel2","Teléfono 2","txt",r=>r.tel2||""),
         W("Cliente","dir","Dirección","txt",r=>r.dir||""),W("Cliente","municipio","Municipio / ciudad","txt",r=>r.municipio||""),W("Cliente","estadoProv","Estado / provincia","txt",r=>r.estado||""),W("Cliente","pais","País","txt",r=>r.pais||""),
@@ -6373,12 +6469,12 @@ export default function SistemaCarga(){
         ...(puedeFin?[W("Dinero","deuda","Nos debe","money",r=>mObj(deudaDe({tipo:"cliente",id:r.id}))),W("Dinero","favor","Saldo a favor","money",r=>mObj(favorDe({tipo:"cliente",id:r.id})))]:[])],
         filas:()=>clientesVisibles.filter(c=>c.tipo==="cliente")},
       ...(ext?{}:{
-      usuario:{l:"Usuarios del sistema",ic:"🧑‍💼",fecha:"",campos:[
+      usuario:{l:"Usuarios del sistema",ic:<Ico e="🧑‍💼"/>,fecha:"",campos:[
         W("Usuario","id","N° usuario","txt",r=>r.id),W("Usuario","nombre","Nombre","txt",r=>fullName(r)),W("Usuario","rol","Rol","txt",r=>ROLN[r.rol]||r.rol||""),
         W("Usuario","email","Email","txt",r=>r.email||""),W("Usuario","tel1","Teléfono","txt",r=>r.tel1||""),
         W("Usuario","oficina","Oficina","txt",r=>oficinas.find(o=>o.id===r.oficinaId)?.nombre||""),W("Usuario","agente","Agente","txt",r=>agentes.find(a=>a.id===r.agenteId)?.nombre||""),
         W("Usuario","activo","Activo","txt",r=>siNo(r.activo!==false))],filas:()=>clients.filter(c=>c.tipo==="usuario")},
-      agente:{l:"Agentes y autónomos",ic:"🤝",fecha:"",campos:[
+      agente:{l:"Agentes y autónomos",ic:<Ico e="🤝"/>,fecha:"",campos:[
         W("Cuenta","tipo","Tipo","txt",r=>r.tipo==="agente"?"Agente":"Autónomo"),W("Cuenta","codigo","Código","txt",r=>r.codigo||""),W("Cuenta","nombre","Nombre","txt",r=>r.nombre),
         W("Cuenta","ciudad","Ciudad","txt",r=>r.ciudad||""),W("Cuenta","pais","País","txt",r=>r.pais||""),W("Cuenta","tel","Teléfono","txt",r=>r.tel||""),W("Cuenta","email","Email","txt",r=>r.email||""),
         W("Cuenta","activo","Activo","txt",r=>siNo(r.activo!==false)),
@@ -6387,13 +6483,13 @@ export default function SistemaCarga(){
         ...(puedeFin?[W("Dinero","deuda","Nos debe","money",r=>mObj(deudaDe(r))),W("Dinero","favor","Le debemos","money",r=>mObj(favorDe(r)))]:[])],
         filas:()=>[...agentes.map(a=>({tipo:"agente",id:a.id,codigo:a.codigo,nombre:a.nombre||a.codigo,ciudad:a.ciudad,pais:a.pais,tel:a.tel,email:a.email,activo:a.activo})),
           ...clients.filter(c=>c.tipo==="usuario"&&c.rol==="F").map(c=>({tipo:"autonomo",id:c.id,codigo:c.id,nombre:fullName(c),ciudad:c.municipio,pais:c.pais,tel:c.tel1,email:c.email,activo:c.activo}))]},
-      oficina:{l:"Oficinas",ic:"🏢",fecha:"",campos:[
+      oficina:{l:"Oficinas",ic:<Ico e="🏢"/>,fecha:"",campos:[
         W("Oficina","codigo","Código","txt",r=>r.codigo||""),W("Oficina","nombre","Nombre","txt",r=>r.nombre||""),W("Oficina","ciudad","Ciudad","txt",r=>r.ciudad||""),
         W("Oficina","pais","País","txt",r=>r.pais||""),W("Oficina","tel","Teléfono","txt",r=>r.tel||""),W("Oficina","email","Email","txt",r=>r.email||""),W("Oficina","contacto","Contacto","txt",r=>r.contacto||""),
         W("Oficina","activo","Activa","txt",r=>siNo(r.activo!==false))],filas:()=>oficinas},
       }),
       ...(puedeFin?{
-      factura:{l:"Facturas",ic:"🧾",fecha:"fechaEmision",campos:[
+      factura:{l:"Facturas",ic:<Ico e="🧾"/>,fecha:"fechaEmision",campos:[
         W("Factura","id","N° factura","txt",r=>r.id),W("Factura","tipo","Tipo","txt",r=>r.tipo==="nota_credito"?"Nota de crédito":r.tipo==="proforma"?"Proforma":"Factura"),
         W("Factura","fechaEmision","Fecha de emisión","fecha",r=>r.fechaEmision||r.fecha),W("Factura","estado","Estado","txt",r=>(FAC_STATUS_LABEL[r.status]||r.status).replace(/^\S+\s/,"")),
         W("Factura","ncOrigen","Factura de origen (NC / cargo)","txt",r=>r.ncFacturaOrigen||""),W("Factura","usuario","Emitida por","txt",r=>nomUsr(r.usuario)),
@@ -6407,14 +6503,14 @@ export default function SistemaCarga(){
         W("Cobro","dias","Días desde emisión","dias",r=>repDias(r.fechaEmision||r.fecha)),
         W("Cobro","antiguedad","Antigüedad de la deuda","txt",r=>{if(!["emitida","pagada_parcial"].includes(r.status))return "Sin deuda";const d=repDias(r.fechaEmision||r.fecha)||0;return d<=30?"1. 0–30 días":d<=60?"2. 31–60 días":d<=90?"3. 61–90 días":"4. Más de 90 días";}),
         W("Factura","notas","Notas","txt",r=>r.notas||"")],filas:()=>facsVis.filter(f=>f.status!=="borrador")},
-      lineaFactura:{l:"Líneas de factura",ic:"📃",fecha:"fecha",campos:[
+      lineaFactura:{l:"Líneas de factura",ic:<Ico e="📃"/>,fecha:"fecha",campos:[
         W("Factura","factura","N° factura","txt",r=>r.f.id),W("Factura","fecha","Fecha","fecha",r=>r.f.fechaEmision||r.f.fecha),W("Factura","estado","Estado","txt",r=>(FAC_STATUS_LABEL[r.f.status]||r.f.status).replace(/^\S+\s/,"")),
         W("Factura","receptor","Receptor","txt",r=>r.f.receptorNombre||""),
         W("Línea","tipoLinea","Tipo de línea","txt",r=>({flete:"Flete",adicional:"Servicio / gasto",minimo:"Ajuste a mínimo",extra:"Otro"})[r.l.tipo||"extra"]),
         W("Línea","concepto","Concepto","txt",r=>r.l.descripcion||""),W("Línea","wr","WR","txt",r=>r.l.wrId||""),W("Línea","cantidad","Cantidad","num",r=>parseFloat(r.l.cantidad)||0),
         W("Línea","unidad","Unidad","txt",r=>r.l.unidad||""),W("Línea","precio","Precio","money",r=>parseFloat(r.l.precio)||0,{cur:r=>r.f.moneda}),W("Línea","totalLinea","Total línea","money",r=>parseFloat(r.l.total)||0,{cur:r=>r.f.moneda})],
         filas:()=>facsVis.filter(f=>!["borrador","anulada"].includes(f.status)).flatMap(f=>(f.lineas||[]).map(l=>({f,l})))},
-      pago:{l:"Cobros, pagos y movimientos",ic:"💵",fecha:"fecha",campos:[
+      pago:{l:"Cobros, pagos y movimientos",ic:<Ico e="💵"/>,fecha:"fecha",campos:[
         W("Movimiento","fecha","Fecha","fecha",r=>r.fecha),W("Movimiento","id","N° pago","txt",r=>r.id),W("Movimiento","recibo","Recibo","txt",r=>r.reciboId||""),
         W("Movimiento","clase","Clase","txt",r=>!esDinero(r)?"Interno":r.monto<0?"Salida":"Entrada"),
         W("Movimiento","forma","Forma de pago","txt",r=>metodoLbl(r.tipoPago).replace(/^\S+\s/,"")),W("Movimiento","factura","Factura","txt",r=>r.facturaId||"A favor"),
@@ -6424,7 +6520,7 @@ export default function SistemaCarga(){
         W("Pagador","pagadorTipo","Tipo de pagador","txt",r=>({cliente:"Cliente",agente:"Agente",autonomo:"Autónomo"})[(pagadorDePago(r)||{}).tipo]||"Cliente"),
         W("Pagador","pagador","Pagador","txt",r=>(pagadorDePago(r)||{}).nombre||r.pagadorNombre||"")],
         filas:()=>ext?pagos.filter(p=>facVisIds.has(p.facturaId)):pagos},
-      ...(ext?{}:{comision:{l:"Comisiones de agentes",ic:"🤝",fecha:"fecha",campos:[
+      ...(ext?{}:{comision:{l:"Comisiones de agentes",ic:<Ico e="🤝"/>,fecha:"fecha",campos:[
         W("Comisión","fecha","Fecha de la factura","fecha",r=>r.f.fechaEmision||r.f.fecha),W("Comisión","cuenta","Agente / autónomo","txt",r=>r.dom.nombre),
         W("Comisión","tipo","Tipo","txt",r=>r.dom.tipo==="agente"?"Agente":"Autónomo"),W("Comisión","wr","WR","txt",r=>r.w.id),W("Comisión","factura","Factura","txt",r=>r.f.id),
         W("Comisión","cliente","Cliente","txt",r=>{const c=cliDeWR(r.w);return c?fullName(c):r.w.consignee||"";}),
@@ -6432,7 +6528,7 @@ export default function SistemaCarga(){
         W("Comisión","comision","Comisión","money",r=>r.comision,{cur:r=>r.moneda}),W("Comisión","estado","Estado","txt",r=>r.acreditada?"Acreditada":"Pendiente"),
         W("Comisión","tarifa","Tarifa usada","txt",r=>r.tf?`${r.tf.id}${r.tf._especial?" (especial)":""}`:"Sin tarifa")],filas:()=>comisionesPrepaid()}}),
       }:{}),
-      entrega:{l:"Entregas y despachos",ic:"📝",fecha:"fecha",campos:[
+      entrega:{l:"Entregas y despachos",ic:<Ico e="📝"/>,fecha:"fecha",campos:[
         W("Nota","id","N° nota","txt",r=>r.id),W("Nota","fecha","Fecha","fecha",r=>r.fecha),W("Nota","tipo","Tipo","txt",r=>r.tipo==="despacho"?"Despacho":"Entrega"),
         W("Nota","guia","Guía","txt",r=>r.guiaId||""),W("Nota","destinoDe","Despachado a","txt",r=>r.receptorEntidad?.nombre||""),
         W("Nota","recibe","Recibe","txt",r=>r.receptorNombre||r.consignatario||""),W("Nota","docRecibe","ID de quien recibe","txt",r=>r.receptorDocumento||""),
@@ -6440,13 +6536,13 @@ export default function SistemaCarga(){
         W("Nota","nWR","WR","num",r=>(r.wrIds||[]).length),W("Nota","wrs","N° de WR","txt",r=>(r.wrIds||[]).join(", ")),
         W("Nota","usuario","Registrada por","txt",r=>nomUsr(r.usuario)),W("Nota","anulada","Anulada","txt",r=>siNo(r.anulado))],
         filas:()=>deliveryNotes.filter(n=>!ext||(n.wrIds||[]).some(id=>visIds.has(id)))},
-      egreso:{l:"Cargo Release (egresos)",ic:"🚚",fecha:"fecha",campos:[
+      egreso:{l:"Cargo Release (egresos)",ic:<Ico e="🚚"/>,fecha:"fecha",campos:[
         W("Egreso","id","N°","txt",r=>r.id),W("Egreso","fecha","Fecha","fecha",r=>r.fecha),W("Egreso","agenteCarga","Agente de carga","txt",r=>r.agenteCarga||""),
         W("Egreso","contacto","Contacto","txt",r=>r.contacto||""),W("Egreso","documento","Documento","txt",r=>r.documento||""),W("Egreso","vehiculo","Vehículo","txt",r=>r.vehiculo||""),
         W("Egreso","nWR","WR","num",r=>(r.wrIds||[]).length),W("Egreso","wrs","N° de WR","txt",r=>(r.wrIds||[]).join(", ")),
         W("Egreso","usuario","Registrado por","txt",r=>nomUsr(r.usuario)),W("Egreso","anulado","Anulado","txt",r=>siNo(r.anulado))],
         filas:()=>cargoReleases.filter(c=>!ext||(c.wrIds||[]).some(id=>visIds.has(id)))},
-      pickup:{l:"Pick-ups",ic:"🚐",fecha:"fecha",campos:[
+      pickup:{l:"Pick-ups",ic:<Ico e="🚐"/>,fecha:"fecha",campos:[
         W("Pick-up","id","N°","txt",r=>r.id),W("Pick-up","fecha","Fecha de solicitud","fecha",r=>r.fecha),W("Pick-up","estado","Estado","txt",r=>(PU_ST[r.status]||{l:r.status}).l),
         W("Pick-up","cliente","Para","txt",r=>r.clienteNombre||""),W("Pick-up","casillero","Casillero","txt",r=>r.casillero||""),W("Pick-up","solicitante","Solicitado por","txt",r=>r.solicitanteNombre||""),
         W("Pick-up","direccion","Dirección de recogida","txt",r=>r.direccion||""),W("Pick-up","telefono","Teléfono","txt",r=>r.telefono||""),
@@ -6456,16 +6552,16 @@ export default function SistemaCarga(){
         ...(ext?[]:[W("Pick-up","cargo","Cargo","money",r=>r.monto||0,{cur:r=>r.moneda||"USD"})]),W("Pick-up","wr","WR","txt",r=>r.wrId||"")],
         filas:()=>pickupList.filter(p=>!ext||p.solicitanteId===currentUser.id||alcanceUsr.clienteOk(clients.find(c=>c.id===p.clienteId)))},
       ...(ext?{}:{
-      puerta:{l:"Recepción en puerta",ic:"📡",fecha:"fecha",campos:[
+      puerta:{l:"Recepción en puerta",ic:<Ico e="📡"/>,fecha:"fecha",campos:[
         W("Recepción","fecha","Fecha","fecha",r=>r.ts),W("Recepción","hora","Hora","txt",r=>fmtTime(r.ts)),W("Recepción","tracking","Tracking","txt",r=>r.tracking),
         W("Recepción","carrier","Carrier","txt",r=>r.carrier||""),W("Recepción","registrado","Con WR","txt",r=>siNo(r.registered))],filas:()=>scanLog},
-      tarifa:{l:"Tarifas",ic:"💰",fecha:"",campos:[
+      tarifa:{l:"Tarifas",ic:<Ico e="💰"/>,fecha:"",campos:[
         W("Tarifa","id","N°","txt",r=>r.id),W("Tarifa","aplica","Aplica a","txt",r=>r.aplicaTipo?nombreAplica(r):"Predeterminada"),
         W("Tarifa","origen","Origen","txt",r=>[r.paisOrig,r.ciudadOrig].filter(Boolean).join(" ")||"Cualquiera"),W("Tarifa","destino","Destino","txt",r=>[r.paisDest,r.ciudadDest].filter(Boolean).join(" ")||"Cualquiera"),
         W("Tarifa","tipoEnvio","Tipo de envío","txt",r=>r.tipoEnvio||""),W("Tarifa","unidad","Unidad","txt",r=>r.unidad||""),
         W("Tarifa","precio","Precio","money",r=>parseFloat(tipoEsMaritimoG(r.tipoEnvio)?r.porFt3:r.porLb)||0,{cur:r=>r.moneda}),W("Tarifa","minimo","Mínimo","money",r=>parseFloat(r.min)||0,{cur:r=>r.moneda}),
         W("Tarifa","activa","Activa","txt",r=>siNo(r.activo!==false))],filas:()=>tarifas},
-      ...(hasPerm("registro_actividad")?{actividad:{l:"Actividad de usuarios",ic:"📋",fecha:"fecha",campos:[
+      ...(hasPerm("registro_actividad")?{actividad:{l:"Actividad de usuarios",ic:<Ico e="📋"/>,fecha:"fecha",campos:[
         W("Actividad","fecha","Fecha","fecha",r=>r.ts),W("Actividad","hora","Hora","txt",r=>fmtTime(r.ts)),W("Actividad","usuario","Usuario","txt",r=>nomUsr(r.user)),
         W("Actividad","rol","Rol","txt",r=>ROLN[r.role]||r.role||""),W("Actividad","accion","Acción","txt",r=>r.action||""),W("Actividad","detalle","Detalle","txt",r=>r.detail||""),
         W("Actividad","cantidad","Cantidad","num",()=>1)],filas:()=>repAct||[]}}:{}),
@@ -6583,21 +6679,21 @@ export default function SistemaCarga(){
       <div className="page-scroll">
         <div className="card" style={{marginBottom:12,display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
           <input className="fi" style={{flex:1,minWidth:240,fontSize:15,padding:"9px 12px"}} placeholder="Buscar reporte…" value={repListaQ} onChange={e=>setRepListaQ(e.target.value)}/>
-          {puedeCrear&&<button className="btn-p" onClick={repNuevo}>➕ Crear reporte</button>}
+          {puedeCrear&&<button className="btn-p" onClick={repNuevo}><Ico e="➕" sp/>Crear reporte</button>}
         </div>
         {lista.length===0?<div className="card" style={{textAlign:"center",padding:40,color:"var(--t3)"}}>{Q?"Sin coincidencias.":"No hay reportes."}</div>:
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:12}}>
           {lista.map(r=>(
             <div key={r.id} className="card" style={{cursor:"pointer",padding:14,display:"flex",gap:12,alignItems:"flex-start"}} onClick={()=>repAbrir(r)}>
-              <div style={{fontSize:26}}>{fs[r.fuente]?.ic||"📈"}</div>
+              <div style={{fontSize:26}}>{fs[r.fuente]?.ic||<Ico e="📈"/>}</div>
               <div style={{flex:1,minWidth:0}}>
                 <div style={{fontSize:15,fontWeight:700,color:"var(--navy)"}}>{r.nombre}</div>
-                <div style={{fontSize:12,color:"var(--t3)"}}>{fs[r.fuente]?.l}{r.compartido===false?" · 🔒 solo para mí":""}</div>
+                <div style={{fontSize:12,color:"var(--t3)"}}>{fs[r.fuente]?.l}{r.compartido===false?" · solo para mí":""}</div>
               </div>
               {repPuedeEditar(r)&&<div style={{display:"flex",gap:4}} onClick={e=>e.stopPropagation()}>
-                <span className="ic-b" title="Editar" onClick={()=>repEditar(r)}>✏️</span>
+                <span className="ic-b" title="Editar" onClick={()=>repEditar(r)}><Ico e="✏️" solo/></span>
                 <span className="ic-b" title="Duplicar" onClick={()=>repEditar({...r,id:"",nombre:`${r.nombre} (copia)`,owner:currentUser.id})}>⧉</span>
-                <span className="ic-b" style={{color:"var(--red)"}} title="Borrar" onClick={async()=>{if(!window.confirm(`¿Borrar el reporte "${r.nombre}"?`))return;if(await repGuardarLista((repGuardados??REP_EJEMPLOS).filter(x=>x.id!==r.id)))logAction("Borró reporte",r.nombre);}}>🗑</span>
+                <span className="ic-b" style={{color:"var(--red)"}} title="Borrar" onClick={async()=>{if(!window.confirm(`¿Borrar el reporte "${r.nombre}"?`))return;if(await repGuardarLista((repGuardados??REP_EJEMPLOS).filter(x=>x.id!==r.id)))logAction("Borró reporte",r.nombre);}}><Ico e="🗑" solo/></span>
               </div>}
             </div>))}
         </div>}
@@ -6619,8 +6715,8 @@ export default function SistemaCarga(){
             <button className="btn-s" style={{fontSize:13}} onClick={()=>setRepModo("lista")}>← Reportes</button>
             <div style={{flex:1}}><div style={{fontSize:18,fontWeight:700,color:"var(--navy)"}}>{F.ic} {rep.nombre}</div><div style={{fontSize:12,color:"var(--t3)"}}>{F.l}</div></div>
             <button className="btn-s" style={{fontSize:13}} onClick={()=>repExcel(rep,par)}>⬇️ Excel</button>
-            <button className="btn-s" style={{fontSize:13}} onClick={()=>repImprimir(rep,par)}>🖨️ Imprimir</button>
-            {repPuedeEditar(rep)&&<button className="btn-s" style={{fontSize:13}} onClick={()=>repEditar(rep)}>✏️ Editar</button>}
+            <button className="btn-s" style={{fontSize:13}} onClick={()=>repImprimir(rep,par)}><Ico e="🖨️" sp/>Imprimir</button>
+            {repPuedeEditar(rep)&&<button className="btn-s" style={{fontSize:13}} onClick={()=>repEditar(rep)}><Ico e="✏️" sp/>Editar</button>}
           </div>
           <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
             {fc&&<><span style={{fontSize:13,color:"var(--t2)"}}>{fc.l}</span>
@@ -6651,7 +6747,7 @@ export default function SistemaCarga(){
               else R.filas.forEach((r,i)=>{if(i<MAXF)out.push(fila(r,i));});
               out.push(tot("TOTAL",R.filas.length,R.tot,"T"));return out;})()}</tbody>
           </table>)}
-          {R.filas.length>MAXF&&!rep.soloTot&&<div style={{padding:10,textAlign:"center",fontSize:13,color:"var(--t3)"}}>Se muestran {MAXF} de {R.filas.length}. Excel e Imprimir incluyen todos.</div>}
+          {R.filas.length>MAXF&&!rep.soloTot&&<div style={{padding:10,textAlign:"center",fontSize:13,color:"var(--t3)"}}>{MAXF} de {R.filas.length}</div>}
         </div>
       </div>);
     }
@@ -6676,12 +6772,12 @@ export default function SistemaCarga(){
       <div style={{maxWidth:1100,margin:"0 auto"}}>
         <div className="card" style={{marginBottom:12,display:"flex",alignItems:"center",gap:10}}>
           <button className="btn-s" style={{fontSize:13}} onClick={()=>{if(window.confirm("¿Salir sin guardar?"))setRepModo(d.id?"ver":"lista");}}>← Cancelar</button>
-          <div style={{fontSize:18,fontWeight:700,color:"var(--navy)",flex:1}}>{d.id?"✏️ Editar reporte":"➕ Crear reporte"}</div>
-          <button className="btn-p" onClick={guardar}>💾 Guardar</button>
+          <div style={{fontSize:18,fontWeight:700,color:"var(--navy)",flex:1}}>{d.id?"Editar reporte":"Crear reporte"}</div>
+          <button className="btn-p" onClick={guardar}><Ico e="💾" sp/>Guardar</button>
         </div>
         {paso(1,"Nombre",<div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"center"}}>
           <input className="fi" style={{flex:1,minWidth:260,fontSize:15}} placeholder="Ej: Manifiesto Venezuela aéreo" value={d.nombre||""} onChange={e=>setD({nombre:e.target.value})}/>
-          {seg([[true,"👥 Para todos"],[false,"🔒 Solo para mí"]],d.compartido!==false,v=>setD({compartido:v}))}</div>)}
+          {seg([[true,"Para todos"],[false,"Solo para mí"]],d.compartido!==false,v=>setD({compartido:v}))}</div>)}
         {paso(2,"¿De qué trata?",<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(190px,1fr))",gap:8}}>
           {Object.entries(fs).map(([k,f])=>{const on=d.fuente===k;return(
             <div key={k} onClick={()=>{if(on)return;if(d.cols.length&&!window.confirm("Al cambiar se borran los datos y filtros elegidos. ¿Continuar?"))return;
@@ -6701,7 +6797,7 @@ export default function SistemaCarga(){
           <div>
             <div style={{fontSize:13,fontWeight:700,color:"var(--t2)",marginBottom:8}}>En el reporte, en este orden ({d.cols.length})</div>
             <div style={{maxHeight:350,overflowY:"auto",border:"1px solid var(--b1)",borderRadius:8}}>
-              {d.cols.length===0&&<div style={{padding:14,textAlign:"center",color:"var(--t3)",fontSize:13}}>Toca los datos de la izquierda para agregarlos.</div>}
+              {d.cols.length===0&&<div style={{padding:14,textAlign:"center",color:"var(--t3)",fontSize:13}}>Sin columnas</div>}
               {d.cols.map((k,i)=><div key={k} style={{padding:"6px 10px",fontSize:13,borderBottom:"1px solid var(--b2)",display:"flex",gap:8,alignItems:"center"}}>
                 <span style={{...mono,color:"var(--t3)",width:22}}>{i+1}</span><span style={{flex:1,fontWeight:600}}>{C[k]?.l||k}</span>
                 <span className="ic-b" style={{opacity:i?1:.3}} onClick={()=>{if(!i)return;const a=[...d.cols];[a[i-1],a[i]]=[a[i],a[i-1]];setD({cols:a});}}>▲</span>
@@ -6725,7 +6821,6 @@ export default function SistemaCarga(){
               {(()=>{const Qf=sinAcentos(repPick.fq||"");const ops=F.campos.filter(c=>!Qf||sinAcentos(c.l).includes(Qf)).slice(0,25);
                 return ops.length>0&&<div className="fi-search-res">{ops.map(c=><div key={c.k} className="fi-search-item" onMouseDown={e=>{e.preventDefault();setD({filtros:[...(d.filtros||[]),c.t==="txt"?{k:c.k,vals:[]}:{k:c.k,min:"",max:""}]});setRepPick({q:repPick.q});}}>{c.l}<span style={{fontSize:11,color:"var(--t3)",marginLeft:6}}>{c.g}</span></div>)}</div>;})()}
             </div>:<button className="btn-s" style={{fontSize:13}} onClick={()=>setRepPick({...(repPick||{}),modo:"filtro",fq:""})}>+ Agregar filtro</button>}
-          {F.fecha&&<div style={{fontSize:13,color:"var(--t3)",marginTop:8}}>Al abrir el reporte siempre se puede elegir el rango de {C[F.fecha]?.l.toLowerCase()}.</div>}
         </div>)}
         {F&&paso(5,"Agrupar y ordenar",<div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"flex-end"}}>
           <div className="fg"><div className="fl">Agrupar por</div><select className="fs" style={{minWidth:240}} value={d.agrupar||""} onChange={e=>setD({agrupar:e.target.value,soloTot:e.target.value?d.soloTot:false})}>
@@ -6735,7 +6830,7 @@ export default function SistemaCarga(){
           <div className="fg"><div className="fl">Ordenar por</div><select className="fs" style={{minWidth:200}} value={d.orden?.k||""} onChange={e=>setD({orden:e.target.value?{k:e.target.value,dir:d.orden?.dir||1}:null})}>
             <option value="">—</option>{d.cols.map(k=><option key={k} value={k}>{C[k]?.l}</option>)}</select></div>
           {d.orden&&<div className="fg"><div className="fl">&nbsp;</div>{seg([[1,"Ascendente"],[-1,"Descendente"]],d.orden.dir||1,v=>setD({orden:{...d.orden,dir:v}}))}</div>}
-          <div style={{fontSize:13,color:"var(--t3)",alignSelf:"center"}}>Los números se suman y los días se promedian.</div></div>)}
+</div>)}
         {prev&&paso(6,`Vista previa (${prev.filas.length} registros)`,<div style={{overflow:"auto",maxHeight:300}}>
           <table className="ct" style={{fontSize:12}}><thead><tr>{d.soloTot&&prev.grupos?<><th>{prev.gl}</th><th>Cantidad</th>{prev.cols.filter(repNum).map(c=><th key={c.k}>{c.l}</th>)}</>:prev.cols.map(c=><th key={c.k}>{c.l}</th>)}</tr></thead>
             <tbody>{d.soloTot&&prev.grupos?prev.grupos.slice(0,15).map(g=><tr key={g.k}><td>{g.k}</td><td>{g.rows.length}</td>{prev.cols.filter(repNum).map(c=><td key={c.k}>{repFmt(c,g.tot[c.k])}</td>)}</tr>)
@@ -6750,19 +6845,19 @@ export default function SistemaCarga(){
     if(!canAdmin)return <div className="page-scroll"><div className="card" style={{textAlign:"center",padding:60,color:"var(--t3)"}}>Solo Administradores pueden acceder a Configuración.</div></div>;
 
     const CFG_TABS=[
-      {k:"empresa",l:"Empresa",ic:"🏢"},
-      {k:"documentos",l:"Documentos por país",ic:"🌎"},
-      {k:"numeracion",l:"Numeración",ic:"🔢"},
-      {k:"tipoenvio",l:"Tipo de Envío",ic:"✈️"},
-      {k:"servicios",l:"Servicios Adicionales",ic:"⚡"},
-      {k:"cargos",l:"Gastos Adicionales",ic:"💲"},
-      {k:"pagos",l:"Tipos de Pago",ic:"💳"},
-      {k:"contenedores",l:"Tipos de Contenedor",ic:"📦"},
-      {k:"paises",l:"Países y Ciudades",ic:"🌎"},
-      {k:"agentes",l:"Agentes",ic:"🤝"},
-      {k:"oficinas",l:"Oficinas",ic:"🏢"},
-      {k:"tarifas",l:"Tarifas",ic:"💰"},
-      {k:"actividad",l:"Registro de Actividad",ic:"📋"},
+      {k:"empresa",l:"Empresa",ic:<Ico e="🏢"/>},
+      {k:"documentos",l:"Documentos por país",ic:<Ico e="🌎"/>},
+      {k:"numeracion",l:"Numeración",ic:<Ico e="🔢"/>},
+      {k:"tipoenvio",l:"Tipo de Envío",ic:<Ico e="✈️"/>},
+      {k:"servicios",l:"Servicios Adicionales",ic:<Ico e="⚡"/>},
+      {k:"cargos",l:"Gastos Adicionales",ic:<Ico e="💲"/>},
+      {k:"pagos",l:"Tipos de Pago",ic:<Ico e="💳"/>},
+      {k:"contenedores",l:"Tipos de Contenedor",ic:<Ico e="📦"/>},
+      {k:"paises",l:"Países y Ciudades",ic:<Ico e="🌎"/>},
+      {k:"agentes",l:"Agentes",ic:<Ico e="🤝"/>},
+      {k:"oficinas",l:"Oficinas",ic:<Ico e="🏢"/>},
+      {k:"tarifas",l:"Tarifas",ic:<Ico e="💰"/>},
+      {k:"actividad",l:"Registro de Actividad",ic:<Ico e="📋"/>},
     ];
 
     return (
@@ -6797,7 +6892,7 @@ export default function SistemaCarga(){
                   <div style={{width:120,height:120,border:"1px dashed var(--b1)",borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",background:"var(--bg3)",overflow:"hidden"}}>
                     {m.logo?<img src={m.logo} alt="" style={{maxWidth:"100%",maxHeight:"100%"}}/>:<span style={{fontSize:32,fontWeight:900,color:"var(--navy)"}}>{(m.iniciales||String(m.nombre||"?").slice(0,2)).toUpperCase()}</span>}
                   </div>
-                  <label className="btn-s" style={{display:"inline-block",marginTop:8,fontSize:13,cursor:"pointer"}}>📷 Logo<input type="file" accept="image/*" style={{display:"none"}} onChange={e=>subirLogo(e.target.files?.[0])}/></label>
+                  <label className="btn-s" style={{display:"inline-block",marginTop:8,fontSize:13,cursor:"pointer"}}><Ico e="📷" sp/>Logo<input type="file" accept="image/*" style={{display:"none"}} onChange={e=>subirLogo(e.target.files?.[0])}/></label>
                   {m.logo&&<div><span style={{fontSize:12,color:"var(--red)",cursor:"pointer"}} onClick={()=>set({logo:""})}>Quitar logo</span></div>}
                 </div>
                 <div style={{flex:1,minWidth:260}}>
@@ -6808,7 +6903,7 @@ export default function SistemaCarga(){
               </div>
               <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:10}}>
                 {marcaDraft&&<button className="btn-s" onClick={()=>setMarcaDraft(null)}>Descartar</button>}
-                <button className="btn-p" disabled={!marcaDraft} onClick={guardar}>💾 Guardar</button>
+                <button className="btn-p" disabled={!marcaDraft} onClick={guardar}><Ico e="💾" sp/>Guardar</button>
               </div>
             </div>);
         })()}
@@ -6816,7 +6911,7 @@ export default function SistemaCarga(){
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
             {/* WR */}
             <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,padding:"16px"}}>
-              <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:16,fontWeight:700,color:"var(--navy)",marginBottom:4}}>📦 Numeración de WR</div>
+              <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:16,fontWeight:700,color:"var(--navy)",marginBottom:4}}><Ico e="📦" sp/>Numeración de WR</div>
               {[
                 {v:1,l:"Tipo 1 — 7 dígitos secuenciales",ex:"0000001"},
                 {v:2,l:"Tipo 2 — Indicativo + Oficina Origen + Oficina Destino + Secuencia",ex:`${empresaSlug}01MIA01VLN0000001`},
@@ -6847,7 +6942,7 @@ export default function SistemaCarga(){
 
             {/* GUÍA CONSOLIDADA */}
             <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,padding:"16px"}}>
-              <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:16,fontWeight:700,color:"var(--navy)",marginBottom:4}}>🗂️ Numeración de Guía Consolidada</div>
+              <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:16,fontWeight:700,color:"var(--navy)",marginBottom:4}}><Ico e="🗂️" sp/>Numeración de Guía Consolidada</div>
               {[
                 {v:1,l:"Tipo 1 — 7 dígitos secuenciales",ex:"0000001"},
                 {v:2,l:"Tipo 2 — Oficina Origen + Oficina Destino + Secuencia",ex:"01VLN01CCS0000001"},
@@ -6872,10 +6967,10 @@ export default function SistemaCarga(){
 
             {/* ETIQUETAS */}
             <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,padding:"16px",gridColumn:"1/-1"}}>
-              <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:16,fontWeight:700,color:"var(--navy)",marginBottom:12}}>🏷️ Tipo de Etiqueta Predeterminada</div>
+              <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:16,fontWeight:700,color:"var(--navy)",marginBottom:12}}><Ico e="🏷️" sp/>Tipo de Etiqueta Predeterminada</div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
                 <div>
-                  <div style={{fontSize:14,fontWeight:700,color:"var(--t2)",marginBottom:8}}>📦 Etiqueta WR</div>
+                  <div style={{fontSize:14,fontWeight:700,color:"var(--t2)",marginBottom:8}}><Ico e="📦" sp/>Etiqueta WR</div>
                   {[{v:1,l:"4×6 pulg. — Tipo 1 Básica (7 franjas)"},{v:2,l:"4×6 pulg. — Tipo 2 Completa (5 franjas + QR)"},{v:3,l:"4×2 pulg. — Tipo 3 Básica (3 franjas)"},{v:4,l:"4×2 pulg. — Tipo 4 Completa (3 franjas)"}].map(t=>(
                     <div key={t.v} onClick={()=>setLabelWRTipo(t.v)} style={{padding:"8px 12px",borderRadius:6,border:`2px solid ${labelWRTipo===t.v?"var(--navy)":"var(--b1)"}`,background:labelWRTipo===t.v?"#EEF3FF":"var(--bg3)",marginBottom:6,cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>
                       <div style={{width:14,height:14,borderRadius:"50%",border:`2px solid ${labelWRTipo===t.v?"var(--navy)":"var(--b1)"}`,background:labelWRTipo===t.v?"var(--navy)":"transparent",flexShrink:0}}/>
@@ -6884,7 +6979,7 @@ export default function SistemaCarga(){
                   ))}
                 </div>
                 <div>
-                  <div style={{fontSize:14,fontWeight:700,color:"var(--t2)",marginBottom:8}}>🗂️ Etiqueta Guía Consolidada</div>
+                  <div style={{fontSize:14,fontWeight:700,color:"var(--t2)",marginBottom:8}}><Ico e="🗂️" sp/>Etiqueta Guía Consolidada</div>
                   {[{v:1,l:"4×6 pulg. — Tipo 1 Grande (5 franjas)"},{v:2,l:"4×2 pulg. — Tipo 2 Compacta"}].map(t=>(
                     <div key={t.v} onClick={()=>setLabelCSATipo(t.v)} style={{padding:"8px 12px",borderRadius:6,border:`2px solid ${labelCSATipo===t.v?"var(--navy)":"var(--b1)"}`,background:labelCSATipo===t.v?"#EEF3FF":"var(--bg3)",marginBottom:6,cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>
                       <div style={{width:14,height:14,borderRadius:"50%",border:`2px solid ${labelCSATipo===t.v?"var(--navy)":"var(--b1)"}`,background:labelCSATipo===t.v?"var(--navy)":"transparent",flexShrink:0}}/>
@@ -6904,15 +6999,15 @@ export default function SistemaCarga(){
                 dbSetConfig('label_wr_tipo',labelWRTipo);
                 dbSetConfig('label_csa_tipo',labelCSATipo);
                 logAction("Guardó configuración de numeración","");
-                alert("✅ Configuración de numeración guardada correctamente.");
-              }}>💾 Guardar Numeración</button>
+                alert("Configuración de numeración guardada correctamente.");
+              }}><Ico e="💾" sp/>Guardar Numeración</button>
             </div>
           </div>
         )}
 
         {/* ── TIPO DE ENVÍO ── */}
         {cfgTab==="tipoenvio"&&(
-          <ListEditor title="✈️ Tipos de Envío" items={SEND_TYPES}
+          <ListEditor title="Tipos de Envío" items={SEND_TYPES}
             onAdd={v=>{const n=[...SEND_TYPES,v];setSendTypes(n);dbSetConfig('send_types',n);}}
             onDelete={i=>{const n=SEND_TYPES.filter((_,j)=>j!==i);setSendTypes(n);dbSetConfig('send_types',n);}}
             placeholder="Ej: Aéreo Premium, Courier…"/>
@@ -6920,19 +7015,19 @@ export default function SistemaCarga(){
 
         {/* ── SERVICIOS ADICIONALES ── */}
         {cfgTab==="servicios"&&(
-          <PriceListEditor title="⚡ Servicios Adicionales" items={SERVICIOS_CAT} placeholder="Ej: Embalaje especial, Custodia…"
+          <PriceListEditor title="Servicios Adicionales" items={SERVICIOS_CAT} placeholder="Ej: Embalaje especial, Custodia…"
             onSave={n=>{setServiciosCat(n);dbSetConfig('servicios_cat',n);}}/>
         )}
 
         {/* ── GASTOS ADICIONALES ── */}
         {cfgTab==="cargos"&&(
-          <PriceListEditor title="💲 Gastos Adicionales" items={GASTOS_CAT} placeholder="Ej: Recargo combustible, Seguro…"
+          <PriceListEditor title="Gastos Adicionales" items={GASTOS_CAT} placeholder="Ej: Recargo combustible, Seguro…"
             onSave={n=>{setGastosCat(n);dbSetConfig('gastos_cat',n);}}/>
         )}
 
         {/* ── TIPOS DE PAGO ── */}
         {cfgTab==="pagos"&&(
-          <ListEditor title="💳 Tipos de Pago" items={PAY_TYPES}
+          <ListEditor title="Tipos de Pago" items={PAY_TYPES}
             onAdd={v=>{const n=[...PAY_TYPES,v];setPayTypes(n);dbSetConfig('pay_types',n);}}
             onDelete={i=>{const n=PAY_TYPES.filter((_,j)=>j!==i);setPayTypes(n);dbSetConfig('pay_types',n);}}
             placeholder="Ej: Zelle, Pago Móvil, Transferencia…"/>
@@ -6941,7 +7036,7 @@ export default function SistemaCarga(){
         {/* ── TIPOS DE CONTENEDOR ── */}
         {cfgTab==="contenedores"&&(
           <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,padding:"14px 16px",marginBottom:14}}>
-            <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:15,fontWeight:700,color:"var(--navy)",marginBottom:12}}>📦 Tipos de Contenedor</div>
+            <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:15,fontWeight:700,color:"var(--navy)",marginBottom:12}}><Ico e="📦" sp/>Tipos de Contenedor</div>
             {/* Agregar / Editar */}
             <div style={{display:"grid",gridTemplateColumns:"100px 1fr 1fr 120px auto",gap:8,marginBottom:12,alignItems:"flex-end"}}>
               <div className="fg"><div className="fl">Código</div><input className="fi" style={{fontFamily:"'DM Mono',monospace",fontWeight:700}} value={cfgNewCont.code} onChange={e=>setCfgNewCont(p=>({...p,code:e.target.value.toUpperCase()}))} placeholder="EH"/></div>
@@ -6960,7 +7055,7 @@ export default function SistemaCarga(){
                   }
                   setContainerTypes(n);dbSetConfig('container_types',n);
                   setCfgNewCont({code:"",name:"",dim:"",maxLb:""});
-                }}>{cfgEditContIdx!==null?"💾 Guardar":"+ Agregar"}</button>
+                }}>{cfgEditContIdx!==null?"Guardar":"+ Agregar"}</button>
                 {cfgEditContIdx!==null&&<button className="btn-s" style={{padding:"8px 10px",fontSize:13}} onClick={()=>{setCfgEditContIdx(null);setCfgNewCont({code:"",name:"",dim:"",maxLb:""});}}>✕</button>}
               </div>
             </div>
@@ -6976,8 +7071,8 @@ export default function SistemaCarga(){
                     <td style={{fontFamily:"'DM Mono',monospace",fontSize:13,color:"var(--t2)"}}>{c.dim}</td>
                     <td style={{fontFamily:"'DM Mono',monospace",fontWeight:600}}>{(c.maxLb||0).toLocaleString()}lb</td>
                     <td><div style={{display:"flex",gap:4}}>
-                      <button className="btn-s" style={{fontSize:12,padding:"2px 8px"}} onClick={()=>{setCfgNewCont({code:c.code,name:c.name,dim:c.dim,maxLb:c.maxLb});setCfgEditContIdx(i);}}>✏️ Editar</button>
-                      <button className="btn-d" style={{fontSize:12,padding:"2px 8px"}} onClick={()=>{const n=CONTAINER_TYPES.filter((_,j)=>j!==i);setContainerTypes(n);dbSetConfig('container_types',n);if(cfgEditContIdx===i){setCfgEditContIdx(null);setCfgNewCont({code:"",name:"",dim:"",maxLb:""});}}}>🗑</button>
+                      <button className="btn-s" style={{fontSize:12,padding:"2px 8px"}} onClick={()=>{setCfgNewCont({code:c.code,name:c.name,dim:c.dim,maxLb:c.maxLb});setCfgEditContIdx(i);}}><Ico e="✏️" sp/>Editar</button>
+                      <button className="btn-d" style={{fontSize:12,padding:"2px 8px"}} onClick={()=>{const n=CONTAINER_TYPES.filter((_,j)=>j!==i);setContainerTypes(n);dbSetConfig('container_types',n);if(cfgEditContIdx===i){setCfgEditContIdx(null);setCfgNewCont({code:"",name:"",dim:"",maxLb:""});}}}><Ico e="🗑" solo/></button>
                     </div></td>
                   </tr>
                 ))}
@@ -6991,7 +7086,7 @@ export default function SistemaCarga(){
           <div style={{display:"grid",gridTemplateColumns:"300px 1fr",gap:14}}>
             {/* Lista de países */}
             <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,overflow:"hidden"}}>
-              <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",fontFamily:"Arial,Helvetica,sans-serif",fontSize:15,fontWeight:700,color:"var(--navy)"}}>🌎 Países</div>
+              <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",fontFamily:"Arial,Helvetica,sans-serif",fontSize:15,fontWeight:700,color:"var(--navy)"}}><Ico e="🌎" sp/>Países</div>
               {/* Agregar país */}
               <div style={{padding:"10px 12px",borderBottom:"1px solid var(--b1)"}}>
                 <div style={{display:"grid",gridTemplateColumns:"60px 1fr auto",gap:6,alignItems:"flex-end"}}>
@@ -7024,7 +7119,7 @@ export default function SistemaCarga(){
             {/* Ciudades del país seleccionado */}
             <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,overflow:"hidden"}}>
               <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",fontFamily:"Arial,Helvetica,sans-serif",fontSize:15,fontWeight:700,color:"var(--navy)"}}>
-                🏙️ Ciudades — {COUNTRIES[cfgSelPais]?.name||"Selecciona un país"}
+                <Ico e="🏙️" sp/>Ciudades — {COUNTRIES[cfgSelPais]?.name||"Selecciona un país"}
               </div>
               {COUNTRIES[cfgSelPais]&&(
                 <>
@@ -7068,7 +7163,7 @@ export default function SistemaCarga(){
           return(
           <div>
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
-              <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:17,fontWeight:700,color:"var(--navy)",flex:1}}>🤝 Agentes registrados</div>
+              <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:17,fontWeight:700,color:"var(--navy)",flex:1}}><Ico e="🤝" sp/>Agentes registrados</div>
               {hasPerm("crear_agente")&&<button className="btn-p" style={{fontSize:13}} onClick={()=>{setAgForm({nombre:"",ciudad:"",pais:"",tel:"",email:"",contacto:"",notas:""});setShowNewAgente(true);}}>+ Nuevo Agente</button>}
             </div>
             <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,overflow:"hidden"}}>
@@ -7087,11 +7182,11 @@ export default function SistemaCarga(){
                       <td style={{fontSize:13,fontFamily:"'DM Mono',monospace"}}>{a.tel||"—"}</td>
                       <td style={{fontSize:13,color:"var(--cyan)"}}>{a.email||"—"}</td>
                       <td style={{fontSize:13}}>{a.contacto||"—"}</td>
-                      <td><span style={{fontSize:11,padding:"2px 8px",borderRadius:4,fontWeight:700,background:a.activo?"#E8F8EE":"#FEE8E8",color:a.activo?"var(--green)":"var(--red)",border:"1px solid",borderColor:a.activo?"#80D0A0":"#F0A0A0"}}>{a.activo?"✅ Activo":"❌ Inactivo"}</span></td>
+                      <td><span style={{fontSize:11,padding:"2px 8px",borderRadius:4,fontWeight:700,background:a.activo?"#E8F8EE":"#FEE8E8",color:a.activo?"var(--green)":"var(--red)",border:"1px solid",borderColor:a.activo?"#80D0A0":"#F0A0A0"}}>{a.activo?"Activo":"Inactivo"}</span></td>
                       <td onClick={e=>e.stopPropagation()}><div style={{display:"flex",gap:4}}>
-                        <span className="ic-b" title="Ver" onClick={()=>setVerAgente(a0)}>👁️</span>
-                        {hasPerm("editar_agente")&&<span className="ic-b" onClick={()=>abrirEditar(a0)}>✏️</span>}
-                        {hasPerm("borrar_agente")&&<span className="ic-b" style={{color:"var(--red)"}} onClick={()=>{if(!window.confirm(`¿Borrar agente ${a.codigo} — ${a.nombre}?`))return;setAgentes(p=>p.filter(x=>x.id!==a.id));dbDeleteAgente(a.id);logAction("Borró agente",`${a.codigo} — ${a.nombre}`);}}>🗑</span>}
+                        <span className="ic-b" title="Ver" onClick={()=>setVerAgente(a0)}><Ico e="👁️" solo/></span>
+                        {hasPerm("editar_agente")&&<span className="ic-b" onClick={()=>abrirEditar(a0)}><Ico e="✏️" solo/></span>}
+                        {hasPerm("borrar_agente")&&<span className="ic-b" style={{color:"var(--red)"}} onClick={()=>{if(!window.confirm(`¿Borrar agente ${a.codigo} — ${a.nombre}?`))return;setAgentes(p=>p.filter(x=>x.id!==a.id));dbDeleteAgente(a.id);logAction("Borró agente",`${a.codigo} — ${a.nombre}`);}}><Ico e="🗑" solo/></span>}
                       </div></td>
                     </tr>
                   );})}
@@ -7105,9 +7200,9 @@ export default function SistemaCarga(){
               return(
               <div className="ov" onClick={()=>setVerAgente(null)}>
                 <div className="modal" style={{maxWidth:620}} onClick={e=>e.stopPropagation()}>
-                  <div className="mhd"><div className="mt">🤝 {a.codigo} — {a.nombre}</div><button className="mcl" onClick={()=>setVerAgente(null)}>✕</button></div>
+                  <div className="mhd"><div className="mt"><Ico e="🤝" sp/>{a.codigo} — {a.nombre}</div><button className="mcl" onClick={()=>setVerAgente(null)}>✕</button></div>
                   <div className="fgrid g2" style={{gap:12,marginBottom:14}}>
-                    {D("Ciudad",a.ciudad)}{D("País",a.pais)}{D("Teléfono",a.tel)}{D("Email",a.email)}{D("Contacto",a.contacto)}{D("Estado",a.activo!==false?"✅ Activo":"❌ Inactivo")}
+                    {D("Ciudad",a.ciudad)}{D("País",a.pais)}{D("Teléfono",a.tel)}{D("Email",a.email)}{D("Contacto",a.contacto)}{D("Estado",a.activo!==false?"Activo":"Inactivo")}
                     {a.notas&&<div className="full">{D("Notas",a.notas)}</div>}
                   </div>
                   <div className="sdiv">USUARIOS ({us.length})</div>
@@ -7115,10 +7210,10 @@ export default function SistemaCarga(){
                     <div key={u.id} style={{fontSize:13,padding:"4px 0",borderBottom:"1px solid var(--b1)"}}><b>{u.id}</b> · {fullName(u)} · {u.rol==="E"?"Agente":"Vendedor"}{u.email?` · ${u.email}`:""}{u.tel1?` · ${u.tel1}`:""}</div>))}</div>
                   <div className="sdiv">CLIENTES ({cls.length})</div>
                   <div style={{marginBottom:12,fontSize:13}}>{cls.length===0?<span style={{color:"var(--t3)"}}>—</span>:cls.map(c=><span key={c.id} style={{display:"inline-block",marginRight:10}}>#{c.casillero} {fullName(c)}</span>)}</div>
-                  <div className="sdiv" style={{display:"flex",alignItems:"center"}}>TARIFAS ESPECIALES ({tfs.length})<span style={{marginLeft:"auto",cursor:"pointer",color:"var(--cyan)"}} onClick={()=>{const x=verAgente;setVerAgente(null);setTafGrupo(`agente:${x.id}`);setTafQ("");setCfgTab("tarifas");}}>💰 Ir a sus tarifas</span></div>
+                  <div className="sdiv" style={{display:"flex",alignItems:"center"}}>TARIFAS ESPECIALES ({tfs.length})<span style={{marginLeft:"auto",cursor:"pointer",color:"var(--cyan)"}} onClick={()=>{const x=verAgente;setVerAgente(null);setTafGrupo(`agente:${x.id}`);setTafQ("");setCfgTab("tarifas");}}><Ico e="💰" sp/>Ir a sus tarifas</span></div>
                   <div style={{fontSize:13,marginBottom:12}}>{tfs.length===0?<span style={{color:"var(--t3)"}}>—</span>:tfs.map(t=><div key={t.id}>{t.id} · {t.tipoEnvio} · {[t.ciudadOrig||t.paisOrig,t.ciudadDest||t.paisDest].map(x=>x||"Cualquiera").join(" → ")} · {cSym(t.moneda)}{/^a/i.test(t.tipoEnvio||"")?t.porLb:t.porFt3}/{t.unidad||(/^a/i.test(t.tipoEnvio||"")?"lb":"ft³")} · mín {cSym(t.moneda)}{t.min}</div>)}</div>
                   <div className="mft" style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
-                    {hasPerm("editar_agente")&&<button className="btn-p" onClick={()=>{const x=verAgente;setVerAgente(null);abrirEditar(x);}}>✏️ Editar</button>}
+                    {hasPerm("editar_agente")&&<button className="btn-p" onClick={()=>{const x=verAgente;setVerAgente(null);abrirEditar(x);}}><Ico e="✏️" sp/>Editar</button>}
                     <button className="btn-s" onClick={()=>setVerAgente(null)}>Cerrar</button>
                   </div>
                 </div>
@@ -7126,7 +7221,7 @@ export default function SistemaCarga(){
             {showNewAgente&&(
               <div className="ov">
                 <div className="modal" style={{maxWidth:520}} onClick={e=>e.stopPropagation()}>
-                  <div className="mhd"><div className="mt">{editAgente?"✏️ Editar Agente":"➕ Nuevo Agente"}</div><button className="mcl" onClick={()=>{setShowNewAgente(false);setEditAgente(null);}}>✕</button></div>
+                  <div className="mhd"><div className="mt">{editAgente?"Editar Agente":"Nuevo Agente"}</div><button className="mcl" onClick={()=>{setShowNewAgente(false);setEditAgente(null);}}>✕</button></div>
                   <div className="fgrid g2" style={{marginBottom:10}}>
                     <div className="fg full"><div className="fl">Nombre del Agente *</div><input className="fi" value={agForm.nombre} onChange={e=>setAgForm(p=>({...p,nombre:e.target.value.toUpperCase()}))} placeholder="Nombre completo o razón social"/></div>
                     <div className="fg"><div className="fl">Ciudad</div><input className="fi" value={agForm.ciudad} onChange={e=>setAgForm(p=>({...p,ciudad:e.target.value.toUpperCase()}))}/></div>
@@ -7155,7 +7250,7 @@ export default function SistemaCarga(){
                         logAction("Creó agente",`${nextCod} — ${agForm.nombre}`);
                       }
                       setShowNewAgente(false);setEditAgente(null);
-                    }}>Guardar ✅</button>
+                    }}>Guardar <Ico e="✅"/></button>
                   </div>
                 </div>
               </div>
@@ -7167,7 +7262,7 @@ export default function SistemaCarga(){
         {cfgTab==="oficinas"&&(
           <div>
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
-              <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:17,fontWeight:700,color:"var(--navy)",flex:1}}>🏢 Oficinas / Sucursales</div>
+              <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:17,fontWeight:700,color:"var(--navy)",flex:1}}><Ico e="🏢" sp/>Oficinas / Sucursales</div>
               {hasPerm("crear_oficina")&&<button className="btn-p" style={{fontSize:13}} onClick={()=>{setOfForm({nombre:"",ciudad:"",pais:"",tel:"",email:"",contacto:"",notas:"",tipo:"Matriz"});setShowNewOficina(true);}}>+ Nueva Oficina</button>}
             </div>
             <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,overflow:"hidden"}}>
@@ -7186,17 +7281,17 @@ export default function SistemaCarga(){
                         color:o.tipo==="Asociado"?"var(--orange)":"var(--navy)",
                         border:"1px solid",
                         borderColor:o.tipo==="Asociado"?"#F0B880":"#B8C8F0"}}>
-                        {o.tipo==="Asociado"?"🤝 Asociado":"🏛️ Matriz"}
+                        {o.tipo==="Asociado"?"Asociado":"Matriz"}
                       </span></td>
                       <td style={{fontSize:13}}>{o.ciudad||"—"}</td>
                       <td style={{fontSize:13}}>{o.pais||"—"}</td>
                       <td style={{fontSize:13,fontFamily:"'DM Mono',monospace"}}>{o.tel||"—"}</td>
                       <td style={{fontSize:13,color:"var(--cyan)"}}>{o.email||"—"}</td>
                       <td style={{fontSize:13}}>{o.contacto||"—"}</td>
-                      <td><span style={{fontSize:11,padding:"2px 8px",borderRadius:4,fontWeight:700,background:o.activo?"#E8F8EE":"#FEE8E8",color:o.activo?"var(--green)":"var(--red)",border:"1px solid",borderColor:o.activo?"#80D0A0":"#F0A0A0"}}>{o.activo?"✅ Activo":"❌ Inactivo"}</span></td>
+                      <td><span style={{fontSize:11,padding:"2px 8px",borderRadius:4,fontWeight:700,background:o.activo?"#E8F8EE":"#FEE8E8",color:o.activo?"var(--green)":"var(--red)",border:"1px solid",borderColor:o.activo?"#80D0A0":"#F0A0A0"}}>{o.activo?"Activo":"Inactivo"}</span></td>
                       <td><div style={{display:"flex",gap:4}}>
-                        {hasPerm("editar_oficina")&&<span className="ic-b" onClick={()=>{setOfForm(o);setEditOficina(o);setShowNewOficina(true);}}>✏️</span>}
-                        {hasPerm("borrar_oficina")&&<span className="ic-b" style={{color:"var(--red)"}} onClick={()=>{if(!window.confirm(`¿Borrar oficina ${o.codigo} — ${o.nombre}?`))return;setOficinas(p=>p.filter(x=>x.id!==o.id));dbDeleteOficina(o.id);logAction("Borró oficina",`${o.codigo} — ${o.nombre}`);}}>🗑</span>}
+                        {hasPerm("editar_oficina")&&<span className="ic-b" onClick={()=>{setOfForm(o);setEditOficina(o);setShowNewOficina(true);}}><Ico e="✏️" solo/></span>}
+                        {hasPerm("borrar_oficina")&&<span className="ic-b" style={{color:"var(--red)"}} onClick={()=>{if(!window.confirm(`¿Borrar oficina ${o.codigo} — ${o.nombre}?`))return;setOficinas(p=>p.filter(x=>x.id!==o.id));dbDeleteOficina(o.id);logAction("Borró oficina",`${o.codigo} — ${o.nombre}`);}}><Ico e="🗑" solo/></span>}
                       </div></td>
                     </tr>
                   ))}
@@ -7206,7 +7301,7 @@ export default function SistemaCarga(){
             {showNewOficina&&(
               <div className="ov">
                 <div className="modal" style={{maxWidth:520}} onClick={e=>e.stopPropagation()}>
-                  <div className="mhd"><div className="mt">{editOficina?"✏️ Editar Oficina":"➕ Nueva Oficina"}</div><button className="mcl" onClick={()=>{setShowNewOficina(false);setEditOficina(null);}}>✕</button></div>
+                  <div className="mhd"><div className="mt">{editOficina?"Editar Oficina":"Nueva Oficina"}</div><button className="mcl" onClick={()=>{setShowNewOficina(false);setEditOficina(null);}}>✕</button></div>
                   <div className="fgrid g2" style={{marginBottom:10}}>
                     <div className="fg full"><div className="fl">Nombre de la Oficina *</div><input className="fi" value={ofForm.nombre} onChange={e=>setOfForm(p=>({...p,nombre:e.target.value.toUpperCase()}))} placeholder="Ej: Oficina Valencia"/></div>
                     <div className="fg full">
@@ -7216,7 +7311,7 @@ export default function SistemaCarga(){
                           <button key={t} className={`btn-${(ofForm.tipo||"Matriz")===t?"p":"s"}`}
                             style={{flex:1,fontSize:13}}
                             onClick={()=>setOfForm(p=>({...p,tipo:t}))}>
-                            {t==="Matriz"?"🏛️ Matriz (Oficina Propia)":"🤝 Asociado (Franquiciado)"}
+                            {t==="Matriz"?"Matriz (Oficina Propia)":"Asociado (Franquiciado)"}
                           </button>
                         ))}
                       </div>
@@ -7245,7 +7340,7 @@ export default function SistemaCarga(){
                         logAction("Creó oficina",`${nextCod} — ${ofForm.nombre}`);
                       }
                       setShowNewOficina(false);setEditOficina(null);
-                    }}>Guardar ✅</button>
+                    }}>Guardar <Ico e="✅"/></button>
                   </div>
                 </div>
               </div>
@@ -7267,7 +7362,7 @@ export default function SistemaCarga(){
           return(
           <div>
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
-              <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:17,fontWeight:700,color:"var(--navy)",flex:1}}>💰 Tarifas por Ruta y Tipo de Envío</div>
+              <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:17,fontWeight:700,color:"var(--navy)",flex:1}}><Ico e="💰" sp/>Tarifas por Ruta y Tipo de Envío</div>
               {hasPerm("crear_tarifa")&&<button className="btn-p" style={{fontSize:13}} onClick={()=>{
                 const [gt,gi]=tafGrupo?tafGrupo.split(":"):["",""];
                 setTafForm({...tafNuevo(),aplicaTipo:gt,aplicaId:gi||""});
@@ -7277,8 +7372,8 @@ export default function SistemaCarga(){
             {(()=>{
               const gKey=t=>t.aplicaTipo?`${t.aplicaTipo}:${t.aplicaId}`:"";
               const cuenta={};tarifas.forEach(t=>{const k=gKey(t);cuenta[k]=(cuenta[k]||0)+1;});
-              const IC={agente:"🤝",autonomo:"🧑‍💻",cliente:"👤"};
-              const grupos=[{k:"",l:"Predeterminadas",ic:"🌐"},
+              const IC={agente:<Ico e="🤝"/>,autonomo:<Ico e="🧑‍💻"/>,cliente:<Ico e="👤"/>};
+              const grupos=[{k:"",l:"Predeterminadas",ic:<Ico e="🌐"/>},
                 ...agentes.map(a=>({k:`agente:${a.id}`,l:a.nombre||a.codigo,sub:`Agente ${a.codigo||""}`,ic:IC.agente})),
                 ...clients.filter(c=>c.tipo==="usuario"&&c.rol==="F").map(c=>({k:`autonomo:${c.id}`,l:fullName(c),sub:`Autónomo ${c.id}`,ic:IC.autonomo})),
                 ...Object.keys(cuenta).filter(k=>k.startsWith("cliente:")).map(k=>{const c=clients.find(x=>x.id===k.split(":")[1]);return {k,l:c?fullName(c):"?",sub:`Cliente ${c?.casillero||""}`,ic:IC.cliente};}),
@@ -7333,11 +7428,11 @@ export default function SistemaCarga(){
                       <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:esAereo?"var(--green)":"var(--sky)"}}>{monto}</td>
                       <td style={{fontFamily:"'DM Mono',monospace",color:"var(--orange)"}}>{sy}{t.min}</td>
                       <td style={{fontSize:13}}>{t.moneda}</td>
-                      <td><span style={{fontSize:11,padding:"2px 8px",borderRadius:4,fontWeight:700,background:t.activo?"#E8F8EE":"#FEE8E8",color:t.activo?"var(--green)":"var(--red)",border:"1px solid",borderColor:t.activo?"#80D0A0":"#F0A0A0"}}>{t.activo?"✅ Activa":"❌ Inactiva"}</span></td>
+                      <td><span style={{fontSize:11,padding:"2px 8px",borderRadius:4,fontWeight:700,background:t.activo?"#E8F8EE":"#FEE8E8",color:t.activo?"var(--green)":"var(--red)",border:"1px solid",borderColor:t.activo?"#80D0A0":"#F0A0A0"}}>{t.activo?"Activa":"Inactiva"}</span></td>
                       <td><div style={{display:"flex",gap:4}}>
-                        {hasPerm("editar_tarifa")&&<span className="ic-b" onClick={()=>{setTafForm(tafDeTarifa(t));setEditTarifa(t);setShowNewTarifa(true);}}>✏️</span>}
-                        {hasPerm("editar_tarifa")&&<span className="ic-b" onClick={()=>{const upd={...t,activo:!t.activo};setTarifas(p=>p.map(x=>x.id===t.id?upd:x));dbUpsertTarifa(upd);logAction(upd.activo?"Activó tarifa":"Desactivó tarifa",`${t.paisOrig}-${t.ciudadOrig} → ${t.paisDest}-${t.ciudadDest}`);}}>{t.activo?"⏸":"▶️"}</span>}
-                        {hasPerm("borrar_tarifa")&&<span className="ic-b" style={{color:"var(--red)"}} onClick={()=>{if(!window.confirm(`¿Borrar tarifa ${t.paisOrig}-${t.ciudadOrig} → ${t.paisDest}-${t.ciudadDest}?`))return;setTarifas(p=>p.filter(x=>x.id!==t.id));dbDeleteTarifa(t.id);logAction("Borró tarifa",`${t.paisOrig}-${t.ciudadOrig} → ${t.paisDest}-${t.ciudadDest} · ${t.tipoEnvio}`);}}>🗑</span>}
+                        {hasPerm("editar_tarifa")&&<span className="ic-b" onClick={()=>{setTafForm(tafDeTarifa(t));setEditTarifa(t);setShowNewTarifa(true);}}><Ico e="✏️" solo/></span>}
+                        {hasPerm("editar_tarifa")&&<span className="ic-b" onClick={()=>{const upd={...t,activo:!t.activo};setTarifas(p=>p.map(x=>x.id===t.id?upd:x));dbUpsertTarifa(upd);logAction(upd.activo?"Activó tarifa":"Desactivó tarifa",`${t.paisOrig}-${t.ciudadOrig} → ${t.paisDest}-${t.ciudadDest}`);}}>{t.activo?<Ico e="⏸"/>:"▶️"}</span>}
+                        {hasPerm("borrar_tarifa")&&<span className="ic-b" style={{color:"var(--red)"}} onClick={()=>{if(!window.confirm(`¿Borrar tarifa ${t.paisOrig}-${t.ciudadOrig} → ${t.paisDest}-${t.ciudadDest}?`))return;setTarifas(p=>p.filter(x=>x.id!==t.id));dbDeleteTarifa(t.id);logAction("Borró tarifa",`${t.paisOrig}-${t.ciudadOrig} → ${t.paisDest}-${t.ciudadDest} · ${t.tipoEnvio}`);}}><Ico e="🗑" solo/></span>}
                       </div></td>
                     </tr>
                     );
@@ -7350,7 +7445,7 @@ export default function SistemaCarga(){
             {showNewTarifa&&(
               <div className="ov">
                 <div className="modal" style={{maxWidth:780}} onClick={e=>e.stopPropagation()}>
-                  <div className="mhd"><div className="mt">{editTarifa?"✏️ Editar Tarifa":"➕ Nuevas Tarifas"}</div><button className="mcl" onClick={()=>setShowNewTarifa(false)}>✕</button></div>
+                  <div className="mhd"><div className="mt">{editTarifa?"Editar Tarifa":"Nuevas Tarifas"}</div><button className="mcl" onClick={()=>setShowNewTarifa(false)}>✕</button></div>
                   <div className="sdiv">APLICA A</div>
                   <div className="fgrid g2" style={{marginBottom:10}}>
                     <div className="fg"><div className="fl">Tipo</div>
@@ -7420,14 +7515,14 @@ export default function SistemaCarga(){
                             <td><input className="fi" type="number" step="0.01" min="0" style={{width:90}} value={f.precio} onChange={e=>setFila(i,{precio:e.target.value})}/></td>
                             <td><input className="fi" type="number" step="0.01" min="0" style={{width:90}} value={f.min} onChange={e=>setFila(i,{min:e.target.value})}/></td>
                             <td><select className="fs" value={f.moneda} onChange={e=>setFila(i,{moneda:e.target.value})}>{MONEDAS.map(m=><option key={m}>{m}</option>)}</select></td>
-                            <td>{(F.filas||[]).length>1&&<span className="ic-b" style={{color:"var(--red)"}} onClick={()=>set({filas:F.filas.filter((_,j)=>j!==i)})}>🗑</span>}</td>
+                            <td>{(F.filas||[]).length>1&&<span className="ic-b" style={{color:"var(--red)"}} onClick={()=>set({filas:F.filas.filter((_,j)=>j!==i)})}><Ico e="🗑" solo/></span>}</td>
                           </tr>);})}</tbody>
                       </table>
                       <button className="btn-s" style={{fontSize:13,marginBottom:10}} onClick={()=>set({filas:[...(F.filas||[]),filaNueva(SEND_TYPES.find(t=>!(F.filas||[]).some(f=>f.tipoEnvio===t)))]})}>+ Agregar tarifa</button>
                       <div className="mft">
                         <span style={{marginRight:"auto",fontSize:13,fontWeight:700,color:"var(--navy)"}}>{combos.filter(c=>c.f.tipoEnvio).length} tarifa(s)</span>
                         <button className="btn-s" onClick={()=>setShowNewTarifa(false)}>Cancelar</button>
-                        <button className="btn-p" onClick={guardar}>Guardar ✅</button>
+                        <button className="btn-p" onClick={guardar}>Guardar <Ico e="✅"/></button>
                       </div>
                     </>);
                   })()}
@@ -7441,11 +7536,11 @@ export default function SistemaCarga(){
         {cfgTab==="actividad"&&(
           <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,overflow:"hidden"}}>
             <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",display:"flex",alignItems:"center",gap:10}}>
-              <span style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:15,fontWeight:700,color:"var(--navy)"}}>📋 Registro de Actividad</span>
+              <span style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:15,fontWeight:700,color:"var(--navy)"}}><Ico e="📋" sp/>Registro de Actividad</span>
               <span style={{fontSize:12,background:"var(--bg4)",border:"1px solid var(--b1)",borderRadius:4,padding:"2px 8px",color:"var(--t3)"}}>{actLog.length} eventos</span>
               <div style={{flex:1}}/>
               <input className="fi" style={{width:200,fontSize:13}} value={actFilter} onChange={e=>setActFilter(e.target.value)} placeholder="Filtrar por usuario o acción…"/>
-              <button className="btn-s" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>window.print()}>🖨 Exportar</button>
+              <button className="btn-s" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>window.print()}><Ico e="🖨" sp/>Exportar</button>
             </div>
             <div style={{maxHeight:"60vh",overflowY:"auto"}}>
               <table className="ct">
@@ -7527,9 +7622,9 @@ export default function SistemaCarga(){
         {/* HEADER — vista informativa, sin acciones de modificación */}
         <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
           <div style={{flex:1}}>
-            <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:20,fontWeight:700,color:"var(--navy)"}}>🔍 Tracking Internacional</div>
+            <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:20,fontWeight:700,color:"var(--navy)"}}><Ico e="🔍" sp/>Tracking Internacional</div>
           </div>
-          <span style={{fontSize:11,fontWeight:700,color:"var(--t3)",background:"#EEF2F7",padding:"4px 10px",borderRadius:10,border:"1px solid #DCE2EC"}}>👁️ Solo lectura</span>
+          <span style={{fontSize:11,fontWeight:700,color:"var(--t3)",background:"#EEF2F7",padding:"4px 10px",borderRadius:10,border:"1px solid #DCE2EC"}}><Ico e="👁️" sp/>Solo lectura</span>
         </div>
 
         {/* (Bloque de Actualización Masiva eliminado — Tracking es solo lectura) */}
@@ -7583,7 +7678,7 @@ export default function SistemaCarga(){
             {trkSearch.length<=1&&!trkSelected&&(
               <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,overflow:"hidden"}}>
                 <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",fontFamily:"Arial,Helvetica,sans-serif",fontSize:16,fontWeight:700,color:"var(--navy)"}}>
-                  📊 Resumen por Estado
+                  <Ico e="📊" sp/>Resumen por Estado
                 </div>
                 <div style={{padding:"12px 14px",display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
                   {WR_STATUSES.map(st=>{
@@ -7645,9 +7740,9 @@ export default function SistemaCarga(){
   // ── CHAT INTERNO ─────────────────────────────────────────────────────────────
 
   const CHAT_ROOMS=[
-    {id:"general",ic:"💬",l:"General",desc:"Todo el equipo"},
-    {id:"operaciones",ic:"⚙️",l:"Operaciones",desc:"D, D1, D2"},
-    {id:"ventas",ic:"💼",l:"Ventas",desc:"E, E1, G, G1"},
+    {id:"general",ic:<Ico e="💬"/>,l:"General",desc:"Todo el equipo"},
+    {id:"operaciones",ic:<Ico e="⚙️"/>,l:"Operaciones",desc:"D, D1, D2"},
+    {id:"ventas",ic:<Ico e="💼"/>,l:"Ventas",desc:"E, E1, G, G1"},
   ];
 
   const sendChat=()=>{
@@ -7664,7 +7759,7 @@ export default function SistemaCarga(){
         {/* SIDEBAR CANALES */}
         <div style={{background:"var(--navy)",display:"flex",flexDirection:"column",overflow:"hidden"}}>
           <div style={{padding:"14px 12px",borderBottom:"1px solid rgba(255,255,255,.1)"}}>
-            <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:18,fontWeight:700,color:"#E5AE3A",letterSpacing:1}}>💬 CHAT INTERNO</div>
+            <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:18,fontWeight:700,color:"#E5AE3A",letterSpacing:1}}><Ico e="💬" sp/>CHAT INTERNO</div>
             <div style={{fontSize:13,color:"rgba(255,255,255,.4)",marginTop:2}}>{empresaNombre}</div>
           </div>
           <div style={{flex:1,padding:"8px 6px",overflowY:"auto"}}>
@@ -7832,7 +7927,7 @@ export default function SistemaCarga(){
     <div className="page-scroll">
       <div className="card" style={{marginBottom:12,display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
         <div style={{display:"flex",gap:3,background:"var(--bg4)",borderRadius:7,padding:3,border:"1px solid var(--b1)"}}>
-          {[["activos","⏳ En curso"],["recibido","✅ Recibidos"],["cancelado","✕ Cancelados"],["todos","Todos"]].map(([k,l])=>
+          {[["activos","En curso"],["recibido","Recibidos"],["cancelado","✕ Cancelados"],["todos","Todos"]].map(([k,l])=>
             <button key={k} onClick={()=>setPickupFil(k)} style={{padding:"5px 12px",borderRadius:5,border:"none",cursor:"pointer",fontSize:13,fontWeight:600,background:pickupFil===k?"var(--navy)":"transparent",color:pickupFil===k?"#fff":"var(--t2)"}}>
               {l}{k!=="todos"&&<span style={{marginLeft:6,fontSize:11,fontWeight:800,opacity:.8}}>{cuenta[k]}</span>}</button>)}
         </div>
@@ -7862,7 +7957,7 @@ export default function SistemaCarga(){
       {sel&&(
         <div className="ov" onClick={()=>setPickupSel(null)}>
           <div className="modal mlg" style={{maxWidth:820,width:"96%"}} onClick={e=>e.stopPropagation()}>
-            <div className="mhd"><div className="mt">🚐 Pick-up {sel.id} {puChip(sel.status)}</div><button className="mcl" onClick={()=>setPickupSel(null)}>✕</button></div>
+            <div className="mhd"><div className="mt"><Ico e="🚐" sp/>Pick-up {sel.id} {puChip(sel.status)}</div><button className="mcl" onClick={()=>setPickupSel(null)}>✕</button></div>
             <div className="mbd" style={{maxHeight:"74vh",overflow:"auto"}}>
               <div className="fgrid g2" style={{gap:12,marginBottom:12}}>
                 {[["Para",`${sel.clienteNombre}${sel.casillero?` · #${sel.casillero}`:""}`],["Contacto",`${sel.contacto||"—"} · ${sel.telefono||"—"}`],
@@ -7889,18 +7984,18 @@ export default function SistemaCarga(){
                     <div className="fg"><div className="fl">Moneda</div><select className="fs" value={puConf.moneda} onChange={e=>setPuConf(x=>({...x,moneda:e.target.value}))}><option>USD</option><option>EUR</option></select></div>
                   </div>
                   <button className="btn-p" style={{marginTop:10}} onClick={()=>{if(!puConf.fecha){window.alert("Pon la fecha programada.");return;}
-                    puCambiar(sel,"confirmado",{fechaProgramada:puConf.fecha,transportista:puConf.transportista,chofer:puConf.chofer,monto:parseFloat(puConf.monto)||0,moneda:puConf.moneda},`Programado ${puConf.fecha}${puRecoge(puConf)?` · ${puRecoge(puConf)}`:""}`);}}>✅ Confirmar pick-up</button>
+                    puCambiar(sel,"confirmado",{fechaProgramada:puConf.fecha,transportista:puConf.transportista,chofer:puConf.chofer,monto:parseFloat(puConf.monto)||0,moneda:puConf.moneda},`Programado ${puConf.fecha}${puRecoge(puConf)?` · ${puRecoge(puConf)}`:""}`);}}><Ico e="✅" sp/>Confirmar pick-up</button>
                 </div>)}
               <div className="sdiv">HISTORIAL</div>
               {(sel.historial||[]).map((h,i)=><div key={i} style={{fontSize:13,padding:"3px 0",borderBottom:"1px solid var(--b2)"}}><span style={mono}>{fmtDate(h.fecha)} {fmtTime(h.fecha)}</span> · <b>{PU_ST[h.status]?.l||h.status}</b>{h.nota&&h.nota!==PU_ST[h.status]?.l?` · ${h.nota}`:""}{esEmpleadoPU&&h.user?<span style={{color:"var(--t3)"}}> · {h.user}</span>:null}</div>)}
             </div>
             <div className="mft" style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-              {sel.status==="solicitado"&&(puGestiona||sel.solicitanteId===currentUser.id)&&<button className="btn-s" onClick={()=>{setPuf({...sel});setPickupClientSearch(sel.clienteNombre);setPickupSel(null);setShowNewPickup(true);}}>✏️ Editar</button>}
+              {sel.status==="solicitado"&&(puGestiona||sel.solicitanteId===currentUser.id)&&<button className="btn-s" onClick={()=>{setPuf({...sel});setPickupClientSearch(sel.clienteNombre);setPickupSel(null);setShowNewPickup(true);}}><Ico e="✏️" sp/>Editar</button>}
               {!["recibido","cancelado"].includes(sel.status)&&(puGestiona||(sel.status==="solicitado"&&sel.solicitanteId===currentUser.id))&&<button className="btn-s" style={{color:"var(--red)",borderColor:"var(--red)"}} onClick={()=>puCancelar(sel)}>✕ Cancelar</button>}
               <span style={{flex:1}}/>
-              <button className="btn-s" onClick={()=>setPuPrint(sel)}>🖨️ Comprobante</button>
-              {puGestiona&&sel.status==="confirmado"&&<button className="btn-p" onClick={()=>puRecogido(sel)}>📦 Marcar recogido</button>}
-              {sel.status==="recogido"&&<span style={{fontSize:13,fontWeight:700,color:"#E65100",alignSelf:"center"}}>📡 En Recepción en Puerta, pendiente de WR</span>}
+              <button className="btn-s" onClick={()=>setPuPrint(sel)}><Ico e="🖨️" sp/>Comprobante</button>
+              {puGestiona&&sel.status==="confirmado"&&<button className="btn-p" onClick={()=>puRecogido(sel)}><Ico e="📦" sp/>Marcar recogido</button>}
+              {sel.status==="recogido"&&<span style={{fontSize:13,fontWeight:700,color:"#E65100",alignSelf:"center"}}><Ico e="📡" sp/>En Recepción en Puerta, pendiente de WR</span>}
               <button className="btn-s" onClick={()=>setPickupSel(null)}>Cerrar</button>
             </div>
           </div>
@@ -7910,7 +8005,7 @@ export default function SistemaCarga(){
       {showNewPickup&&(
         <div className="ov">
           <div className="modal mxl" onClick={e=>e.stopPropagation()}>
-            <div className="mhd"><div className="mt">🚐 {puf.id?`Editar ${puf.id}`:"Solicitar Pick-up"}</div><button className="mcl" onClick={()=>setShowNewPickup(false)}>✕</button></div>
+            <div className="mhd"><div className="mt"><Ico e="🚐" sp/>{puf.id?`Editar ${puf.id}`:"Solicitar Pick-up"}</div><button className="mcl" onClick={()=>setShowNewPickup(false)}>✕</button></div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
               <div>
                 <div className="sdiv">PARA QUIÉN</div>
@@ -7951,7 +8046,7 @@ export default function SistemaCarga(){
                 <div className="fg"><div className="fl">L (in)</div><input className="fi" type="number" value={pkg.largo} onChange={e=>setP("largo",e.target.value)}/></div>
                 <div className="fg"><div className="fl">A (in)</div><input className="fi" type="number" value={pkg.ancho} onChange={e=>setP("ancho",e.target.value)}/></div>
                 <div className="fg"><div className="fl">H (in)</div><input className="fi" type="number" value={pkg.alto} onChange={e=>setP("alto",e.target.value)}/></div>
-                {puf.paquetes.length>1?<button className="btn-d" style={{padding:"7px 10px"}} onClick={()=>setPuf(p=>({...p,paquetes:p.paquetes.filter((_,j)=>j!==i)}))}>🗑</button>:<span/>}
+                {puf.paquetes.length>1?<button className="btn-d" style={{padding:"7px 10px"}} onClick={()=>setPuf(p=>({...p,paquetes:p.paquetes.filter((_,j)=>j!==i)}))}><Ico e="🗑" solo/></button>:<span/>}
               </div>);})}
             <div style={{display:"flex",alignItems:"center",gap:16,marginBottom:14,flexWrap:"wrap"}}>
               <button className="btn-s" onClick={()=>setPuf(p=>({...p,paquetes:[...p.paquetes,{descripcion:"",largo:"",ancho:"",alto:"",pesoLb:"",cantidad:1}]}))}>+ Agregar paquete</button>
@@ -7959,7 +8054,7 @@ export default function SistemaCarga(){
             </div>
             <div className="mft">
               <button className="btn-s" onClick={()=>setShowNewPickup(false)}>Cancelar</button>
-              <button className="btn-p" onClick={submitPickup}>{puf.id?"💾 Guardar":"🚐 Solicitar"}</button>
+              <button className="btn-p" onClick={submitPickup}>{puf.id?"Guardar":"Solicitar"}</button>
             </div>
           </div>
         </div>)}
@@ -8036,7 +8131,7 @@ export default function SistemaCarga(){
             {esStaff?(
               <div className="fg" style={{flex:1,minWidth:260}}><div className="fl">Cotizar para</div>
                 {f.para?<span style={{display:"inline-block",fontSize:14,fontWeight:700,padding:"6px 12px",borderRadius:14,background:"#FFF3E0",color:"#E65100",border:"1px solid #FFCC80"}}>
-                    {({agente:"🤝",autonomo:"🧑‍💻",cliente:"👤"})[f.para.tipo]} {f.para.nombre}<span style={{cursor:"pointer",color:"var(--red)",marginLeft:8}} onClick={()=>setCalc({para:null,paraQ:""})}>✕</span></span>
+                    {({agente:<Ico e="🤝"/>,autonomo:<Ico e="🧑‍💻"/>,cliente:<Ico e="👤"/>})[f.para.tipo]} {f.para.nombre}<span style={{cursor:"pointer",color:"var(--red)",marginLeft:8}} onClick={()=>setCalc({para:null,paraQ:""})}>✕</span></span>
                   :<div className="fi-search" style={{position:"relative"}}>
                     <input className="fi" placeholder="Público general · o busca agente, autónomo o cliente…" value={f.paraQ||""} onChange={e=>setCalc({paraQ:e.target.value})}/>
                     {(()=>{const Q=sinAcentos((f.paraQ||"").trim());if(Q.length<2)return null;
@@ -8046,7 +8141,7 @@ export default function SistemaCarga(){
                         .filter(o=>sinAcentos(`${o.nombre} ${o.sub}`).includes(Q)).slice(0,20);
                       return ops.length>0&&<div className="fi-search-res">{ops.map(o=>(
                         <div key={o.tipo+o.id} className="fi-search-item" onMouseDown={e=>{e.preventDefault();setCalc({para:o,paraQ:""});}}>
-                          {o.nombre}<span style={{fontSize:12,color:"var(--t3)",marginLeft:8}}>{o.sub}{tarifas.some(t=>t.aplicaTipo===o.tipo&&t.aplicaId===o.id)?" · ⭐ tarifa especial":""}</span></div>))}</div>;})()}
+                          {o.nombre}<span style={{fontSize:12,color:"var(--t3)",marginLeft:8}}>{o.sub}{tarifas.some(t=>t.aplicaTipo===o.tipo&&t.aplicaId===o.id)?" · tarifa especial":""}</span></div>))}</div>;})()}
                   </div>}
               </div>
             ):calcPara&&<div style={{fontSize:13,color:"var(--t2)",alignSelf:"center"}}>Cotizando para <b>{calcPara.nombre}</b></div>}
@@ -8068,11 +8163,11 @@ export default function SistemaCarga(){
               <div className="fg"><div className="fl">Ancho ({f.unitDim})</div><input className="fi" type="number" value={c.ancho} onChange={e=>setCaja(i,{ancho:e.target.value})}/></div>
               <div className="fg"><div className="fl">Alto ({f.unitDim})</div><input className="fi" type="number" value={c.alto} onChange={e=>setCaja(i,{alto:e.target.value})}/></div>
               <div className="fg"><div className="fl">Peso c/u ({f.unitPeso})</div><input className="fi" type="number" value={c.peso} onChange={e=>setCaja(i,{peso:e.target.value})}/></div>
-              {f.cajas.length>1?<button className="btn-d" style={{padding:"7px 8px"}} onClick={()=>setCalc({cajas:f.cajas.filter((_,j)=>j!==i)})}>🗑</button>:<span/>}
+              {f.cajas.length>1?<button className="btn-d" style={{padding:"7px 8px"}} onClick={()=>setCalc({cajas:f.cajas.filter((_,j)=>j!==i)})}><Ico e="🗑" solo/></button>:<span/>}
             </div>))}
           <div style={{display:"flex",gap:8}}>
             <button className="btn-s" onClick={()=>setCalc({cajas:[...f.cajas,calcCaja()]})}>+ Agregar caja</button>
-            <button className="btn-s" style={{marginLeft:"auto"}} onClick={()=>setCalcForm({...CALC_FORM_EMPTY,tipoEnvio:f.tipoEnvio})}>🧹 Limpiar</button>
+            <button className="btn-s" style={{marginLeft:"auto"}} onClick={()=>setCalcForm({...CALC_FORM_EMPTY,tipoEnvio:f.tipoEnvio})}><Ico e="🧹" sp/>Limpiar</button>
           </div>
         </div>
 
@@ -8082,12 +8177,12 @@ export default function SistemaCarga(){
               <div key={l} className="card" style={{textAlign:"center",padding:12}}><div style={{fontSize:13,color:"var(--t3)"}}>{l}</div><div style={{...mono,fontSize:20,fontWeight:800,color:"var(--navy)"}}>{v}</div></div>))}
           </div>
           {R.falta?<div className="card" style={{textAlign:"center",color:"var(--t3)",padding:20}}>Elige origen, destino y tipo de envío.</div>
-          :R.sinTarifa?<div style={{background:"#FEF3C7",border:"1.5px solid #F59E0B",borderRadius:12,padding:18,textAlign:"center",color:"#92400E",fontWeight:700}}>⚠️ No hay tarifa para {lugarTxt(f.orig)} → {lugarTxt(f.dest)} · {f.tipoEnvio}</div>
+          :R.sinTarifa?<div style={{background:"#FEF3C7",border:"1.5px solid #F59E0B",borderRadius:12,padding:18,textAlign:"center",color:"#92400E",fontWeight:700}}><Ico e="⚠️" sp/>No hay tarifa para {lugarTxt(f.orig)} → {lugarTxt(f.dest)} · {f.tipoEnvio}</div>
           :(<div style={{background:"var(--navy)",borderRadius:14,padding:22,textAlign:"center",color:"#fff"}}>
               <div style={{fontSize:14,opacity:.7,marginBottom:6}}>{f.tipoEnvio} · {lugarTxt(f.orig)} → {lugarTxt(f.dest)}</div>
               <div style={{fontSize:52,fontWeight:800,color:"#E5AE3A",lineHeight:1}}>{fmtMoney(R.total,R.moneda)}</div>
               <div style={{fontSize:14,opacity:.85,marginTop:10,...mono}}>{R.cant} {UL[R.uni]} × {fmtMoney(R.precio,R.moneda)}/{UL[R.uni]} = {fmtMoney(R.flete,R.moneda)}{R.usoMinimo?` · mínimo ${fmtMoney(R.min,R.moneda)}`:""}</div>
-              <div style={{fontSize:12,opacity:.6,marginTop:6}}>{R.tf._especial?`⭐ Tarifa especial de ${calcPara?.nombre||""}`:"Tarifa general"} · {R.tf.id} · {R.moneda}{(tipoEsAereoG(f.tipoEnvio))?` · se cobra el mayor entre peso real y volumétrico`:""}</div>
+              <div style={{fontSize:12,opacity:.6,marginTop:6}}>{R.tf._especial?`Tarifa especial de ${calcPara?.nombre||""}`:"Tarifa general"} · {R.tf.id} · {R.moneda}{(tipoEsAereoG(f.tipoEnvio))?` · se cobra el mayor entre peso real y volumétrico`:""}</div>
             </div>)}
         </>)}
       </div>
@@ -8103,24 +8198,24 @@ export default function SistemaCarga(){
 
   const CUR_SYMBOL={USD:"$",EUR:"€"};
   const PAY_METHODS=[
-    {k:"efectivo",l:"💵 Efectivo"},
-    {k:"zelle",l:"📲 Zelle"},
-    {k:"transferencia",l:"🏦 Transferencia"},
-    {k:"pos_usd",l:"💳 POS (USD)"},
-    {k:"pos_eur",l:"💳 POS (EUR)"},
-    {k:"otro",l:"➕ Otro"},
-    {k:"saldo_favor",l:"⭐ Saldo a favor",interno:true},
-    {k:"nota_credito",l:"📝 Nota de crédito",interno:true},
-    {k:"comision",l:"🤝 Comisión",interno:true},
-    {k:"comision_quitada",l:"🚫 Comisión quitada",interno:true},
-    {k:"pago_agente",l:"💸 Pago a agente",interno:true},
+    {k:"efectivo",l:"Efectivo"},
+    {k:"zelle",l:"Zelle"},
+    {k:"transferencia",l:"Transferencia"},
+    {k:"pos_usd",l:"POS (USD)"},
+    {k:"pos_eur",l:"POS (EUR)"},
+    {k:"otro",l:"Otro"},
+    {k:"saldo_favor",l:"Saldo a favor",interno:true},
+    {k:"nota_credito",l:"Nota de crédito",interno:true},
+    {k:"comision",l:"Comisión",interno:true},
+    {k:"comision_quitada",l:"Comisión quitada",interno:true},
+    {k:"pago_agente",l:"Pago a agente",interno:true},
   ];
   const REC_TYPES=[
     {k:"cliente",l:"Cliente (consignatario)"},
     {k:"agente",l:"Agente"},
     {k:"autonomo",l:"Autónomo"},
   ];
-  const FAC_STATUS_LABEL={borrador:"📝 Borrador",emitida:"📤 Emitida",pagada_parcial:"⏳ Pago parcial",pagada:"✅ Pagada",anulada:"✕ Anulada"};
+  const FAC_STATUS_LABEL={borrador:"Borrador",emitida:"Emitida",pagada_parcial:"Pago parcial",pagada:"Pagada",anulada:"✕ Anulada"};
   const FAC_STATUS_CLS={borrador:"s5",emitida:"s2",pagada_parcial:"s4",pagada:"s3",anulada:"s1"};
 
   const fmtMoney=(v,mon="USD")=>`${CUR_SYMBOL[mon]||"$"}${(parseFloat(v)||0).toFixed(2)}`;
@@ -8813,8 +8908,8 @@ export default function SistemaCarga(){
       if(p.anulado||(p.moneda||"USD")!==mon)return;
       const pp=pagadorDePago(p);if(!pp||pagKey(pp)!==k)return;
       if(["saldo_favor","nota_credito","comision_quitada"].includes(p.tipoPago))return;
-      if(p.tipoPago==="comision"){out.push({fecha:new Date(p.fecha),doc:"🤝 Comisión",det:p.notaReferencial,debe:0,haber:p.monto,pagos:[p]});return;}
-      if(p.monto<0){out.push({fecha:new Date(p.fecha),doc:String(p.notaReferencial||"").startsWith("Reembolso")?"💵 Reembolso":"💸 Pago",det:[metodoLbl(p.tipoPago).replace(/^\S+\s/,""),p.referencia].filter(Boolean).join(" · "),debe:-p.monto,haber:0,pagos:[p]});return;}
+      if(p.tipoPago==="comision"){out.push({fecha:new Date(p.fecha),doc:"Comisión",det:p.notaReferencial,debe:0,haber:p.monto,pagos:[p]});return;}
+      if(p.monto<0){out.push({fecha:new Date(p.fecha),doc:String(p.notaReferencial||"").startsWith("Reembolso")?"Reembolso":"Pago",det:[metodoLbl(p.tipoPago).replace(/^\S+\s/,""),p.referencia].filter(Boolean).join(" · "),debe:-p.monto,haber:0,pagos:[p]});return;}
       const g=p.reciboId||p.id;
       if(!grupos.has(g))grupos.set(g,{fecha:new Date(p.fecha),doc:`Cobro ${p.reciboId||p.id}`,det:"",debe:0,haber:0,pagos:[],facs:new Set(),metodo:metodoLbl(p.tipoPago).replace(/^\S+\s/,""),ref:p.referencia});
       const x=grupos.get(g);x.haber+=p.monto;x.pagos.push(p);if(p.facturaId)x.facs.add(p.facturaId);
@@ -9106,7 +9201,7 @@ export default function SistemaCarga(){
     const porMon={};ok.forEach(f=>{porMon[f.moneda]=(porMon[f.moneda]||0)+(f.total||0);});
     const enCero=ok.filter(f=>(f.total||0)<=0);
     const msg=`¿Emitir ${ok.length} factura(s)?\nTotal: ${Object.entries(porMon).map(([m,v])=>fmtMoney(v,m)).join(" · ")}`
-      +(enCero.length?`\n\n⚠️ ${enCero.length} con total 0: ${enCero.map(f=>f.id).join(", ")}`:"")
+      +(enCero.length?`\n\n${enCero.length} con total 0: ${enCero.map(f=>f.id).join(", ")}`:"")
       +(sinRec.length?`\n\n${sinRec.length} sin receptor quedan en borrador: ${sinRec.map(f=>f.id).join(", ")}`:"");
     if(!window.confirm(msg))return;
     const now=new Date();
@@ -9122,7 +9217,7 @@ export default function SistemaCarga(){
   const bloqueCuenta=(pg,{onVolver=null}={})=>{
           const puede=hasPerm("registrar_pago")||hasPerm("cobrar");
           const puedeNC=hasPerm("nota_credito")||hasPerm("facturar");
-          const IC={cliente:"👤",agente:"🤝",autonomo:"🧑‍💻"},TL={cliente:"Cliente",agente:"Agente",autonomo:"Autónomo"};
+          const IC={cliente:<Ico e="👤"/>,agente:<Ico e="🤝"/>,autonomo:<Ico e="🧑‍💻"/>},TL={cliente:"Cliente",agente:"Agente",autonomo:"Autónomo"};
           const coms=comisionesPrepaid();
           const mono={fontFamily:"'DM Mono',monospace"};
           const k=pagKey(pg);
@@ -9156,31 +9251,31 @@ export default function SistemaCarga(){
             <div>
               <div className="card" style={{marginBottom:10,display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
                 {onVolver&&<button className="btn-s" style={{fontSize:13}} onClick={onVolver}>← Cuentas</button>}
-                {onVolver?<div><div style={{fontSize:18,fontWeight:700,color:"var(--navy)"}}>{IC[pg.tipo]||"👤"} {pg.nombre}</div>
+                {onVolver?<div><div style={{fontSize:18,fontWeight:700,color:"var(--navy)"}}>{IC[pg.tipo]||<Ico e="👤"/>} {pg.nombre}</div>
                   <div style={{fontSize:12,color:"var(--t3)"}}>{TL[pg.tipo]||"Cliente"}{pg.casillero?` · #${pg.casillero}`:""}</div></div>
-                  :<div style={{fontSize:16,fontWeight:700,color:"var(--navy)"}}>💰 Cuenta</div>}
+                  :<div style={{fontSize:16,fontWeight:700,color:"var(--navy)"}}><Ico e="💰" sp/>Cuenta</div>}
                 <div style={{display:"flex",gap:18,marginLeft:"auto",flexWrap:"wrap",alignItems:"center"}}>
                   <div style={{textAlign:"right"}}><div style={{fontSize:12,color:"var(--t3)"}}>Nos debe</div><div style={{...mono,fontSize:18,fontWeight:800,color:"var(--orange)"}}>{fmtMoney(deuda,mon)}</div></div>
                   <div style={{textAlign:"right"}}><div style={{fontSize:12,color:"var(--t3)"}}>Le debemos</div><div style={{...mono,fontSize:18,fontWeight:800,color:"var(--green)"}}>{fmtMoney(favor,mon)}</div></div>
-                  {puede&&<button className="btn-p" style={{fontSize:13}} onClick={()=>cobroAbrir(pg)}>💵 Cobrar</button>}
-                  {puede&&favor>0&&!cuadrePago&&<button className="btn-s" style={{fontSize:13}} onClick={()=>setCuadrePago({monto:String(favor),moneda:mon,tipoPago:"efectivo",referencia:""})}>💸 Pagarle</button>}
-                  <button className="btn-s" style={{fontSize:13}} onClick={imprimir}>🖨️ Imprimir</button>
+                  {puede&&<button className="btn-p" style={{fontSize:13}} onClick={()=>cobroAbrir(pg)}><Ico e="💵" sp/>Cobrar</button>}
+                  {puede&&favor>0&&!cuadrePago&&<button className="btn-s" style={{fontSize:13}} onClick={()=>setCuadrePago({monto:String(favor),moneda:mon,tipoPago:"efectivo",referencia:""})}><Ico e="💸" sp/>Pagarle</button>}
+                  <button className="btn-s" style={{fontSize:13}} onClick={imprimir}><Ico e="🖨️" sp/>Imprimir</button>
                 </div>
               </div>
               {cuadrePago&&(
                 <div className="card" style={{marginBottom:10,display:"flex",gap:8,alignItems:"flex-end",flexWrap:"wrap"}}>
-                  <b style={{alignSelf:"center",marginRight:8}}>💸 Pagar a {pg.nombre}</b>
+                  <b style={{alignSelf:"center",marginRight:8}}><Ico e="💸" sp/>Pagar a {pg.nombre}</b>
                   <div><label className="fl">Monto</label><input className="fi" type="number" step="0.01" style={{width:130}} value={cuadrePago.monto} onChange={e=>setCuadrePago(x=>({...x,monto:e.target.value}))}/></div>
                   <div><label className="fl">Moneda</label><select className="fi" value={cuadrePago.moneda} onChange={e=>setCuadrePago(x=>({...x,moneda:e.target.value,monto:String(saldoFavorDe(pg,e.target.value)||"")}))}>{["USD","EUR"].map(m=><option key={m}>{m}</option>)}</select></div>
                   <div><label className="fl">Forma de pago</label><select className="fi" value={cuadrePago.tipoPago} onChange={e=>setCuadrePago(x=>({...x,tipoPago:e.target.value}))}>{PAY_METHODS.filter(x=>!x.interno).map(x=><option key={x.k} value={x.k}>{x.l}</option>)}</select></div>
                   <div><label className="fl">Referencia</label><input className="fi" style={{width:160}} value={cuadrePago.referencia} onChange={e=>setCuadrePago(x=>({...x,referencia:e.target.value}))}/></div>
-                  <button className="btn-p" style={{fontSize:13}} onClick={()=>cuadrePagar(pg)}>💸 Registrar pago</button>
+                  <button className="btn-p" style={{fontSize:13}} onClick={()=>cuadrePagar(pg)}><Ico e="💸" sp/>Registrar pago</button>
                   <button className="btn-s" style={{fontSize:13}} onClick={()=>setCuadrePago(null)}>Cancelar</button>
                 </div>)}
 
               <div className="card" style={{padding:0,marginBottom:10}}>
                 <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-                  <span style={{fontSize:15,fontWeight:700,color:"var(--navy)"}}>📒 Movimientos</span>
+                  <span style={{fontSize:15,fontWeight:700,color:"var(--navy)"}}><Ico e="📒" sp/>Movimientos</span>
                   {monsCon.length>1&&monsCon.map(mn=><button key={mn} className={mon===mn?"btn-p":"btn-s"} style={{fontSize:12,padding:"3px 10px"}} onClick={()=>setCtaMon(mn)}>{mn}</button>)}
                   <span style={{marginLeft:"auto",fontSize:13,color:"var(--t2)"}}>Desde</span><input className="fi" type="date" style={{width:150,fontSize:13,padding:"4px 6px"}} value={ctaDesde} onChange={e=>setCtaDesde(e.target.value)}/>
                   <span style={{fontSize:13,color:"var(--t2)"}}>Hasta</span><input className="fi" type="date" style={{width:150,fontSize:13,padding:"4px 6px"}} value={ctaHasta} onChange={e=>setCtaHasta(e.target.value)}/>
@@ -9195,18 +9290,18 @@ export default function SistemaCarga(){
                       <tr key={i}>
                         <td style={{...mono,fontSize:13,whiteSpace:"nowrap"}}>{fmtDate(x.fecha)}</td>
                         <td style={{fontWeight:700,fontSize:13,whiteSpace:"nowrap"}}>{x.doc}{x.factura&&x.factura.status==="pagada"&&<span style={{marginLeft:6,fontSize:11,color:"var(--green)"}}>✓ pagada</span>}</td>
-                        <td style={{fontSize:12,color:"var(--t2)",maxWidth:320,whiteSpace:"normal"}}>{x.det}{x.usoFavor>0&&<div style={{color:"var(--green)"}}>⭐ Usó {fmtMoney(x.usoFavor,mon)} de saldo a favor</div>}</td>
+                        <td style={{fontSize:12,color:"var(--t2)",maxWidth:320,whiteSpace:"normal"}}>{x.det}{x.usoFavor>0&&<div style={{color:"var(--green)"}}><Ico e="⭐" sp/>Usó {fmtMoney(x.usoFavor,mon)} de saldo a favor</div>}</td>
                         <td style={{...mono,textAlign:"right",fontWeight:700,color:"var(--orange)"}}>{x.debe?fmtMoney(x.debe,mon):""}</td>
                         <td style={{...mono,textAlign:"right",fontWeight:700,color:"var(--green)"}}>{x.haber?fmtMoney(x.haber,mon):""}</td>
                         <td style={{...mono,textAlign:"right",fontWeight:800}}>{saldoTxt(x.saldo)}</td>
                         <td style={{whiteSpace:"nowrap"}}>
-                          {x.factura&&<button className="btn-s" style={{fontSize:12,padding:"2px 6px",marginRight:4}} title="Ver factura" onClick={()=>setFacPrint(x.factura)}>🖨️</button>}
-                          {x.factura&&puedeNC&&<button className="btn-s" style={{fontSize:12,padding:"2px 6px",color:"var(--purple)",borderColor:"var(--purple)"}} title="Nota de crédito" onClick={()=>ncOpen(x.factura)}>📝</button>}
-                          {x.factura&&["pagada","pagada_parcial"].includes(x.factura.status)&&(hasPerm("crear_factura")||hasPerm("facturar"))&&<button className="btn-s" style={{fontSize:12,padding:"2px 6px",marginLeft:4,color:"var(--cyan)",borderColor:"var(--cyan)"}} title="Cargo adicional" onClick={()=>facCargoAdicional(x.factura)}>➕</button>}
+                          {x.factura&&<button className="btn-s" style={{fontSize:12,padding:"2px 6px",marginRight:4}} title="Ver factura" onClick={()=>setFacPrint(x.factura)}><Ico e="🖨️" solo/></button>}
+                          {x.factura&&puedeNC&&<button className="btn-s" style={{fontSize:12,padding:"2px 6px",color:"var(--purple)",borderColor:"var(--purple)"}} title="Nota de crédito" onClick={()=>ncOpen(x.factura)}><Ico e="📝" solo/></button>}
+                          {x.factura&&["pagada","pagada_parcial"].includes(x.factura.status)&&(hasPerm("crear_factura")||hasPerm("facturar"))&&<button className="btn-s" style={{fontSize:12,padding:"2px 6px",marginLeft:4,color:"var(--cyan)",borderColor:"var(--cyan)"}} title="Cargo adicional" onClick={()=>facCargoAdicional(x.factura)}><Ico e="➕" solo/></button>}
                           {x.nc&&puedeNC&&<button className="btn-s" style={{fontSize:12,padding:"2px 6px",color:"var(--red)",borderColor:"var(--red)"}} title="Anular nota de crédito" onClick={()=>facAnular(x.nc)}>✕</button>}
-                          {rid&&<button className="btn-s" style={{fontSize:12,padding:"2px 6px",marginRight:4}} title="Recibo" onClick={()=>setReciboVer(rid)}>🧾</button>}
-                          {comp&&<a href={comp} target="_blank" rel="noreferrer" className="btn-s" style={{fontSize:12,padding:"2px 6px",marginRight:4,textDecoration:"none"}} title="Comprobante">📎</a>}
-                          {x.pagos&&x.doc!=="🤝 Comisión"&&x.doc!=="💵 Reembolso"&&(hasPerm("anular_pago")||hasPerm("cobrar"))&&<button className="btn-s" style={{fontSize:12,padding:"2px 6px",color:"var(--red)",borderColor:"var(--red)"}} title="Anular" onClick={()=>pagoAnularGrupo(x.pagos)}>✕</button>}
+                          {rid&&<button className="btn-s" style={{fontSize:12,padding:"2px 6px",marginRight:4}} title="Recibo" onClick={()=>setReciboVer(rid)}><Ico e="🧾" solo/></button>}
+                          {comp&&<a href={comp} target="_blank" rel="noreferrer" className="btn-s" style={{fontSize:12,padding:"2px 6px",marginRight:4,textDecoration:"none"}} title="Comprobante"><Ico e="📎" solo/></a>}
+                          {x.pagos&&x.doc!=="Comisión"&&x.doc!=="Reembolso"&&(hasPerm("anular_pago")||hasPerm("cobrar"))&&<button className="btn-s" style={{fontSize:12,padding:"2px 6px",color:"var(--red)",borderColor:"var(--red)"}} title="Anular" onClick={()=>pagoAnularGrupo(x.pagos)}>✕</button>}
                         </td>
                       </tr>);})}
                   </tbody>
@@ -9216,8 +9311,8 @@ export default function SistemaCarga(){
               {["agente","autonomo"].includes(pg.tipo)&&(
               <div className="card" style={{padding:0}}>
                 <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",display:"flex",alignItems:"center",gap:10}}>
-                  <span style={{fontSize:15,fontWeight:700,color:"var(--navy)"}}>🤝 Comisiones PREPAID</span>
-                  {puede&&pend.length>0&&<button className="btn-p" style={{fontSize:13,padding:"5px 12px",marginLeft:"auto"}} onClick={()=>cuadreAcreditar(pg,pend)}>⭐ Acreditar todas ({pend.length})</button>}
+                  <span style={{fontSize:15,fontWeight:700,color:"var(--navy)"}}><Ico e="🤝" sp/>Comisiones PREPAID</span>
+                  {puede&&pend.length>0&&<button className="btn-p" style={{fontSize:13,padding:"5px 12px",marginLeft:"auto"}} onClick={()=>cuadreAcreditar(pg,pend)}><Ico e="⭐" sp/>Acreditar todas ({pend.length})</button>}
                 </div>
                 {cm.length===0?<div style={{textAlign:"center",padding:24,color:"var(--t3)"}}>Sin WR PREPAID cobrados de sus clientes.</div>:(
                 <table className="ct">
@@ -9228,15 +9323,15 @@ export default function SistemaCarga(){
                       <td style={mono}>{x.f.id}</td>
                       <td style={{fontSize:13}}>{cl?fullName(cl):(x.w.consignee||"—")}</td>
                       <td style={{...mono,textAlign:"right"}}>{fmtMoney(x.cobrado,x.moneda)}</td>
-                      <td style={{...mono,fontSize:12}}>{x.tf?`${x.tf.id}${x.tf._especial?" ⭐":""}`:"⚠️ Sin tarifa"}{x.tf&&!x.monedaOk?" ⚠️ "+x.tf.moneda:""}</td>
+                      <td style={{...mono,fontSize:12}}>{x.tf?`${x.tf.id}${x.tf._especial?" (especial)":""}`:"Sin tarifa"}{x.tf&&!x.monedaOk?<span style={{color:"var(--red)",marginLeft:6}}>{x.tf.moneda}</span>:""}</td>
                       <td style={{...mono,textAlign:"right"}}>{x.tf?fmtMoney(x.costo,x.tf.moneda||x.moneda):"—"}</td>
                       <td style={{...mono,textAlign:"right",fontWeight:800,color:"var(--cyan)"}}>{fmtMoney(x.comision,x.moneda)}</td>
                       <td style={{whiteSpace:"nowrap"}}>
                         {x.acreditada?<span className="st s3"><span className="st-dot"/>Acreditada</span>
-                          :x.comision>0&&puede?<button className="btn-s" style={{fontSize:12,padding:"2px 8px"}} onClick={()=>cuadreAcreditar(pg,[x])}>⭐ Acreditar</button>
+                          :x.comision>0&&puede?<button className="btn-s" style={{fontSize:12,padding:"2px 8px"}} onClick={()=>cuadreAcreditar(pg,[x])}><Ico e="⭐" sp/>Acreditar</button>
                           :<span style={{fontSize:12,color:"var(--t3)"}}>—</span>}
-                        {x.faltante&&<span style={{marginLeft:6,fontSize:12,fontWeight:700,color:"var(--orange)"}}>⚠️ Faltante</span>}
-                        {x.perdido&&<><span style={{marginLeft:6,fontSize:12,fontWeight:700,color:"var(--red)"}}>❌ {x.w.status?.label}</span>
+                        {x.faltante&&<span style={{marginLeft:6,fontSize:12,fontWeight:700,color:"var(--orange)"}}><Ico e="⚠️" sp/>Faltante</span>}
+                        {x.perdido&&<><span style={{marginLeft:6,fontSize:12,fontWeight:700,color:"var(--red)"}}><Ico e="❌" sp/>{x.w.status?.label}</span>
                           {puede&&<button className="btn-s" style={{fontSize:12,padding:"2px 8px",marginLeft:6,color:"var(--red)",borderColor:"var(--red)"}} onClick={()=>cuadreQuitarComision(pg,x)}>Quitar comisión</button>}</>}
                       </td>
                     </tr>);})}</tbody>
@@ -9256,8 +9351,8 @@ export default function SistemaCarga(){
     // Facturación: Por guía / Facturas · Contabilidad: Por Cobrar / Pagos / Reporte
     const enFacturacion=["porguia","facturas"].includes(contabTab);
     const CTABS=enFacturacion
-      ?[{k:"porguia",l:"🚢 Por guía"},{k:"facturas",l:"📄 Facturas"}]
-      :[{k:"cuentas",l:"👥 Cuentas"},{k:"caja",l:"💵 Caja"},{k:"reporte",l:"📊 Reporte"}];
+      ?[{k:"porguia",l:"Por guía"},{k:"facturas",l:"Facturas"}]
+      :[{k:"cuentas",l:"Cuentas"},{k:"caja",l:"Caja"},{k:"reporte",l:"Reporte"}];
     // Filtrar facturas (no incluye anuladas en stats principales)
     const facsActivas=facturas.filter(f=>f.status!=="anulada");
     // Stats por moneda (no se mezclan)
@@ -9296,10 +9391,10 @@ export default function SistemaCarga(){
         {/* Mini stats */}
         <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:16}}>
           {(enFacturacion?[
-            ["📄","Total Facturas",facturas.length,"var(--navy)"],
-            ["💰","Por Cobrar",fmtMonyBoth(totalPorCobrar),"var(--orange)"],
-            ["✅","Pagado",fmtMonyBoth(totalPagado),"var(--green)"],
-            ["📊","Facturado",fmtMonyBoth(totalFacturado),"var(--cyan)"],
+            [<Ico e="📄"/>,"Total Facturas",facturas.length,"var(--navy)"],
+            [<Ico e="💰"/>,"Por Cobrar",fmtMonyBoth(totalPorCobrar),"var(--orange)"],
+            [<Ico e="✅"/>,"Pagado",fmtMonyBoth(totalPagado),"var(--green)"],
+            [<Ico e="📊"/>,"Facturado",fmtMonyBoth(totalFacturado),"var(--cyan)"],
           ]:(()=>{
             const kv=alcanceUsr?new Set(facturas.map(f=>pagKey(pagadorDeFactura(f)))):null;
             const rs=resumenCuentas().filter(r=>!kv||kv.has(pagKey(r.pg)));
@@ -9308,10 +9403,10 @@ export default function SistemaCarga(){
             const hoyE={USD:0,EUR:0};pagos.forEach(p=>{if(!p.anulado&&esDinero(p)&&p.monto>0&&new Date(p.fecha)>=h0){const m=p.moneda||"USD";hoyE[m]=(hoyE[m]||0)+p.monto;}});
             const sinAcred=comisionesPrepaid().filter(x=>!x.acreditada&&x.comision>0&&(!kv||kv.has(pagKey(x.dom)))).length;
             return [
-              ["💰","Nos deben",fmtMonyBoth(suma("debe")),"var(--orange)"],
-              ["⭐","Les debemos",fmtMonyBoth(suma("favor")),"var(--green)"],
-              ["💵","Entró hoy",fmtMonyBoth(hoyE),"var(--cyan)"],
-              ["🤝","Comisiones sin acreditar",sinAcred,"var(--navy)"],
+              [<Ico e="💰"/>,"Nos deben",fmtMonyBoth(suma("debe")),"var(--orange)"],
+              [<Ico e="⭐"/>,"Les debemos",fmtMonyBoth(suma("favor")),"var(--green)"],
+              [<Ico e="💵"/>,"Entró hoy",fmtMonyBoth(hoyE),"var(--cyan)"],
+              [<Ico e="🤝"/>,"Comisiones sin acreditar",sinAcred,"var(--navy)"],
             ];})()).map(([ic,l,v,c])=>(
             <div key={l} style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,padding:"14px",boxShadow:"var(--shadow)"}}>
               <div style={{fontSize:20,marginBottom:6}}>{ic}</div>
@@ -9410,13 +9505,13 @@ export default function SistemaCarga(){
                           <td style={{fontFamily:"'DM Mono',monospace",fontWeight:800,color:f.saldo>0?"var(--orange)":"var(--t3)"}}>{fmtMoney(f.saldo,f.moneda)}</td>
                           <td><span className={`st ${FAC_STATUS_CLS[f.status]||"s5"}`}><span className="st-dot"/>{FAC_STATUS_LABEL[f.status]||f.status}</span></td>
                           <td style={{whiteSpace:"nowrap"}}>
-                            <button className="btn-s" style={{fontSize:12,padding:"3px 6px",marginRight:4}} title="Ver / Imprimir" onClick={()=>setFacPrint(f)}>🖨️</button>
-                            {(f.status==="borrador"||f.status==="emitida")&&(hasPerm("editar_factura")||hasPerm("facturar"))&&<button className="btn-s" style={{fontSize:12,padding:"3px 6px",marginRight:4}} title="Editar" onClick={()=>facOpenEdit(f)}>✏️</button>}
-                            {(f.status==="emitida"||f.status==="pagada_parcial")&&(hasPerm("registrar_pago")||hasPerm("cobrar"))&&<button className="btn-p" style={{fontSize:12,padding:"3px 8px",marginRight:4}} title="Registrar pago" onClick={()=>pagoOpen(f)}>💵 Cobrar</button>}
-                            {f.status!=="borrador"&&f.tipo==="factura"&&(hasPerm("nota_credito")||hasPerm("facturar"))&&<button className="btn-s" style={{fontSize:12,padding:"3px 6px",marginRight:4,color:"var(--purple)",borderColor:"var(--purple)"}} title="Nota de crédito" onClick={()=>ncOpen(f)}>📝 NC</button>}
-                            {["pagada","pagada_parcial"].includes(f.status)&&f.tipo==="factura"&&(hasPerm("crear_factura")||hasPerm("facturar"))&&<button className="btn-s" style={{fontSize:12,padding:"3px 6px",marginRight:4,color:"var(--cyan)",borderColor:"var(--cyan)"}} title="Cargo adicional" onClick={()=>facCargoAdicional(f)}>➕ Cargo</button>}
+                            <button className="btn-s" style={{fontSize:12,padding:"3px 6px",marginRight:4}} title="Ver / Imprimir" onClick={()=>setFacPrint(f)}><Ico e="🖨️" solo/></button>
+                            {(f.status==="borrador"||f.status==="emitida")&&(hasPerm("editar_factura")||hasPerm("facturar"))&&<button className="btn-s" style={{fontSize:12,padding:"3px 6px",marginRight:4}} title="Editar" onClick={()=>facOpenEdit(f)}><Ico e="✏️" solo/></button>}
+                            {(f.status==="emitida"||f.status==="pagada_parcial")&&(hasPerm("registrar_pago")||hasPerm("cobrar"))&&<button className="btn-p" style={{fontSize:12,padding:"3px 8px",marginRight:4}} title="Registrar pago" onClick={()=>pagoOpen(f)}><Ico e="💵" sp/>Cobrar</button>}
+                            {f.status!=="borrador"&&f.tipo==="factura"&&(hasPerm("nota_credito")||hasPerm("facturar"))&&<button className="btn-s" style={{fontSize:12,padding:"3px 6px",marginRight:4,color:"var(--purple)",borderColor:"var(--purple)"}} title="Nota de crédito" onClick={()=>ncOpen(f)}><Ico e="📝" sp/>NC</button>}
+                            {["pagada","pagada_parcial"].includes(f.status)&&f.tipo==="factura"&&(hasPerm("crear_factura")||hasPerm("facturar"))&&<button className="btn-s" style={{fontSize:12,padding:"3px 6px",marginRight:4,color:"var(--cyan)",borderColor:"var(--cyan)"}} title="Cargo adicional" onClick={()=>facCargoAdicional(f)}><Ico e="➕" sp/>Cargo</button>}
                             {f.status!=="anulada"&&f.status!=="borrador"&&(hasPerm("anular_factura")||hasPerm("facturar"))&&<button className="btn-s" style={{fontSize:12,padding:"3px 6px",marginRight:4,color:"var(--red)",borderColor:"var(--red)"}} title="Anular" onClick={()=>facAnular(f)}>✕</button>}
-                            {f.status==="borrador"&&hasPerm("borrar_factura")&&<button className="btn-s" style={{fontSize:12,padding:"3px 6px",color:"var(--red)",borderColor:"var(--red)"}} title="Borrar borrador" onClick={()=>facDelete(f)}>🗑️</button>}
+                            {f.status==="borrador"&&hasPerm("borrar_factura")&&<button className="btn-s" style={{fontSize:12,padding:"3px 6px",color:"var(--red)",borderColor:"var(--red)"}} title="Borrar borrador" onClick={()=>facDelete(f)}><Ico e="🗑️" solo/></button>}
                           </td>
                         </tr>
                       );
@@ -9431,7 +9526,7 @@ export default function SistemaCarga(){
         {/* ── CUENTAS ── */}
         {contabTab==="cuentas"&&(()=>{
           const puede=hasPerm("registrar_pago")||hasPerm("cobrar");
-          const IC={cliente:"👤",agente:"🤝",autonomo:"🧑‍💻"},TL={cliente:"Cliente",agente:"Agente",autonomo:"Autónomo"};
+          const IC={cliente:<Ico e="👤"/>,agente:<Ico e="🤝"/>,autonomo:<Ico e="🧑‍💻"/>},TL={cliente:"Cliente",agente:"Agente",autonomo:"Autónomo"};
           const keysVis=alcanceUsr?new Set(facturas.map(f=>pagKey(pagadorDeFactura(f)))):null;
           const coms=comisionesPrepaid();
           const pendCom=k=>coms.filter(x=>!x.acreditada&&x.comision>0&&pagKey(x.dom)===k);
@@ -9454,21 +9549,21 @@ export default function SistemaCarga(){
                   <input className="fi" style={{width:280,fontSize:14,padding:"6px 10px"}} placeholder="Buscar nombre o casillero…" value={ctaQ} onChange={e=>setCtaQ(e.target.value)}/>
                   {(()=>{const seg=(ops,val,set)=><div style={{display:"flex",gap:3,background:"var(--bg4)",borderRadius:7,padding:3,border:"1px solid var(--b1)"}}>
                       {ops.map(([k,l])=><button key={k||"t"} onClick={()=>set(k)} style={{padding:"4px 11px",borderRadius:5,border:"none",cursor:"pointer",fontSize:13,fontWeight:600,background:val===k?"var(--navy)":"transparent",color:val===k?"#fff":"var(--t2)"}}>{l}</button>)}</div>;
-                    return <>{seg([["","Todos"],["cliente","👤 Clientes"],["agente","🤝 Agentes"],["autonomo","🧑‍💻 Autónomos"]],ctaFil,setCtaFil)}
+                    return <>{seg([["","Todos"],["cliente","Clientes"],["agente","Agentes"],["autonomo","Autónomos"]],ctaFil,setCtaFil)}
                       {seg([["con","Con saldo"],["sin","Sin saldo"],["todas","Con y sin saldo"]],ctaSoloSaldo,setCtaSoloSaldo)}</>;})()}
-                  {puede&&<button className="btn-p" style={{fontSize:13,padding:"6px 12px",marginLeft:"auto"}} onClick={()=>cobroAbrir(null)}>💵 Recibir pago</button>}
+                  {puede&&<button className="btn-p" style={{fontSize:13,padding:"6px 12px",marginLeft:"auto"}} onClick={()=>cobroAbrir(null)}><Ico e="💵" sp/>Recibir pago</button>}
                 </div>
-                {filas.length===0?<div style={{textAlign:"center",padding:40,color:"var(--t3)"}}>{Q?"Sin coincidencias.":ctaSoloSaldo==="con"?"No hay cuentas con saldo. ✅":"No hay cuentas."}</div>:(
+                {filas.length===0?<div style={{textAlign:"center",padding:40,color:"var(--t3)"}}>{Q?"Sin coincidencias.":ctaSoloSaldo==="con"?"No hay cuentas con saldo. ":"No hay cuentas."}</div>:(
                 <table className="ct">
                   <thead><tr><th>Cuenta</th><th style={{textAlign:"right"}}>Nos debe</th><th style={{textAlign:"right"}}>Le debemos</th><th></th></tr></thead>
                   <tbody>
                     {filas.slice(0,MAX).map(r=>(
                       <tr key={pagKey(r.pg)} style={{cursor:"pointer"}} onClick={()=>{setCuadreSel(r.pg);setCuadrePago(null);setCtaDesde("");setCtaHasta("");}}>
-                        <td><span style={{fontWeight:700}}>{IC[r.pg.tipo]||"👤"} {r.pg.nombre||"—"}</span>
+                        <td><span style={{fontWeight:700}}>{IC[r.pg.tipo]||<Ico e="👤"/>} {r.pg.nombre||"—"}</span>
                           <div style={{fontSize:12,color:"var(--t3)"}}>{TL[r.pg.tipo]||"Cliente"}{r.pg.casillero?` · #${r.pg.casillero}`:""}</div></td>
                         <td style={{...mono,textAlign:"right",fontWeight:800,color:"var(--orange)"}}>{fm(r.debe).map(x=><div key={x}>{x}</div>)}{!fm(r.debe).length&&<span style={{color:"var(--t3)"}}>—</span>}</td>
                         <td style={{...mono,textAlign:"right",fontWeight:800,color:"var(--green)"}}>{fm(r.favor).map(x=><div key={x}>{x}</div>)}{!fm(r.favor).length&&<span style={{color:"var(--t3)"}}>—</span>}</td>
-                        <td style={{fontSize:12,color:"var(--cyan)",fontWeight:700,whiteSpace:"nowrap"}}>{r.pc.length>0&&`🤝 ${r.pc.length} comisión${r.pc.length===1?"":"es"} sin acreditar`}</td>
+                        <td style={{fontSize:12,color:"var(--cyan)",fontWeight:700,whiteSpace:"nowrap"}}>{r.pc.length>0&&`${r.pc.length} comisión${r.pc.length===1?"":"es"} sin acreditar`}</td>
                       </tr>))}
                     <tr style={{background:"var(--bg3)"}}>
                       <td style={{fontWeight:800}}>Total ({filas.length})</td>
@@ -9530,7 +9625,7 @@ export default function SistemaCarga(){
                 <span style={{fontSize:13,color:"var(--t2)"}}>Hasta</span><input className="fi" type="date" style={{width:150,fontSize:13,padding:"4px 6px"}} value={cajaHasta} onChange={e=>setCajaHasta(e.target.value)}/>
                 <select className="fs" style={{width:200,fontSize:13}} value={cajaUsr} onChange={e=>setCajaUsr(e.target.value)}>
                   <option value="">Todos los usuarios</option>{usuarios.map(u=><option key={u} value={u}>{nombreUsr(u)}</option>)}</select>
-                <button className="btn-s" style={{fontSize:13,marginLeft:"auto"}} onClick={imprimir}>🖨️ Cierre de caja</button>
+                <button className="btn-s" style={{fontSize:13,marginLeft:"auto"}} onClick={imprimir}><Ico e="🖨️" sp/>Cierre de caja</button>
               </div>
               <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:10,marginBottom:10}}>
                 {Object.keys(porMon).length===0&&<div className="card" style={{textAlign:"center",color:"var(--t3)"}}>Sin movimientos en este periodo.</div>}
@@ -9569,8 +9664,8 @@ export default function SistemaCarga(){
                       <td style={{...mono,textAlign:"right",fontWeight:800,color:g.monto<0?"var(--red)":"var(--green)"}}>{fmtMoney(g.monto,g.moneda)}</td>
                       <td style={{fontSize:12}}>{nombreUsr(g.usuario)}</td>
                       <td style={{whiteSpace:"nowrap"}}>
-                        {g.pagos[0].reciboId&&<button className="btn-s" style={{fontSize:12,padding:"2px 6px",marginRight:4}} title="Recibo" onClick={()=>setReciboVer(g.pagos[0].reciboId)}>🧾</button>}
-                        {g.comp&&<a href={g.comp} target="_blank" rel="noreferrer" className="btn-s" style={{fontSize:12,padding:"2px 6px",marginRight:4,textDecoration:"none"}}>📎</a>}
+                        {g.pagos[0].reciboId&&<button className="btn-s" style={{fontSize:12,padding:"2px 6px",marginRight:4}} title="Recibo" onClick={()=>setReciboVer(g.pagos[0].reciboId)}><Ico e="🧾" solo/></button>}
+                        {g.comp&&<a href={g.comp} target="_blank" rel="noreferrer" className="btn-s" style={{fontSize:12,padding:"2px 6px",marginRight:4,textDecoration:"none"}}><Ico e="📎" solo/></a>}
                         {(hasPerm("anular_pago")||hasPerm("cobrar"))&&<button className="btn-s" style={{fontSize:12,padding:"2px 6px",color:"var(--red)",borderColor:"var(--red)"}} title="Anular" onClick={()=>pagoAnularGrupo(pagos.filter(p=>!p.anulado&&(g.pagos[0].reciboId?p.reciboId===g.pagos[0].reciboId:p.id===g.id)))}>✕</button>}
                       </td>
                     </tr>))}</tbody>
@@ -9584,7 +9679,7 @@ export default function SistemaCarga(){
         {contabTab==="porguia"&&(()=>{
           const FST={borrador:{l:"Borrador",c:"#7A5C00",bg:"#FFF8E1"},emitida:{l:"Emitida",c:"#1565C0",bg:"#E3F2FD"},pagada_parcial:{l:"Pago parcial",c:"#E65100",bg:"#FFF3E0"},pagada:{l:"Pagada",c:"#2E7D32",bg:"#E8F5E9"}};
           const chipF=f=>{const st=FST[f.status]||{l:f.status,c:"var(--t2)",bg:"var(--bg4)"};return <span style={{fontSize:12,fontWeight:700,padding:"2px 8px",borderRadius:10,color:st.c,background:st.bg,whiteSpace:"nowrap"}}>{st.l}</span>;};
-          const IC={cliente:"👤",agente:"🤝",autonomo:"🧑‍💻"};
+          const IC={cliente:<Ico e="👤"/>,agente:<Ico e="🤝"/>,autonomo:<Ico e="🧑‍💻"/>};
           if(!facGuiaSel){
             const q=(facGuiaBuscar||"").trim().toUpperCase();
             const tarjetas=consolList.map(g=>{const {grupos,prepaid}=facGruposGuia(g);return {g,grupos,prepaid};})
@@ -9598,7 +9693,7 @@ export default function SistemaCarga(){
               <div>
                 <div style={{display:"flex",gap:10,marginBottom:12,flexWrap:"wrap",alignItems:"center"}}>
                   <div style={{display:"flex",gap:4,background:"var(--bg4)",borderRadius:7,padding:3,border:"1px solid var(--b1)"}}>
-                    {[{k:"pendientes",l:"⏳ Pendientes",n:nPend},{k:"historial",l:"📜 Historial",n:nHist}].map(t=>(
+                    {[{k:"pendientes",l:"Pendientes",n:nPend},{k:"historial",l:"Historial",n:nHist}].map(t=>(
                       <button key={t.k} onClick={()=>setFacGuiaVista(t.k)} style={{padding:"5px 14px",borderRadius:5,border:"none",cursor:"pointer",fontSize:14,fontWeight:600,display:"flex",gap:6,alignItems:"center",
                         background:facGuiaVista===t.k?"var(--navy)":"transparent",color:facGuiaVista===t.k?"#fff":"var(--t2)"}}>{t.l}
                         <span style={{background:facGuiaVista===t.k?"rgba(255,255,255,.2)":"var(--bg5)",borderRadius:3,padding:"0 6px",fontSize:11,fontWeight:800}}>{t.n}</span></button>
@@ -9621,17 +9716,17 @@ export default function SistemaCarga(){
                         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
                           <span style={{fontFamily:"'DM Mono',monospace",fontWeight:800,fontSize:18,color:"var(--navy)"}}>{g.id}</span><TypeBadge t={g.tipoEnvio}/>
                         </div>
-                        <div style={{fontSize:14,color:"var(--t2)",marginBottom:8}}>📍 {g.destino||"—"} · {fmtDate(g.fecha)}</div>
+                        <div style={{fontSize:14,color:"var(--t2)",marginBottom:8}}><Ico e="📍" sp/>{g.destino||"—"} · {fmtDate(g.fecha)}</div>
                         <div style={{height:8,background:"var(--bg4)",borderRadius:4,overflow:"hidden",marginBottom:8}}><div style={{width:`${pct}%`,height:"100%",background:"var(--green)"}}/></div>
                         <div style={{display:"flex",justifyContent:"space-between",fontSize:13,flexWrap:"wrap",gap:6}}>
                           <span><b style={{color:hechos===tot?"var(--green)":"var(--orange)"}}>{hechos}</b> / {tot} WR facturados</span>
                           <span style={{fontFamily:"'DM Mono',monospace",fontWeight:700}}>{Object.entries(porMon).map(([m,v])=>fmtMoney(v,m)).join(" · ")||"—"}</span>
                         </div>
                         {(nSin>0||nBor>0||faltantes.length>0||prepaid.length>0)&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:8}}>
-                          {prepaid.length>0&&<span style={{fontSize:12,fontWeight:700,padding:"2px 8px",borderRadius:10,color:"var(--navy)",background:"#EEF3FF",border:"1px solid #B8C8F0"}}>💳 {prepaid.length} PREPAID</span>}
-                          {faltantes.length>0&&<span style={{fontSize:12,fontWeight:700,padding:"2px 8px",borderRadius:10,color:"var(--red)",background:"#FEE8E8",border:"1px solid #F0A0A0"}}>⚠️ {faltantes.length} faltante{faltantes.length===1?"":"s"}</span>}
-                          {nSin>0&&<span style={{fontSize:12,fontWeight:700,padding:"2px 8px",borderRadius:10,color:"#E65100",background:"#FFF3E0",border:"1px solid #FFCC80"}}>🧾 {nSin} WR sin facturar</span>}
-                          {nBor>0&&<span style={{fontSize:12,fontWeight:700,padding:"2px 8px",borderRadius:10,color:"#7A5C00",background:"#FFF8E1",border:"1px solid #FFE082"}}>📤 {nBor} por emitir</span>}
+                          {prepaid.length>0&&<span style={{fontSize:12,fontWeight:700,padding:"2px 8px",borderRadius:10,color:"var(--navy)",background:"#EEF3FF",border:"1px solid #B8C8F0"}}><Ico e="💳" sp/>{prepaid.length} PREPAID</span>}
+                          {faltantes.length>0&&<span style={{fontSize:12,fontWeight:700,padding:"2px 8px",borderRadius:10,color:"var(--red)",background:"#FEE8E8",border:"1px solid #F0A0A0"}}><Ico e="⚠️" sp/>{faltantes.length} faltante{faltantes.length===1?"":"s"}</span>}
+                          {nSin>0&&<span style={{fontSize:12,fontWeight:700,padding:"2px 8px",borderRadius:10,color:"#E65100",background:"#FFF3E0",border:"1px solid #FFCC80"}}><Ico e="🧾" sp/>{nSin} WR sin facturar</span>}
+                          {nBor>0&&<span style={{fontSize:12,fontWeight:700,padding:"2px 8px",borderRadius:10,color:"#7A5C00",background:"#FFF8E1",border:"1px solid #FFE082"}}><Ico e="📤" sp/>{nBor} por emitir</span>}
                         </div>}
                       </div>
                     );
@@ -9652,11 +9747,11 @@ export default function SistemaCarga(){
               <div className="card" style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",marginBottom:12}}>
                 <button className="btn-s" onClick={()=>setFacGuiaSel(null)}>← Guías</button>
                 <span style={{fontFamily:"'DM Mono',monospace",fontWeight:800,fontSize:20,color:"var(--navy)"}}>{g.id}</span>
-                <TypeBadge t={g.tipoEnvio}/><span style={{fontSize:14,color:"var(--t2)"}}>📍 {g.destino||"—"}</span>
+                <TypeBadge t={g.tipoEnvio}/><span style={{fontSize:14,color:"var(--t2)"}}><Ico e="📍" sp/>{g.destino||"—"}</span>
                 <span style={{marginLeft:"auto",display:"flex",gap:8,flexWrap:"wrap"}}>
-                  {puedeFac&&pendTot.length>0&&<button className="btn-p" onClick={()=>{const n=facFromGuia(g,true);if(n.length)window.alert(`✅ ${n.length} factura(s) en borrador.`);}}>⚡ Facturar todo lo pendiente ({pendTot.length})</button>}
+                  {puedeFac&&pendTot.length>0&&<button className="btn-p" onClick={()=>{const n=facFromGuia(g,true);if(n.length)window.alert(`${n.length} factura(s) en borrador.`);}}><Ico e="⚡" sp/>Facturar todo lo pendiente ({pendTot.length})</button>}
                   {(()=>{const bor=grupos.flatMap(x=>x.facturas.filter(f=>f.status==="borrador"));
-                    return bor.length>0&&(puedeFac||hasPerm("editar_factura"))&&<button className="btn-p" style={{background:"#1565C0",borderColor:"#1565C0"}} onClick={()=>facEmitirVarios(bor)}>📤 Emitir todo ({bor.length})</button>;})()}
+                    return bor.length>0&&(puedeFac||hasPerm("editar_factura"))&&<button className="btn-p" style={{background:"#1565C0",borderColor:"#1565C0"}} onClick={()=>facEmitirVarios(bor)}><Ico e="📤" sp/>Emitir todo ({bor.length})</button>;})()}
                 </span>
               </div>
               <div className="card" style={{padding:0,overflow:"hidden"}}>
@@ -9675,7 +9770,7 @@ export default function SistemaCarga(){
                             <div style={{fontSize:12,color:"var(--t3)"}}>{r.tipo==="cliente"?(r.snapshot?.casillero?`#${r.snapshot.casillero}`:"Cliente"):r.tipo==="agente"?"Agente":"Autónomo"}</div></td>
                           <td style={{textAlign:"right",fontWeight:700}}>{gr.wrs.length}</td>
                           <td style={{textAlign:"right",fontFamily:"'DM Mono',monospace"}}>{r2(cobrar)} {uniG}</td>
-                          <td>{tf?<span style={{fontSize:13}}>{tf._especial&&<b style={{color:"#E65100"}}>⭐ </b>}{fmtMoney(isAereoG?tf.porLb:tf.porFt3,tf.moneda)}/{uniG}<div style={{fontSize:11,color:"var(--t3)"}}>{tf._especial?"Especial":"Predeterminada"} · mín. {fmtMoney(tf.min,tf.moneda)}</div></span>
+                          <td>{tf?<span style={{fontSize:13}}>{tf._especial&&<b style={{color:"#E65100"}}><Ico e="⭐" solo/></b>}{fmtMoney(isAereoG?tf.porLb:tf.porFt3,tf.moneda)}/{uniG}<div style={{fontSize:11,color:"var(--t3)"}}>{tf._especial?"Especial":"Predeterminada"} · mín. {fmtMoney(tf.min,tf.moneda)}</div></span>
                             :<span style={{fontSize:13,color:"var(--red)",fontWeight:700}}>Sin tarifa</span>}</td>
                           <td style={{textAlign:"right",fontFamily:"'DM Mono',monospace",fontWeight:800}}>
                             {gr.facturas.map(f=><div key={f.id}>{fmtMoney(f.total,f.moneda)}</div>)}
@@ -9685,13 +9780,13 @@ export default function SistemaCarga(){
                                 <span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)"}}>{f.id}</span>{chipF(f)}</div>)}
                               {gr.pendientes.length>0&&<span style={{fontSize:12,fontWeight:700,color:"var(--orange)"}}>{gr.pendientes.length} WR sin facturar</span>}</td>
                           <td><div style={{display:"flex",gap:6,flexWrap:"wrap",justifyContent:"flex-end"}}>
-                            {gr.pendientes.length>0&&puedeFac&&<button className="btn-p" style={{fontSize:13,padding:"5px 12px"}} onClick={()=>facturarUno(gr)}>🧾 Facturar</button>}
+                            {gr.pendientes.length>0&&puedeFac&&<button className="btn-p" style={{fontSize:13,padding:"5px 12px"}} onClick={()=>facturarUno(gr)}><Ico e="🧾" sp/>Facturar</button>}
                             {gr.facturas.filter(f=>f.status==="borrador").map(f=><Fragment key={f.id}>
-                              <button className="btn-s" style={{fontSize:13,padding:"5px 10px"}} onClick={()=>facOpenEdit(f)}>✏️ Revisar</button>
-                              <button className="btn-p" style={{fontSize:13,padding:"5px 10px",background:"#1565C0",borderColor:"#1565C0"}} onClick={()=>facEmitirRapido(f)}>📤 Emitir</button>
+                              <button className="btn-s" style={{fontSize:13,padding:"5px 10px"}} onClick={()=>facOpenEdit(f)}><Ico e="✏️" sp/>Revisar</button>
+                              <button className="btn-p" style={{fontSize:13,padding:"5px 10px",background:"#1565C0",borderColor:"#1565C0"}} onClick={()=>facEmitirRapido(f)}><Ico e="📤" sp/>Emitir</button>
                             </Fragment>)}
-                            {gr.facturas.filter(f=>f.status==="emitida"&&(hasPerm("editar_factura")||hasPerm("facturar"))).map(f=><button key={"e"+f.id} className="btn-s" style={{fontSize:13,padding:"5px 10px"}} onClick={()=>facOpenEdit(f)}>✏️ Editar</button>)}
-                            {gr.facturas.filter(f=>f.status!=="borrador").map(f=><button key={f.id} className="btn-s" style={{fontSize:13,padding:"5px 10px"}} onClick={()=>setFacPrint(f)}>🖨️ Ver</button>)}
+                            {gr.facturas.filter(f=>f.status==="emitida"&&(hasPerm("editar_factura")||hasPerm("facturar"))).map(f=><button key={"e"+f.id} className="btn-s" style={{fontSize:13,padding:"5px 10px"}} onClick={()=>facOpenEdit(f)}><Ico e="✏️" sp/>Editar</button>)}
+                            {gr.facturas.filter(f=>f.status!=="borrador").map(f=><button key={f.id} className="btn-s" style={{fontSize:13,padding:"5px 10px"}} onClick={()=>setFacPrint(f)}><Ico e="🖨️" sp/>Ver</button>)}
                           </div></td>
                         </tr>
                       );
@@ -9702,7 +9797,7 @@ export default function SistemaCarga(){
               </div>
               {prepaid.length>0&&(
                 <div className="card" style={{padding:0,overflow:"hidden",marginTop:12}}>
-                  <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",fontSize:15,fontWeight:700,color:"var(--navy)"}}>💳 PREPAID ({prepaid.length})</div>
+                  <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",fontSize:15,fontWeight:700,color:"var(--navy)"}}><Ico e="💳" sp/>PREPAID ({prepaid.length})</div>
                   <table className="ct">
                     <thead><tr><th>WR</th><th>Consignatario</th><th>Paga</th><th>Factura</th><th>Total</th><th>Estado</th><th></th></tr></thead>
                     <tbody>{prepaid.map(w=>{const f=facPrepaid.find(x=>x.wrIds.includes(w.id));return(
@@ -9713,8 +9808,8 @@ export default function SistemaCarga(){
                         <td style={{fontFamily:"'DM Mono',monospace"}}>{f?.id||"—"}</td>
                         <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700}}>{f?fmtMoney(f.total,f.moneda):"—"}</td>
                         <td>{f?chipF(f):<span style={{fontSize:12,fontWeight:700,color:"#E65100"}}>Sin facturar</span>}</td>
-                        <td style={{whiteSpace:"nowrap"}}>{f?<button className="btn-s" style={{fontSize:12,padding:"3px 6px"}} onClick={()=>setFacPrint(f)}>🖨️</button>
-                          :puedeFac&&<button className="btn-p" style={{fontSize:12,padding:"3px 8px"}} onClick={()=>{if(!w.tipoEnvio){window.alert("Asigna primero el tipo de envío del WR.");return;}facOpenNew(facConstruirWR(w));}}>💰 Facturar</button>}</td>
+                        <td style={{whiteSpace:"nowrap"}}>{f?<button className="btn-s" style={{fontSize:12,padding:"3px 6px"}} onClick={()=>setFacPrint(f)}><Ico e="🖨️" solo/></button>
+                          :puedeFac&&<button className="btn-p" style={{fontSize:12,padding:"3px 8px"}} onClick={()=>{if(!w.tipoEnvio){window.alert("Asigna primero el tipo de envío del WR.");return;}facOpenNew(facConstruirWR(w));}}><Ico e="💰" sp/>Facturar</button>}</td>
                       </tr>);})}</tbody>
                   </table>
                 </div>)}
@@ -9751,7 +9846,7 @@ export default function SistemaCarga(){
           return (
             <div style={{display:"flex",flexDirection:"column",gap:14}}>
               <div className="card" style={{padding:0}}>
-                <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",fontFamily:"Arial,Helvetica,sans-serif",fontSize:16,fontWeight:700,color:"var(--navy)"}}>📊 Ingresos por Período (separado por moneda)</div>
+                <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",fontFamily:"Arial,Helvetica,sans-serif",fontSize:16,fontWeight:700,color:"var(--navy)"}}><Ico e="📊" sp/>Ingresos por Período (separado por moneda)</div>
                 {meses.length===0?<div style={{textAlign:"center",padding:30,color:"var(--t3)"}}>No hay datos para reportar aún.</div>:(
                   <table className="ct">
                     <thead><tr><th>Período</th><th>Mon</th><th>Facturas</th><th>Total Facturado</th><th>Pagado</th><th>Saldo</th><th>% Cobrado</th></tr></thead>
@@ -9782,8 +9877,8 @@ export default function SistemaCarga(){
                 )}
               </div>
               <div className="card" style={{padding:0}}>
-                <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",fontFamily:"Arial,Helvetica,sans-serif",fontSize:16,fontWeight:700,color:"var(--navy)"}}>👥 Quién debe cuánto</div>
-                {deudores.length===0?<div style={{textAlign:"center",padding:30,color:"var(--t3)"}}>No hay deudores. ✅</div>:(
+                <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",fontFamily:"Arial,Helvetica,sans-serif",fontSize:16,fontWeight:700,color:"var(--navy)"}}><Ico e="👥" sp/>Quién debe cuánto</div>
+                {deudores.length===0?<div style={{textAlign:"center",padding:30,color:"var(--t3)"}}>No hay deudores. <Ico e="✅"/></div>:(
                   <table className="ct">
                     <thead><tr><th>Tipo</th><th>Receptor</th><th>Mon</th><th>Facturas</th><th>Total</th><th>Pagado</th><th>Saldo</th></tr></thead>
                     <tbody>
@@ -9903,9 +9998,9 @@ export default function SistemaCarga(){
     // 1) Registrado — siempre
     // ─────────────────────────────────────────────────────────────────────
     lineal.push({
-      key:"registrado", label:"Registrado", ic:"📦", color:"var(--navy)",
+      key:"registrado", label:"Registrado", ic:<Ico e="📦"/>, color:"var(--navy)",
       fecha:w.fecha, user:w.usuario||"", nota:`WR creado · ${w.id}`,
-      extra:w.tipoPago?`💳 ${w.tipoPago}`:null,
+      extra:w.tipoPago?`${w.tipoPago}`:null,
       reached:!!w.fecha,
     });
 
@@ -9942,11 +10037,11 @@ export default function SistemaCarga(){
     const pasoConfirmacion=!!confEffective||tieneTipo||codeImplicaConfirm||histImplicaConfirm||!!guiaConsol;
     const tipoEnvioMostrar=w.tipoEnvio||guiaConsol?.tipoEnvio||"";
     lineal.push({
-      key:"confirmado", label:"Confirmado", ic:"✅", color:"var(--green)",
+      key:"confirmado", label:"Confirmado", ic:<Ico e="✅"/>, color:"var(--green)",
       fecha:confEffective?.fecha||null, fechaAprox:false,
       user:confEffective?.user||"",
       nota:confEffective?.nota||(pasoConfirmacion&&!confEffective?"(fecha exacta no registrada)":""),
-      extra:pasoConfirmacion&&tipoEnvioMostrar?`✈️ Tipo de envío: ${tipoEnvioMostrar}${!w.tipoEnvio&&guiaConsol?` (de guía ${guiaConsol.id})`:""}`:null,
+      extra:pasoConfirmacion&&tipoEnvioMostrar?`Tipo de envío: ${tipoEnvioMostrar}${!w.tipoEnvio&&guiaConsol?` (de guía ${guiaConsol.id})`:""}`:null,
       reached:pasoConfirmacion,
     });
 
@@ -9968,11 +10063,11 @@ export default function SistemaCarga(){
     const POST_CONSOLIDADO=["5","6","6.2","7","8","9","10","11","12","13","14","15","16","17","18","18.1","18.2","18.3","19","20","20.1","20.2","21","22","23"];
     const hCons=buildHito("4",POST_CONSOLIDADO,guiaConsol?.fecha||null,guiaConsol?`(según fecha de guía ${guiaConsol.id})`:"");
     lineal.push({
-      key:"consolidado", label:"Consolidado", ic:"🗂️", color:"var(--cyan)",
+      key:"consolidado", label:"Consolidado", ic:<Ico e="🗂️"/>, color:"var(--cyan)",
       fecha:hCons.fecha, fechaAprox:hCons.fechaAprox,
       user:hCons.user,
       nota:hCons.nota||(hCons.reached&&!hCons.fecha?"(fecha exacta no registrada)":""),
-      extra:guiaConsol?`📋 Guía: ${guiaConsol.id} · ${guiaConsol.destino||""}`:null,
+      extra:guiaConsol?`Guía: ${guiaConsol.id} · ${guiaConsol.destino||""}`:null,
       reached:hCons.reached,
     });
 
@@ -9982,7 +10077,7 @@ export default function SistemaCarga(){
     const POST_ALMACEN=["18","18.1","18.2","18.3","19","20","20.1","20.2","21","22","23"];
     const hRec=buildHito("17",POST_ALMACEN);
     lineal.push({
-      key:"recibido", label:"Recibido en Almacén", ic:"📥", color:"var(--purple)",
+      key:"recibido", label:"Recibido en Almacén", ic:<Ico e="📥"/>, color:"var(--purple)",
       fecha:hRec.fecha, fechaAprox:hRec.fechaAprox,
       user:hRec.user,
       nota:hRec.nota||(hRec.reached&&!hRec.fecha?"(fecha exacta no registrada)":""),
@@ -9993,7 +10088,7 @@ export default function SistemaCarga(){
     const POST_PORENTREGA=["20.1","20.2","21","22","23"];
     const hPE=buildHito("20",POST_PORENTREGA);
     lineal.push({
-      key:"porentrega", label:"Por Entrega", ic:"🚚", color:"var(--sky)",
+      key:"porentrega", label:"Por Entrega", ic:<Ico e="🚚"/>, color:"var(--sky)",
       fecha:hPE.fecha, fechaAprox:hPE.fechaAprox,
       user:hPE.user,
       nota:hPE.nota||(hPE.reached&&!hPE.fecha?"(fecha exacta no registrada)":""),
@@ -10007,11 +10102,11 @@ export default function SistemaCarga(){
     const hEnt=buildHito("21",POST_ENTREGADO,dnRel?.fecha||null,dnRel?`(según nota ${dnRel.id})`:"");
     const entReached=hEnt.reached||!!dnRel;
     lineal.push({
-      key:"entregado", label:"Entregado", ic:"📝", color:"var(--green)",
+      key:"entregado", label:"Entregado", ic:<Ico e="📝"/>, color:"var(--green)",
       fecha:hEnt.fecha, fechaAprox:hEnt.fechaAprox,
       user:hEnt.user,
       nota:hEnt.nota||(entReached&&!hEnt.fecha?"(fecha exacta no registrada)":""),
-      extra:dnRel?`📋 Nota ${dnRel.id} → ${dnRel.receptorNombre||dnRel.consignatario||""}`:null,
+      extra:dnRel?`Nota ${dnRel.id} → ${dnRel.receptorNombre||dnRel.consignatario||""}`:null,
       reached:entReached,
     });
 
@@ -10023,11 +10118,11 @@ export default function SistemaCarga(){
     const cobradoReached=!!cobradoEntry||!!facPagada;
     const cobradoFecha=cobradoEntry?.fecha||facPagada?.fechaEmision||facPagada?.fecha||null;
     lineal.push({
-      key:"cobrado", label:"Cobrado", ic:"💰", color:"var(--gold2)",
+      key:"cobrado", label:"Cobrado", ic:<Ico e="💰"/>, color:"var(--gold2)",
       fecha:cobradoFecha, fechaAprox:!cobradoEntry&&!!facPagada,
       user:cobradoEntry?.user||"",
       nota:cobradoEntry?.nota||(!cobradoEntry&&facPagada?`(según factura ${facPagada.id})`:(cobradoReached&&!cobradoFecha?"(fecha exacta no registrada)":"")),
-      extra:facPagada?`📋 Factura ${facPagada.id} · ${facPagada.moneda} ${(parseFloat(facPagada.total)||0).toFixed(2)}`:null,
+      extra:facPagada?`Factura ${facPagada.id} · ${facPagada.moneda} ${(parseFloat(facPagada.total)||0).toFixed(2)}`:null,
       reached:cobradoReached,
     });
 
@@ -10043,21 +10138,21 @@ export default function SistemaCarga(){
     if(esReempacado){
       const reempEntry=findFirst(["2.3"]);
       especial={
-        key:"reempacado", label:"Reempacado", ic:"🔁", color:"var(--purple)",
+        key:"reempacado", label:"Reempacado", ic:<Ico e="🔁"/>, color:"var(--purple)",
         fecha:reempEntry?.fecha||null, user:reempEntry?.user||"", nota:reempEntry?.nota||"",
-        extra:w.reempacadoEn?`📦 Reempacado en: ${w.reempacadoEn}`:null,
+        extra:w.reempacadoEn?`Reempacado en: ${w.reempacadoEn}`:null,
         reached:true, terminal:true,
-        seccionTitulo:"🔁 Estado especial · Reempacado",
+        seccionTitulo:"Estado especial · Reempacado",
       };
     }else if(esEgresado){
       const egresEntry=findFirst(["25"]);
       const cr=(cargoReleases||[]).find(c=>!c.anulado&&Array.isArray(c.wrIds)&&c.wrIds.includes(w.id));
       especial={
-        key:"despachado", label:"Despachado (Egresado)", ic:"🚀", color:"var(--orange)",
+        key:"despachado", label:"Despachado (Egresado)", ic:<Ico e="🚀"/>, color:"var(--orange)",
         fecha:egresEntry?.fecha||cr?.fecha||null, user:egresEntry?.user||cr?.usuario||"", nota:egresEntry?.nota||"",
-        extra:cr?`📋 Egreso ${cr.id} → ${cr.agenteCarga||"agente"}`:null,
+        extra:cr?`Egreso ${cr.id} → ${cr.agenteCarga||"agente"}`:null,
         reached:true, terminal:true,
-        seccionTitulo:"🚀 Estado especial · Egresado (Cargo Release)",
+        seccionTitulo:"Estado especial · Egresado (Cargo Release)",
       };
     }
     return {lineal,especial};
@@ -10191,7 +10286,7 @@ export default function SistemaCarga(){
       <div className="page-scroll">
         <div className="card" style={{marginBottom:14}}>
           <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",marginBottom:10}}>
-            <div style={{fontSize:17,fontWeight:700,color:"var(--navy)"}}>🔁 Reempaque de WR</div>
+            <div style={{fontSize:17,fontWeight:700,color:"var(--navy)"}}><Ico e="🔁" sp/>Reempaque de WR</div>
             <div style={{marginLeft:"auto",display:"flex",gap:8,alignItems:"center"}}>
               <input className="fi" placeholder="Buscar WR, consignatario, tracking…" value={rpqSearch} onChange={e=>setRpqSearch(e.target.value)} style={{fontSize:14,padding:"6px 10px",width:260}}/>
               <span style={{fontSize:13,color:"var(--t2)",fontWeight:600}}>Seleccionados: {rpqSel.length}</span>
@@ -10231,7 +10326,7 @@ export default function SistemaCarga(){
             <button
               onClick={()=>setRpqHistOpen(p=>!p)}
               style={{background:"none",border:"none",cursor:"pointer",fontSize:15,fontWeight:700,color:"var(--navy)",padding:0}}>
-              {rpqHistOpen?"▼":"▶"} 📜 Histórico de Reempaques
+              {rpqHistOpen?"▼":"▶"} <Ico e="📜" sp/>Histórico de Reempaques
             </button>
             <span style={{fontSize:12,color:"var(--t3)"}}>
               {rpqHistOpen?`${yaReempacados.length} resultado${yaReempacados.length===1?"":"s"}`:""}
@@ -10323,7 +10418,7 @@ export default function SistemaCarga(){
       if(!wrIds.includes(match.id)){
         // Es SOBRANTE: el WR llegó pero no estaba en la lista de esta guía
         const ok=window.confirm(
-          `⚠️ WR ${match.id} no pertenece a la guía ${rdSelGuia}.\n`+
+          `WR ${match.id} no pertenece a la guía ${rdSelGuia}.\n`+
           `Estado actual: ${match.status?.code} ${match.status?.label||""}\n\n`+
           `¿Registrar como SOBRANTE (19)? Luego decidirás si pasa a Por Entrega o vuelve a Consolidado para la próxima guía.`
         );
@@ -10505,8 +10600,8 @@ export default function SistemaCarga(){
     if(!window.confirm(
       `¿Cerrar recepción de la guía ${guia.id}?\n`+
       `✓ ${recibidos.length} recibidos pasarán a Por Entrega (20)\n`+
-      `⚠️ ${faltantes} faltantes/investigación permanecerán pendientes\n`+
-      `➕ ${sobrantes} sobrantes permanecerán como 19 (resuélvelos aparte)\n\n`+
+      `${faltantes} faltantes/investigación permanecerán pendientes\n`+
+      `${sobrantes} sobrantes permanecerán como 19 (resuélvelos aparte)\n\n`+
       `La guía se archivará.`
     ))return;
     // Promover 17 → 20
@@ -10524,7 +10619,7 @@ export default function SistemaCarga(){
     logAction(`Cerró recepción guía ${guia.id}`,`${recibidos.length} WR → Por Entrega · ${faltantes} faltantes · ${sobrantes} sobrantes`);
     setRdSelGuia("");
     // Las facturas se generan con el botón de Facturación (no automáticamente)
-    window.alert(`✅ Guía ${guia.id} cerrada.\n${recibidos.length} WR pasaron a Por Entrega (20).`);
+    window.alert(`Guía ${guia.id} cerrada.\n${recibidos.length} WR pasaron a Por Entrega (20).`);
   };
   // Marca como recibidos (17 Almacén) todos los WR de una guía, en un paso.
   // NO archiva la guía — la archivación requiere `cerrarRecepcionGuia` (paso 2).
@@ -10547,7 +10642,7 @@ export default function SistemaCarga(){
       return upd;
     }));
     logAction(`Recibió guía ${guia.id} (bulk)`,`${cambiados} WR → Almacén`);
-    window.alert(`✅ ${cambiados} WR marcados como recibidos (Almacén).\nUsa "Cerrar recepción de guía" cuando termines el checklist para pasarlos a Por Entrega.`);
+    window.alert(`${cambiados} WR marcados como recibidos (Almacén).\nUsa "Cerrar recepción de guía" cuando termines el checklist para pasarlos a Por Entrega.`);
   };
   // ── CARGO RELEASE (Egreso) ──────────────────────────────────────────────────
   // Un Cargo Release agrupa 1+ WRs entregados a un agente/transportista.
@@ -10606,7 +10701,7 @@ export default function SistemaCarga(){
     dbUpsertCargoRelease(cr);
     logAction(editing?"Editó egreso":"Creó egreso",`${id} · ${cr.wrIds.length} WR → ${cr.agenteCarga}`);
     setCrModal(null);
-    if(!editing)window.alert(`✅ Egreso ${id} creado.\n${cr.wrIds.length} WR → Egresado (25).`);
+    if(!editing)window.alert(`Egreso ${id} creado.\n${cr.wrIds.length} WR → Egresado (25).`);
   };
   const crAnular=(cr)=>{
     if(!hasPerm("editar_egreso")){window.alert("Tu rol no tiene permiso.");return;}
@@ -10918,7 +11013,7 @@ export default function SistemaCarga(){
     }
     if(f.metodoEntrega==="domicilio"&&!f.direccionEntrega.trim()){window.alert("Falta la dirección de entrega.");return;}
     const pend=dnFacturasPendientes(f.wrs.filter(w=>f.wrIds.includes(w.id)));
-    if(pend.length>0&&!window.confirm(`⚠️ Hay ${pend.length} factura(s) con pago pendiente:\n${pend.map(x=>`• ${x.id} — ${fmtMoney(x.total-(x.pagado||0),x.moneda)}`).join("\n")}\n\n¿Entregar de todos modos?`))return;
+    if(pend.length>0&&!window.confirm(`Hay ${pend.length} factura(s) con pago pendiente:\n${pend.map(x=>`• ${x.id} — ${fmtMoney(x.total-(x.pagado||0),x.moneda)}`).join("\n")}\n\n¿Entregar de todos modos?`))return;
     const now=new Date();
     const id=dnBuildId();
     const aSucursal=f.tipo==="despacho"&&f.entidad.tipo==="oficina";
@@ -11022,7 +11117,7 @@ export default function SistemaCarga(){
     dbUpsertDeliveryNote(dn);
     logAction(editing?"Editó entrega":"Creó entrega",`${id} · ${dn.wrIds.length} WR → ${dn.consignatario}`);
     setDnModal(null);
-    if(!editing)window.alert(`✅ Nota de entrega ${id} creada.\n${dn.wrIds.length} WR → Entregado (21).`);
+    if(!editing)window.alert(`Nota de entrega ${id} creada.\n${dn.wrIds.length} WR → Entregado (21).`);
   };
   const dnAnular=(dn)=>{
     if(!hasPerm("revertir_entrega")&&!hasPerm("editar_entrega")){window.alert("Tu rol no tiene permiso.");return;}
@@ -11092,7 +11187,7 @@ export default function SistemaCarga(){
     <div className="page-scroll">
       <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,flexWrap:"wrap"}}>
         <div style={{flex:1,minWidth:240}}>
-          <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:18,fontWeight:700,color:"var(--navy)"}}>📶 Status de Guías</div>
+          <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:18,fontWeight:700,color:"var(--navy)"}}><Ico e="📶" sp/>Status de Guías</div>
         </div>
         <div style={{position:"relative"}}>
           <input className="fi" placeholder="Buscar guía, destino, AWB/BL, vuelo…" value={lmSearch} onChange={e=>setLmSearch(e.target.value)}
@@ -11119,7 +11214,7 @@ export default function SistemaCarga(){
           if(ph.canal==="consolidacion"){
             editable=!origenBloqueado&&statusInChannel(ph.advance,"consolidacion");
             tip=origenBloqueado?`${ph.label} — bloqueada (la guía ya pasó a Tránsito 2)`
-              :`${ph.label} — click para fijar esta fase${ph.advance==="13"?"\n⚠️ Al confirmar Tránsito 2 ya no se podrá retroceder.":""}`;
+              :`${ph.label} — click para fijar esta fase${ph.advance==="13"?"\nAl confirmar Tránsito 2 ya no se podrá retroceder.":""}`;
           }else{
             editable=origenBloqueado&&!enAlmacen&&puedeRecep&&statusInChannel(ph.advance,"recepcion");
             tip=enAlmacen?`${ph.label} — la guía ya está en almacén`
@@ -11129,7 +11224,7 @@ export default function SistemaCarga(){
           }
           const onClick=editable?(()=>{
             if(ph.canal==="consolidacion"){
-              if(ph.advance==="13"&&!window.confirm(`⚠️ Al fijar Tránsito 2, la guía ${c.id} quedará BLOQUEADA en las fases de origen/tránsito.\nNo podrás regresar a fases anteriores.\nSe habilitarán las fases de destino (Ad. Dest., Auditoría 3, Liberado 3).\n\n¿Confirmar?`))return;
+              if(ph.advance==="13"&&!window.confirm(`Al fijar Tránsito 2, la guía ${c.id} quedará BLOQUEADA en las fases de origen/tránsito.\nNo podrás regresar a fases anteriores.\nSe habilitarán las fases de destino (Ad. Dest., Auditoría 3, Liberado 3).\n\n¿Confirmar?`))return;
               updateGuideStatus(c.id,ph.advance);
             }else{
               if(window.confirm(`¿Fijar el estado "${ph.label}" en la guía ${c.id}?\nSe aplicará a todos los WR pendientes de la guía.`))
@@ -11194,7 +11289,7 @@ export default function SistemaCarga(){
             <div className="ov" onClick={()=>setRdArchView(null)}>
               <div className="modal mlg" onClick={e=>e.stopPropagation()} style={{maxHeight:"90vh",display:"flex",flexDirection:"column"}}>
                 <div className="mhd">
-                  <div className="mt">📦 Guía {c.id}{c.archivada?" — Cerrada":""}</div>
+                  <div className="mt"><Ico e="📦" sp/>Guía {c.id}{c.archivada?" — Cerrada":""}</div>
                   <div style={{display:"flex",gap:6}}>
                     <button className="mcl" onClick={()=>setRdArchView(null)}>✕</button>
                   </div>
@@ -11206,7 +11301,7 @@ export default function SistemaCarga(){
                       <div><span style={{color:"var(--t3)",fontWeight:600}}>Origen:</span> <strong style={{color:"var(--t1)"}}>{guiaOrigen(c)}</strong></div>
                       <div><span style={{color:"var(--t3)",fontWeight:600}}>Destino:</span> <strong style={{color:"var(--t1)"}}>{c.destino||"—"}</strong></div>
                       <div><span style={{color:"var(--t3)",fontWeight:600}}>Tipo de envío:</span> <TypeBadge t={c.tipoEnvio}/></div>
-                      <div><span style={{color:"var(--t3)",fontWeight:600}}>Estado:</span> {c.archivada?<strong style={{color:"var(--green)"}}>🗄️ Cerrada</strong>:<StBadge st={getStatus(guiaCode(c))||{cls:"s3",label:c.status||"En preparación"}}/>}</div>
+                      <div><span style={{color:"var(--t3)",fontWeight:600}}>Estado:</span> {c.archivada?<strong style={{color:"var(--green)"}}><Ico e="🗄️" sp/>Cerrada</strong>:<StBadge st={getStatus(guiaCode(c))||{cls:"s3",label:c.status||"En preparación"}}/>}</div>
                       <div><span style={{color:"var(--t3)",fontWeight:600}}>Fecha creación:</span> {fmtDate(c.fecha)}</div>
                       <div><span style={{color:"var(--t3)",fontWeight:600}}>Fecha salida:</span> {c.fechaSalida?fmtDate(c.fechaSalida):"—"}</div>
                       <div><span style={{color:"var(--t3)",fontWeight:600}}>Fecha llegada:</span> {(()=>{const f=fechaLlegadaGuia(c);return f?`${fmtDate(f)} ${fmtTime(f)}`:"—";})()}</div>
@@ -11239,7 +11334,7 @@ export default function SistemaCarga(){
                   ):containers.map((ct,i)=>(
                     <div key={i} style={{border:"2px solid var(--navy)",borderRadius:10,marginBottom:12,overflow:"hidden"}}>
                       <div style={{background:"var(--navy)",padding:"8px 14px",display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
-                        <span style={{color:"#E5AE3A",fontWeight:700,fontSize:14}}>📦 Contenedor {i+1}{ct.tipo?` — ${ct.tipo}`:""}</span>
+                        <span style={{color:"#E5AE3A",fontWeight:700,fontSize:14}}><Ico e="📦" sp/>Contenedor {i+1}{ct.tipo?` — ${ct.tipo}`:""}</span>
                         <div style={{flex:1}}/>
                         <span style={{fontSize:12,color:"rgba(255,255,255,.7)"}}>
                           {[ct.largo,ct.ancho,ct.alto].filter(Boolean).join(" × ")}{[ct.largo,ct.ancho,ct.alto].filter(Boolean).length===3?" in":""}
@@ -11272,15 +11367,15 @@ export default function SistemaCarga(){
                 <div className="mft">
                   {!c.archivada&&hasPerm("borrar_guia")&&(
                     <button className="btn-s" style={{color:"var(--red)",borderColor:"var(--red)",marginRight:"auto"}}
-                      onClick={()=>{if(guiaBorrar(c))setRdArchView(null);}}>🗑 Borrar</button>
+                      onClick={()=>{if(guiaBorrar(c))setRdArchView(null);}}><Ico e="🗑" sp/>Borrar</button>
                   )}
                   <button className="btn-s" onClick={()=>setRdArchView(null)}>Cerrar</button>
-                  <button className="btn-c" onClick={()=>guiaEtiquetas(c)}>🏷️ Etiquetas</button>
+                  <button className="btn-c" onClick={()=>guiaEtiquetas(c)}><Ico e="🏷️" sp/>Etiquetas</button>
                   {c.archivada&&hasPerm("imp_guia")&&(
-                    <button className="btn-s" onClick={()=>printGuiaArchivada(c)}>🖨 Imprimir guía</button>
+                    <button className="btn-s" onClick={()=>printGuiaArchivada(c)}><Ico e="🖨" sp/>Imprimir guía</button>
                   )}
                   {hasPerm("editar_guia")&&(
-                    <button className="btn-p" onClick={()=>{setRdArchView(null);setLmTab("master");setTab("loadingmaster");guiaEditar(c);}}>✏️ Editar</button>
+                    <button className="btn-p" onClick={()=>{setRdArchView(null);setLmTab("master");setTab("loadingmaster");guiaEditar(c);}}><Ico e="✏️" sp/>Editar</button>
                   )}
                 </div>
               </div>
@@ -11297,7 +11392,7 @@ export default function SistemaCarga(){
     <div className="cnt">
       <div style={{padding:"12px 18px 0"}}>
         <div className="tabs" style={{marginBottom:0}}>
-          {[["master","🗂️ Master",consolList.length],["status","📶 Status",nAbiertas],["recepcion","📬 Recepción",nRecep]].map(([v,l,n])=>(
+          {[["master","Master",consolList.length],["status","Status",nAbiertas],["recepcion","Recepción",nRecep]].map(([v,l,n])=>(
             <div key={v} className={`tab ${lmTab===v?"on":""}`} onClick={()=>setLmTab(v)}>{l}<span className="t-cnt">{n}</span></div>
           ))}
         </div>
@@ -11353,30 +11448,30 @@ export default function SistemaCarga(){
       if(!hasPerm("hacer_recepcion_dest"))return<span style={{fontSize:12,color:"var(--t4)"}}>—</span>;
       // Pre-destino (14/15/16/13/etc) o estados de tránsito
       if(!["17","18","18.1","18.2","18.3","19","20","20.1","20.2","21","22","23","25"].includes(c)){
-        if(guiaSel&&!puedeRecibir)return<span style={{fontSize:11,fontWeight:600,color:"#8A6100"}}>⏳ Esperando Liberado 3</span>;
+        if(guiaSel&&!puedeRecibir)return<span style={{fontSize:11,fontWeight:600,color:"#8A6100"}}><Ico e="⏳" sp/>Esperando Liberado 3</span>;
         return(<div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
           <button className="btn-s" style={{fontSize:11,padding:"3px 7px",background:"#E8F5E9",borderColor:"#81C784",color:"#2E7D32"}}
-            onClick={()=>recibirEnDestino(w,`Checklist guía ${guiaSel?.id||"?"}`)}>✅ Recibir</button>
+            onClick={()=>recibirEnDestino(w,`Checklist guía ${guiaSel?.id||"?"}`)}><Ico e="✅" sp/>Recibir</button>
           <button className="btn-s" style={{fontSize:11,padding:"3px 7px",background:"#FFEBEE",borderColor:"#E57373",color:"#C62828"}}
-            onClick={()=>marcarFaltante(w,guiaSel?.id)}>❌ Faltante</button>
+            onClick={()=>marcarFaltante(w,guiaSel?.id)}><Ico e="❌" sp/>Faltante</button>
         </div>);
       }
       if(c==="17"){
         return(<div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
           <span style={{fontSize:11,fontWeight:700,color:"#2E7D32"}}>✓ Recibido</span>
-          {hasPerm("editar_recepcion_dest")&&<button className="btn-s" style={{fontSize:11,padding:"3px 7px"}} onClick={()=>revertirRecepcion(w)}>↩️ Revertir</button>}
+          {hasPerm("editar_recepcion_dest")&&<button className="btn-s" style={{fontSize:11,padding:"3px 7px"}} onClick={()=>revertirRecepcion(w)}><Ico e="↩️" sp/>Revertir</button>}
         </div>);
       }
       // Faltantes: se resuelven en Alertas (investigar, apareció, indemnizado, pérdida)
       if(["18","18.1"].includes(c)){
         return(<div style={{display:"flex",gap:4,flexWrap:"wrap",alignItems:"center"}}>
-          <span style={{fontSize:11,fontWeight:700,color:c==="18"?"#C62828":"#E65100"}}>{c==="18"?"⚠️ Faltante":"🔍 En investigación"}</span>
-          <button className="btn-s" style={{fontSize:11,padding:"3px 7px"}} onClick={()=>{setAlTab("abiertas");setAlSearch(w.id);setTab("alerts");}}>🔔 Ver en Alertas</button>
+          <span style={{fontSize:11,fontWeight:700,color:c==="18"?"#C62828":"#E65100"}}>{c==="18"?"Faltante":"En investigación"}</span>
+          <button className="btn-s" style={{fontSize:11,padding:"3px 7px"}} onClick={()=>{setAlTab("abiertas");setAlSearch(w.id);setTab("alerts");}}><Ico e="🔔" sp/>Ver en Alertas</button>
         </div>);
       }
-      if(c==="18.2")return<span style={{fontSize:11,fontWeight:700,color:"#2E7D32"}}>💵 Indemnizado</span>;
-      if(c==="18.3")return<span style={{fontSize:11,fontWeight:700,color:"var(--t3)"}}>❌ Pérdida cerrada</span>;
-      if(c==="19")return<span style={{fontSize:11,fontWeight:700,color:"#7B1FA2"}}>➕ Sobrante</span>;
+      if(c==="18.2")return<span style={{fontSize:11,fontWeight:700,color:"#2E7D32"}}><Ico e="💵" sp/>Indemnizado</span>;
+      if(c==="18.3")return<span style={{fontSize:11,fontWeight:700,color:"var(--t3)"}}><Ico e="❌" sp/>Pérdida cerrada</span>;
+      if(c==="19")return<span style={{fontSize:11,fontWeight:700,color:"#7B1FA2"}}><Ico e="➕" sp/>Sobrante</span>;
       return<span style={{fontSize:11,fontWeight:700,color:"var(--t3)"}}>{c} {w.status?.label||""}</span>;
     };
     return (
@@ -11384,13 +11479,13 @@ export default function SistemaCarga(){
         {/* HEADER + TABS */}
         <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
           <div style={{flex:1}}>
-            <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:18,fontWeight:700,color:"var(--navy)"}}>{vista==="archivadas"?"🗄️ Guías Cerradas":"📬 Recepción en Almacén"}</div>
+            <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:18,fontWeight:700,color:"var(--navy)"}}>{vista==="archivadas"?"Guías Cerradas":"Recepción en Almacén"}</div>
             <div style={{fontSize:13,color:"var(--t3)",marginTop:2}}>{vista==="archivadas"?"Guías cuya recepción ya se cerró (archivadas). Se pueden ver, imprimir o desarchivar.":"Guías desde Tránsito 2 en adelante. Recibe guías completas o WR individuales; al cerrar la recepción la guía pasa a Archivadas."}</div>
           </div>
           {!modo&&(
           <div style={{display:"flex",gap:4,background:"#EEF2F7",border:"1px solid #DCE2EC",borderRadius:8,padding:3}}>
-            <button onClick={()=>setRdTab("pendientes")} style={{fontSize:13,fontWeight:600,padding:"6px 14px",borderRadius:6,border:"none",cursor:"pointer",background:rdTab==="pendientes"?"var(--navy)":"transparent",color:rdTab==="pendientes"?"#fff":"var(--t2)"}}>⏳ Pendientes ({guiasActivas.length})</button>
-            <button onClick={()=>setRdTab("archivadas")} style={{fontSize:13,fontWeight:600,padding:"6px 14px",borderRadius:6,border:"none",cursor:"pointer",background:rdTab==="archivadas"?"var(--navy)":"transparent",color:rdTab==="archivadas"?"#fff":"var(--t2)"}}>📦 Archivadas ({guiasArchivadas.length})</button>
+            <button onClick={()=>setRdTab("pendientes")} style={{fontSize:13,fontWeight:600,padding:"6px 14px",borderRadius:6,border:"none",cursor:"pointer",background:rdTab==="pendientes"?"var(--navy)":"transparent",color:rdTab==="pendientes"?"#fff":"var(--t2)"}}><Ico e="⏳" sp/>Pendientes ({guiasActivas.length})</button>
+            <button onClick={()=>setRdTab("archivadas")} style={{fontSize:13,fontWeight:600,padding:"6px 14px",borderRadius:6,border:"none",cursor:"pointer",background:rdTab==="archivadas"?"var(--navy)":"transparent",color:rdTab==="archivadas"?"#fff":"var(--t2)"}}><Ico e="📦" sp/>Archivadas ({guiasArchivadas.length})</button>
           </div>
           )}
         </div>
@@ -11399,13 +11494,13 @@ export default function SistemaCarga(){
         {vista==="pendientes"&&<>
           {/* SCAN / MANUAL */}
           <div className="card" style={{marginBottom:14}}>
-            <div style={{fontSize:15,fontWeight:700,color:"var(--navy)",marginBottom:8}}>🔎 Escanear o seleccionar guía</div>
+            <div style={{fontSize:15,fontWeight:700,color:"var(--navy)",marginBottom:8}}><Ico e="🔎" sp/>Escanear o seleccionar guía</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,alignItems:"end"}}>
               <div>
                 <div style={{fontSize:12,color:"var(--t3)",marginBottom:3,fontWeight:600}}>Por escaneo (N° guía / N° WR / Tracking)</div>
                 <div style={{display:"flex",gap:6}}>
                   <input className="fi" placeholder="Escanear o escribir…" value={rdScan} onChange={e=>setRdScan(e.target.value.toUpperCase())} onKeyDown={e=>{if(e.key==="Enter"&&hasPerm("hacer_recepcion_dest"))rdOnScan();}} disabled={!hasPerm("hacer_recepcion_dest")} style={{flex:1,fontFamily:"'DM Mono',monospace",fontSize:15,letterSpacing:1,padding:"8px 12px",opacity:hasPerm("hacer_recepcion_dest")?1:.5}} autoFocus/>
-                  {hasPerm("hacer_recepcion_dest")&&<button className="btn-p" onClick={rdOnScan}>📥 Recibir</button>}
+                  {hasPerm("hacer_recepcion_dest")&&<button className="btn-p" onClick={rdOnScan}><Ico e="📥" sp/>Recibir</button>}
                 </div>
               </div>
               <div>
@@ -11418,19 +11513,19 @@ export default function SistemaCarga(){
                   {guiaSel&&puedeRecibir&&hasPerm("hacer_recepcion_dest")&&(
                     <button className="btn-s" title={`Marcar como recibidos todos los ${guiaWrIds.length} WR pendientes de ${guiaSel.id} (bulk → estado 17 Almacén). No archiva.`}
                       onClick={()=>{if(window.confirm(`¿Marcar todos los WR pendientes de ${guiaSel.id} como recibidos (17 Almacén)?\nNo archivará la guía — luego usa "Cerrar Recepción" cuando estés conforme.`))recibirGuiaCompleta(guiaSel,"Recepción bulk (atajo checklist)");}}>
-                      📥 Marcar todos recibidos
+                      <Ico e="📥" sp/>Marcar todos recibidos
                     </button>
                   )}
                 </div>
               </div>
             </div>
-            {!hasPerm("hacer_recepcion_dest")&&<div style={{fontSize:13,color:"var(--red)",fontWeight:600,marginTop:6}}>⚠️ Tu rol no tiene permiso para registrar recepciones.</div>}
+            {!hasPerm("hacer_recepcion_dest")&&<div style={{fontSize:13,color:"var(--red)",fontWeight:600,marginTop:6}}><Ico e="⚠️" sp/>Tu rol no tiene permiso para registrar recepciones.</div>}
           </div>
 
           {/* GUÍAS EN RECEPCIÓN — listado estilo Dashboard; click = abrir checklist */}
           <div className="card" style={{marginBottom:14,padding:0}}>
             <div style={{padding:"10px 14px",fontSize:15,fontWeight:700,color:"var(--navy)",borderBottom:"1px solid var(--b1)"}}>
-              📬 Guías en recepción ({guiasRecep.length})
+              <Ico e="📬" sp/>Guías en recepción ({guiasRecep.length})
             </div>
             {guiasRecep.length===0?(
               <div style={{textAlign:"center",padding:30,color:"var(--t3)",fontSize:13}}>No hay guías en Tránsito 2 o en destino.</div>
@@ -11475,14 +11570,14 @@ export default function SistemaCarga(){
             return(
             <div className="card" style={{marginBottom:14}}>
               <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:8,flexWrap:"wrap"}}>
-                <div style={{fontSize:15,fontWeight:700,color:"var(--navy)"}}>📋 Checklist {guiaSel.id} ({checklist.length} WR)</div>
+                <div style={{fontSize:15,fontWeight:700,color:"var(--navy)"}}><Ico e="📋" sp/>Checklist {guiaSel.id} ({checklist.length} WR)</div>
                 {/* Stats inline */}
                 <div style={{display:"flex",gap:8,fontSize:13,alignItems:"center"}}>
                   <span style={{background:"#E8F5E9",color:"#2E7D32",padding:"2px 8px",borderRadius:10,fontWeight:700,border:"1px solid #A5D6A7"}}>✓ {nRecibidos} recibidos</span>
-                  <span style={{background:"#FFEBEE",color:"#C62828",padding:"2px 8px",borderRadius:10,fontWeight:700,border:"1px solid #EF9A9A"}}>⚠️ {nFaltantes} faltantes</span>
-                  <span style={{background:"#F3E5F5",color:"#7B1FA2",padding:"2px 8px",borderRadius:10,fontWeight:700,border:"1px solid #CE93D8"}}>➕ {sobrantesGuia.length} sobrantes</span>
-                  {nPorEntrega>0&&<span style={{background:"#E3F2FD",color:"#1565C0",padding:"2px 8px",borderRadius:10,fontWeight:700,border:"1px solid #90CAF9"}}>🚚 {nPorEntrega} por entrega</span>}
-                  <span style={{background:nPendientes>0?"#FFF3E0":"#F5F5F5",color:nPendientes>0?"#E65100":"var(--t3)",padding:"2px 8px",borderRadius:10,fontWeight:700,border:`1px solid ${nPendientes>0?"#FFCC80":"#E0E0E0"}`}}>⏳ {nPendientes} pendientes</span>
+                  <span style={{background:"#FFEBEE",color:"#C62828",padding:"2px 8px",borderRadius:10,fontWeight:700,border:"1px solid #EF9A9A"}}><Ico e="⚠️" sp/>{nFaltantes} faltantes</span>
+                  <span style={{background:"#F3E5F5",color:"#7B1FA2",padding:"2px 8px",borderRadius:10,fontWeight:700,border:"1px solid #CE93D8"}}><Ico e="➕" sp/>{sobrantesGuia.length} sobrantes</span>
+                  {nPorEntrega>0&&<span style={{background:"#E3F2FD",color:"#1565C0",padding:"2px 8px",borderRadius:10,fontWeight:700,border:"1px solid #90CAF9"}}><Ico e="🚚" sp/>{nPorEntrega} por entrega</span>}
+                  <span style={{background:nPendientes>0?"#FFF3E0":"#F5F5F5",color:nPendientes>0?"#E65100":"var(--t3)",padding:"2px 8px",borderRadius:10,fontWeight:700,border:`1px solid ${nPendientes>0?"#FFCC80":"#E0E0E0"}`}}><Ico e="⏳" sp/>{nPendientes} pendientes</span>
                 </div>
                 <input className="fi" placeholder="Buscar en checklist…" value={rdSearch} onChange={e=>setRdSearch(e.target.value)} style={{fontSize:14,padding:"6px 10px",width:200,marginLeft:"auto"}}/>
               </div>
@@ -11493,10 +11588,10 @@ export default function SistemaCarga(){
                 <span style={{fontSize:12,fontWeight:700,color:"var(--navy)"}}>Estado de la guía:</span>
                 <StBadge st={stGuiaActual||{cls:"s3",label:guiaSel.status||"—"}}/>
                 <span style={{fontSize:12,color:puedeRecibir?"#1A6040":"#8A6100",fontWeight:600}}>
-                  {puedeRecibir?"✅ Lista para recibir":"⏳ Aún no se puede recibir — la guía debe llegar a Liberado 3 (se cambia en la pestaña Status)"}
+                  {puedeRecibir?"Lista para recibir":"Aún no se puede recibir — la guía debe llegar a Liberado 3 (se cambia en la pestaña Status)"}
                 </span>
                 {!puedeRecibir&&<button type="button" className="btn-s" style={{fontSize:12,padding:"3px 10px",fontWeight:700,marginLeft:"auto"}}
-                  onClick={()=>{setLmSearch(guiaSel.id);setLmTab("status");}}>📶 Ir a Status</button>}
+                  onClick={()=>{setLmSearch(guiaSel.id);setLmTab("status");}}><Ico e="📶" sp/>Ir a Status</button>}
               </div>
 
               <div style={{maxHeight:"62vh",overflow:"auto",border:"1px solid var(--b1)",borderRadius:8}}>
@@ -11531,7 +11626,7 @@ export default function SistemaCarga(){
               {/* SOBRANTES DE ESTA GUÍA */}
               {sobrantesGuia.length>0&&(
                 <div style={{marginTop:12,border:"1px dashed #CE93D8",borderRadius:8,padding:10,background:"#FCF5FF"}}>
-                  <div style={{fontSize:14,fontWeight:700,color:"#7B1FA2",marginBottom:6}}>➕ Sobrantes detectados en {guiaSel.id} ({sobrantesGuia.length})</div>
+                  <div style={{fontSize:14,fontWeight:700,color:"#7B1FA2",marginBottom:6}}><Ico e="➕" sp/>Sobrantes detectados en {guiaSel.id} ({sobrantesGuia.length})</div>
                   <div style={{maxHeight:"40vh",overflow:"auto"}}>
                     <table className="wt">
                       <thead><tr><th>N° WR</th><th>Consignatario</th><th>Tracking</th><th style={{width:260}}>Resolución</th></tr></thead>
@@ -11545,7 +11640,7 @@ export default function SistemaCarga(){
                               <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
                                 {/* Los sobrantes se resuelven en Alertas */}
                                 <button className="btn-s" style={{fontSize:11,padding:"3px 7px"}}
-                                  onClick={()=>{setAlTab("abiertas");setAlSearch(w.id);setTab("alerts");}}>🔔 Resolver en Alertas</button>
+                                  onClick={()=>{setAlTab("abiertas");setAlSearch(w.id);setTab("alerts");}}><Ico e="🔔" sp/>Resolver en Alertas</button>
                               </div>
                             ):<span style={{fontSize:12,color:"var(--t4)"}}>—</span>}</td>
                           </tr>
@@ -11561,13 +11656,13 @@ export default function SistemaCarga(){
                 <div style={{marginTop:12,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",paddingTop:10,borderTop:"1px solid var(--b2)"}}>
                   <div style={{fontSize:13,color:"var(--t3)"}}>
                     {nPendientes>0
-                      ?<span style={{color:"#E65100",fontWeight:600}}>⚠️ Quedan {nPendientes} WR sin resolver. Márcalos como Recibidos o Faltantes antes de cerrar.</span>
+                      ?<span style={{color:"#E65100",fontWeight:600}}><Ico e="⚠️" sp/>Quedan {nPendientes} WR sin resolver. Márcalos como Recibidos o Faltantes antes de cerrar.</span>
                       :"Todos los WR están resueltos. Listos para cerrar la recepción."}
                   </div>
                   <div style={{flex:1}}/>
                   <button className="btn-p" disabled={nPendientes>0} style={{opacity:nPendientes>0?.45:1,fontSize:14,padding:"8px 18px"}}
                     onClick={()=>cerrarRecepcionGuia(guiaSel)}>
-                    ✅ Cerrar Recepción de Guía ({nRecibidos} → Por Entrega)
+                    <Ico e="✅" sp/>Cerrar Recepción de Guía ({nRecibidos} → Por Entrega)
                   </button>
                 </div>
               )}
@@ -11579,7 +11674,7 @@ export default function SistemaCarga(){
           {!guiaSel&&(
             <div className="card" style={{marginBottom:14}}>
               <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:8}}>
-                <div style={{fontSize:15,fontWeight:700,color:"var(--navy)"}}>⏳ WR pendientes en tránsito destino ({candidatos.length})</div>
+                <div style={{fontSize:15,fontWeight:700,color:"var(--navy)"}}><Ico e="⏳" sp/>WR pendientes en tránsito destino ({candidatos.length})</div>
                 <input className="fi" placeholder="Buscar…" value={rdSearch} onChange={e=>setRdSearch(e.target.value)} style={{fontSize:14,padding:"6px 10px",width:220,marginLeft:"auto"}}/>
               </div>
               <div style={{maxHeight:"60vh",overflow:"auto",border:"1px solid var(--b1)",borderRadius:8}}>
@@ -11598,7 +11693,7 @@ export default function SistemaCarga(){
                           <td><span className="c-cas">{w.casillero||"—"}</span></td>
                           <td><span className="c-trk">{w.tracking||"—"}</span></td>
                           <td><StBadge st={w.status}/></td>
-                          <td>{hasPerm("hacer_recepcion_dest")?<button className="btn-s" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>recibirEnDestino(w,"Recepción manual en destino")}>📥 Recibir</button>:<span style={{fontSize:12,color:"var(--t4)"}}>—</span>}</td>
+                          <td>{hasPerm("hacer_recepcion_dest")?<button className="btn-s" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>recibirEnDestino(w,"Recepción manual en destino")}><Ico e="📥" sp/>Recibir</button>:<span style={{fontSize:12,color:"var(--t4)"}}>—</span>}</td>
                         </tr>
                       ))}
                   </tbody>
@@ -11610,7 +11705,7 @@ export default function SistemaCarga(){
           {enAlmacen.length>0&&(
             <div className="card">
               <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8,flexWrap:"wrap"}}>
-                <div style={{fontSize:15,fontWeight:700,color:"var(--navy)"}}>📦 Últimos WR recibidos en Almacén</div>
+                <div style={{fontSize:15,fontWeight:700,color:"var(--navy)"}}><Ico e="📦" sp/>Últimos WR recibidos en Almacén</div>
               </div>
               <div style={{maxHeight:"50vh",overflow:"auto",border:"1px solid var(--b1)",borderRadius:8}}>
                 <table className="wt">
@@ -11626,7 +11721,7 @@ export default function SistemaCarga(){
                         <td onClick={e=>e.stopPropagation()}>
                           <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
                             <button className="btn-s" style={{fontSize:11,padding:"3px 7px"}}
-                              onClick={()=>setSelWR(w)} title="Abrir detalle del WR">👁 Ver</button>
+                              onClick={()=>setSelWR(w)} title="Abrir detalle del WR"><Ico e="👁" sp/>Ver</button>
                             {hasPerm("hacer_recepcion_dest")&&(
                               <button className="btn-s" style={{fontSize:11,padding:"3px 7px",background:"#E3F2FD",borderColor:"#64B5F6",color:"#1565C0",fontWeight:700}}
                                 title="Mover a Por Entrega (20)"
@@ -11638,7 +11733,7 @@ export default function SistemaCarga(){
                                   setWrList(p=>p.map(x=>x.id===w.id?upd:x));
                                   dbUpsertWR(upd);
                                   logAction("Pasó WR a Por Entrega (individual)",upd.id);
-                                }}>🚚 Pasar a Por Entrega</button>
+                                }}><Ico e="🚚" sp/>Pasar a Por Entrega</button>
                             )}
                           </div>
                         </td>
@@ -11721,10 +11816,10 @@ export default function SistemaCarga(){
                       <td onClick={e=>e.stopPropagation()}>
                         <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
                           <button className="btn-s" style={{fontSize:12,padding:"3px 8px"}} title="Ver detalle de la guía"
-                            onClick={()=>setRdArchView(c)}>👁 Ver</button>
+                            onClick={()=>setRdArchView(c)}><Ico e="👁" sp/>Ver</button>
                           {hasPerm("imp_guia")&&(
                             <button className="btn-s" style={{fontSize:12,padding:"3px 8px"}} title="Imprimir guía archivada"
-                              onClick={()=>printGuiaArchivada(c)}>🖨 Imprimir</button>
+                              onClick={()=>printGuiaArchivada(c)}><Ico e="🖨" sp/>Imprimir</button>
                           )}
                           {hasPerm("editar_guia")&&(
                             <button className="btn-s" style={{fontSize:12,padding:"3px 8px",color:"var(--orange)",borderColor:"var(--orange)"}} title="Desarchivar (volver a pendientes)"
@@ -11739,8 +11834,8 @@ export default function SistemaCarga(){
                                 const wrsBloqueados=wrList.filter(w=>allWrIds.includes(w.id)&&["21","22","23","25"].includes(w.status?.code||""));
                                 if(!window.confirm(
                                   `¿Desarchivar la guía ${c.id}?\n`+
-                                  `↩️ ${wrsEnPorEntrega.length} WR en Por Entrega volverán a Almacén (17)\n`+
-                                  (wrsBloqueados.length>0?`🔒 ${wrsBloqueados.length} WR ya avanzaron a Entregado/Cobrado/Egresado y NO se tocarán\n`:"")+
+                                  `${wrsEnPorEntrega.length} WR en Por Entrega volverán a Almacén (17)\n`+
+                                  (wrsBloqueados.length>0?`${wrsBloqueados.length} WR ya avanzaron a Entregado/Cobrado/Egresado y NO se tocarán\n`:"")+
                                   `\nLa guía vuelve a pendientes.`
                                 ))return;
                                 // Revertir 20 → 17 con entrada en historial
@@ -11758,7 +11853,7 @@ export default function SistemaCarga(){
                                 setConsolList(p=>p.map(x=>x.id===c.id?upd:x));
                                 dbUpsertConsolidacion(upd);
                                 logAction("Desarchivó guía",`${c.id} · ${wrsEnPorEntrega.length} WR revertidos 20→17`);
-                              }}>↩️</button>
+                              }}><Ico e="↩️" solo/></button>
                           )}
                         </div>
                       </td>
@@ -11817,18 +11912,18 @@ export default function SistemaCarga(){
     const acciones=(k)=>{
       if(!puede)return <span style={{fontSize:12,color:"var(--t4)"}}>—</span>;
       const c=k.w.status?.code;
-      if(alTab==="historial")return (["18.2","18.3"].includes(c))?btn("💲 Registrar recobro",()=>abrir(k.w,"recobro")):<span style={{fontSize:12,color:"var(--t4)"}}>—</span>;
+      if(alTab==="historial")return (["18.2","18.3"].includes(c))?btn("Registrar recobro",()=>abrir(k.w,"recobro")):<span style={{fontSize:12,color:"var(--t4)"}}>—</span>;
       if(k.tipo==="faltante")return(<div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-        {c==="18"&&btn("🔍 Investigar",()=>abrir(k.w,"investigar"),"#E65100")}
-        {btn("📦 Apareció",()=>abrir(k.w,"aparecio"),"#2E7D32")}
-        {btn("💵 Indemnizado",()=>abrir(k.w,"indemnizado"),"#1565C0")}
-        {btn("❌ Pérdida",()=>abrir(k.w,"perdida"),"var(--red)")}
+        {c==="18"&&btn("Investigar",()=>abrir(k.w,"investigar"),"#E65100")}
+        {btn("Apareció",()=>abrir(k.w,"aparecio"),"#2E7D32")}
+        {btn("Indemnizado",()=>abrir(k.w,"indemnizado"),"#1565C0")}
+        {btn("Pérdida",()=>abrir(k.w,"perdida"),"var(--red)")}
       </div>);
       return(<div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-        {btn("🚚 Entregar",()=>abrir(k.w,"entregar"),"#1565C0")}
+        {btn("Entregar",()=>abrir(k.w,"entregar"),"#1565C0")}
         {k.gCorrecta
-          ? btn(`📦 Es de ${k.gCorrecta.id}`,()=>abrir(k.w,"otraguia"),"#2E7D32")
-          : btn("↩️ Devolver a origen",()=>abrir(k.w,"devolver"))}
+          ? btn(`Es de ${k.gCorrecta.id}`,()=>abrir(k.w,"otraguia"),"#2E7D32")
+          : btn("Devolver a origen",()=>abrir(k.w,"devolver"))}
       </div>);
     };
     const Card=({ic,v,l,d,c})=>(
@@ -11843,8 +11938,8 @@ export default function SistemaCarga(){
       const {w,accion}=alModal; const k=caso(w); const a=ALERTA_ACC[accion];
       const pideCli=accion==="indemnizado", pideTr=["indemnizado","perdida","recobro"].includes(accion);
       const notaObl=["investigar","perdida"].includes(accion);
-      const titulo={investigar:"🔍 Abrir investigación",aparecio:"📦 El paquete apareció",indemnizado:"💵 Cerrar como indemnizado",perdida:"❌ Cerrar como pérdida",
-        recobro:"💲 Registrar recobro al transportista",entregar:"🚚 Entregar sobrante al cliente",devolver:"↩️ Devolver sobrante a origen",otraguia:"📦 Recibir en su guía correcta"}[accion];
+      const titulo={investigar:"Abrir investigación",aparecio:"El paquete apareció",indemnizado:"Cerrar como indemnizado",perdida:"Cerrar como pérdida",
+        recobro:"Registrar recobro al transportista",entregar:"Entregar sobrante al cliente",devolver:"Devolver sobrante a origen",otraguia:"Recibir en su guía correcta"}[accion];
       const explica={investigar:"El caso queda abierto en investigación con tu nota.",aparecio:"El WR pasa a 17 Almacén y el caso se cierra.",
         indemnizado:"El WR pasa a 18.2 Indemnizado. Registra lo pagado al cliente y, si ya lo hay, lo recuperado del transportista.",
         perdida:"El WR pasa a 18.3 Pérdida cerrada, sin pago al cliente.",recobro:"Suma lo recuperado del transportista a este caso cerrado.",
@@ -11880,7 +11975,7 @@ export default function SistemaCarga(){
     <div className="page-scroll">
       <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,flexWrap:"wrap"}}>
         <div style={{flex:1,minWidth:260}}>
-          <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:18,fontWeight:700,color:"var(--navy)"}}>🔔 Alertas — Faltantes y Sobrantes</div>
+          <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:18,fontWeight:700,color:"var(--navy)"}}><Ico e="🔔" sp/>Alertas — Faltantes y Sobrantes</div>
         </div>
         <div className="tabs" style={{marginBottom:0}}>
           <div className={`tab ${alTab==="abiertas"?"on":""}`} onClick={()=>setAlTab("abiertas")}>Abiertas<span className="t-cnt">{abiertos.length}</span></div>
@@ -11889,11 +11984,11 @@ export default function SistemaCarga(){
       </div>
 
       <div className="stats stats-5" style={{padding:0,marginBottom:10}}>
-        <Card ic="⚠️" v={abiertos.filter(k=>k.w.status?.code==="18").length} l="Faltantes" d="Sin investigar" c="#CC2233"/>
-        <Card ic="🔍" v={abiertos.filter(k=>k.w.status?.code==="18.1").length} l="En investigación" d="Faltantes en curso" c="#E65100"/>
-        <Card ic="➕" v={abiertos.filter(k=>k.tipo==="sobrante").length} l="Sobrantes" d="Por decidir" c="#7B1FA2"/>
+        <Card ic={<Ico e="⚠️"/>} v={abiertos.filter(k=>k.w.status?.code==="18").length} l="Faltantes" d="Sin investigar" c="#CC2233"/>
+        <Card ic={<Ico e="🔍"/>} v={abiertos.filter(k=>k.w.status?.code==="18.1").length} l="En investigación" d="Faltantes en curso" c="#E65100"/>
+        <Card ic={<Ico e="➕"/>} v={abiertos.filter(k=>k.tipo==="sobrante").length} l="Sobrantes" d="Por decidir" c="#7B1FA2"/>
         <Card ic="⏳" v={abiertos.length?Math.max(...abiertos.map(k=>dias(k.inicio?.fecha))):0} l="Días del más antiguo" d="Caso abierto más viejo" c="#C05800"/>
-        <Card ic="✅" v={cerradosMes} l="Cerrados este mes" d={`${hoy.getFullYear()}: pagado ${money(pagadoAnio)} · recuperado ${money(recupAnio)}`} c="#1A8A4A"/>
+        <Card ic={<Ico e="✅"/>} v={cerradosMes} l="Cerrados este mes" d={`${hoy.getFullYear()}: pagado ${money(pagadoAnio)} · recuperado ${money(recupAnio)}`} c="#1A8A4A"/>
       </div>
 
       <div className="card" style={{padding:0}}>
@@ -11907,7 +12002,7 @@ export default function SistemaCarga(){
           {alSearch&&<button className="btn-s" style={{fontSize:12,padding:"4px 8px"}} onClick={()=>setAlSearch("")}>✕</button>}
         </div>
         {lista.length===0?(
-          <div style={{textAlign:"center",padding:40,color:"var(--t3)"}}>{alTab==="abiertas"?(q?"Ningún caso abierto coincide.":"✅ No hay faltantes ni sobrantes abiertos."):"Aún no hay casos cerrados."}</div>
+          <div style={{textAlign:"center",padding:40,color:"var(--t3)"}}>{alTab==="abiertas"?(q?"Ningún caso abierto coincide.":"No hay faltantes ni sobrantes abiertos."):"Aún no hay casos cerrados."}</div>
         ):(
           <div style={{overflowX:"auto"}}>
           <table className="ct">
@@ -11923,7 +12018,7 @@ export default function SistemaCarga(){
                 const d=dias(k.inicio?.fecha);
                 return(
                 <tr key={k.w.id}>
-                  <td style={{whiteSpace:"nowrap",fontWeight:700,color:k.tipo==="faltante"?"#C62828":"#7B1FA2"}}>{k.tipo==="faltante"?"⚠️ Faltante":"➕ Sobrante"}</td>
+                  <td style={{whiteSpace:"nowrap",fontWeight:700,color:k.tipo==="faltante"?"#C62828":"#7B1FA2"}}>{k.tipo==="faltante"?"Faltante":"Sobrante"}</td>
                   <td><span onClick={()=>setSelWR(k.w)} title="Abrir WR" style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",cursor:"pointer",textDecoration:"underline"}}>{k.w.id}</span></td>
                   <td><div style={{fontWeight:600}}>{k.cli?fullName(k.cli):(k.w.consignee||"—")}</div><div style={{fontSize:11,color:"var(--t3)"}}>{k.w.casillero||""}</div></td>
                   <td style={{whiteSpace:"nowrap"}}>{k.g?<span onClick={()=>setRdArchView(k.g)} title="Abrir guía" style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",cursor:"pointer",textDecoration:"underline"}}>{k.g.id}</span>:"—"}
@@ -11989,7 +12084,7 @@ export default function SistemaCarga(){
       <div className="page-scroll">
         <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
           <div style={{flex:1}}>
-            <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:18,fontWeight:700,color:"var(--navy)"}}>🚀 Cargo Release (Egresos)</div>
+            <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:18,fontWeight:700,color:"var(--navy)"}}><Ico e="🚀" sp/>Cargo Release (Egresos)</div>
           </div>
           <div style={{display:"flex",gap:6,fontSize:13}}>
             <span style={{background:"#E8F5E9",color:"#2E7D32",padding:"4px 10px",borderRadius:10,fontWeight:700,border:"1px solid #A5D6A7"}}>✓ {activos.length} activos</span>
@@ -12001,11 +12096,11 @@ export default function SistemaCarga(){
         {/* CANDIDATOS — multi-selección estilo Reempaque */}
         <div className="card" style={{marginBottom:14}}>
           <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",marginBottom:10}}>
-            <div style={{fontSize:17,fontWeight:700,color:"var(--navy)"}}>📦 WR elegibles para egresar</div>
+            <div style={{fontSize:17,fontWeight:700,color:"var(--navy)"}}><Ico e="📦" sp/>WR elegibles para egresar</div>
             <div style={{marginLeft:"auto",display:"flex",gap:8,alignItems:"center"}}>
               <input className="fi" placeholder="Buscar WR, consignatario, tracking…" value={crSearch} onChange={e=>setCrSearch(e.target.value)} style={{fontSize:14,padding:"6px 10px",width:260}}/>
               <span style={{fontSize:13,color:"var(--t2)",fontWeight:600}}>Seleccionados: {crSel.length}</span>
-              {hasPerm("hacer_egreso")&&<button className="btn-p" disabled={crSel.length===0} style={{opacity:crSel.length===0?.5:1}} onClick={()=>crOpenNew(crSel)}>🚀 Egresar ({crSel.length})</button>}
+              {hasPerm("hacer_egreso")&&<button className="btn-p" disabled={crSel.length===0} style={{opacity:crSel.length===0?.5:1}} onClick={()=>crOpenNew(crSel)}><Ico e="🚀" sp/>Egresar ({crSel.length})</button>}
             </div>
           </div>
           <div style={{maxHeight:"50vh",overflow:"auto",border:"1px solid var(--b1)",borderRadius:8}}>
@@ -12046,7 +12141,7 @@ export default function SistemaCarga(){
             <button
               onClick={()=>setCrHistOpen(p=>!p)}
               style={{background:"none",border:"none",cursor:"pointer",fontSize:15,fontWeight:700,color:"var(--navy)",padding:0}}>
-              {crHistOpen?"▼":"▶"} 📜 Histórico de Cargo Release
+              {crHistOpen?"▼":"▶"} <Ico e="📜" sp/>Histórico de Cargo Release
             </button>
             <span style={{fontSize:12,color:"var(--t3)"}}>
               {crHistOpen?`${historico.length} resultado${historico.length===1?"":"s"}`:""}
@@ -12089,10 +12184,10 @@ export default function SistemaCarga(){
                       </td>
                       <td>
                         <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-                          <button className="btn-s" style={{fontSize:12,padding:"3px 8px"}} onClick={()=>setCrPrint(c)} title="Ver / Imprimir nota">🖨️ Nota</button>
-                          {!c.anulado&&hasPerm("editar_egreso")&&<button className="btn-s" style={{fontSize:12,padding:"3px 8px"}} onClick={()=>crOpenEdit(c)}>✏️ Editar</button>}
+                          <button className="btn-s" style={{fontSize:12,padding:"3px 8px"}} onClick={()=>setCrPrint(c)} title="Ver / Imprimir nota"><Ico e="🖨️" sp/>Nota</button>
+                          {!c.anulado&&hasPerm("editar_egreso")&&<button className="btn-s" style={{fontSize:12,padding:"3px 8px"}} onClick={()=>crOpenEdit(c)}><Ico e="✏️" sp/>Editar</button>}
                           {!c.anulado&&hasPerm("editar_egreso")&&<button className="btn-s" style={{fontSize:12,padding:"3px 8px",background:"#FFF3E0",borderColor:"#FFB74D",color:"#E65100"}} onClick={()=>crAnular(c)}>✕ Anular</button>}
-                          {hasPerm("borrar_egreso")&&<button className="btn-d" style={{fontSize:12,padding:"3px 8px"}} onClick={()=>crDelete(c)}>🗑️</button>}
+                          {hasPerm("borrar_egreso")&&<button className="btn-d" style={{fontSize:12,padding:"3px 8px"}} onClick={()=>crDelete(c)}><Ico e="🗑️" solo/></button>}
                         </div>
                       </td>
                     </tr>
@@ -12108,7 +12203,7 @@ export default function SistemaCarga(){
 
   // ── ENTREGAS Y DESPACHOS — vista por guía ─────────────────────────
   const DN_DOM_ORDEN={matriz:0,oficina:1,agente:2,autonomo:3};
-  const DN_DOM_IC={matriz:"🏛️",oficina:"🏢",agente:"🤝",autonomo:"🧑‍💻"};
+  const DN_DOM_IC={matriz:<Ico e="🏛️"/>,oficina:<Ico e="🏢"/>,agente:<Ico e="🤝"/>,autonomo:<Ico e="🧑‍💻"/>};
   const DN_DOM_LBL={matriz:"Clientes directos",oficina:"Oficina",agente:"Agente",autonomo:"Autónomo"};
   const dnCuenta=ws=>({
     total:ws.length,
@@ -12142,7 +12237,7 @@ export default function SistemaCarga(){
                       <span style={{fontFamily:"'DM Mono',monospace",fontWeight:800,fontSize:18,color:"var(--navy)"}}>{g.id}</span>
                       <TypeBadge t={g.tipoEnvio}/>
                     </div>
-                    <div style={{fontSize:14,color:"var(--t2)",marginBottom:10}}>📍 {g.destino||"—"} · {fmtDate(g.fecha)}</div>
+                    <div style={{fontSize:14,color:"var(--t2)",marginBottom:10}}><Ico e="📍" sp/>{g.destino||"—"} · {fmtDate(g.fecha)}</div>
                     <div style={{height:8,background:"var(--bg4)",borderRadius:4,overflow:"hidden",marginBottom:8}}>
                       <div style={{width:`${pct}%`,height:"100%",background:"var(--green)"}}/>
                     </div>
@@ -12191,7 +12286,7 @@ export default function SistemaCarga(){
         <span key={w.id} style={{display:"inline-flex",alignItems:"center",gap:6,padding:"3px 8px",borderRadius:6,border:wrCoincide(w)?"2px solid var(--orange)":"1px solid var(--b1)",background:wrCoincide(w)?"#FFF3E0":"var(--bg2)",fontSize:13}}>
           <span onClick={()=>setSelWR(w)} title="Abrir WR" style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",cursor:"pointer"}}>{w.id}</span>
           <StBadge st={w.status}/>
-          {nota&&<span onClick={()=>setDnPrint(nota)} title={`Imprimir nota ${nota.id}`} style={{cursor:"pointer"}}>🖨️</span>}
+          {nota&&<span onClick={()=>setDnPrint(nota)} title={`Imprimir nota ${nota.id}`} style={{cursor:"pointer"}}><Ico e="🖨️" solo/></span>}
         </span>
       );
     };
@@ -12210,7 +12305,7 @@ export default function SistemaCarga(){
           {entregables.length>0&&hasPerm("entregar")&&(
             <button className="btn-p" style={{fontSize:13,padding:"6px 12px",background:"#2E7D32",borderColor:"#2E7D32"}}
               onClick={()=>dnAbrirConfirmar("entrega",g,cl.cli?{tipo:"cliente",id:cl.cli.id,nombre:cl.nombre}:{tipo:"cliente",id:"",nombre:cl.nombre},entregables,cl.cli)}>
-              📦 Entregar ({entregables.length})
+              <Ico e="📦" sp/>Entregar ({entregables.length})
             </button>
           )}
         </div>
@@ -12222,7 +12317,7 @@ export default function SistemaCarga(){
           <button className="btn-s" onClick={()=>{setDnGuiaSel(null);setDnBuscar("");}}>← Guías</button>
           <span style={{fontFamily:"'DM Mono',monospace",fontWeight:800,fontSize:20,color:"var(--navy)"}}>{g.id}</span>
           <TypeBadge t={g.tipoEnvio}/>
-          <span style={{fontSize:14,color:"var(--t2)"}}>📍 {g.destino||"—"}</span>
+          <span style={{fontSize:14,color:"var(--t2)"}}><Ico e="📍" sp/>{g.destino||"—"}</span>
           <span style={{fontSize:14,marginLeft:"auto",display:"flex",gap:12,flexWrap:"wrap"}}>
             <span><b style={{color:"var(--orange)"}}>{c.pend}</b> por entregar</span>
             {c.suc>0&&<span><b style={{color:"var(--sky)"}}>{c.suc}</b> en sucursal</span>}
@@ -12257,11 +12352,11 @@ export default function SistemaCarga(){
                   <span><b style={{color:"var(--green)"}}>{cb.ent}</b> entr.</span>
                   {!esMatriz&&enCamino.length>0&&hasPerm("entregar")&&(
                     <button className="btn-s" style={{fontSize:13,padding:"5px 10px",borderColor:"var(--sky)",color:"var(--sky)",fontWeight:700}}
-                      onClick={e=>{e.stopPropagation();dnRecibirSucursal(dom,enCamino);}}>📥 Recibido en sucursal ({enCamino.length})</button>
+                      onClick={e=>{e.stopPropagation();dnRecibirSucursal(dom,enCamino);}}><Ico e="📥" sp/>Recibido en sucursal ({enCamino.length})</button>
                   )}
                   {!esMatriz&&paraDespachar.length>0&&hasPerm("entregar")&&(
                     <button className="btn-p" style={{fontSize:13,padding:"6px 12px",background:"#E65100",borderColor:"#E65100"}}
-                      onClick={e=>{e.stopPropagation();dnAbrirConfirmar("despacho",g,dom,paraDespachar);}}>🚚 Despachar ({paraDespachar.length})</button>
+                      onClick={e=>{e.stopPropagation();dnAbrirConfirmar("despacho",g,dom,paraDespachar);}}><Ico e="🚚" sp/>Despachar ({paraDespachar.length})</button>
                   )}
                   {!esMatriz&&<span style={{fontSize:14,color:"var(--t3)"}}>{abierto?"▲":"▼"}</span>}
                 </span>
@@ -12276,9 +12371,9 @@ export default function SistemaCarga(){
   const renderDeliveryNotes=()=>(
     <div className="page-scroll">
       <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,flexWrap:"wrap"}}>
-        <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:18,fontWeight:700,color:"var(--navy)",flex:1}}>📝 Entregas y Despachos</div>
+        <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:18,fontWeight:700,color:"var(--navy)",flex:1}}><Ico e="📝" sp/>Entregas y Despachos</div>
         <div style={{display:"flex",gap:4,background:"var(--bg4)",borderRadius:7,padding:3,border:"1px solid var(--b1)"}}>
-          {[{k:"guias",l:"🚢 Por guía"},{k:"historial",l:"📜 Historial"}].map(t=>(
+          {[{k:"guias",l:"Por guía"},{k:"historial",l:"Historial"}].map(t=>(
             <button key={t.k} onClick={()=>setDnVista(t.k)}
               style={{padding:"5px 14px",borderRadius:5,border:"none",cursor:"pointer",fontSize:14,fontWeight:600,
                 background:dnVista===t.k?"var(--navy)":"transparent",color:dnVista===t.k?"#fff":"var(--t2)"}}>{t.l}</button>
@@ -12301,18 +12396,18 @@ export default function SistemaCarga(){
       if(!q)return true;
       return [n.id,n.consignatario,n.receptorNombre,n.receptorDocumento,n.transportista,n.guiaId].some(v=>String(v||"").toLowerCase().includes(q));
     });
-    const metodoLabel={retiro_oficina:"🏢 Retiro oficina",domicilio:"🏠 Domicilio",transportista:"🚚 Transportista",despacho:"🚚 Despacho"};
+    const metodoLabel={retiro_oficina:"Retiro oficina",domicilio:"Domicilio",transportista:"Transportista",despacho:"Despacho"};
     const tipoBadge=(t)=>t==="despacho"
-      ?<span style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:8,background:"#FFF3E0",color:"#E65100",border:"1px solid #FFCC80",letterSpacing:.4}}>🚚 DESPACHO</span>
-      :<span style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:8,background:"#E8F5E9",color:"#2E7D32",border:"1px solid #A5D6A7",letterSpacing:.4}}>📦 ENTREGA</span>;
+      ?<span style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:8,background:"#FFF3E0",color:"#E65100",border:"1px solid #FFCC80",letterSpacing:.4}}><Ico e="🚚" sp/>DESPACHO</span>
+      :<span style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:8,background:"#E8F5E9",color:"#2E7D32",border:"1px solid #A5D6A7",letterSpacing:.4}}><Ico e="📦" sp/>ENTREGA</span>;
     return(
       <div>
         <div className="card" style={{marginBottom:10,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
           <div style={{display:"flex",gap:4,background:"var(--bg4)",borderRadius:7,padding:"3px",border:"1px solid var(--b1)"}}>
             {[
               {k:"todos",l:"Todos",n:deliveryNotes.length},
-              {k:"entrega",l:"📦 Entregas",n:totEntrega},
-              {k:"despacho",l:"🚚 Despachos",n:totDespacho},
+              {k:"entrega",l:"Entregas",n:totEntrega},
+              {k:"despacho",l:"Despachos",n:totDespacho},
             ].map(t=>(
               <button key={t.k} onClick={()=>setDnTipoFiltro(t.k)}
                 style={{padding:"4px 12px",borderRadius:5,border:"none",cursor:"pointer",fontSize:13,fontWeight:600,
@@ -12339,7 +12434,7 @@ export default function SistemaCarga(){
               <tbody>
                 {lista.map(n=>{
                   const facsRel=facturas.filter(f=>f.status!=="anulada"&&Array.isArray(f.wrIds)&&(n.wrIds||[]).some(id=>f.wrIds.includes(id)));
-                  const statusBadge={borrador:"📝 Borrador",emitida:"📤 Emitida",pagada_parcial:"💵 Parcial",pagada:"✅ Pagada"};
+                  const statusBadge={borrador:"Borrador",emitida:"Emitida",pagada_parcial:"Parcial",pagada:"Pagada"};
                   const t=tipoDe(n);
                   return (
                   <tr key={n.id} style={{background:n.anulado?"#FFF5F5":""}}>
@@ -12370,10 +12465,10 @@ export default function SistemaCarga(){
                     </td>
                     <td>
                       <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-                        <button className="btn-s" style={{fontSize:12,padding:"3px 8px"}} onClick={()=>setDnPrint(n)} title="Ver / Imprimir nota">🖨️ Nota</button>
-                        {!n.anulado&&hasPerm("editar_entrega")&&<button className="btn-s" style={{fontSize:12,padding:"3px 8px"}} onClick={()=>dnOpenEdit(n)}>✏️ Editar</button>}
+                        <button className="btn-s" style={{fontSize:12,padding:"3px 8px"}} onClick={()=>setDnPrint(n)} title="Ver / Imprimir nota"><Ico e="🖨️" sp/>Nota</button>
+                        {!n.anulado&&hasPerm("editar_entrega")&&<button className="btn-s" style={{fontSize:12,padding:"3px 8px"}} onClick={()=>dnOpenEdit(n)}><Ico e="✏️" sp/>Editar</button>}
                         {!n.anulado&&(hasPerm("revertir_entrega")||hasPerm("editar_entrega"))&&<button className="btn-s" style={{fontSize:12,padding:"3px 8px",background:"#FFF3E0",borderColor:"#FFB74D",color:"#E65100"}} onClick={()=>dnAnular(n)}>✕ Anular</button>}
-                        {hasPerm("borrar_entrega")&&<button className="btn-d" style={{fontSize:12,padding:"3px 8px"}} onClick={()=>dnDelete(n)}>🗑️</button>}
+                        {hasPerm("borrar_entrega")&&<button className="btn-d" style={{fontSize:12,padding:"3px 8px"}} onClick={()=>dnDelete(n)}><Ico e="🗑️" solo/></button>}
                       </div>
                     </td>
                   </tr>
@@ -12392,38 +12487,38 @@ export default function SistemaCarga(){
 
   const navGroups=[
     {label:"Principal",items:[
-      {id:"dashboard",ic:"📊",l:"Dashboard"},
-      {id:"estadocuenta",ic:"📄",l:"Estado de Cuenta"},
+      {id:"dashboard",ic:<Ico e="📊"/>,l:"Dashboard"},
+      {id:"estadocuenta",ic:<Ico e="📄"/>,l:"Estado de Cuenta"},
     ]},
     {label:"Operación",items:[
-      {id:"scan",ic:"📡",l:"Recepción en Puerta",badge:scanLog.filter(s=>!s.registered).length>0?String(scanLog.filter(s=>!s.registered).length):null,red:true},
-      {id:"loadingmaster",ic:"🚢",l:"Loading Master"},
-      {id:"alerts",ic:"🔔",l:"Alertas",badge:(()=>{const n=wrList.filter(w=>["18","18.1","19"].includes(w.status?.code||"")).length;return n>0?String(n):null;})(),red:true},
-      {id:"reempaque",ic:"🔁",l:"Reempaque"},
-      {id:"cargorelease",ic:"🚀",l:"Cargo Release"},
+      {id:"scan",ic:<Ico e="📡"/>,l:"Recepción en Puerta",badge:scanLog.filter(s=>!s.registered).length>0?String(scanLog.filter(s=>!s.registered).length):null,red:true},
+      {id:"loadingmaster",ic:<Ico e="🚢"/>,l:"Loading Master"},
+      {id:"alerts",ic:<Ico e="🔔"/>,l:"Alertas",badge:(()=>{const n=wrList.filter(w=>["18","18.1","19"].includes(w.status?.code||"")).length;return n>0?String(n):null;})(),red:true},
+      {id:"reempaque",ic:<Ico e="🔁"/>,l:"Reempaque"},
+      {id:"cargorelease",ic:<Ico e="🚀"/>,l:"Cargo Release"},
     ]},
     {label:"Administración",items:[
-      {id:"facturacion",ic:"🧾",l:"Facturación",onClick:()=>{setTab("contabilidad");setContabTab("porguia");setFacGuiaSel(null);},activeWhen:()=>tab==="contabilidad"&&["porguia","facturas"].includes(contabTab)},
-      {id:"entregasydespachos",ic:"📝",l:"Entregas y Despachos"},
-      {id:"contabilidad",ic:"💰",l:"Contabilidad",onClick:()=>{setTab("contabilidad");setContabTab("cuentas");setCuadreSel(null);},activeWhen:()=>tab==="contabilidad"&&!["porguia","facturas"].includes(contabTab)},
+      {id:"facturacion",ic:<Ico e="🧾"/>,l:"Facturación",onClick:()=>{setTab("contabilidad");setContabTab("porguia");setFacGuiaSel(null);},activeWhen:()=>tab==="contabilidad"&&["porguia","facturas"].includes(contabTab)},
+      {id:"entregasydespachos",ic:<Ico e="📝"/>,l:"Entregas y Despachos"},
+      {id:"contabilidad",ic:<Ico e="💰"/>,l:"Contabilidad",onClick:()=>{setTab("contabilidad");setContabTab("cuentas");setCuadreSel(null);},activeWhen:()=>tab==="contabilidad"&&!["porguia","facturas"].includes(contabTab)},
     ]},
     {label:"Gestión",items:[
-      {id:"clients",ic:"👥",l:"Clientes & Usuarios"},
-      {id:"agentes",ic:"🤝",l:"Agentes",onClick:()=>goSettingsTab("agentes"),activeWhen:()=>tab==="settings"&&cfgTab==="agentes"},
-      {id:"oficinas",ic:"🏢",l:"Oficinas",onClick:()=>goSettingsTab("oficinas"),activeWhen:()=>tab==="settings"&&cfgTab==="oficinas"},
-      {id:"etiquetas",ic:"🖨️",l:"Impresión"},
-      {id:"tracking",ic:"🔍",l:"Tracking"},
-      {id:"pickup",ic:"🚐",l:"Pick-up"},
+      {id:"clients",ic:<Ico e="👥"/>,l:"Clientes & Usuarios"},
+      {id:"agentes",ic:<Ico e="🤝"/>,l:"Agentes",onClick:()=>goSettingsTab("agentes"),activeWhen:()=>tab==="settings"&&cfgTab==="agentes"},
+      {id:"oficinas",ic:<Ico e="🏢"/>,l:"Oficinas",onClick:()=>goSettingsTab("oficinas"),activeWhen:()=>tab==="settings"&&cfgTab==="oficinas"},
+      {id:"etiquetas",ic:<Ico e="🖨️"/>,l:"Impresión"},
+      {id:"tracking",ic:<Ico e="🔍"/>,l:"Tracking"},
+      {id:"pickup",ic:<Ico e="🚐"/>,l:"Pick-up"},
     ]},
     {label:"Herramientas",items:[
-      {id:"calculadora",ic:"🧮",l:"Calculadora"},
-      {id:"chat",ic:"💬",l:"Chat Interno"},
-      {id:"reports",ic:"📈",l:"Reportes"},
+      {id:"calculadora",ic:<Ico e="🧮"/>,l:"Calculadora"},
+      {id:"chat",ic:<Ico e="💬"/>,l:"Chat Interno"},
+      {id:"reports",ic:<Ico e="📈"/>,l:"Reportes"},
     ]},
     {label:"Sistema",items:[
-      ...(canAdmin?[{id:"settings",ic:"⚙️",l:"Configuración"}]:[]),
-      {id:"roles",ic:"🔐",l:"Roles & Permisos"},
-      {id:"actividad",ic:"📋",l:"Actividad",onClick:()=>goSettingsTab("actividad"),activeWhen:()=>tab==="settings"&&cfgTab==="actividad"},
+      ...(canAdmin?[{id:"settings",ic:<Ico e="⚙️"/>,l:"Configuración"}]:[]),
+      {id:"roles",ic:<Ico e="🔐"/>,l:"Roles & Permisos"},
+      {id:"actividad",ic:<Ico e="📋"/>,l:"Actividad",onClick:()=>goSettingsTab("actividad"),activeWhen:()=>tab==="settings"&&cfgTab==="actividad"},
     ]},
   ];
   // Cada menú se muestra solo si el rol tiene al menos uno de estos permisos
@@ -12445,7 +12540,7 @@ export default function SistemaCarga(){
   const renderPage=()=>{
     if(!navVisible({id:tab}))return (
       <div style={{padding:60,textAlign:"center",color:"var(--t3)"}}>
-        <div style={{fontSize:42}}>🔒</div>
+        <div style={{fontSize:42}}><Ico e="🔒" solo/></div>
         <div style={{fontSize:16,fontWeight:600,marginTop:8}}>Tu rol no tiene permiso para ver esta sección.</div>
       </div>
     );
@@ -12505,8 +12600,8 @@ export default function SistemaCarga(){
             <div style={{flex:1,minWidth:0}}><div className="u-nm">{currentUser.primerNombre} {currentUser.primerApellido}</div><div className="u-rl">{currentUser.email}</div></div>
             <RoleBadge code={currentUser.rol}/>
           </div>
-          <button className="btn-s" style={{width:"100%",marginTop:8,fontSize:13,padding:"6px 10px"}} onClick={()=>setPwModal({a:"",b:"",err:"",ok:false})}>🔑 Cambiar contraseña</button>
-          <button className="btn-d" style={{width:"100%",marginTop:6,fontSize:13,padding:"6px 10px"}} onClick={doLogout}>🚪 Cerrar sesión</button>
+          <button className="btn-s" style={{width:"100%",marginTop:8,fontSize:13,padding:"6px 10px"}} onClick={()=>setPwModal({a:"",b:"",err:"",ok:false})}><Ico e="🔑" sp/>Cambiar contraseña</button>
+          <button className="btn-d" style={{width:"100%",marginTop:6,fontSize:13,padding:"6px 10px"}} onClick={doLogout}><Ico e="🚪" sp/>Cerrar sesión</button>
         </div>
       </div>
 
@@ -12515,11 +12610,11 @@ export default function SistemaCarga(){
         <div className="topbar">
           <div className="tb-ttl">{tab==="contabilidad"&&["porguia","facturas"].includes(contabTab)?"Facturación":(PAGE_TITLES[tab]||tab)}</div>
           <div className="tb-srch">
-            <span style={{color:"var(--t3)"}}>🔍</span>
+            <span style={{color:"var(--t3)"}}><Ico e="🔍" solo/></span>
             <input placeholder="Buscar en el sistema…" value={search} onChange={e=>{setSearch(e.target.value);setPage(1);}}/>
           </div>
-          <div className="tb-ic">🌐</div>
-          <div className="tb-ic">🔔<div className="tb-dot"/></div>
+          <div className="tb-ic"><Ico e="🌐" solo/></div>
+          <div className="tb-ic"><Ico e="🔔" sp/><div className="tb-dot"/></div>
           <div style={{width:28,height:28,borderRadius:6,background:"var(--navy)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,cursor:"pointer",color:"#fff"}}>{initials(currentUser)}</div>
         </div>
         {renderPage()}
@@ -12536,9 +12631,9 @@ export default function SistemaCarga(){
         <div className="ov" style={{alignItems:"stretch",padding:10}}>
           <div className="modal" style={{maxWidth:1600,padding:16,display:"flex",flexDirection:"column",maxHeight:"calc(100vh - 20px)"}}>
             <div className="mhd">
-              <div className="mt">{quickTab==="reempaque"?"🔁 Reempaque":"🚀 Cargo Release (Egreso)"}</div>
+              <div className="mt">{quickTab==="reempaque"?"Reempaque":"Cargo Release (Egreso)"}</div>
               <button type="button" className="btn-s" title="Abrir el módulo a pantalla completa"
-                onClick={()=>{const t=quickTab;setQuickTab(null);setTab(t);}}>⛶ Pantalla completa</button>
+                onClick={()=>{const t=quickTab;setQuickTab(null);setTab(t);}}><Ico e="⛶" sp/>Pantalla completa</button>
               <button type="button" className="mcl" title="Cerrar y volver" onClick={()=>setQuickTab(null)}>✕</button>
             </div>
             <div style={{flex:1,minHeight:0,display:"flex",flexDirection:"column",overflow:"hidden",margin:"0 -16px -16px"}}>
@@ -12570,9 +12665,9 @@ export default function SistemaCarga(){
           <div className="ov" onClick={()=>setTimelineWR(null)}>
             <div className="modal mmd" onClick={e=>e.stopPropagation()} style={{maxHeight:"85vh",display:"flex",flexDirection:"column"}}>
               <div className="mhd">
-                <div className="mt">📅 Historia y Fechas — WR {w.id}</div>
+                <div className="mt"><Ico e="📅" sp/>Historia y Fechas — WR {w.id}</div>
                 <div style={{display:"flex",gap:6}}>
-                  <button className="btn-s" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>{setSelWR(w);setTimelineWR(null);}} title="Abrir detalle completo del WR">📋 Ver WR completo</button>
+                  <button className="btn-s" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>{setSelWR(w);setTimelineWR(null);}} title="Abrir detalle completo del WR"><Ico e="📋" sp/>Ver WR completo</button>
                   <button className="mcl" onClick={()=>setTimelineWR(null)}>✕</button>
                 </div>
               </div>
@@ -12582,7 +12677,7 @@ export default function SistemaCarga(){
                   <span style={{fontWeight:600,color:"var(--t1)"}}>{w.consignee||"—"}</span>
                   <span style={{color:"var(--t3)",fontFamily:"'DM Mono',monospace"}}>{w.casillero||""}</span>
                   <div style={{flex:1}}/>
-                  <span style={{fontSize:12,color:"var(--t3)"}}>💳 {w.tipoPago||"—"} · {w.tipoEnvio||"—"}</span>
+                  <span style={{fontSize:12,color:"var(--t3)"}}><Ico e="💳" sp/>{w.tipoPago||"—"} · {w.tipoEnvio||"—"}</span>
                 </div>
                 {renderWRTimeline(w)}
               </div>
@@ -12599,11 +12694,11 @@ export default function SistemaCarga(){
         const sameAsCurrent=stTarget&&w.status?.code===stTarget.code;
         // Agrupar estados por phase para presentar
         const grupos=[
-          {label:"📍 Origen",states:WR_STATUSES.filter(s=>s.phase==="origen")},
-          {label:"🛫 Tránsito",states:WR_STATUSES.filter(s=>s.phase==="transito")},
-          {label:"📥 Destino",states:WR_STATUSES.filter(s=>s.phase==="destino")},
-          {label:"⚠️ Excepciones",states:WR_STATUSES.filter(s=>s.phase==="excep")},
-          {label:"🚚 Entrega / Cierre",states:WR_STATUSES.filter(s=>s.phase==="entrega")},
+          {label:"Origen",states:WR_STATUSES.filter(s=>s.phase==="origen")},
+          {label:"Tránsito",states:WR_STATUSES.filter(s=>s.phase==="transito")},
+          {label:"Destino",states:WR_STATUSES.filter(s=>s.phase==="destino")},
+          {label:"Excepciones",states:WR_STATUSES.filter(s=>s.phase==="excep")},
+          {label:"Entrega / Cierre",states:WR_STATUSES.filter(s=>s.phase==="entrega")},
         ];
         const aplicar=()=>{
           if(!stTarget){window.alert("Seleccionas un estado destino.");return;}
@@ -12620,7 +12715,7 @@ export default function SistemaCarga(){
           <div className="ov" onClick={()=>setOverrideModal(null)}>
             <div className="modal mmd" onClick={e=>e.stopPropagation()}>
               <div className="mhd">
-                <div className="mt">🛠 Forzar Estado — WR {w.id}</div>
+                <div className="mt"><Ico e="🛠" sp/>Forzar Estado — WR {w.id}</div>
                 <button className="mcl" onClick={()=>setOverrideModal(null)}>✕</button>
               </div>
               <div style={{padding:"14px 18px"}}>
@@ -12660,7 +12755,7 @@ export default function SistemaCarga(){
               </div>
               <div className="mft">
                 <button className="btn-s" onClick={()=>setOverrideModal(null)}>Cancelar</button>
-                <button className="btn-p" style={{background:"var(--orange)"}} onClick={aplicar} disabled={!stTarget||sameAsCurrent||!m.motivo.trim()}>🛠 Aplicar Override</button>
+                <button className="btn-p" style={{background:"var(--orange)"}} onClick={aplicar} disabled={!stTarget||sameAsCurrent||!m.motivo.trim()}><Ico e="🛠" sp/>Aplicar Override</button>
               </div>
             </div>
           </div>
@@ -12674,7 +12769,7 @@ export default function SistemaCarga(){
           <div className="ov" onClick={()=>setCrIndivModal(null)}>
             <div className="modal" style={{maxWidth:520}} onClick={e=>e.stopPropagation()}>
               <div className="mhd">
-                <div className="mt">🚀 Cargo Release — {f.wrs.length===1?`WR ${f.wrs[0].id}`:`${f.wrs.length} WR`}</div>
+                <div className="mt"><Ico e="🚀" sp/>Cargo Release — {f.wrs.length===1?`WR ${f.wrs[0].id}`:`${f.wrs.length} WR`}</div>
                 <button className="mcl" onClick={()=>setCrIndivModal(null)}>✕</button>
               </div>
               <div style={{padding:"8px 16px 0",display:"grid",gap:10}}>
@@ -12697,7 +12792,7 @@ export default function SistemaCarga(){
               </div>
               <div className="mft">
                 <button className="btn-s" onClick={()=>setCrIndivModal(null)}>Cancelar</button>
-                <button className="btn-p" onClick={crSubmitIndiv}>🚀 Confirmar Egreso</button>
+                <button className="btn-p" onClick={crSubmitIndiv}><Ico e="🚀" sp/>Confirmar Egreso</button>
               </div>
             </div>
           </div>
@@ -12712,7 +12807,7 @@ export default function SistemaCarga(){
           <div className="ov" onClick={()=>setCrIndivRecibo(null)} style={{background:"rgba(0,0,0,0.7)"}}>
             <div className="modal" style={{maxWidth:640}} onClick={e=>e.stopPropagation()}>
               <div className="mhd no-print">
-                <div className="mt">🧾 Recibo de Cargo Release</div>
+                <div className="mt"><Ico e="🧾" sp/>Recibo de Cargo Release</div>
                 <button className="mcl" onClick={()=>setCrIndivRecibo(null)}>✕</button>
               </div>
               <div id="cr-recibo-print" style={{padding:24,background:"#fff",color:"#000",fontFamily:"Arial,Helvetica,sans-serif",fontSize:13,lineHeight:1.5}}>
@@ -12763,7 +12858,7 @@ export default function SistemaCarga(){
                   w.document.write(`<!doctype html><html><head><title>Recibo ${_cr.id}</title><style>body{margin:0;padding:20px;font-family:Arial,Helvetica,sans-serif;background:#fff}@media print{body{padding:0}}</style></head><body>${html}</body></html>`);
                   w.document.close();
                   setTimeout(()=>{w.focus();w.print();},250);
-                }}>🖨 Imprimir Recibo</button>
+                }}><Ico e="🖨" sp/>Imprimir Recibo</button>
               </div>
             </div>
           </div>
@@ -13031,14 +13126,14 @@ export default function SistemaCarga(){
         <div className="ov">
           <div className="modal mxl" onClick={e=>e.stopPropagation()} style={{maxHeight:"90vh",overflowY:"auto"}}>
             <div className="mhd">
-              <div className="mt">🏷️ Etiquetas de Caja — {_lwr?.id}</div>
+              <div className="mt"><Ico e="🏷️" sp/>Etiquetas de Caja — {_lwr?.id}</div>
               <div style={{display:"flex",gap:6}}>
-                <button className="btn-p" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>window.print()}>🖨️ Imprimir todo</button>
+                <button className="btn-p" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>window.print()}><Ico e="🖨️" sp/>Imprimir todo</button>
                 <button className="mcl" onClick={()=>setShowLabels(null)}>✕</button>
               </div>
             </div>
             <div style={{marginBottom:12}}>
-              <div style={{fontSize:13,fontWeight:700,color:"var(--navy)",marginBottom:4}}>📦 Etiquetas de Caja ({_ldims.length||_lwr?.cajas||0}) · Tipo actual: <span style={{fontFamily:"'DM Mono',monospace"}}>{_tipoDesc}</span></div>
+              <div style={{fontSize:13,fontWeight:700,color:"var(--navy)",marginBottom:4}}><Ico e="📦" sp/>Etiquetas de Caja ({_ldims.length||_lwr?.cajas||0}) · Tipo actual: <span style={{fontFamily:"'DM Mono',monospace"}}>{_tipoDesc}</span></div>
               <div style={{fontSize:12,color:"var(--t3)",marginBottom:8}}>Cambia el tipo de etiqueta en <b>Configuración → Etiquetas</b>.</div>
               <div style={{display:"flex",flexWrap:"wrap",gap:12,justifyContent:"center"}}>
                 {_ldims.length>0?_ldims.map((d,i)=><LabelCaja key={i} d={d} idx={i+1} total={_ldims.length}/>)
@@ -13191,15 +13286,15 @@ export default function SistemaCarga(){
           <div className="ov">
             <div className="modal mxl" onClick={e=>e.stopPropagation()} style={{maxHeight:"90vh",overflowY:"auto"}}>
               <div className="mhd">
-                <div className="mt">📋 Etiquetas de Guía Consolidada — {_g?.id}</div>
+                <div className="mt"><Ico e="📋" sp/>Etiquetas de Guía Consolidada — {_g?.id}</div>
                 <div style={{display:"flex",gap:6}}>
-                  <button className="btn-p" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>window.print()}>🖨️ Imprimir todo</button>
+                  <button className="btn-p" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>window.print()}><Ico e="🖨️" sp/>Imprimir todo</button>
                   <button className="mcl" onClick={()=>setShowConsolLabels(null)}>✕</button>
                 </div>
               </div>
               <div style={{marginBottom:12}}>
-                <div style={{fontSize:13,fontWeight:700,color:"var(--navy)",marginBottom:4}}>📋 Etiquetas de Guía Consolidada ({_total}) · Tipo actual: <span style={{fontFamily:"'DM Mono',monospace"}}>{_tipoDesc}</span></div>
-                <div style={{fontSize:12,color:"var(--t3)",marginBottom:8}}>Una etiqueta por contenedor · Total: {_totalWR} WR · {_totalCajas} cajas. Cambia el tipo en <b>Configuración → Etiquetas</b>.</div>
+                <div style={{fontSize:13,fontWeight:700,color:"var(--navy)",marginBottom:4}}><Ico e="📋" sp/>Etiquetas de Guía Consolidada ({_total}) · Tipo actual: <span style={{fontFamily:"'DM Mono',monospace"}}>{_tipoDesc}</span></div>
+                <div style={{fontSize:12,color:"var(--t3)",marginBottom:8}}>Total: {_totalWR} WR · {_totalCajas} cajas</div>
                 <div style={{display:"flex",flexWrap:"wrap",gap:12,justifyContent:"center"}}>
                   {_conts.map((ct,i)=><LabelGuiaConsol key={i} ct={ct} idx={i+1} total={_total}/>)}
                 </div>
@@ -13209,8 +13304,8 @@ export default function SistemaCarga(){
         );
       })()}
 
-      {showNewCl&&<ClientModal agentes={agentes} oficinas={oficinas} autonomos={clients.filter(c=>c.tipo==="usuario"&&c.rol==="F")} allClients={clients} title="➕ Nuevo Registro" initial={{tipo:"cliente",clienteTipo:"matriz",primerNombre:"",segundoNombre:"",primerApellido:"",segundoApellido:"",cedula:"",dir:"",municipio:"",estado:"",pais:"",cp:"",tel1:"",tel2:"",email:"",casillero:"",rol:"I",password:"",...presetDominio()}} onClose={()=>setShowNewCl(false)} onSave={f=>{const esUser=f.tipo==="usuario";const prefix=esUser?"U":"C";const nextNum=clients.filter(c=>c.tipo===(esUser?"usuario":"cliente")).length+1;const newId=`${prefix}-${String(nextNum).padStart(3,"0")}`;const casillero=(!esUser&&!f.casillero)?nextCasillero():f.casillero;const newRec={...f,id:newId,casillero,clienteTipo:f.clienteTipo||"matriz",password:""};setClients(p=>[...p,newRec]);setShowNewCl(false);logAction("Creó registro",`${newId} — ${f.primerNombre} ${f.primerApellido}`);(async()=>{await dbUpsertCliente(newRec);await sincronizarCuenta(newRec,f.password);})();}}/>}
-      {showEditCl&&<ClientModal agentes={agentes} oficinas={oficinas} autonomos={clients.filter(c=>c.tipo==="usuario"&&c.rol==="F")} allClients={clients} title={`✏️ Editar — ${fullName(showEditCl)}`} initial={showEditCl} onClose={()=>setShowEditCl(null)} onSave={f=>{const ant=showEditCl;const rec={...f,clienteTipo:f.clienteTipo||"matriz",password:""};setClients(p=>p.map(c=>c.id===f.id?rec:c));logAction("Editó registro",`${f.id} — ${f.primerNombre} ${f.primerApellido}`);setShowEditCl(null);(async()=>{await dbUpsertCliente(rec);await sincronizarCuenta(rec,f.password,ant);})();}}/>}
+      {showNewCl&&<ClientModal agentes={agentes} oficinas={oficinas} autonomos={clients.filter(c=>c.tipo==="usuario"&&c.rol==="F")} allClients={clients} title="Nuevo Registro" initial={{tipo:"cliente",clienteTipo:"matriz",primerNombre:"",segundoNombre:"",primerApellido:"",segundoApellido:"",cedula:"",dir:"",municipio:"",estado:"",pais:"",cp:"",tel1:"",tel2:"",email:"",casillero:"",rol:"I",password:"",...presetDominio()}} onClose={()=>setShowNewCl(false)} onSave={f=>{const esUser=f.tipo==="usuario";const prefix=esUser?"U":"C";const nextNum=clients.filter(c=>c.tipo===(esUser?"usuario":"cliente")).length+1;const newId=`${prefix}-${String(nextNum).padStart(3,"0")}`;const casillero=(!esUser&&!f.casillero)?nextCasillero():f.casillero;const newRec={...f,id:newId,casillero,clienteTipo:f.clienteTipo||"matriz",password:""};setClients(p=>[...p,newRec]);setShowNewCl(false);logAction("Creó registro",`${newId} — ${f.primerNombre} ${f.primerApellido}`);(async()=>{await dbUpsertCliente(newRec);await sincronizarCuenta(newRec,f.password);})();}}/>}
+      {showEditCl&&<ClientModal agentes={agentes} oficinas={oficinas} autonomos={clients.filter(c=>c.tipo==="usuario"&&c.rol==="F")} allClients={clients} title={`Editar — ${fullName(showEditCl)}`} initial={showEditCl} onClose={()=>setShowEditCl(null)} onSave={f=>{const ant=showEditCl;const rec={...f,clienteTipo:f.clienteTipo||"matriz",password:""};setClients(p=>p.map(c=>c.id===f.id?rec:c));logAction("Editó registro",`${f.id} — ${f.primerNombre} ${f.primerApellido}`);setShowEditCl(null);(async()=>{await dbUpsertCliente(rec);await sincronizarCuenta(rec,f.password,ant);})();}}/>}
 
       {/* ── Cargo Release — MODAL FORMULARIO ───────────────────────────────── */}
       {crModal&&(()=>{
@@ -13232,7 +13327,7 @@ export default function SistemaCarga(){
             <div className="modal mlg" style={{maxWidth:1100,width:"96%"}} onClick={e=>e.stopPropagation()}>
               <div className="mhd">
                 <div style={{flex:1}}>
-                  <div className="mt">🚀 {editing?`Editar Egreso ${f.editId}`:"Nuevo Egreso (Cargo Release)"}</div>
+                  <div className="mt"><Ico e="🚀" sp/>{editing?`Editar Egreso ${f.editId}`:"Nuevo Egreso (Cargo Release)"}</div>
                 </div>
                 <button className="mcl" onClick={()=>setCrModal(null)}>✕</button>
               </div>
@@ -13259,7 +13354,7 @@ export default function SistemaCarga(){
 
                 <div style={{background:"#F5F7FB",padding:10,borderRadius:6,marginBottom:10}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-                    <div style={{fontSize:13,fontWeight:700,color:"var(--navy)"}}>📦 WR Seleccionados ({sel.length})</div>
+                    <div style={{fontSize:13,fontWeight:700,color:"var(--navy)"}}><Ico e="📦" sp/>WR Seleccionados ({sel.length})</div>
                     {sel.length>0&&<button className="btn-s" style={{fontSize:12,padding:"2px 8px"}} onClick={()=>setCrModal(p=>({...p,wrIds:[]}))}>Limpiar todos</button>}
                   </div>
                   {sel.length===0?(
@@ -13280,7 +13375,7 @@ export default function SistemaCarga(){
                 </div>
 
                 <div style={{marginBottom:6}}>
-                  <div style={{fontSize:13,fontWeight:700,color:"var(--t2)",marginBottom:4}}>➕ Agregar WR</div>
+                  <div style={{fontSize:13,fontWeight:700,color:"var(--t2)",marginBottom:4}}><Ico e="➕" sp/>Agregar WR</div>
                   <input className="fi" placeholder="Buscar por WR, consignee, tracking…" value={qRef} onChange={e=>setCrModal(p=>({...p,_q:e.target.value}))} style={{marginBottom:6}}/>
                   <div style={{maxHeight:"40vh",overflow:"auto",border:"1px solid #E0E7EF",borderRadius:4}}>
                     {filtered.length===0?(
@@ -13299,7 +13394,7 @@ export default function SistemaCarga(){
               </div>
               <div className="mft" style={{display:"flex",justifyContent:"flex-end",gap:8}}>
                 <button className="btn-s" onClick={()=>setCrModal(null)}>Cancelar</button>
-                <button className="btn-p" onClick={crSubmit}>{editing?"💾 Guardar cambios":"🚀 Crear Egreso"}</button>
+                <button className="btn-p" onClick={crSubmit}>{editing?"Guardar cambios":"Crear Egreso"}</button>
               </div>
             </div>
           </div>
@@ -13316,9 +13411,9 @@ export default function SistemaCarga(){
           <div className="ov">
             <div className="modal mlg" style={{maxWidth:900,width:"96%"}}>
               <div className="mhd no-print">
-                <div className="mt">🖨️ Nota de Egreso — {cr.id}</div>
+                <div className="mt"><Ico e="🖨️" sp/>Nota de Egreso — {cr.id}</div>
                 <div style={{display:"flex",gap:6}}>
-                  <button className="btn-p" style={{fontSize:13,padding:"4px 12px"}} onClick={()=>window.print()}>🖨️ Imprimir</button>
+                  <button className="btn-p" style={{fontSize:13,padding:"4px 12px"}} onClick={()=>window.print()}><Ico e="🖨️" sp/>Imprimir</button>
                   <button className="mcl" onClick={()=>setCrPrint(null)}>✕</button>
                 </div>
               </div>
@@ -13409,7 +13504,7 @@ export default function SistemaCarga(){
       {pwModal&&(
         <div className="ov" onClick={()=>setPwModal(null)}>
           <div className="modal" style={{maxWidth:400}} onClick={e=>e.stopPropagation()}>
-            <div className="mhd"><div className="mt">🔑 Cambiar mi contraseña</div><button className="mcl" onClick={()=>setPwModal(null)}>✕</button></div>
+            <div className="mhd"><div className="mt"><Ico e="🔑" sp/>Cambiar mi contraseña</div><button className="mcl" onClick={()=>setPwModal(null)}>✕</button></div>
             <div className="mbd" style={{display:"flex",flexDirection:"column",gap:10}}>
               {pwModal.ok
                 ?<div style={{color:"var(--green)",fontWeight:700,textAlign:"center",padding:10}}>✓ Contraseña cambiada</div>
@@ -13449,7 +13544,7 @@ export default function SistemaCarga(){
           <div className="ov">
             <div className="modal" style={{maxWidth:760,width:"96%"}} onClick={e=>e.stopPropagation()}>
               <div className="mhd" style={{borderTop:`4px solid ${color}`}}>
-                <div className="mt">{esDesp?`🚚 Despacho — ${f.entidad.nombre}`:`📦 Entrega — ${f.consignatario||f.entidad.nombre}`}</div>
+                <div className="mt">{esDesp?`Despacho — ${f.entidad.nombre}`:`Entrega — ${f.consignatario||f.entidad.nombre}`}</div>
                 <button className="mcl" onClick={()=>setDnQuick(null)}>✕</button>
               </div>
               <div className="mbd" style={{maxHeight:"72vh",overflow:"auto"}}>
@@ -13479,12 +13574,12 @@ export default function SistemaCarga(){
                 </div>
                 {pend.length>0&&(
                   <div style={{background:"#FFF3E0",border:"1px solid #FFB74D",borderRadius:8,padding:"8px 12px",marginBottom:12,fontSize:14,color:"#BF360C"}}>
-                    ⚠️ Pago pendiente: {pend.map(x=>`${x.id} (${fmtMoney((x.total||0)-(x.pagado||0),x.moneda)})`).join(" · ")}
+                    <Ico e="⚠️" sp/>Pago pendiente: {pend.map(x=>`${x.id} (${fmtMoney((x.total||0)-(x.pagado||0),x.moneda)})`).join(" · ")}
                   </div>
                 )}
                 {!esDesp&&(
                   <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap"}}>
-                    {[{k:"consignatario",l:"👤 Recibe el consignatario"},{k:"encargado",l:"🧑‍🤝‍🧑 Recibe un encargado"}].map(o=>(
+                    {[{k:"consignatario",l:"Recibe el consignatario"},{k:"encargado",l:"Recibe un encargado"}].map(o=>(
                       <button key={o.k} className={f.recibe===o.k?"btn-p":"btn-s"} style={{fontSize:14}}
                         onClick={()=>setDnQuick(p=>o.k==="consignatario"
                           ?{...p,recibe:"consignatario",receptorNombre:p.consignatario,receptorDocumento:(clients.find(c=>c.id===p.clienteId)?.cedula)||"",relacion:""}
@@ -13511,7 +13606,7 @@ export default function SistemaCarga(){
                     <div style={{gridColumn:"1/-1"}}>
                       <div style={lbl}>Entrega</div>
                       <div style={{display:"flex",gap:8}}>
-                        {[{k:"retiro_oficina",l:"🏢 Retiro en oficina"},{k:"domicilio",l:"🏠 A domicilio"}].map(o=>(
+                        {[{k:"retiro_oficina",l:"Retiro en oficina"},{k:"domicilio",l:"A domicilio"}].map(o=>(
                           <button key={o.k} className={f.metodoEntrega===o.k?"btn-p":"btn-s"} style={{fontSize:14}} onClick={()=>set("metodoEntrega",o.k)}>{o.l}</button>
                         ))}
                       </div>
@@ -13527,7 +13622,7 @@ export default function SistemaCarga(){
               <div className="mft">
                 <div style={{fontSize:14,color:"var(--t2)",marginRight:"auto"}}><b>{f.wrIds.length}</b> de {f.wrs.length} WR</div>
                 <button className="btn-s" onClick={()=>setDnQuick(null)}>Cancelar</button>
-                <button className="btn-p" style={{background:color,borderColor:color}} onClick={dnQuickSubmit}>{esDesp?"🚚 Confirmar despacho":"📦 Confirmar entrega"}</button>
+                <button className="btn-p" style={{background:color,borderColor:color}} onClick={dnQuickSubmit}>{esDesp?"Confirmar despacho":"Confirmar entrega"}</button>
               </div>
             </div>
           </div>
@@ -13642,7 +13737,7 @@ export default function SistemaCarga(){
             <div className="modal mlg" style={{maxWidth:1100,width:"96%"}} onClick={e=>e.stopPropagation()}>
               <div className="mhd" style={{borderTop:`4px solid ${colorTipo}`}}>
                 <div style={{flex:1}}>
-                  <div className="mt">{esDespacho?"🚚":"📦"} {editing?`Editar Nota ${f.editId}`:(esDespacho?"Nuevo Despacho":"Nueva Entrega")}</div>
+                  <div className="mt">{esDespacho?<Ico e="🚚"/>:<Ico e="📦"/>} {editing?`Editar Nota ${f.editId}`:(esDespacho?"Nuevo Despacho":"Nueva Entrega")}</div>
                 </div>
                 <button className="mcl" onClick={()=>setDnModal(null)}>✕</button>
               </div>
@@ -13658,9 +13753,9 @@ export default function SistemaCarga(){
                   </select>
                   {guiaSel&&(
                     <div style={{fontSize:11,color:"var(--t3)",marginTop:6,display:"flex",gap:14,flexWrap:"wrap"}}>
-                      <span>📦 <b>Destino:</b> {guiaSel.destino||"—"}</span>
-                      <span>{isAereo?"✈️":"🚢"} <b>Modo:</b> {guiaSel.tipoEnvio||"—"}</span>
-                      <span>📋 <b>Total WR x entregar:</b> {wrsGuia.length}</span>
+                      <span><Ico e="📦" sp/><b>Destino:</b> {guiaSel.destino||"—"}</span>
+                      <span>{isAereo?<Ico e="✈️"/>:<Ico e="🚢"/>} <b>Modo:</b> {guiaSel.tipoEnvio||"—"}</span>
+                      <span><Ico e="📋" sp/><b>Total WR x entregar:</b> {wrsGuia.length}</span>
                     </div>
                   )}
                 </div>
@@ -13679,7 +13774,7 @@ export default function SistemaCarga(){
                       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:6,maxHeight:"35vh",overflow:"auto"}}>
                         {receptoresDisponibles.map(r=>{
                           const isSel=f.receptorEntidad?.tipo===r.tipo&&f.receptorEntidad?.id===r.id;
-                          const icon={cliente:"👤",agente:"🤝",oficina:"🏢",autonomo:"🧑‍💻"}[r.tipo]||"•";
+                          const icon={cliente:<Ico e="👤"/>,agente:<Ico e="🤝"/>,oficina:<Ico e="🏢"/>,autonomo:<Ico e="🧑‍💻"/>}[r.tipo]||"•";
                           return (
                             <div key={`${r.tipo}:${r.id}`} onClick={()=>elegirReceptor(r)}
                               style={{cursor:"pointer",padding:"6px 10px",borderRadius:6,
@@ -13774,9 +13869,9 @@ export default function SistemaCarga(){
                       </div>
                       <div><div style={{fontSize:11,fontWeight:600,color:"var(--t2)",marginBottom:2}}>Método de entrega</div>
                         <select className="fs" value={f.metodoEntrega} onChange={e=>setDnModal(p=>({...p,metodoEntrega:e.target.value}))} style={{width:"100%"}}>
-                          <option value="retiro_oficina">🏢 Retiro en oficina</option>
-                          <option value="domicilio">🏠 Entrega a domicilio</option>
-                          <option value="transportista">🚚 Transportista / Agente</option>
+                          <option value="retiro_oficina">Retiro en oficina</option>
+                          <option value="domicilio">Entrega a domicilio</option>
+                          <option value="transportista">Transportista / Agente</option>
                         </select>
                       </div>
                       {f.metodoEntrega==="transportista"&&(
@@ -13804,7 +13899,7 @@ export default function SistemaCarga(){
                   <button className="btn-s" onClick={()=>setDnModal(null)}>Cancelar</button>
                   <button className="btn-p" style={{background:colorTipo,borderColor:colorTipo}}
                     onClick={dnSubmit}>
-                    {editing?"💾 Guardar cambios":(esDespacho?"🚚 Crear Despacho":"📦 Crear Entrega")}
+                    {editing?"Guardar cambios":(esDespacho?"Crear Despacho":"Crear Entrega")}
                   </button>
                 </div>
               </div>
@@ -13842,9 +13937,9 @@ export default function SistemaCarga(){
           <div className="ov">
             <div className="modal mlg" style={{maxWidth:900,width:"96%"}}>
               <div className="mhd no-print">
-                <div className="mt">🖨️ Nota de {esDespacho?"Despacho":"Entrega"} — {dn.id}</div>
+                <div className="mt"><Ico e="🖨️" sp/>Nota de {esDespacho?"Despacho":"Entrega"} — {dn.id}</div>
                 <div style={{display:"flex",gap:6}}>
-                  <button className="btn-p" style={{fontSize:13,padding:"4px 12px"}} onClick={()=>window.print()}>🖨️ Imprimir</button>
+                  <button className="btn-p" style={{fontSize:13,padding:"4px 12px"}} onClick={()=>window.print()}><Ico e="🖨️" sp/>Imprimir</button>
                   <button className="mcl" onClick={()=>setDnPrint(null)}>✕</button>
                 </div>
               </div>
@@ -13948,7 +14043,7 @@ export default function SistemaCarga(){
                           grupos.forEach((g,gi)=>{
                             rows.push(
                               <tr key={`hdr-${gi}`} style={{background:"#F0F4FA"}}>
-                                <td colSpan={totCols} style={{border:"1px solid #999",padding:"4px 8px",fontWeight:700}}>👤 {g.nombre}{g.casillero?` · ${g.casillero}`:""} ({g.wrs.length} WR)</td>
+                                <td colSpan={totCols} style={{border:"1px solid #999",padding:"4px 8px",fontWeight:700}}><Ico e="👤" sp/>{g.nombre}{g.casillero?` · ${g.casillero}`:""} ({g.wrs.length} WR)</td>
                               </tr>
                             );
                             g.wrs.forEach(w=>{rows.push(renderRow(w,idx));idx++;});
@@ -14053,7 +14148,7 @@ export default function SistemaCarga(){
               <div className="mh">
                 <div>
                   <div style={{fontSize:17,fontWeight:700,color:"var(--navy)"}}>
-                    {f._editing?"✏️ Editar factura":"📄 Nueva factura"}
+                    {f._editing?"Editar factura":"Nueva factura"}
                     {f.id&&<span style={{fontFamily:"'DM Mono',monospace",marginLeft:10,color:"var(--navy)"}}>{f.id}</span>}
                     {!f.id&&<span style={{fontFamily:"'DM Mono',monospace",marginLeft:10,color:"var(--t3)"}}>#{buildFacturaId(nextInvoiceNum)}</span>}
                   </div>
@@ -14072,7 +14167,7 @@ export default function SistemaCarga(){
                       {f.receptorDir&&<div style={{fontSize:13,color:"var(--t3)"}}>{f.receptorDir}</div>}
                     </div>
                     <div style={{fontSize:13,color:"var(--t2)",textAlign:"right"}}>{fmtDate(f.fecha)} · {f.moneda}</div>
-                    <button className="btn-s" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>setFacModal(p=>({...p,_verDatos:true}))}>✏️ Editar datos</button>
+                    <button className="btn-s" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>setFacModal(p=>({...p,_verDatos:true}))}><Ico e="✏️" sp/>Editar datos</button>
                   </div>
                 ):(<>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:10,marginBottom:10}}>
@@ -14153,7 +14248,7 @@ export default function SistemaCarga(){
 
                 {/* WR Y FLETE */}
                 {fl.length>0&&<>
-                  <div style={secT}>📦 WR y flete</div>
+                  <div style={secT}><Ico e="📦" sp/>WR y flete</div>
                   <div style={{overflowX:"auto",border:"1px solid var(--b1)",borderRadius:8}}>
                     <table className="ct" style={{width:"100%",fontSize:14}}>
                       <thead><tr>
@@ -14187,7 +14282,7 @@ export default function SistemaCarga(){
                 </>}
 
                 {/* SERVICIOS Y GASTOS ADICIONALES */}
-                <div style={secT}>⚡ Servicios y gastos adicionales
+                <div style={secT}><Ico e="⚡" sp/>Servicios y gastos adicionales
                   <select className="fs" value="" style={{fontSize:13,padding:"3px 6px",width:"auto"}} onChange={e=>{
                     const c=catalogo.find(x=>x.nombre===e.target.value);
                     if(c)addL({tipo:"adicional",wrId:(f.wrIds||[])[0]||"",descripcion:c.nombre,precio:c.precio});
@@ -14212,7 +14307,7 @@ export default function SistemaCarga(){
                   </table>}
 
                 {/* COBROS EXTRA */}
-                <div style={secT}>➕ Cobros extra
+                <div style={secT}><Ico e="➕" sp/>Cobros extra
                   <button className="btn-s" style={{fontSize:12,padding:"3px 10px"}} onClick={()=>addL({tipo:"extra"})}>+ Agregar</button>
                 </div>
                 {ex.length===0?<div style={{fontSize:13,color:"var(--t3)"}}>—</div>:
@@ -14262,8 +14357,8 @@ export default function SistemaCarga(){
               </div>
               <div className="mf" style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
                 <button className="btn-s" onClick={()=>setFacModal(null)}>Cancelar</button>
-                {f.status==="borrador"&&<button className="btn-s" onClick={facSaveBorrador}>💾 Guardar borrador</button>}
-                {(f.status==="borrador"||f.status==="emitida")&&<button className="btn-p" onClick={facEmitir}>📤 {f.status==="emitida"?"Actualizar emitida":"Emitir"}</button>}
+                {f.status==="borrador"&&<button className="btn-s" onClick={facSaveBorrador}><Ico e="💾" sp/>Guardar borrador</button>}
+                {(f.status==="borrador"||f.status==="emitida")&&<button className="btn-p" onClick={facEmitir}><Ico e="📤" sp/>{f.status==="emitida"?"Actualizar emitida":"Emitir"}</button>}
               </div>
             </div>
           </div>
@@ -14276,14 +14371,14 @@ export default function SistemaCarga(){
         const set=patch=>setCobroModal(x=>({...x,...patch}));
         const lista=m.pagador?null:pagadoresConMovimiento();
         const mons=m.pagador?monedasDe(m.pagador):[];
-        const IC={cliente:"👤",agente:"🤝",autonomo:"🧑‍💻"};
+        const IC={cliente:<Ico e="👤"/>,agente:<Ico e="🤝"/>,autonomo:<Ico e="🧑‍💻"/>};
         const aplicDe=id=>c.aplic.find(x=>x.f.id===id)?.monto||0;
         return(
           <div className="ov">
             <div className="modal mmd">
               <div className="mhd">
                 <div style={{flex:1}}>
-                  <div className="mt">💵 Registrar cobro</div>
+                  <div className="mt"><Ico e="💵" sp/>Registrar cobro</div>
                   {m.pagador&&<div style={{fontSize:14,color:"var(--t2)",fontWeight:600}}>{IC[m.pagador.tipo]||"•"} {m.pagador.nombre}</div>}
                 </div>
                 <button className="mcl" onClick={cobroCerrar}>✕</button>
@@ -14347,7 +14442,7 @@ export default function SistemaCarga(){
               <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:16,paddingTop:12,borderTop:"1px solid var(--b1)"}}>
                 {m.pagador&&<button className="btn-s" style={{marginRight:"auto"}} onClick={()=>set({pagador:null})}>← Cambiar pagador</button>}
                 <button className="btn-s" onClick={cobroCerrar}>Cancelar</button>
-                {m.pagador&&<button className="btn-p" onClick={cobroSubmit}>💵 Registrar y emitir recibo</button>}
+                {m.pagador&&<button className="btn-p" onClick={cobroSubmit}><Ico e="💵" sp/>Registrar y emitir recibo</button>}
               </div>
             </div>
           </div>
@@ -14364,7 +14459,7 @@ export default function SistemaCarga(){
             <div className="modal" style={{width:560}}>
               <div className="mh">
                 <div>
-                  <div style={{fontSize:17,fontWeight:700,color:"var(--navy)"}}>💵 Registrar pago</div>
+                  <div style={{fontSize:17,fontWeight:700,color:"var(--navy)"}}><Ico e="💵" sp/>Registrar pago</div>
                   <div style={{fontSize:13,color:"var(--t3)"}}>Factura {fact.id} · Saldo {fmtMoney(fact.saldo,fact.moneda)}</div>
                 </div>
                 <button className="mcl" onClick={()=>setPagoModal(null)}>✕</button>
@@ -14397,7 +14492,7 @@ export default function SistemaCarga(){
               </div>
               <div className="mf" style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
                 <button className="btn-s" onClick={()=>setPagoModal(null)}>Cancelar</button>
-                <button className="btn-p" onClick={pagoSubmit}>💵 Registrar pago</button>
+                <button className="btn-p" onClick={pagoSubmit}><Ico e="💵" sp/>Registrar pago</button>
               </div>
             </div>
           </div>
@@ -14413,7 +14508,7 @@ export default function SistemaCarga(){
             <div className="modal" style={{width:520}}>
               <div className="mh">
                 <div>
-                  <div style={{fontSize:17,fontWeight:700,color:"var(--purple)"}}>📝 Nota de Crédito</div>
+                  <div style={{fontSize:17,fontWeight:700,color:"var(--purple)"}}><Ico e="📝" sp/>Nota de Crédito</div>
                   <div style={{fontSize:13,color:"var(--t3)"}}>Factura origen: {orig.id} · Total {fmtMoney(orig.total,orig.moneda)} · Pagado {fmtMoney(orig.pagado,orig.moneda)}</div>
                 </div>
                 <button className="mcl" onClick={()=>setNcModal(null)}>✕</button>
@@ -14427,7 +14522,7 @@ export default function SistemaCarga(){
                   return(<div style={{marginBottom:10}}>
                     <label className="fl">Ya pagado: {fmtMoney(exc,orig.moneda)}</label>
                     <div style={{display:"flex",gap:6}}>
-                      {[["favor","⭐ Saldo a favor"],["reembolso","💵 Reembolsado"]].map(([k,l])=><button key={k} className={ncModal.destino===k?"btn-p":"btn-s"} style={{fontSize:13,padding:"5px 12px"}} onClick={()=>setNcModal(x=>({...x,destino:k}))}>{l}</button>)}
+                      {[["favor","Saldo a favor"],["reembolso","Reembolsado"]].map(([k,l])=><button key={k} className={ncModal.destino===k?"btn-p":"btn-s"} style={{fontSize:13,padding:"5px 12px"}} onClick={()=>setNcModal(x=>({...x,destino:k}))}>{l}</button>)}
                       {ncModal.destino==="reembolso"&&<select className="fs" style={{width:170}} value={ncModal.metodoReemb||"efectivo"} onChange={e=>setNcModal(x=>({...x,metodoReemb:e.target.value}))}>{PAY_METHODS.filter(x=>!x.interno).map(x=><option key={x.k} value={x.k}>{x.l}</option>)}</select>}
                     </div>
                   </div>);})()}
@@ -14442,7 +14537,7 @@ export default function SistemaCarga(){
               </div>
               <div className="mf" style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
                 <button className="btn-s" onClick={()=>setNcModal(null)}>Cancelar</button>
-                <button className="btn-p" style={{background:"var(--purple)"}} onClick={ncSubmit}>📝 Emitir NC</button>
+                <button className="btn-p" style={{background:"var(--purple)"}} onClick={ncSubmit}><Ico e="📝" sp/>Emitir NC</button>
               </div>
             </div>
           </div>
@@ -14454,9 +14549,9 @@ export default function SistemaCarga(){
         <div className="ov">
           <div className="modal mlg" style={{maxWidth:900,width:"96%"}}>
             <div className="mhd no-print">
-              <div className="mt">🖨️ Solicitud de Pick-up — {p.id}</div>
+              <div className="mt"><Ico e="🖨️" sp/>Solicitud de Pick-up — {p.id}</div>
               <div style={{display:"flex",gap:6}}>
-                <button className="btn-p" style={{fontSize:13,padding:"4px 12px"}} onClick={()=>window.print()}>🖨️ Imprimir</button>
+                <button className="btn-p" style={{fontSize:13,padding:"4px 12px"}} onClick={()=>window.print()}><Ico e="🖨️" sp/>Imprimir</button>
                 <button className="mcl" onClick={()=>setPuPrint(null)}>✕</button>
               </div>
             </div>
@@ -14499,9 +14594,9 @@ export default function SistemaCarga(){
         <div className="ov">
           <div className="modal mlg" style={{maxWidth:1100,width:"97%"}}>
             <div className="mhd">
-              <div className="mt">📑 Documentos — WR {ed.wr.id}</div>
+              <div className="mt"><Ico e="📑" sp/>Documentos — WR {ed.wr.id}</div>
               <div style={{display:"flex",gap:6}}>
-                <button className="btn-p" style={{fontSize:13,padding:"4px 12px"}} onClick={()=>docImprimir(ed)}>🖨️ Imprimir</button>
+                <button className="btn-p" style={{fontSize:13,padding:"4px 12px"}} onClick={()=>docImprimir(ed)}><Ico e="🖨️" sp/>Imprimir</button>
                 <button className="mcl" onClick={()=>setDocEd(null)}>✕</button>
               </div>
             </div>
@@ -14528,7 +14623,7 @@ export default function SistemaCarga(){
                       {ed.tipo==="factura"&&<td><input className="fi" type="number" value={x.pesoKg} onChange={e=>setL(i,{pesoKg:e.target.value})}/></td>}
                       <td><input className="fi" type="number" value={x.valorUnit} onChange={e=>setL(i,{valorUnit:e.target.value})}/></td>
                       <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700}}>{fmtMoney((parseFloat(x.cantidad)||0)*(parseFloat(x.valorUnit)||0),ed.moneda)}</td>
-                      <td>{ed.lineas.length>1&&<span className="ic-b" style={{color:"var(--red)"}} onClick={()=>set({lineas:ed.lineas.filter((_,j)=>j!==i)})}>🗑</span>}</td>
+                      <td>{ed.lineas.length>1&&<span className="ic-b" style={{color:"var(--red)"}} onClick={()=>set({lineas:ed.lineas.filter((_,j)=>j!==i)})}><Ico e="🗑" solo/></span>}</td>
                     </tr>))}</tbody>
                 </table>
                 <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
@@ -14543,9 +14638,9 @@ export default function SistemaCarga(){
         <div className="ov">
           <div className="modal mlg" style={{maxWidth:900,width:"96%"}}>
             <div className="mhd no-print">
-              <div className="mt">🖨️ Recibo de Cobro — {reciboVer}</div>
+              <div className="mt"><Ico e="🖨️" sp/>Recibo de Cobro — {reciboVer}</div>
               <div style={{display:"flex",gap:6}}>
-                <button className="btn-p" style={{fontSize:13,padding:"4px 12px"}} onClick={()=>printRecibo(reciboVer)}>🖨️ Imprimir</button>
+                <button className="btn-p" style={{fontSize:13,padding:"4px 12px"}} onClick={()=>printRecibo(reciboVer)}><Ico e="🖨️" sp/>Imprimir</button>
                 <button className="mcl" onClick={()=>setReciboVer(null)}>✕</button>
               </div>
             </div>
@@ -14562,10 +14657,10 @@ export default function SistemaCarga(){
           <div className="ov">
             <div className="modal mlg" style={{maxWidth:900,width:"96%"}}>
               <div className="mhd no-print">
-                <div className="mt">🖨️ {f.tipo==="nota_credito"?"Nota de Crédito":f.tipo==="proforma"?"Proforma":"Factura"} — {f.id}
+                <div className="mt"><Ico e="🖨️" sp/>{f.tipo==="nota_credito"?"Nota de Crédito":f.tipo==="proforma"?"Proforma":"Factura"} — {f.id}
                   {f.status==="anulada"&&<span style={{marginLeft:10,color:"var(--red)",fontWeight:800}}>ANULADA</span>}</div>
                 <div style={{display:"flex",gap:6}}>
-                  {hasPerm("imp_factura")&&<button className="btn-p" style={{fontSize:13,padding:"4px 12px"}} onClick={()=>printFactura(f)}>🖨️ Imprimir</button>}
+                  {hasPerm("imp_factura")&&<button className="btn-p" style={{fontSize:13,padding:"4px 12px"}} onClick={()=>printFactura(f)}><Ico e="🖨️" sp/>Imprimir</button>}
                   <button className="mcl" onClick={()=>setFacPrint(null)}>✕</button>
                 </div>
               </div>
