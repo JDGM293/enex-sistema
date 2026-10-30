@@ -6206,7 +6206,7 @@ export default function SistemaCarga(){
         {filas.length===0?<div style={{textAlign:"center",padding:40,color:"var(--t3)"}}>{Q?"Sin coincidencias.":"No hay documentos."}</div>:
         pagSlice("imp_"+tipo,filas).map(f=>(
           <div key={f.k} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 14px",borderBottom:"1px solid var(--b1)",flexWrap:"wrap"}}>
-            <div style={{flex:1,minWidth:220}}>{f.izq}</div>
+            <div style={{flex:1,minWidth:220,display:"flex",flexDirection:"column",alignItems:"flex-start",gap:6}}>{f.izq}</div>
             {f.estado}
             <div style={{display:"flex",gap:6}}>{f.acc}</div>
           </div>))}
