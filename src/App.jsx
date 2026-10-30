@@ -629,6 +629,7 @@ const ICO_SVG={
   inbox:'<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',
   receipt:'<path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 17.5v-11"/>',
   folder:'<path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>',
+  download:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/>',
   upload:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/>',
   search:'<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
   clock:'<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
@@ -684,7 +685,7 @@ const ICO_SVG={
 const ICO_MAP={"📦":"package","✅":"checkCircle","⚠":"alert","🤝":"handshake","🖨":"printer","🏢":"building","🏙":"building","✏":"pencil","✍":"pencil",
   "💵":"banknote","👤":"user","🧑‍💻":"userCheck","🧑‍💼":"briefcase","🧑‍🤝‍🧑":"users","📝":"filePen","🚚":"truck","🚐":"truck","🚛":"truck","➕":"plus","🚀":"send",
   "📋":"clipboard","🗑":"trash","💰":"wallet","🏛":"landmark","🏦":"landmark","🔁":"repeat","🔄":"repeat","📥":"inbox","📬":"inbox","📭":"inbox","🧾":"receipt",
-  "🗂":"folder","📁":"folder","🗃":"folder","🗄":"folder","📤":"upload","🔍":"search","🔎":"search","⏳":"clock","💾":"save","💳":"card","⭐":"star","👥":"users",
+  "🗂":"folder","📁":"folder","🗃":"folder","🗄":"folder","📤":"upload","🆕":"inbox","🔍":"search","🔎":"search","⏳":"clock","💾":"save","💳":"card","⭐":"star","👥":"users",
   "❌":"xCircle","🚫":"ban","📡":"scan","📶":"scan","💼":"briefcase","✈":"plane","🛫":"plane","🔔":"bell","📷":"camera","📸":"camera","📅":"calendar","🏠":"home",
   "💸":"arrowOut","↩":"undo","📍":"pin","🚢":"ship","📊":"chart","📈":"chart","⚡":"zap","🏷":"tag","📄":"file","📑":"file","📃":"file","📜":"file","📒":"file",
   "💲":"dollar","🛒":"cart","🔒":"lock","🔐":"lock","🔑":"key","🔗":"link","👁":"eye","🙈":"eyeOff","🌎":"globe","🌐":"globe","⚙":"settings","🛠":"wrench",
@@ -3287,7 +3288,7 @@ export default function SistemaCarga(){
   // de más arriba (única fuente de verdad por estado).
   const STAT_DEFS=[
     {key:"total",          ic:<Ico e="📦"/>, label:"Total WR",        d:"Todos los WR del sistema",            cls:"up", filter:()=>wrList, color:"#1A2B4A"},
-    {key:"porConfirmar",   ic:"🆕", label:"Por Confirmar",    d:"Recibido / Origen — falta tipo",       cls:"dn", filter:()=>wrList.filter(w=>w.status&&["1","2"].includes(w.status.code)), color:"#C05800"},
+    {key:"porConfirmar",   ic:<Ico e="🆕"/>, label:"Por Confirmar",    d:"Recibido / Origen — falta tipo",       cls:"dn", filter:()=>wrList.filter(w=>w.status&&["1","2"].includes(w.status.code)), color:"#C05800"},
     {key:"confirmed",      ic:<Ico e="✅"/>, label:"Confirmados",      d:"Listos para consolidar",               cls:"up", filter:()=>wrList.filter(w=>w.status&&w.status.code==="3"), color:"#1A8A4A"},
     {key:"consolidados",   ic:<Ico e="🗂️"/>, label:"Consolidados",     d:"Asignados a una guía",                 cls:"up", filter:()=>wrList.filter(w=>w.status&&w.status.code==="4"), color:"#2A6FA0"},
     {key:"transit",        ic:<Ico e="✈️"/>, label:"En Tránsito",      d:"Viajando origen → destino",            cls:"up", filter:()=>wrList.filter(w=>w.status&&["5","6","6.2","7","8","9","10","11","12","13"].includes(w.status.code)), color:"#0080CC"},
@@ -6714,7 +6715,7 @@ export default function SistemaCarga(){
           <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:10}}>
             <button className="btn-s" style={{fontSize:13}} onClick={()=>setRepModo("lista")}>← Reportes</button>
             <div style={{flex:1}}><div style={{fontSize:18,fontWeight:700,color:"var(--navy)"}}>{F.ic} {rep.nombre}</div><div style={{fontSize:12,color:"var(--t3)"}}>{F.l}</div></div>
-            <button className="btn-s" style={{fontSize:13}} onClick={()=>repExcel(rep,par)}>⬇️ Excel</button>
+            <button className="btn-s" style={{fontSize:13}} onClick={()=>repExcel(rep,par)}><Ico n="download" sp/>Excel</button>
             <button className="btn-s" style={{fontSize:13}} onClick={()=>repImprimir(rep,par)}><Ico e="🖨️" sp/>Imprimir</button>
             {repPuedeEditar(rep)&&<button className="btn-s" style={{fontSize:13}} onClick={()=>repEditar(rep)}><Ico e="✏️" sp/>Editar</button>}
           </div>
@@ -11987,7 +11988,7 @@ export default function SistemaCarga(){
         <Card ic={<Ico e="⚠️"/>} v={abiertos.filter(k=>k.w.status?.code==="18").length} l="Faltantes" d="Sin investigar" c="#CC2233"/>
         <Card ic={<Ico e="🔍"/>} v={abiertos.filter(k=>k.w.status?.code==="18.1").length} l="En investigación" d="Faltantes en curso" c="#E65100"/>
         <Card ic={<Ico e="➕"/>} v={abiertos.filter(k=>k.tipo==="sobrante").length} l="Sobrantes" d="Por decidir" c="#7B1FA2"/>
-        <Card ic="⏳" v={abiertos.length?Math.max(...abiertos.map(k=>dias(k.inicio?.fecha))):0} l="Días del más antiguo" d="Caso abierto más viejo" c="#C05800"/>
+        <Card ic={<Ico e="⏳"/>} v={abiertos.length?Math.max(...abiertos.map(k=>dias(k.inicio?.fecha))):0} l="Días del más antiguo" d="Caso abierto más viejo" c="#C05800"/>
         <Card ic={<Ico e="✅"/>} v={cerradosMes} l="Cerrados este mes" d={`${hoy.getFullYear()}: pagado ${money(pagadoAnio)} · recuperado ${money(recupAnio)}`} c="#1A8A4A"/>
       </div>
 
