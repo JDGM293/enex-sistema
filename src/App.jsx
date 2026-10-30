@@ -6087,7 +6087,7 @@ export default function SistemaCarga(){
     exp:{notaLegal:"",
       declaracion:"Yo, {REMITENTE}, declaro bajo fe de juramento que el contenido de este envío corresponde a lo descrito en este documento, que es de lícita procedencia y que no contiene dinero en efectivo, armas, municiones, explosivos, drogas o sustancias controladas, materiales peligrosos, mercancía perecedera ni ningún otro artículo prohibido o restringido por las leyes del país de origen, de tránsito o de destino. Asumo toda la responsabilidad legal por la veracidad de esta declaración.",
       autorizacion:"Yo, {REMITENTE}, autorizo a {EMPRESA} y a sus agentes a abrir, inspeccionar y verificar el contenido de mis envíos, y a preparar y presentar en mi nombre la documentación de exportación, aduana y transporte que sea necesaria. Instruyo a {EMPRESA} a transportar mis envíos según el servicio contratado y declaro conocer y aceptar sus términos y condiciones. Esta autorización es válida para todos mis envíos hasta que la revoque por escrito."},
-    imp:{tituloPro:"FACTURA PROFORMA",tituloCom:"FACTURA COMERCIAL",idioma:"bi",idLabel:"ID / Tax ID",hs:"si",origenMerc:"si",incoterm:"",moneda:"USD",
+    imp:{tituloPro:"FACTURA PROFORMA",tituloCom:"FACTURA COMERCIAL",idioma:"bi",idLabel:"ID / Tax ID",hs:"si",origenMerc:"si",incoterm:"DAP",moneda:"USD",
       declaracion:"Declaro que la información contenida en esta factura es verdadera y correcta, y que el contenido de este envío es el aquí indicado."},
   };
   const docPaisKey=pais=>{const P=paisCanon(pais);return P?Object.keys(docPais).find(x=>x!=="_default"&&paisCanon(x)===P)||"":"";};
