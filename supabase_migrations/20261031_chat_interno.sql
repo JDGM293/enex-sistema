@@ -81,7 +81,7 @@ create policy chat_adj_subir on storage.objects for insert to authenticated with
 -- Canales iniciales (se editan en Configuración → Chat).
 insert into public.configuracion (clave, valor)
 select 'chat_canales', '[
-  {"id":"general","nombre":"General","roles":["A","B","C","D","D1","D2","H"]},
+  {"id":"general","nombre":"General","roles":["A","B","C","D","D1","D2"]},
   {"id":"operaciones","nombre":"Operaciones","roles":["A","B","D","D1","D2"]},
   {"id":"comercial","nombre":"Agentes y oficinas","roles":["A","B","C","E","E1","F","G"]}
 ]'::jsonb

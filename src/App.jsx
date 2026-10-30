@@ -490,6 +490,8 @@ input.fi:not([type="email"]):not([type="password"]):not([type="number"]){text-tr
 .stats.stats-5{grid-template-columns:repeat(5,1fr)}
 @media(max-width:900px){.stats.stats-5{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:540px){.stats.stats-5{grid-template-columns:repeat(2,1fr)}}
+.tb-sig{min-width:30px;height:30px;padding:0 9px;border-radius:7px;background:var(--navy);color:#fff;border:none;font-family:'DM Mono',monospace;font-size:13px;font-weight:700;letter-spacing:.5px;cursor:pointer;white-space:nowrap}
+.tb-menu{position:absolute;right:0;top:38px;z-index:601;background:var(--bg2);border:1px solid var(--b1);border-radius:10px;box-shadow:0 12px 32px rgba(0,0,0,.18);padding:14px;width:250px}
 .tb-mnu{display:none;background:none;border:1px solid var(--b1);border-radius:8px;padding:6px 8px;color:var(--navy);cursor:pointer;font-size:18px;line-height:1;margin-right:10px}
 .sb-velo{display:none}
 @media(max-width:900px){
@@ -776,6 +778,24 @@ const ChatAdjunto=({a})=>{
     :<button className="chat-file" onClick={abrir}><Ico e="📎" sp/>{a.nombre}{kb&&<span style={{opacity:.6,marginLeft:6}}>{kb}</span>}</button>;
 };
 
+// Sigla del usuario para la barra superior: rol + número de registro cuando aplica.
+const SIGLA_ROL={A:"A",B:"GER",C:"AX",D:"OP",D1:"OPO",D2:"OPD"};
+const siglaUsuario=(u,clients=[],agentes=[],oficinas=[])=>{
+  if(!u)return"";
+  const num=v=>{const n=parseInt(String(v||"").replace(/\D/g,""),10);return isNaN(n)?"":String(n);};
+  const orden=(lista)=>{const l=[...lista].sort((a,b)=>(parseInt(String(a.id).replace(/\D/g,""),10)||0)-(parseInt(String(b.id).replace(/\D/g,""),10)||0));return l.findIndex(x=>x.id===u.id)+1;};
+  const usrs=clients.filter(c=>c.tipo==="usuario");
+  const ag=agentes.find(a=>a.id===u.agenteId), of=oficinas.find(o=>o.id===u.oficinaId);
+  if(u.clienteTipo==="vendedor_oficina")return `VOF${num(of?.codigo)}-${orden(usrs.filter(c=>c.clienteTipo==="vendedor_oficina"&&c.oficinaId===u.oficinaId))}`;
+  if(SIGLA_ROL[u.rol])return SIGLA_ROL[u.rol];
+  if(u.rol==="E")return `AG${num(ag?.codigo)}`;
+  if(u.rol==="E1")return `VAG${num(ag?.codigo)}-${orden(usrs.filter(c=>c.rol==="E1"&&c.agenteId===u.agenteId))}`;
+  if(u.rol==="F")return `AT${orden(usrs.filter(c=>c.rol==="F"))}`;
+  if(u.rol==="G")return `OF${num(of?.codigo)}`;
+  if(u.rol==="I")return `CL${u.casillero||""}`;
+  return u.rol||"";
+};
+
 // ─── ROLE DEFINITIONS ────────────────────────────────────────────────────────
 const ROLE_DEFS={
   A:{code:"A",name:"Administrador",color:"rA",icon:<Ico e="👑"/>,
@@ -819,10 +839,6 @@ const ROLE_DEFS={
   G:{code:"G",name:"Oficina",color:"rG",icon:<Ico e="🏢"/>,
     desc:"Sucursal de la empresa. Ve la carga que recibe o que se envió por ella.",
     perms:["ver_chat","enviar_chat","editar_mensaje","borrar_mensaje","chat_directo","chat_adjuntar","crear_cliente","editar_cliente","crear_wr","editar_wr","ver_wr","ver_rp","hacer_rp","editar_rp","ver_booking","crear_booking","editar_booking","ver_reempaque","ver_guia","crear_guia","ver_confirmacion","ver_entrega","entregar","ver_reportes","rep_confirmados","imp_wr","imp_guia","imp_etiq_caja","imp_etiq_guia","imp_rp","imp_lista_conf","imp_recibo_entrega","imp_factura","ver_estado_cuenta","ver_estado_oficina","ver_tracking","rastrear","ver_prealerta","pre_tracking","pre_factura","ver_pickup","solicitar_pickup","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_tarifas","ver_factura","registrar_cobro","ver_cuentas_cobrar","ver_bd_clientes","paquetes_sin_reclamo","ver_fotos","subir_foto"]},
-
-  H:{code:"H",name:"Usuario Sistema",color:"rH1",icon:<Ico e="👤"/>,
-    desc:"Usuario interno al que se le asigna un rol específico (A-G).",
-    perms:["ver_chat","enviar_chat","editar_mensaje","borrar_mensaje","chat_directo","chat_adjuntar","ver_wr","ver_tracking","rastrear","ver_estado_cuenta","ver_servicios","calculadora"]},
 
   I:{code:"I",name:"Cliente",color:"rH2",icon:<Ico e="📦"/>,
     desc:"Cliente externo. Solo ve sus propios envíos, estado de cuenta, tracking y factura.",
@@ -1770,7 +1786,7 @@ const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomo
         <div className="mhd"><div className="mt">{title}</div><button className="mcl" onClick={onClose}>✕</button></div>
         <div className="sdiv">TIPO DE REGISTRO</div>
         <div style={{display:"flex",gap:8,marginBottom:14}}>
-          {[["cliente","Cliente"],["usuario","Usuario Sistema"]].map(([v,l])=>
+          {[["cliente","Cliente"],["usuario","Usuario"]].map(([v,l])=>
             <button key={v} className={`btn-${f.tipo===v?"p":"s"}`} onClick={()=>ff("tipo",v)}>{l}</button>)}
         </div>
         {/* Pertenece a — solo clientes (los usuarios lo toman de su rol) */}
@@ -1851,7 +1867,7 @@ const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomo
           <div className="fg"><div className="fl">ID Identificación *</div><input className="fi" value={f.cedula} onChange={e=>ff("cedula",e.target.value)} placeholder="V-00000000"/></div>
           {f.tipo==="cliente"
             ?<div className="fg"><div className="fl">Casillero (auto)</div><input className="fi" value={f.casillero} onChange={e=>ff("casillero",e.target.value)} placeholder="Se genera automático" style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)"}}/></div>
-            :<div className="fg"><div className="fl">Rol del Sistema</div><select className="fs" value={["H","I"].includes(f.rol)?"":(f.rol||"")} onChange={e=>ff("rol",e.target.value)}><option value="">— Selecciona el rol —</option>{ALL_ROLES.filter(r=>!["H","I"].includes(r.code)).map(r=><option key={r.code} value={r.code}>{r.code} — {r.name}</option>)}</select></div>}
+            :<div className="fg"><div className="fl">Rol del Sistema</div><select className="fs" value={f.rol==="I"?"":(f.rol||"")} onChange={e=>ff("rol",e.target.value)}><option value="">— Selecciona el rol —</option>{ALL_ROLES.filter(r=>r.code!=="I").map(r=><option key={r.code} value={r.code}>{r.code} — {r.name}</option>)}</select></div>}
           {f.tipo==="usuario"&&<div className="fg"><div className="fl">Login (usuario)</div><input className="fi" value={f.login||f.email} onChange={e=>ff("login",e.target.value)} placeholder="usuario@email.com o nick"/></div>}
         </div>
         {/* Password para todos los registros */}
@@ -1886,7 +1902,7 @@ const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomo
           if(f.password&&f.password.length<6){setEmailErr("La contraseña debe tener al menos 6 caracteres.");return;}
           if(f.password&&!(f.email||"").trim()&&!(f.login||"").trim()){setEmailErr(f.tipo==="usuario"?"Para dar acceso hace falta un email o un nombre de usuario.":"Para dar acceso al cliente hace falta su email.");return;}
           // Un usuario del sistema necesita un rol de trabajo (no "Cliente")
-          if(f.tipo==="usuario"&&(!f.rol||["H","I"].includes(f.rol))){setEmailErr("Selecciona el rol del usuario.");return;}
+          if(f.tipo==="usuario"&&(!f.rol||f.rol==="I")){setEmailErr("Selecciona el rol del usuario.");return;}
           setEmailErr("");
           onSave(f);
         }}>Guardar <Ico e="✅"/></button></div>
@@ -2234,6 +2250,7 @@ function PhotoGalleryModal({ wrId, currentUser, onClose }){
 // ─── MAIN APP ──────────────────────────────────────────────────────────────────
 export default function SistemaCarga(){
   const [sbMov,setSbMov]=useState(false);
+  const [tbMenu,setTbMenu]=useState(false);
   // ── LOGIN STATE ────────────────────────────────────────────────────────────
   const [currentUser,setCurrentUser]=useState(null);
   // Sesión de Supabase Auth: contraseñas cifradas y login en el servidor
@@ -7870,7 +7887,7 @@ export default function SistemaCarga(){
   };
 
   // ── CHAT INTERNO ─────────────────────────────────────────────────────────────
-  const CHAT_INTERNOS=["A","B","C","D","D1","D2","H"];
+  const CHAT_INTERNOS=["A","B","C","D","D1","D2"];
   const chatYo=currentUser.id;
   const chatDmKey=otro=>"d:"+[chatYo,otro].sort().join(":");
   const chatOtroDe=conv=>conv.startsWith("d:")?conv.slice(2).split(":").find(x=>x!==chatYo):null;
@@ -12863,7 +12880,18 @@ export default function SistemaCarga(){
             <span style={{color:"var(--t3)"}}><Ico e="🔍" solo/></span>
             <input placeholder="Buscar en el sistema…" value={search} onChange={e=>{setSearch(e.target.value);setPage(1);}}/>
           </div>
-          <div style={{width:28,height:28,borderRadius:6,background:"var(--navy)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,cursor:"pointer",color:"#fff"}}>{initials(currentUser)}</div>
+          <div style={{position:"relative"}}>
+            <button className="tb-sig" onClick={()=>setTbMenu(v=>!v)} title={`${fullName(currentUser)} · ${ROLE_DEFS[currentUser.rol]?.name||""}`}>{siglaUsuario(currentUser,clients,agentes,oficinas)}</button>
+            {tbMenu&&<>
+              <div style={{position:"fixed",inset:0,zIndex:600}} onClick={()=>setTbMenu(false)}/>
+              <div className="tb-menu">
+                <div style={{fontWeight:700,color:"var(--navy)",fontSize:15}}>{fullName(currentUser)}</div>
+                <div style={{fontSize:13,color:"var(--t3)",marginBottom:10}}>{ROLE_DEFS[currentUser.rol]?.name}{currentUser.email?` · ${currentUser.email}`:""}</div>
+                <button className="btn-s" style={{width:"100%",fontSize:13,marginBottom:6}} onClick={()=>{setTbMenu(false);setPwModal({a:"",b:"",err:"",ok:false});}}><Ico e="🔑" sp/>Cambiar contraseña</button>
+                <button className="btn-d" style={{width:"100%",fontSize:13}} onClick={()=>{setTbMenu(false);doLogout();}}><Ico e="🚪" sp/>Cerrar sesión</button>
+              </div>
+            </>}
+          </div>
         </div>
         {renderPage()}
       </div>
