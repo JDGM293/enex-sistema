@@ -86,3 +86,6 @@ select 'chat_canales', '[
   {"id":"comercial","nombre":"Agentes y oficinas","roles":["A","B","C","E","E1","F","G"]}
 ]'::jsonb
 where not exists (select 1 from public.configuracion where clave = 'chat_canales');
+
+revoke execute on function public.chat_puede_ver(text), public.chat_tiene_perm(text,text[]), public.chat_yo_id(), public.chat_yo_rol(), public.chat_no_leidos() from anon, public;
+grant execute on function public.chat_puede_ver(text), public.chat_tiene_perm(text,text[]), public.chat_yo_id(), public.chat_yo_rol(), public.chat_no_leidos() to authenticated;
