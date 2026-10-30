@@ -12863,8 +12863,6 @@ export default function SistemaCarga(){
             <span style={{color:"var(--t3)"}}><Ico e="🔍" solo/></span>
             <input placeholder="Buscar en el sistema…" value={search} onChange={e=>{setSearch(e.target.value);setPage(1);}}/>
           </div>
-          <div className="tb-ic"><Ico e="🌐" solo/></div>
-          <div className="tb-ic"><Ico e="🔔" sp/><div className="tb-dot"/></div>
           <div style={{width:28,height:28,borderRadius:6,background:"var(--navy)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,cursor:"pointer",color:"#fff"}}>{initials(currentUser)}</div>
         </div>
         {renderPage()}
