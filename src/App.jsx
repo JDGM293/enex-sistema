@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { dbGetPickups, dbUpsertPickup } from './supabase'
 import { descargarXlsx } from './xlsx'
 import { dbGetActividadReporte } from './supabase'
+import { chatFromDB, dbChatMensajes, dbChatEnviar, dbChatEditar, dbChatNoLeidos, dbChatMarcarLeido, chatSubirAdjunto, chatUrlAdjunto } from './supabase'
 import { supabase, resolverLogin, cuentaGuardar, cuentaEliminar, dbGetClientes, dbUpsertCliente, dbDeleteCliente, dbGetWR, dbUpsertWR, dbDeleteWR, dbGetAgentes, dbUpsertAgente, dbDeleteAgente, dbGetOficinas, dbUpsertOficina, dbDeleteOficina, dbGetTarifas, dbUpsertTarifa, dbDeleteTarifa, dbGetConsolidaciones, dbUpsertConsolidacion, dbDeleteConsolidacion, dbGetCargoReleases, dbUpsertCargoRelease, dbDeleteCargoRelease, dbGetDeliveryNotes, dbUpsertDeliveryNote, dbDeleteDeliveryNote, dbGetFacturas, dbUpsertFactura, dbDeleteFactura, dbGetPagos, dbUpsertPago, dbDeletePago, storageUploadComprobante, dbLogActividad, dbGetActividad, dbGetConfig, dbSetConfig, dbGetScanLog, dbInsertScan, dbSetScanRegistered, dbDeleteScanIds, storageUploadFoto, storageDeleteFoto, dbGetFotosByWR, dbInsertFoto, dbDeleteFoto, storageUploadFotoConsol, storageDeleteFotoConsol, dbGetFotosByConsol, dbInsertFotoConsol, dbDeleteFotoConsol } from "./supabase";
 
 // ─── TEMA CLARO PROFESIONAL ───────────────────────────────────────────────────
@@ -360,6 +361,54 @@ input.fi:not([type="email"]):not([type="password"]):not([type="number"]){text-tr
 .mt{font-family:Arial,Helvetica,sans-serif;font-size:21px;font-weight:700;flex:1;color:var(--navy)}
 .mcl{width:28px;height:28px;border-radius:6px;background:var(--bg4);border:1px solid var(--b1);color:var(--t2);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all .12s}
 .mcl:hover{background:var(--bg5);color:var(--t1)}
+.chat-grid{display:grid;grid-template-columns:250px 1fr;flex:1;min-height:0;overflow:hidden;height:100%}
+.chat-lado{background:var(--navy);display:flex;flex-direction:column;overflow:hidden;min-height:0}
+.chat-busca{margin-top:10px;background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.15);color:#fff;font-size:14px;padding:7px 10px}
+.chat-busca::placeholder{color:rgba(255,255,255,.45)}
+.chat-res{margin-top:6px;background:rgba(0,0,0,.18);border-radius:8px;max-height:260px;overflow-y:auto;padding:4px}
+.chat-sec{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.35);padding:12px 8px 4px;font-weight:700}
+.chat-it{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:7px;cursor:pointer;margin-bottom:2px;border:1px solid transparent;color:rgba(255,255,255,.85)}
+.chat-it:hover{background:rgba(255,255,255,.06)}
+.chat-it.on{background:rgba(200,151,28,.2);border-color:rgba(200,151,28,.4)}
+.chat-it.on .chat-it-t{color:#E5AE3A}
+.chat-it-ic{width:24px;display:flex;justify-content:center;color:rgba(255,255,255,.6)}
+.chat-it-t{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chat-it-s{font-size:12px;color:rgba(255,255,255,.4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chat-av{width:28px;height:28px;border-radius:7px;background:rgba(255,255,255,.15);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+.chat-nl{background:#E5AE3A;color:#1A2B4A;font-size:11px;font-weight:800;padding:1px 7px;border-radius:9px}
+.chat-main{display:flex;flex-direction:column;background:var(--bg3);overflow:hidden;min-height:0}
+.chat-hd{padding:12px 16px;background:var(--bg2);border-bottom:1px solid var(--b1);display:flex;align-items:center;gap:10px;flex-shrink:0}
+.chat-volver{display:none}
+.chat-msgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
+.chat-dia{text-align:center;margin:6px 0}
+.chat-dia span{font-size:12px;color:var(--t3);background:var(--bg2);border:1px solid var(--b1);padding:2px 10px;border-radius:10px;text-transform:capitalize}
+.chat-m{display:flex;gap:10px;align-items:flex-end}
+.chat-m.yo{flex-direction:row-reverse}
+.chat-m-c{max-width:68%;display:flex;flex-direction:column}
+.chat-m.yo .chat-m-c{align-items:flex-end}
+.chat-m-h{font-size:12px;color:var(--t3);margin-bottom:3px;display:flex;align-items:center;gap:4px}
+.chat-acc{display:inline-flex;gap:2px;margin-left:6px;opacity:0;transition:opacity .12s}
+.chat-m:hover .chat-acc{opacity:1}
+.chat-acc button{background:none;border:none;cursor:pointer;color:var(--t3);padding:2px;font-size:13px}
+.chat-acc button:hover{color:var(--navy)}
+.chat-b{background:var(--bg2);color:var(--t1);padding:9px 13px;border-radius:12px 12px 12px 2px;font-size:15px;line-height:1.5;border:1px solid var(--b1);white-space:pre-wrap;word-break:break-word}
+.chat-m.yo .chat-b{background:var(--navy);color:#fff;border:none;border-radius:12px 12px 2px 12px}
+.chat-m.yo .chat-b .c-wr{background:#fff}
+.chat-b.borr{font-style:italic;color:var(--t3)!important;background:transparent!important;border:1px dashed var(--b1)!important}
+.chat-adjs{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.chat-img{max-width:240px;max-height:200px;border-radius:8px;border:1px solid var(--b1);cursor:pointer;display:block}
+.chat-file{background:var(--bg2);border:1px solid var(--b1);border-radius:8px;padding:7px 10px;font-size:13px;cursor:pointer;color:var(--navy);font-weight:600}
+.chat-in{padding:10px 16px;background:var(--bg2);border-top:1px solid var(--b1);flex-shrink:0}
+.chat-pend{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.chat-pend span{font-size:12px;background:var(--bg4);border:1px solid var(--b1);border-radius:6px;padding:3px 6px;display:inline-flex;align-items:center;gap:4px}
+.chat-pend button{background:none;border:none;cursor:pointer;color:var(--t3)}
+@media(max-width:760px){
+  .chat-grid{grid-template-columns:1fr}
+  .chat-grid.en-conv .chat-lado{display:none}
+  .chat-grid:not(.en-conv) .chat-main{display:none}
+  .chat-volver{display:inline-flex}
+  .chat-m-c{max-width:82%}
+}
 .mst{font-size:13px;color:var(--t3);font-weight:400;font-family:inherit;margin-top:2px}
 .mft{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;padding-top:14px;border-top:1px solid var(--b1)}
 
@@ -499,7 +548,7 @@ const ALL_PERMS=[
   // Override de estado (escape hatch para Admin/Gerencia — corrige errores sin pasar por módulos)
   "override_estado",
   // Chat
-  "chat_admin","chat_gerencia","chat_auxiliar","chat_operaciones","chat_agente","chat_cliente",
+  "ver_chat","enviar_chat","editar_mensaje","borrar_mensaje","chat_directo","chat_adjuntar","chat_moderar","chat_canales",
   // Pick-up
   "ver_pickup","solicitar_pickup",
   // Servicios & Adicionales
@@ -547,7 +596,7 @@ const PERM_LBL={
   ver_tracking:"Ver Tracking",rastrear:"Rastrear",ver_prealerta:"Ver Pre-alerta",pre_tracking:"Pre-alerta Tracking",pre_factura:"Pre-alerta Factura",
   status_origen:"Status Origen",status_destino:"Status Destino",
   override_estado:"Forzar Estado WR (override)",
-  chat_admin:"Chat Admin",chat_gerencia:"Chat Gerencia",chat_auxiliar:"Chat Auxiliar",chat_operaciones:"Chat Operaciones",chat_agente:"Chat Agente",chat_cliente:"Chat Cliente",
+  ver_chat:"Ver Chat",enviar_chat:"Escribir mensajes",editar_mensaje:"Editar sus mensajes",borrar_mensaje:"Borrar sus mensajes",chat_directo:"Mensajes directos",chat_adjuntar:"Adjuntar archivos",chat_moderar:"Borrar mensajes de otros",chat_canales:"Gestionar canales",
   ver_pickup:"Ver Pick-up",solicitar_pickup:"Solicitar Pick-up",
   ver_servicios:"Ver Servicios",crear_servicio:"Crear Servicio",editar_servicio:"Editar Servicio",borrar_servicio:"Borrar Servicio",sel_servicio:"Seleccionar Servicio",
   ver_adicionales:"Ver Adicionales",crear_adicional:"Crear Adicional",editar_adicional:"Editar Adicional",borrar_adicional:"Borrar Adicional",sel_adicional:"Seleccionar Adicional",
@@ -593,6 +642,7 @@ const PERM_MODULES=[
   {m:"Fotos",ic:<Ico e="📷"/>,ver:"ver_fotos",crear:"subir_foto",editar:"editar_foto",borrar:"borrar_foto"},
   {m:"Documentos",ic:<Ico e="📋"/>,ver:"ver_documentos",crear:"crear_documento",editar:"editar_documento",borrar:"borrar_documento"},
   {m:"Reportes",ic:<Ico e="📈"/>,ver:"ver_reportes",crear:"crear_reporte",editar:"editar_reporte",borrar:"borrar_reporte"},
+  {m:"Chat",ic:<Ico e="💬"/>,ver:"ver_chat",crear:"enviar_chat",editar:"editar_mensaje",borrar:"borrar_mensaje"},
 ];
 const PERM_ACTIONS=[{k:"ver",l:"Ver"},{k:"crear",l:"Crear"},{k:"editar",l:"Editar"},{k:"borrar",l:"Borrar"}];
 const PERMS_EN_TABLA=new Set(PERM_MODULES.flatMap(m=>PERM_ACTIONS.map(a=>m[a.k])));
@@ -607,7 +657,7 @@ const PERM_GROUPS=[
   {label:"Impresión",perms:["imp_wr","imp_guia","imp_etiq_caja","imp_etiq_guia","imp_rp","imp_booking","imp_reempaque","imp_lista_conf","imp_guia_op","imp_postal","imp_packing","imp_recibo_entrega","imp_factura"]},
   {label:"Estado de Cuenta & Tracking",perms:["ver_estado_cuenta","ver_estado_cliente","ver_estado_agente","ver_estado_oficina","ver_tracking","rastrear","ver_prealerta","pre_tracking","pre_factura"]},
   {label:"Servicios & Tarifas",perms:["ver_servicios","crear_servicio","editar_servicio","borrar_servicio","sel_servicio","ver_adicionales","crear_adicional","editar_adicional","borrar_adicional","sel_adicional","calculadora","ver_tarifas","crear_tarifa","editar_tarifa","borrar_tarifa"]},
-  {label:"Chat & Pick-up",perms:["chat_admin","chat_gerencia","chat_auxiliar","chat_operaciones","chat_agente","chat_cliente","ver_pickup","solicitar_pickup"]},
+  {label:"Chat & Pick-up",perms:["chat_directo","chat_adjuntar","chat_moderar","chat_canales","ver_pickup","solicitar_pickup"]},
   {label:"Contabilidad",perms:["facturar","ver_factura","registrar_cobro","ver_cuentas_cobrar","imp_factura","crear_factura","editar_factura","anular_factura","borrar_factura","registrar_pago","cobrar","anular_pago","nota_credito"]},
   {label:"Administración",perms:["configuracion","gestionar_roles","registro_actividad","envio_masivo","ver_bd_clientes","ver_bd_usuarios","paquetes_sin_reclamo","ver_fotos","subir_foto","borrar_foto","todas_sucursales","override_estado","saltar_bloqueos"]},
 ];
@@ -715,6 +765,17 @@ const Num=({t,id,pre="",nolink,style})=>{
     onClick={puede?e=>{e.stopPropagation();e.preventDefault();NUM_ABRIR(t,id);}:undefined}>{pre}{id}</span>;
 };
 
+// Adjunto del chat: el archivo está en un bucket privado y se abre con un enlace temporal.
+const ChatAdjunto=({a})=>{
+  const [url,setUrl]=useState(null);
+  const img=/^image\//.test(a.tipo||"");
+  useEffect(()=>{let vivo=true;if(img)chatUrlAdjunto(a.path).then(u=>{if(vivo)setUrl(u);});return()=>{vivo=false;};},[a.path,img]);
+  const abrir=async()=>{const u=url||await chatUrlAdjunto(a.path);if(u)window.open(u,"_blank","noopener");};
+  const kb=a.tam?(a.tam>1048576?`${(a.tam/1048576).toFixed(1)} MB`:`${Math.max(1,Math.round(a.tam/1024))} KB`):"";
+  return img&&url?<img src={url} alt={a.nombre} className="chat-img" onClick={abrir}/>
+    :<button className="chat-file" onClick={abrir}><Ico e="📎" sp/>{a.nombre}{kb&&<span style={{opacity:.6,marginLeft:6}}>{kb}</span>}</button>;
+};
+
 // ─── ROLE DEFINITIONS ────────────────────────────────────────────────────────
 const ROLE_DEFS={
   A:{code:"A",name:"Administrador",color:"rA",icon:<Ico e="👑"/>,
@@ -727,45 +788,45 @@ const ROLE_DEFS={
 
   C:{code:"C",name:"Auxiliar",color:"rC",icon:<Ico e="🗂️"/>,
     desc:"Apoyo operativo. Crear y editar WR, reportes, confirmaciones.",
-    perms:["ver_usuarios","crear_cliente","editar_cliente","crear_wr","editar_wr","ver_wr","ver_rp","hacer_rp","editar_rp","ver_reempaque","ver_booking","ver_guia","editar_guia","ver_confirmacion","confirmar","desconfirmar","ver_egreso","hacer_egreso","editar_egreso","ver_reportes","rep_confirmados","rep_guia_op","rep_postal","rep_packing","imp_wr","imp_guia","imp_etiq_caja","imp_etiq_guia","imp_rp","imp_lista_conf","imp_guia_op","imp_postal","imp_packing","imp_recibo_entrega","imp_factura","ver_estado_cuenta","ver_estado_cliente","ver_tracking","rastrear","ver_prealerta","pre_tracking","pre_factura","status_origen","status_destino","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_tarifas","ver_factura","ver_bd_clientes","paquetes_sin_reclamo","ver_fotos","subir_foto","chat_admin","chat_gerencia","chat_auxiliar","chat_operaciones"]},
+    perms:["ver_chat","enviar_chat","editar_mensaje","borrar_mensaje","chat_directo","chat_adjuntar","ver_usuarios","crear_cliente","editar_cliente","crear_wr","editar_wr","ver_wr","ver_rp","hacer_rp","editar_rp","ver_reempaque","ver_booking","ver_guia","editar_guia","ver_confirmacion","confirmar","desconfirmar","ver_egreso","hacer_egreso","editar_egreso","ver_reportes","rep_confirmados","rep_guia_op","rep_postal","rep_packing","imp_wr","imp_guia","imp_etiq_caja","imp_etiq_guia","imp_rp","imp_lista_conf","imp_guia_op","imp_postal","imp_packing","imp_recibo_entrega","imp_factura","ver_estado_cuenta","ver_estado_cliente","ver_tracking","rastrear","ver_prealerta","pre_tracking","pre_factura","status_origen","status_destino","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_tarifas","ver_factura","ver_bd_clientes","paquetes_sin_reclamo","ver_fotos","subir_foto"]},
 
   D:{code:"D",name:"Jefe de Operaciones",color:"rD",icon:<Ico e="⚙️"/>,
     desc:"Supervisa y ejecuta operaciones completas — origen + destino.",
     subs:["D1","D2"],
-    perms:["ver_wr","crear_wr","editar_wr","ver_rp","hacer_rp","editar_rp","ver_booking","crear_booking","editar_booking","solicitar_reempaque","ver_reempaque","crear_reempaque","editar_reempaque","ver_guia","crear_guia","editar_guia","ver_confirmacion","confirmar","desconfirmar","ver_egreso","hacer_egreso","editar_egreso","ver_recepcion_dest","hacer_recepcion_dest","editar_recepcion_dest","ver_entrega","entregar","revertir_entrega","editar_entrega","status_origen","status_destino","ver_reportes","rep_confirmados","rep_guia_op","rep_postal","rep_packing","imp_wr","imp_guia","imp_etiq_caja","imp_etiq_guia","imp_rp","imp_booking","imp_reempaque","imp_lista_conf","imp_guia_op","imp_postal","imp_packing","imp_recibo_entrega","ver_estado_cuenta","ver_estado_cliente","ver_tracking","rastrear","ver_prealerta","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_tarifas","ver_bd_clientes","ver_fotos","subir_foto","borrar_foto","chat_admin","chat_gerencia","chat_auxiliar","chat_operaciones","todas_sucursales"]},
+    perms:["ver_chat","enviar_chat","editar_mensaje","borrar_mensaje","chat_directo","chat_adjuntar","ver_wr","crear_wr","editar_wr","ver_rp","hacer_rp","editar_rp","ver_booking","crear_booking","editar_booking","solicitar_reempaque","ver_reempaque","crear_reempaque","editar_reempaque","ver_guia","crear_guia","editar_guia","ver_confirmacion","confirmar","desconfirmar","ver_egreso","hacer_egreso","editar_egreso","ver_recepcion_dest","hacer_recepcion_dest","editar_recepcion_dest","ver_entrega","entregar","revertir_entrega","editar_entrega","status_origen","status_destino","ver_reportes","rep_confirmados","rep_guia_op","rep_postal","rep_packing","imp_wr","imp_guia","imp_etiq_caja","imp_etiq_guia","imp_rp","imp_booking","imp_reempaque","imp_lista_conf","imp_guia_op","imp_postal","imp_packing","imp_recibo_entrega","ver_estado_cuenta","ver_estado_cliente","ver_tracking","rastrear","ver_prealerta","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_tarifas","ver_bd_clientes","ver_fotos","subir_foto","borrar_foto","todas_sucursales"]},
 
   D1:{code:"D1",name:"Operaciones Origen",color:"rD1",icon:<Ico e="📤"/>,
     desc:"Ejecuta operaciones de origen: RP, WR, guías, consolidación, egreso. Estados 1→7.",
-    perms:["ver_wr","crear_wr","editar_wr","ver_rp","hacer_rp","editar_rp","ver_booking","crear_booking","editar_booking","solicitar_reempaque","ver_reempaque","crear_reempaque","editar_reempaque","ver_guia","crear_guia","editar_guia","ver_confirmacion","confirmar","desconfirmar","ver_egreso","hacer_egreso","editar_egreso","status_origen","ver_reportes","rep_confirmados","rep_guia_op","rep_postal","rep_packing","imp_wr","imp_guia","imp_etiq_caja","imp_etiq_guia","imp_rp","imp_booking","imp_reempaque","imp_lista_conf","imp_guia_op","imp_postal","imp_packing","ver_tracking","rastrear","ver_prealerta","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","ver_bd_clientes","ver_fotos","subir_foto","borrar_foto","chat_admin","chat_gerencia","chat_auxiliar","chat_operaciones"]},
+    perms:["ver_chat","enviar_chat","editar_mensaje","borrar_mensaje","chat_directo","chat_adjuntar","ver_wr","crear_wr","editar_wr","ver_rp","hacer_rp","editar_rp","ver_booking","crear_booking","editar_booking","solicitar_reempaque","ver_reempaque","crear_reempaque","editar_reempaque","ver_guia","crear_guia","editar_guia","ver_confirmacion","confirmar","desconfirmar","ver_egreso","hacer_egreso","editar_egreso","status_origen","ver_reportes","rep_confirmados","rep_guia_op","rep_postal","rep_packing","imp_wr","imp_guia","imp_etiq_caja","imp_etiq_guia","imp_rp","imp_booking","imp_reempaque","imp_lista_conf","imp_guia_op","imp_postal","imp_packing","ver_tracking","rastrear","ver_prealerta","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","ver_bd_clientes","ver_fotos","subir_foto","borrar_foto"]},
 
   D2:{code:"D2",name:"Operaciones Destino",color:"rD2",icon:<Ico e="📥"/>,
     desc:"Ejecuta operaciones de destino: recepción, entrega. Estados 8→12P.",
-    perms:["ver_wr","ver_rp","ver_guia","ver_recepcion_dest","hacer_recepcion_dest","editar_recepcion_dest","ver_entrega","entregar","revertir_entrega","editar_entrega","status_destino","ver_reportes","rep_confirmados","rep_guia_op","imp_wr","imp_guia","imp_etiq_caja","imp_lista_conf","imp_guia_op","imp_recibo_entrega","ver_tracking","rastrear","ver_estado_cliente","ver_bd_clientes","ver_fotos","subir_foto","chat_admin","chat_gerencia","chat_auxiliar","chat_operaciones"]},
+    perms:["ver_chat","enviar_chat","editar_mensaje","borrar_mensaje","chat_directo","chat_adjuntar","ver_wr","ver_rp","ver_guia","ver_recepcion_dest","hacer_recepcion_dest","editar_recepcion_dest","ver_entrega","entregar","revertir_entrega","editar_entrega","status_destino","ver_reportes","rep_confirmados","rep_guia_op","imp_wr","imp_guia","imp_etiq_caja","imp_lista_conf","imp_guia_op","imp_recibo_entrega","ver_tracking","rastrear","ver_estado_cliente","ver_bd_clientes","ver_fotos","subir_foto"]},
 
   E:{code:"E",name:"Agente",color:"rE",icon:<Ico e="🤝"/>,
     desc:"Agente externo. Gestiona sus clientes y WR propios.",
     subs:["E1"],
-    perms:["crear_cliente","editar_cliente","crear_wr","editar_wr","ver_wr","ver_booking","ver_confirmacion","imp_wr","imp_factura","ver_estado_cuenta","ver_estado_agente","ver_tracking","rastrear","ver_prealerta","pre_tracking","pre_factura","ver_pickup","solicitar_pickup","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_factura","ver_fotos","subir_foto","chat_admin","chat_gerencia","chat_agente"]},
+    perms:["ver_chat","enviar_chat","editar_mensaje","borrar_mensaje","chat_directo","chat_adjuntar","crear_cliente","editar_cliente","crear_wr","editar_wr","ver_wr","ver_booking","ver_confirmacion","imp_wr","imp_factura","ver_estado_cuenta","ver_estado_agente","ver_tracking","rastrear","ver_prealerta","pre_tracking","pre_factura","ver_pickup","solicitar_pickup","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_factura","ver_fotos","subir_foto"]},
 
   E1:{code:"E1",name:"Vendedor / Agente",color:"rE1",icon:<Ico e="💼"/>,
     desc:"Vendedor bajo un agente. Solo sus clientes.",
-    perms:["crear_cliente","editar_cliente","crear_wr","ver_wr","ver_booking","imp_wr","imp_factura","ver_estado_cuenta","ver_estado_agente","ver_tracking","rastrear","ver_prealerta","pre_tracking","pre_factura","ver_pickup","solicitar_pickup","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_factura","ver_fotos","subir_foto","chat_agente"]},
+    perms:["ver_chat","enviar_chat","editar_mensaje","borrar_mensaje","chat_directo","chat_adjuntar","crear_cliente","editar_cliente","crear_wr","ver_wr","ver_booking","imp_wr","imp_factura","ver_estado_cuenta","ver_estado_agente","ver_tracking","rastrear","ver_prealerta","pre_tracking","pre_factura","ver_pickup","solicitar_pickup","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_factura","ver_fotos","subir_foto"]},
 
   F:{code:"F",name:"Autónomo",color:"rF",icon:<Ico e="🧑‍💻"/>,
     desc:"Operador independiente. Gestiona sus propios clientes.",
-    perms:["crear_cliente","editar_cliente","crear_wr","editar_wr","ver_wr","ver_confirmacion","imp_wr","imp_factura","ver_estado_cuenta","ver_estado_cliente","ver_tracking","rastrear","ver_prealerta","pre_tracking","pre_factura","ver_pickup","solicitar_pickup","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_factura","ver_fotos","subir_foto","chat_admin","chat_gerencia"]},
+    perms:["ver_chat","enviar_chat","editar_mensaje","borrar_mensaje","chat_directo","chat_adjuntar","crear_cliente","editar_cliente","crear_wr","editar_wr","ver_wr","ver_confirmacion","imp_wr","imp_factura","ver_estado_cuenta","ver_estado_cliente","ver_tracking","rastrear","ver_prealerta","pre_tracking","pre_factura","ver_pickup","solicitar_pickup","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_factura","ver_fotos","subir_foto"]},
 
   G:{code:"G",name:"Oficina",color:"rG",icon:<Ico e="🏢"/>,
     desc:"Sucursal de la empresa. Ve la carga que recibe o que se envió por ella.",
-    perms:["crear_cliente","editar_cliente","crear_wr","editar_wr","ver_wr","ver_rp","hacer_rp","editar_rp","ver_booking","crear_booking","editar_booking","ver_reempaque","ver_guia","crear_guia","ver_confirmacion","ver_entrega","entregar","ver_reportes","rep_confirmados","imp_wr","imp_guia","imp_etiq_caja","imp_etiq_guia","imp_rp","imp_lista_conf","imp_recibo_entrega","imp_factura","ver_estado_cuenta","ver_estado_oficina","ver_tracking","rastrear","ver_prealerta","pre_tracking","pre_factura","ver_pickup","solicitar_pickup","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_tarifas","ver_factura","registrar_cobro","ver_cuentas_cobrar","ver_bd_clientes","paquetes_sin_reclamo","ver_fotos","subir_foto","chat_admin","chat_gerencia","chat_auxiliar","chat_operaciones"]},
+    perms:["ver_chat","enviar_chat","editar_mensaje","borrar_mensaje","chat_directo","chat_adjuntar","crear_cliente","editar_cliente","crear_wr","editar_wr","ver_wr","ver_rp","hacer_rp","editar_rp","ver_booking","crear_booking","editar_booking","ver_reempaque","ver_guia","crear_guia","ver_confirmacion","ver_entrega","entregar","ver_reportes","rep_confirmados","imp_wr","imp_guia","imp_etiq_caja","imp_etiq_guia","imp_rp","imp_lista_conf","imp_recibo_entrega","imp_factura","ver_estado_cuenta","ver_estado_oficina","ver_tracking","rastrear","ver_prealerta","pre_tracking","pre_factura","ver_pickup","solicitar_pickup","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_tarifas","ver_factura","registrar_cobro","ver_cuentas_cobrar","ver_bd_clientes","paquetes_sin_reclamo","ver_fotos","subir_foto"]},
 
   H:{code:"H",name:"Usuario Sistema",color:"rH1",icon:<Ico e="👤"/>,
     desc:"Usuario interno al que se le asigna un rol específico (A-G).",
-    perms:["ver_wr","ver_tracking","rastrear","ver_estado_cuenta","ver_servicios","calculadora"]},
+    perms:["ver_chat","enviar_chat","editar_mensaje","borrar_mensaje","chat_directo","chat_adjuntar","ver_wr","ver_tracking","rastrear","ver_estado_cuenta","ver_servicios","calculadora"]},
 
   I:{code:"I",name:"Cliente",color:"rH2",icon:<Ico e="📦"/>,
     desc:"Cliente externo. Solo ve sus propios envíos, estado de cuenta, tracking y factura.",
-    perms:["ver_wr","ver_tracking","rastrear","ver_prealerta","pre_tracking","pre_factura","ver_estado_cuenta","ver_estado_cliente","ver_factura","imp_factura","ver_pickup","solicitar_pickup","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_fotos","subir_foto","chat_agente"]},
+    perms:["ver_wr","ver_tracking","rastrear","ver_prealerta","pre_tracking","pre_factura","ver_estado_cuenta","ver_estado_cliente","ver_factura","imp_factura","ver_pickup","solicitar_pickup","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_fotos","subir_foto"]},
 };
 // Los menús nuevos (Alertas, Documentos) se mantienen visibles para quien ya los usaba
 ["C","D","D1","D2"].forEach(r=>ROLE_DEFS[r].perms.push("ver_alertas","ver_documentos"));
@@ -2421,9 +2482,49 @@ export default function SistemaCarga(){
   const [trkMassStatus,setTrkMassStatus]=useState(null);
   const [trkMassNota,setTrkMassNota]=useState("");
   const [trkMassResult,setTrkMassResult]=useState(null);
-  const [chatConv,setChatConv]=useState("general");
+  // ── Chat interno: estado, tiempo real y presencia ──
+  const [chatConv,setChatConv]=useState("");          // 'c:<canal>' | 'd:<idA>:<idB>'
   const [chatMsg,setChatMsg]=useState("");
-  const [chatMsgs,setChatMsgs]=useState({general:[],operaciones:[],ventas:[]});
+  const [chatMsgs,setChatMsgs]=useState({});          // conv -> [mensajes]
+  const [chatMas,setChatMas]=useState({});            // conv -> hay mensajes anteriores
+  const [chatNL,setChatNL]=useState({});              // conv -> {n, ultimo}
+  const [chatOnline,setChatOnline]=useState(new Set());
+  const [chatCanales,setChatCanales]=useState([]);
+  const [chatAdj,setChatAdj]=useState([]);            // archivos por enviar
+  const [chatEnviando,setChatEnviando]=useState(false);
+  const [chatEdit,setChatEdit]=useState(null);        // {id, texto}
+  const [chatNuevo,setChatNuevo]=useState("");        // buscador de personas
+  const [chatVerLista,setChatVerLista]=useState(true);// móvil: lista o conversación
+  const [chatCanDraft,setChatCanDraft]=useState(null); // edición de canales
+  const [chatCanModal,setChatCanModal]=useState(false);
+  const chatRef=useRef({tab:"",conv:"",yo:""});
+  const chatScroll=useRef(null);
+  useEffect(()=>{
+    if(!authUid||!currentUser?.id)return;
+    const yo=currentUser.id;chatRef.current.yo=yo;
+    dbGetConfig('chat_canales').then(v=>setChatCanales(Array.isArray(v)?v:[]));
+    dbChatNoLeidos().then(rows=>setChatNL(Object.fromEntries(rows.map(r=>[r.conv,{n:Number(r.n)||0,ultimo:r.ultimo?new Date(r.ultimo):null}]))));
+    const dbc=supabase.channel('chat-db').on('postgres_changes',{event:'*',schema:'public',table:'chat_mensajes'},pl=>{
+      const m=chatFromDB(pl.new);if(!m)return;
+      setChatMsgs(p=>{if(!p[m.conv])return p;const l=p[m.conv];const i=l.findIndex(x=>x.id===m.id);
+        return {...p,[m.conv]:i>=0?l.map(x=>x.id===m.id?m:x):[...l,m]};});
+      if(pl.eventType!=="INSERT")return;
+      const abierto=chatRef.current.tab==="chat"&&chatRef.current.conv===m.conv;
+      if(abierto){dbChatMarcarLeido(yo,m.conv);}
+      setChatNL(p=>({...p,[m.conv]:{n:(abierto||m.autorId===yo)?0:((p[m.conv]?.n||0)+1),ultimo:m.creado}}));
+    }).subscribe();
+    const pres=supabase.channel('chat-presencia',{config:{presence:{key:yo}}});
+    pres.on('presence',{event:'sync'},()=>setChatOnline(new Set(Object.keys(pres.presenceState()))))
+      .subscribe(async st=>{if(st==='SUBSCRIBED')await pres.track({id:yo,desde:new Date().toISOString()});});
+    return()=>{supabase.removeChannel(dbc);supabase.removeChannel(pres);};
+  },[authUid,currentUser?.id]);
+  useEffect(()=>{chatRef.current.tab=tab;chatRef.current.conv=chatConv;},[tab,chatConv]);
+  useEffect(()=>{ // al entrar al chat en pantalla ancha se abre el primer canal
+    if(tab!=="chat"||chatConv||!chatCanales.length||!currentUser||window.innerWidth<=760)return;
+    const c=chatCanales.find(c=>currentUser.rol==="A"||(c.roles||[]).includes(currentUser.rol));
+    if(c)chatAbrir("c:"+c.id);
+  },[tab,chatCanales]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(()=>{const el=chatScroll.current;if(el)el.scrollTop=el.scrollHeight;},[chatConv,(chatMsgs[chatConv]||[]).length,tab]);
   const [pickupList,setPickupList]=useState([]);
   const [showNewPickup,setShowNewPickup]=useState(false);
   const [pickupSel,setPickupSel]=useState(null);
@@ -6886,6 +6987,7 @@ export default function SistemaCarga(){
       {k:"agentes",l:"Agentes",ic:<Ico e="🤝"/>},
       {k:"oficinas",l:"Oficinas",ic:<Ico e="🏢"/>},
       {k:"tarifas",l:"Tarifas",ic:<Ico e="💰"/>},
+      {k:"chat",l:"Chat",ic:<Ico e="💬"/>},
       {k:"actividad",l:"Registro de Actividad",ic:<Ico e="📋"/>},
     ];
 
@@ -6905,6 +7007,7 @@ export default function SistemaCarga(){
 
         {/* ── NUMERACIÓN ── */}
         {cfgTab==="documentos"&&renderDocs()}
+        {cfgTab==="chat"&&<div style={{maxWidth:820}}>{chatCanalesEditor()}</div>}
         {cfgTab==="empresa"&&(()=>{
           const m=marcaDraft||marca;const set=x=>setMarcaDraft({...m,...x});
           const subirLogo=f=>{if(!f)return;const rd=new FileReader();rd.onload=()=>{const img=new Image();img.onload=()=>{
@@ -7767,114 +7870,232 @@ export default function SistemaCarga(){
   };
 
   // ── CHAT INTERNO ─────────────────────────────────────────────────────────────
+  const CHAT_INTERNOS=["A","B","C","D","D1","D2","H"];
+  const chatYo=currentUser.id;
+  const chatDmKey=otro=>"d:"+[chatYo,otro].sort().join(":");
+  const chatOtroDe=conv=>conv.startsWith("d:")?conv.slice(2).split(":").find(x=>x!==chatYo):null;
+  const chatPermRol=(rol,p)=>rol==="A"||(rolePerms[rol]||[]).includes(p);
+  const chatCanalesMios=chatCanales.filter(c=>currentUser.rol==="A"||(c.roles||[]).includes(currentUser.rol));
+  // Con quién puede escribir: el personal interno con todos; agentes, autónomos, vendedores y
+  // oficinas con el personal interno y con su propio agente u oficina.
+  const chatContactos=clients.filter(c=>c.tipo==="usuario"&&c.activo!==false&&c.id!==chatYo&&c.rol!=="I"&&chatPermRol(c.rol,"ver_chat")
+    &&(CHAT_INTERNOS.includes(currentUser.rol)||CHAT_INTERNOS.includes(c.rol)
+      ||(currentUser.agenteId&&c.agenteId===currentUser.agenteId)||(currentUser.oficinaId&&c.oficinaId===currentUser.oficinaId)));
+  const chatNombreConv=conv=>{
+    if(conv.startsWith("c:"))return chatCanales.find(c=>"c:"+c.id===conv)?.nombre||conv.slice(2);
+    const o=clients.find(c=>c.id===chatOtroDe(conv));return o?fullName(o):"Usuario";
+  };
+  const chatTotalNL=Object.entries(chatNL).filter(([k])=>k.startsWith("d:")||chatCanalesMios.some(c=>"c:"+c.id===k)).reduce((t,[,v])=>t+(v.n||0),0);
+  const chatAbrir=async conv=>{
+    setChatConv(conv);setChatVerLista(false);setChatEdit(null);setChatAdj([]);
+    setChatNL(p=>({...p,[conv]:{...(p[conv]||{}),n:0}}));
+    dbChatMarcarLeido(chatYo,conv);
+    if(!chatMsgs[conv]){const l=await dbChatMensajes(conv);setChatMsgs(p=>({...p,[conv]:l}));setChatMas(p=>({...p,[conv]:l.length>=50}));}
+  };
+  const chatAnteriores=async()=>{
+    const l=chatMsgs[chatConv]||[];if(!l.length)return;
+    const el=chatScroll.current;const h=el?el.scrollHeight:0;
+    const viejos=await dbChatMensajes(chatConv,l[0].creado);
+    setChatMsgs(p=>({...p,[chatConv]:[...viejos,...(p[chatConv]||[])]}));setChatMas(p=>({...p,[chatConv]:viejos.length>=50}));
+    setTimeout(()=>{if(el)el.scrollTop=el.scrollHeight-h;},50);
+  };
+  const sendChat=async()=>{
+    const texto=chatMsg.trim();if((!texto&&!chatAdj.length)||!chatConv||chatEnviando)return;
+    if(!hasPerm("enviar_chat"))return;
+    setChatEnviando(true);
+    const adjuntos=[];
+    for(const f of chatAdj){if(f.size>20*1024*1024){window.alert(`"${f.name}" pasa de 20 MB.`);continue;}const a=await chatSubirAdjunto(f,chatConv);if(a)adjuntos.push(a);}
+    if(!texto&&!adjuntos.length){setChatEnviando(false);return;}
+    const m=await dbChatEnviar({conv:chatConv,autorId:chatYo,autorNombre:fullName(currentUser),autorRol:currentUser.rol,texto,adjuntos});
+    setChatEnviando(false);
+    if(!m){window.alert("No se pudo enviar el mensaje.");return;}
+    setChatMsg("");setChatAdj([]);
+    setChatMsgs(p=>{const l=p[chatConv]||[];return l.some(x=>x.id===m.id)?p:{...p,[chatConv]:[...l,m]};});
+  };
+  const chatPuedeEditar=m=>m.autorId===chatYo&&!m.borrado&&hasPerm("editar_mensaje")&&Date.now()-m.creado<15*60000;
+  const chatPuedeBorrar=m=>!m.borrado&&((m.autorId===chatYo&&hasPerm("borrar_mensaje")&&Date.now()-m.creado<15*60000)||hasPerm("chat_moderar"));
+  const chatGuardarEdit=async()=>{
+    const t=(chatEdit?.texto||"").trim();if(!t)return;
+    const ok=await dbChatEditar(chatEdit.id,{texto:t,editado:new Date().toISOString()});
+    if(!ok){window.alert("No se pudo editar (pasaron más de 15 minutos o no tienes permiso).");return;}
+    setChatMsgs(p=>({...p,[chatConv]:(p[chatConv]||[]).map(x=>x.id===chatEdit.id?{...x,texto:t,editado:new Date()}:x)}));setChatEdit(null);
+  };
+  const chatBorrar=async m=>{
+    if(!window.confirm("¿Borrar este mensaje?"))return;
+    const ok=await dbChatEditar(m.id,{borrado:true,texto:"",adjuntos:[]});
+    if(!ok){window.alert("No se pudo borrar.");return;}
+    setChatMsgs(p=>({...p,[chatConv]:(p[chatConv]||[]).map(x=>x.id===m.id?{...x,borrado:true,texto:"",adjuntos:[]}:x)}));
+  };
+  // Números de WR, guía, factura, etc. dentro del texto se vuelven enlaces.
+  const chatTexto=t=>String(t).split(/(\s+)/).map((w,i)=>{
+    const lim=w.replace(/^[^\w]+|[^\w]+$/g,"");
+    if(/^https?:\/\//i.test(w))return <a key={i} href={w} target="_blank" rel="noopener noreferrer" style={{color:"inherit",textDecoration:"underline"}}>{w}</a>;
+    if(lim.length>=5&&/\d/.test(lim)){const t2=["wr","guia","factura","entrega","release","pickup","recibo"].find(k=>NUM_ABRIR&&NUM_ABRIR(k,lim.toUpperCase(),true));
+      if(t2){const [a,b]=[w.indexOf(lim),w.indexOf(lim)+lim.length];return <span key={i}>{w.slice(0,a)}<Num t={t2} id={lim.toUpperCase()} style={{fontSize:13,padding:"1px 6px"}}/>{w.slice(b)}</span>;}}
+    return w;});
+  const chatDia=d=>{const h=new Date();h.setHours(0,0,0,0);const x=new Date(d);x.setHours(0,0,0,0);const dif=(h-x)/86400000;
+    return dif===0?"Hoy":dif===1?"Ayer":x.toLocaleDateString("es-VE",{weekday:"long",day:"numeric",month:"long"});};
 
-  const CHAT_ROOMS=[
-    {id:"general",ic:<Ico e="💬"/>,l:"General",desc:"Todo el equipo"},
-    {id:"operaciones",ic:<Ico e="⚙️"/>,l:"Operaciones",desc:"D, D1, D2"},
-    {id:"ventas",ic:<Ico e="💼"/>,l:"Ventas",desc:"E, E1, G, G1"},
-  ];
-
-  const sendChat=()=>{
-    if(!chatMsg.trim())return;
-    const msg={id:Date.now(),user:currentUser.id||"rdiaz",role:currentUser.rol,name:`${currentUser.primerNombre} ${currentUser.primerApellido}`,text:chatMsg.trim(),ts:new Date()};
-    setChatMsgs(p=>({...p,[chatConv]:[...(p[chatConv]||[]),msg]}));
-    setChatMsg("");
-    logAction("Envió mensaje",`Canal: ${chatConv}`);
+  const chatCanalesEditor=()=>{
+    const L=chatCanDraft||chatCanales;const set=n=>setChatCanDraft(n);
+    const ROLES_CHAT=Object.values(ROLE_DEFS).filter(r=>r.code!=="I");
+    const guardar=async()=>{
+      const lim=L.map(c=>({...c,nombre:String(c.nombre||"").trim()})).filter(c=>c.nombre);
+      if(lim.some(c=>!(c.roles||[]).length)){window.alert("Cada canal necesita al menos un rol.");return;}
+      const ok=await dbSetConfig('chat_canales',lim);
+      if(!ok){window.alert("No se pudo guardar.");return;}
+      setChatCanales(lim);setChatCanDraft(null);logAction("Editó canales del chat",lim.map(c=>c.nombre).join(", "));
+    };
+    const nuevo=()=>{const base=sinAcentos("canal").replace(/[^a-z0-9]+/g,"-");let id=base+"-"+Date.now().toString(36);set([...L,{id,nombre:"",roles:["A"]}]);};
+    return(<div>
+      {L.length===0&&<div style={{color:"var(--t3)",padding:10}}>Sin canales</div>}
+      {L.map((c,i)=>(
+        <div key={c.id} className="card" style={{marginBottom:10,padding:12}}>
+          <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8}}>
+            <Ico n="hash"/>
+            <input className="fi" style={{flex:1,fontWeight:700}} value={c.nombre} placeholder="Nombre del canal" onChange={e=>set(L.map((x,j)=>j===i?{...x,nombre:e.target.value}:x))}/>
+            <button className="btn-d" style={{padding:"5px 10px"}} onClick={()=>{if(window.confirm(`¿Borrar el canal "${c.nombre||"sin nombre"}"? Sus mensajes dejarán de verse.`))set(L.filter((_,j)=>j!==i));}}><Ico e="🗑" sp/>Borrar</button>
+          </div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+            {ROLES_CHAT.map(r=>{const on=(c.roles||[]).includes(r.code);return(
+              <button key={r.code} onClick={()=>set(L.map((x,j)=>j===i?{...x,roles:on?x.roles.filter(y=>y!==r.code):[...(x.roles||[]),r.code]}:x))}
+                style={{padding:"4px 10px",borderRadius:14,fontSize:13,fontWeight:600,cursor:"pointer",border:`1px solid ${on?"var(--navy)":"var(--b1)"}`,background:on?"var(--navy)":"var(--bg2)",color:on?"#fff":"var(--t2)"}}>{r.name}</button>);})}
+          </div>
+        </div>))}
+      <div style={{display:"flex",gap:8,justifyContent:"space-between",marginTop:6}}>
+        <button className="btn-s" onClick={nuevo}><Ico e="➕" sp/>Nuevo canal</button>
+        {chatCanDraft&&<div style={{display:"flex",gap:8}}><button className="btn-s" onClick={()=>setChatCanDraft(null)}>Descartar</button><button className="btn-p" onClick={guardar}><Ico e="💾" sp/>Guardar</button></div>}
+      </div>
+    </div>);
   };
 
-  const renderChat=()=>(
-    <div style={{height:"100%",display:"flex",flexDirection:"column",overflow:"hidden"}}>
-      <div style={{display:"grid",gridTemplateColumns:"220px 1fr",flex:1,minHeight:0,overflow:"hidden"}}>
-        {/* SIDEBAR CANALES */}
-        <div style={{background:"var(--navy)",display:"flex",flexDirection:"column",overflow:"hidden"}}>
-          <div style={{padding:"14px 12px",borderBottom:"1px solid rgba(255,255,255,.1)"}}>
-            <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:18,fontWeight:700,color:"#E5AE3A",letterSpacing:1}}><Ico e="💬" sp/>CHAT INTERNO</div>
-            <div style={{fontSize:13,color:"rgba(255,255,255,.4)",marginTop:2}}>{empresaNombre}</div>
-          </div>
-          <div style={{flex:1,padding:"8px 6px",overflowY:"auto"}}>
-            <div style={{fontSize:11,letterSpacing:2,textTransform:"uppercase",color:"rgba(255,255,255,.3)",padding:"8px 8px 4px",fontWeight:700}}>Canales</div>
-            {CHAT_ROOMS.map(r=>(
-              <div key={r.id} onClick={()=>setChatConv(r.id)}
-                style={{padding:"9px 10px",borderRadius:7,cursor:"pointer",marginBottom:2,
-                  background:chatConv===r.id?"rgba(200,151,28,.2)":"transparent",
-                  border:`1px solid ${chatConv===r.id?"rgba(200,151,28,.4)":"transparent"}`}}>
-                <div style={{display:"flex",alignItems:"center",gap:8}}>
-                  <span style={{fontSize:16}}>{r.ic}</span>
-                  <div>
-                    <div style={{color:chatConv===r.id?"#E5AE3A":"rgba(255,255,255,.8)",fontSize:15,fontWeight:600}}>{r.l}</div>
-                    <div style={{color:"rgba(255,255,255,.35)",fontSize:12}}>{r.desc}</div>
-                  </div>
-                  {(chatMsgs[r.id]||[]).length>0&&(
-                    <span style={{marginLeft:"auto",background:chatConv===r.id?"#E5AE3A":"rgba(255,255,255,.2)",color:chatConv===r.id?"#1A2B4A":"rgba(255,255,255,.7)",fontSize:11,fontWeight:800,padding:"1px 6px",borderRadius:4}}>
-                      {(chatMsgs[r.id]||[]).length}
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))}
-            <div style={{fontSize:11,letterSpacing:2,textTransform:"uppercase",color:"rgba(255,255,255,.3)",padding:"12px 8px 4px",fontWeight:700}}>En línea</div>
-            {clients.filter(c=>["A","B","C","D","D1","D2"].includes(c.rol)).map(c=>(
-              <div key={c.id} style={{padding:"6px 10px",display:"flex",alignItems:"center",gap:7}}>
-                <div style={{width:8,height:8,borderRadius:"50%",background:"#1A8A4A",flexShrink:0}}/>
-                <div style={{width:24,height:24,borderRadius:6,background:"rgba(255,255,255,.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:"#fff",flexShrink:0}}>{initials(c)}</div>
-                <div style={{fontSize:13,color:"rgba(255,255,255,.6)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.primerNombre} {c.primerApellido}</div>
-              </div>
-            ))}
-          </div>
-          <div style={{padding:"10px 12px",borderTop:"1px solid rgba(255,255,255,.1)",display:"flex",alignItems:"center",gap:8}}>
-            <div style={{width:30,height:30,borderRadius:8,background:"#E5AE3A",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:700,color:"#1A2B4A",flexShrink:0}}>{initials(CU)}</div>
-            <div style={{flex:1,minWidth:0}}>
-              <div style={{fontSize:14,fontWeight:600,color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{currentUser.primerNombre} {currentUser.primerApellido}</div>
-              <div style={{fontSize:12,color:"rgba(255,255,255,.4)"}}>{ROLE_DEFS[currentUser.rol]?.name}</div>
-            </div>
-          </div>
+  const renderChat=()=>{
+    const conv=chatConv;const msgs=chatMsgs[conv]||[];
+    const Qn=sinAcentos(chatNuevo.trim());
+    const dms=Object.entries(chatNL).filter(([k])=>k.startsWith("d:")).map(([k,v])=>({k,ultimo:v.ultimo}));
+    if(conv.startsWith("d:")&&!dms.some(d=>d.k===conv))dms.push({k:conv,ultimo:new Date()});
+    dms.sort((a,b)=>(b.ultimo||0)-(a.ultimo||0));
+    const resultados=Qn?chatContactos.filter(c=>sinAcentos(`${fullName(c)} ${ROLE_DEFS[c.rol]?.name||""}`).includes(Qn)).slice(0,20):[];
+    const punto=on=><span style={{width:8,height:8,borderRadius:"50%",background:on?"#1A8A4A":"rgba(255,255,255,.25)",flexShrink:0,display:"inline-block"}}/>;
+    const fila=(k,ic,titulo,sub,on)=>{const act=conv===k;const n=chatNL[k]?.n||0;return(
+      <div key={k} onClick={()=>chatAbrir(k)} className={`chat-it${act?" on":""}`}>
+        <span className="chat-it-ic">{ic}</span>
+        <div style={{flex:1,minWidth:0}}>
+          <div className="chat-it-t">{titulo}</div>
+          {sub&&<div className="chat-it-s">{sub}</div>}
         </div>
-
-        {/* MENSAJES */}
-        <div style={{display:"flex",flexDirection:"column",background:"var(--bg3)",overflow:"hidden"}}>
-          {/* Header canal */}
-          <div style={{padding:"12px 16px",background:"var(--bg2)",borderBottom:"1px solid var(--b1)",display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
-            <span style={{fontSize:20}}>{CHAT_ROOMS.find(r=>r.id===chatConv)?.ic}</span>
-            <div>
-              <div style={{fontWeight:700,fontSize:16,color:"var(--navy)"}}>{CHAT_ROOMS.find(r=>r.id===chatConv)?.l}</div>
-              <div style={{fontSize:13,color:"var(--t3)"}}>{CHAT_ROOMS.find(r=>r.id===chatConv)?.desc}</div>
-            </div>
+        {on!==undefined&&punto(on)}
+        {n>0&&<span className="chat-nl">{n}</span>}
+      </div>);};
+    const otro=chatOtroDe(conv);const otroU=otro&&clients.find(c=>c.id===otro);
+    let diaPrev="";
+    return(
+    <div className={`chat-grid${chatVerLista?"":" en-conv"}`}>
+      <div className="chat-lado">
+        <div style={{padding:"14px 12px 10px",borderBottom:"1px solid rgba(255,255,255,.1)"}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+            <div style={{fontSize:16,fontWeight:700,color:"#E5AE3A"}}>Chat interno</div>
+            {hasPerm("chat_canales")&&<button title="Canales" onClick={()=>{setChatCanDraft(null);setChatCanModal(true);}} style={{background:"none",border:"none",color:"rgba(255,255,255,.6)",cursor:"pointer",fontSize:16}}><Ico e="⚙️"/></button>}
           </div>
-          {/* Mensajes */}
-          <div style={{flex:1,overflowY:"auto",padding:"16px",display:"flex",flexDirection:"column",gap:12}}>
-            {(chatMsgs[chatConv]||[]).length===0?(
-              <div style={{textAlign:"center",color:"var(--t3)",padding:"40px 0",fontSize:15}}>No hay mensajes en este canal aún.</div>
-            ):(chatMsgs[chatConv]||[]).map(m=>{
-              const isMe=m.user===(currentUser.id||"rdiaz");
-              return (
-                <div key={m.id} style={{display:"flex",flexDirection:isMe?"row-reverse":"row",gap:10,alignItems:"flex-end"}}>
-                  <div style={{width:32,height:32,borderRadius:8,background:isMe?"var(--navy)":"var(--bg5)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,color:isMe?"#fff":"var(--t2)",flexShrink:0}}>
-                    {(m.name||"?").split(" ").map(n=>n[0]).slice(0,2).join("").toUpperCase()}
-                  </div>
-                  <div style={{maxWidth:"65%"}}>
-                    <div style={{fontSize:12,color:"var(--t3)",marginBottom:3,textAlign:isMe?"right":"left"}}>
-                      {m.name} · <span className={`rb ${ROLE_DEFS[m.role]?.color||"rH1"}`} style={{fontSize:10}}>{m.role}</span> · {fmtTime(m.ts)}
-                    </div>
-                    <div style={{background:isMe?"var(--navy)":"var(--bg2)",color:isMe?"#fff":"var(--t1)",padding:"10px 14px",borderRadius:isMe?"12px 12px 2px 12px":"12px 12px 12px 2px",fontSize:15,lineHeight:1.5,border:isMe?"none":"1px solid var(--b1)",boxShadow:"var(--shadow)"}}>
-                      {m.text}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          {/* Input */}
-          <div style={{padding:"12px 16px",background:"var(--bg2)",borderTop:"1px solid var(--b1)",display:"flex",gap:8,flexShrink:0}}>
-            <input className="fi" style={{flex:1,fontSize:15}} value={chatMsg}
-              onChange={e=>setChatMsg(e.target.value)}
-              onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendChat();}}}
-              placeholder={`Mensaje en #${chatConv}…`}/>
-            <button className="btn-p" onClick={sendChat} style={{padding:"8px 16px"}}>Enviar ↵</button>
+          {hasPerm("chat_directo")&&<input className="fi chat-busca" value={chatNuevo} onChange={e=>setChatNuevo(e.target.value)} placeholder="Buscar persona…"/>}
+          {Qn&&<div className="chat-res">
+            {resultados.length===0?<div style={{padding:8,fontSize:13,color:"rgba(255,255,255,.5)"}}>Sin resultados</div>:
+              resultados.map(c=><div key={c.id} className="chat-it" onClick={()=>{setChatNuevo("");chatAbrir(chatDmKey(c.id));}}>
+                <span className="chat-av">{initials(c)}</span>
+                <div style={{flex:1,minWidth:0}}><div className="chat-it-t">{fullName(c)}</div><div className="chat-it-s">{ROLE_DEFS[c.rol]?.name}</div></div>
+                {punto(chatOnline.has(c.id))}</div>)}
+          </div>}
+        </div>
+        <div style={{flex:1,overflowY:"auto",padding:"8px 6px"}}>
+          <div className="chat-sec">Canales</div>
+          {chatCanalesMios.length===0&&<div style={{padding:"4px 10px",fontSize:13,color:"rgba(255,255,255,.4)"}}>Sin canales</div>}
+          {chatCanalesMios.map(c=>fila("c:"+c.id,<Ico n="hash"/>,c.nombre))}
+          {hasPerm("chat_directo")&&<>
+            <div className="chat-sec">Directos</div>
+            {dms.length===0&&<div style={{padding:"4px 10px",fontSize:13,color:"rgba(255,255,255,.4)"}}>Sin conversaciones</div>}
+            {dms.map(d=>{const u=clients.find(c=>c.id===chatOtroDe(d.k));return fila(d.k,<span className="chat-av">{u?initials(u):"?"}</span>,u?fullName(u):"Usuario",u?ROLE_DEFS[u.rol]?.name:"",chatOnline.has(u?.id));})}
+            <div className="chat-sec">En línea</div>
+            {chatContactos.filter(c=>chatOnline.has(c.id)).length===0&&<div style={{padding:"4px 10px",fontSize:13,color:"rgba(255,255,255,.4)"}}>Nadie más conectado</div>}
+            {chatContactos.filter(c=>chatOnline.has(c.id)).map(c=>(
+              <div key={c.id} className="chat-it" onClick={()=>chatAbrir(chatDmKey(c.id))}>
+                <span className="chat-av">{initials(c)}</span>
+                <div style={{flex:1,minWidth:0}}><div className="chat-it-t">{fullName(c)}</div><div className="chat-it-s">{ROLE_DEFS[c.rol]?.name}</div></div>
+                {punto(true)}</div>))}
+          </>}
+        </div>
+        <div style={{padding:"10px 12px",borderTop:"1px solid rgba(255,255,255,.1)",display:"flex",alignItems:"center",gap:8}}>
+          <span className="chat-av" style={{background:"#E5AE3A",color:"#1A2B4A"}}>{initials(currentUser)}</span>
+          <div style={{flex:1,minWidth:0}}>
+            <div className="chat-it-t" style={{color:"#fff"}}>{fullName(currentUser)}</div>
+            <div className="chat-it-s">{ROLE_DEFS[currentUser.rol]?.name}</div>
           </div>
         </div>
       </div>
-    </div>
-  );
+
+      <div className="chat-main">
+        {!conv?<div style={{margin:"auto",color:"var(--t3)",fontSize:15}}>Elige un canal o una persona</div>:<>
+        <div className="chat-hd">
+          <button className="btn-s chat-volver" onClick={()=>setChatVerLista(true)}>←</button>
+          {otroU?<span className="chat-av" style={{background:"var(--navy)",color:"#fff"}}>{initials(otroU)}</span>:<span style={{color:"var(--navy)",fontSize:20}}><Ico n="hash"/></span>}
+          <div style={{minWidth:0}}>
+            <div style={{fontWeight:700,fontSize:16,color:"var(--navy)"}}>{chatNombreConv(conv)}</div>
+            <div style={{fontSize:13,color:"var(--t3)"}}>{otroU?`${ROLE_DEFS[otroU.rol]?.name||""}${chatOnline.has(otroU.id)?" · en línea":""}`
+              :(chatCanales.find(c=>"c:"+c.id===conv)?.roles||[]).map(r=>ROLE_DEFS[r]?.name).filter(Boolean).join(", ")}</div>
+          </div>
+        </div>
+        <div ref={chatScroll} className="chat-msgs">
+          {chatMas[conv]&&<div style={{textAlign:"center"}}><button className="btn-s" style={{fontSize:13}} onClick={chatAnteriores}>Cargar anteriores</button></div>}
+          {msgs.length===0&&<div style={{textAlign:"center",color:"var(--t3)",padding:"40px 0",fontSize:15}}>Sin mensajes</div>}
+          {msgs.map(m=>{
+            const yo=m.autorId===chatYo;const d=chatDia(m.creado);const sep=d!==diaPrev;diaPrev=d;
+            const autor=clients.find(c=>c.id===m.autorId);
+            return(<Fragment key={m.id}>
+              {sep&&<div className="chat-dia"><span>{d}</span></div>}
+              <div className={`chat-m${yo?" yo":""}`}>
+                <span className="chat-av" style={{background:yo?"var(--navy)":"var(--bg5)",color:yo?"#fff":"var(--t2)"}}>{autor?initials(autor):(m.autorNombre||"?").slice(0,2).toUpperCase()}</span>
+                <div className="chat-m-c">
+                  <div className="chat-m-h">{yo?"Tú":(autor?fullName(autor):m.autorNombre)} · {fmtTime(m.creado)}{m.editado&&!m.borrado?" · editado":""}
+                    {!m.borrado&&(chatPuedeEditar(m)||chatPuedeBorrar(m))&&<span className="chat-acc">
+                      {chatPuedeEditar(m)&&<button title="Editar" onClick={()=>setChatEdit({id:m.id,texto:m.texto})}><Ico e="✏️"/></button>}
+                      {chatPuedeBorrar(m)&&<button title="Borrar" onClick={()=>chatBorrar(m)}><Ico e="🗑"/></button>}
+                    </span>}
+                  </div>
+                  {m.borrado?<div className="chat-b borr">Mensaje eliminado</div>:
+                  chatEdit?.id===m.id?<div className="chat-b" style={{background:"var(--bg2)",color:"var(--t1)",border:"1px solid var(--b1)"}}>
+                    <textarea className="fi" rows={2} autoFocus value={chatEdit.texto} onChange={e=>setChatEdit(p=>({...p,texto:e.target.value}))}
+                      onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();chatGuardarEdit();}if(e.key==="Escape")setChatEdit(null);}}/>
+                    <div style={{display:"flex",gap:6,justifyContent:"flex-end",marginTop:6}}><button className="btn-s" onClick={()=>setChatEdit(null)}>Cancelar</button><button className="btn-p" onClick={chatGuardarEdit}>Guardar</button></div>
+                  </div>:<>
+                    {m.texto&&<div className="chat-b">{chatTexto(m.texto)}</div>}
+                    {(m.adjuntos||[]).length>0&&<div className="chat-adjs">{m.adjuntos.map(a=><ChatAdjunto key={a.path} a={a}/>)}</div>}
+                  </>}
+                </div>
+              </div>
+            </Fragment>);})}
+        </div>
+        {hasPerm("enviar_chat")?<div className="chat-in">
+          {chatAdj.length>0&&<div className="chat-pend">{chatAdj.map((f,i)=><span key={i}><Ico e="📎" sp/>{f.name}<button onClick={()=>setChatAdj(p=>p.filter((_,j)=>j!==i))}>✕</button></span>)}</div>}
+          <div style={{display:"flex",gap:8,alignItems:"flex-end"}}>
+            {hasPerm("chat_adjuntar")&&<label className="btn-s" style={{cursor:"pointer",padding:"8px 10px"}} title="Adjuntar">
+              <Ico e="📎" solo/><input type="file" multiple style={{display:"none"}} onChange={e=>{const fs=[...e.target.files];e.target.value="";setChatAdj(p=>[...p,...fs]);}}/></label>}
+            <textarea className="fi" rows={1} style={{flex:1,fontSize:15,resize:"none",maxHeight:120}} value={chatMsg}
+              onChange={e=>setChatMsg(e.target.value)}
+              onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendChat();}}}
+              onPaste={e=>{if(!hasPerm("chat_adjuntar"))return;const fs=[...(e.clipboardData?.files||[])];if(fs.length){e.preventDefault();setChatAdj(p=>[...p,...fs]);}}}
+              placeholder={`Mensaje para ${chatNombreConv(conv)}…`}/>
+            <button className="btn-p" onClick={sendChat} disabled={chatEnviando} style={{padding:"8px 16px"}}>{chatEnviando?"Enviando…":<><Ico e="🚀" sp/>Enviar</>}</button>
+          </div>
+        </div>:<div className="chat-in" style={{color:"var(--t3)",fontSize:13,textAlign:"center"}}>Tu rol no tiene permiso para escribir mensajes.</div>}
+        </>}
+      </div>
+      {chatCanModal&&<div className="ov" onClick={()=>setChatCanModal(false)}>
+        <div className="modal mmd" onClick={e=>e.stopPropagation()}>
+          <div className="mhd"><div className="mt"><Ico e="💬" sp/>Canales del chat</div><button className="mcl" onClick={()=>setChatCanModal(false)}>✕</button></div>
+          {chatCanalesEditor()}
+        </div>
+      </div>}
+    </div>);
+  };
 
   // ── TARIFAS BASE (usadas en Calculadora, Pick-up y Contabilidad) ─────────────
   const TARIFAS_BASE={"Aéreo Express":{porLb:1.8,porFt3:28,min:25},"Aéreo Económico":{porLb:1.4,porFt3:22,min:20},"Marítimo FCL":{porLb:0.6,porFt3:10,min:50},"Marítimo LCL":{porLb:0.8,porFt3:14,min:40},"Terrestre":{porLb:0.5,porFt3:8,min:30}};
@@ -12539,7 +12760,7 @@ export default function SistemaCarga(){
     ]},
     {label:"Herramientas",items:[
       {id:"calculadora",ic:<Ico e="🧮"/>,l:"Calculadora"},
-      {id:"chat",ic:<Ico e="💬"/>,l:"Chat Interno"},
+      {id:"chat",ic:<Ico e="💬"/>,l:"Chat Interno",badge:chatTotalNL>0?String(chatTotalNL):null,red:true},
       {id:"reports",ic:<Ico e="📈"/>,l:"Reportes"},
     ]},
     {label:"Sistema",items:[
@@ -12557,7 +12778,7 @@ export default function SistemaCarga(){
     entregasydespachos:["ver_entrega"],facturacion:["ver_factura"],contabilidad:["ver_cuentas_cobrar","ver_factura"],
     clients:["ver_bd_clientes","ver_usuarios"],agentes:["ver_agente"],oficinas:["ver_oficina"],
     etiquetas:ALL_PERMS.filter(p=>p.startsWith("imp_")),tracking:["ver_tracking"],pickup:["ver_pickup"],
-    calculadora:["calculadora"],chat:ALL_PERMS.filter(p=>p.startsWith("chat_")),docs:["ver_documentos"],reports:["ver_reportes"],
+    calculadora:["calculadora"],chat:["ver_chat"],docs:["ver_documentos"],reports:["ver_reportes"],
     roles:["gestionar_roles"],actividad:["registro_actividad"],
   };
   const navVisible=n=>!NAV_PERMS[n.id]||NAV_PERMS[n.id].some(p=>hasPerm(p));

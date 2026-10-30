@@ -743,3 +743,51 @@ export const dbDeleteFotoConsol = async (id, path=null) => {
   if (error) { console.error('deleteFotoConsol:', error); return }
   if (path) await storageDeleteFotoConsol(path)
 }
+
+// ── CHAT INTERNO ─────────────────────────────────────────────────────────────
+// conv: 'c:<canal>' o 'd:<idA>:<idB>' (ids ordenados).
+export const chatFromDB = (r) => r ? ({
+  id: r.id, conv: r.conv, autorId: r.autor_id, autorNombre: r.autor_nombre || '', autorRol: r.autor_rol || '',
+  texto: r.texto || '', adjuntos: r.adjuntos || [], creado: new Date(r.creado), editado: r.editado ? new Date(r.editado) : null, borrado: !!r.borrado,
+}) : null
+export const dbChatMensajes = async (conv, antesDe = null, limite = 50) => {
+  let q = supabase.from('chat_mensajes').select('*').eq('conv', conv).order('creado', { ascending: false }).limit(limite)
+  if (antesDe) q = q.lt('creado', new Date(antesDe).toISOString())
+  const { data, error } = await q
+  if (error) { console.error('chatMensajes:', error); return [] }
+  return (data || []).map(chatFromDB).reverse()
+}
+export const dbChatEnviar = async (m) => {
+  const { data, error } = await supabase.from('chat_mensajes').insert({
+    conv: m.conv, autor_id: m.autorId, autor_nombre: m.autorNombre, autor_rol: m.autorRol, texto: m.texto, adjuntos: m.adjuntos || [],
+  }).select().single()
+  if (error) { console.error('chatEnviar:', error); return null }
+  return chatFromDB(data)
+}
+export const dbChatEditar = async (id, cambios) => {
+  const { data, error } = await supabase.from('chat_mensajes').update(cambios).eq('id', id).select()
+  if (error || !data?.length) { console.error('chatEditar:', error); return false }
+  return true
+}
+export const dbChatNoLeidos = async () => {
+  const { data, error } = await supabase.rpc('chat_no_leidos')
+  if (error) { console.error('chatNoLeidos:', error); return [] }
+  return data || []
+}
+export const dbChatMarcarLeido = async (usuarioId, conv) => {
+  const { error } = await supabase.from('chat_leidos').upsert({ usuario_id: usuarioId, conv, visto: new Date().toISOString() })
+  if (error) console.error('chatLeido:', error)
+}
+const CHAT_BUCKET = 'chat-adjuntos'
+export const chatSubirAdjunto = async (file, conv) => {
+  const limpio = String(file.name || 'archivo').replace(/[^\w.\-]+/g, '_').slice(-80)
+  const path = `${conv.replace(/[^\w\-]+/g, '_')}/${Date.now()}_${Math.random().toString(36).slice(2, 8)}_${limpio}`
+  const { error } = await supabase.storage.from(CHAT_BUCKET).upload(path, file, { contentType: file.type || 'application/octet-stream', upsert: false })
+  if (error) { console.error('chatSubirAdjunto:', error); return null }
+  return { path, nombre: file.name || limpio, tipo: file.type || '', tam: file.size || 0 }
+}
+export const chatUrlAdjunto = async (path) => {
+  const { data, error } = await supabase.storage.from(CHAT_BUCKET).createSignedUrl(path, 3600)
+  if (error) { console.error('chatUrlAdjunto:', error); return null }
+  return data?.signedUrl || null
+}
