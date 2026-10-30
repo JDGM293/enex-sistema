@@ -6191,7 +6191,7 @@ export default function SistemaCarga(){
 
   const renderDocs=()=>{
     const puede=hasPerm("editar_documento")||hasPerm("configuracion");
-    if(!puede)return <div className="page-scroll"><div className="card" style={{textAlign:"center",padding:40,color:"var(--t3)"}}>Tu rol no tiene permiso para editar documentos.</div></div>;
+    if(!puede)return <div className="card" style={{textAlign:"center",padding:40,color:"var(--t3)"}}>Tu rol no tiene permiso para editar documentos.</div>;
     const Q=sinAcentos(paisQ.trim());
     const lista=[{k:"_default",l:"Predeterminado (todos los países)"},...COUNTRIES.map(c=>({k:c.name,l:c.name}))].filter(o=>o.k==="_default"||!Q||sinAcentos(o.l).includes(Q));
     const sel=paisSel, sec=paisSec;
@@ -6214,7 +6214,7 @@ export default function SistemaCarga(){
     const SECS=[["empresa","🏢 Empresa en el país"],["exp","📤 Exportación (sale de aquí)"],["imp","📥 Importación (llega aquí)"]];
     const tiene=k=>docPais[k]?SECS.filter(([s2])=>docPais[k][s2]&&Object.keys(docPais[k][s2]).length).map(([s2])=>s2.toUpperCase()).join(" · "):"";
     return(
-    <div className="page-scroll">
+    <div>
       <div style={{display:"grid",gridTemplateColumns:"280px minmax(0,1fr)",gap:14,alignItems:"start"}}>
         <div className="card" style={{padding:0,overflow:"hidden"}}>
           <div style={{padding:8,borderBottom:"1px solid var(--b1)",background:"var(--bg3)"}}><input className="fi" style={{fontSize:13,padding:"6px 8px"}} placeholder="Buscar país…" value={paisQ} onChange={e=>setPaisQ(e.target.value)}/></div>
@@ -6258,6 +6258,7 @@ export default function SistemaCarga(){
 
     const CFG_TABS=[
       {k:"empresa",l:"Empresa",ic:"🏢"},
+      {k:"documentos",l:"Documentos por país",ic:"🌎"},
       {k:"numeracion",l:"Numeración",ic:"🔢"},
       {k:"tipoenvio",l:"Tipo de Envío",ic:"✈️"},
       {k:"servicios",l:"Servicios Adicionales",ic:"⚡"},
@@ -6286,6 +6287,7 @@ export default function SistemaCarga(){
         </div>
 
         {/* ── NUMERACIÓN ── */}
+        {cfgTab==="documentos"&&renderDocs()}
         {cfgTab==="empresa"&&(()=>{
           const m=marcaDraft||marca;const set=x=>setMarcaDraft({...m,...x});
           const subirLogo=f=>{if(!f)return;const rd=new FileReader();rd.onload=()=>{const img=new Image();img.onload=()=>{
@@ -11923,7 +11925,6 @@ export default function SistemaCarga(){
     {label:"Herramientas",items:[
       {id:"calculadora",ic:"🧮",l:"Calculadora"},
       {id:"chat",ic:"💬",l:"Chat Interno"},
-      {id:"docs",ic:"📋",l:"Documentos"},
       {id:"reports",ic:"📈",l:"Reportes"},
     ]},
     {label:"Sistema",items:[
@@ -11973,7 +11974,6 @@ export default function SistemaCarga(){
       case "cargorelease": return renderCargoRelease();
       case "entregasydespachos": return renderDeliveryNotes();
       case "alerts":       return renderAlertas();
-      case "docs":         return renderDocs();
       // case "entregas" — Notas de Entrega también accesible desde Impresión (etqMode="entregas")
       default:             return <div className="page-scroll"><div className="card" style={{textAlign:"center",padding:60,color:"var(--t3)"}}>{PAGE_TITLES[tab]} — Módulo próximamente</div></div>;
     }
