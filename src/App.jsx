@@ -2238,9 +2238,19 @@ export default function ENEXSystem(){
   const [cfgSelPais,setCfgSelPais]=useState(0);
   // Notas legales por país: {_default:"...", "Venezuela 🇻🇪":"...", ...}
   const [notasLegales,setNotasLegales]=useState({});
+  const [fmtFC,setFmtFC]=useState({});            // formatos de factura comercial/proforma por país
+  const [docTextos,setDocTextos]=useState({});    // datos de empresa y textos de declaración/autorización
+  const [docTxtDraft,setDocTxtDraft]=useState(null);
+  const [docsTab,setDocsTab]=useState("generar");
+  const [docsQ,setDocsQ]=useState("");
+  const [docEd,setDocEd]=useState(null);
+  const [fmtSel,setFmtSel]=useState("_default");
+  const [fmtDraft,setFmtDraft]=useState(null);
   const [notaDraft,setNotaDraft]=useState(null); // {pais, texto} mientras se edita
   useEffect(()=>{
     if(!authUid)return;
+    dbGetConfig('formatos_factura').then(v=>{if(v&&typeof v==="object"&&!Array.isArray(v))setFmtFC(v);}).catch(()=>{});
+    dbGetConfig('documentos_textos').then(v=>{if(v&&typeof v==="object"&&!Array.isArray(v))setDocTextos(v);}).catch(()=>{});
     dbGetConfig('notas_legales').then(v=>{if(v&&typeof v==="object"&&!Array.isArray(v))setNotasLegales(v);}).catch(e=>console.error("notas_legales:",e));
   },[authUid]);
   const [cfgNewCity,setCfgNewCity]=useState("");
@@ -2887,6 +2897,7 @@ export default function ENEXSystem(){
           tracking:normTrk(wrf.cajas[i].tracking),
           factura:wrf.cajas[i].numFactura,
           descripcion:cleanReempaqueDesc(wrf.cajas[i].descripcion),
+          valor:r2((parseFloat(wrf.cajas[i].montoFactura)||0)/(c.qty||1)),
         });
       }
     });
@@ -4021,6 +4032,7 @@ export default function ENEXSystem(){
               });
               setShowNewWR(true);setSelWR(null);
             }}>✏️ Editar</button>}
+            {(hasPerm("ver_documentos")||hasPerm("imp_wr"))&&<button className="btn-s" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>docAbrir(selWR)}>📑 Documentos</button>}
             {hasPerm("borrar_wr")&&<button className="btn-s" style={{fontSize:12,padding:"4px 10px",color:"var(--red)",borderColor:"var(--red)"}} onClick={()=>{if(window.confirm(`¿Borrar WR ${selWR.id}? Esta acción no se puede deshacer.`)){setWrList(p=>p.filter(x=>x.id!==selWR.id));dbDeleteWR(selWR.id);logAction("Borró WR",selWR.id);setSelWR(null);}}}>🗑 Borrar</button>}
             {crElegible(selWR)&&hasPerm("hacer_egreso")&&<button className="btn-s" style={{fontSize:12,padding:"4px 10px",background:"#E8F5E9",borderColor:"#81C784",color:"#2E7D32",fontWeight:700}} onClick={()=>{crOpenNew([selWR.id]);setSelWR(null);}} title="Registrar egreso individual de este WR">🚀 Egresar</button>}
             {dnElegible(selWR)&&hasPerm("entregar")&&<button className="btn-s" style={{fontSize:12,padding:"4px 10px",background:"#E3F2FD",borderColor:"#64B5F6",color:"#1565C0",fontWeight:700}} onClick={()=>{const w=selWR;setSelWR(null);dnEntregarDesdeWR(w);}}>📝 Entregar</button>}
@@ -6063,6 +6075,212 @@ export default function ENEXSystem(){
       </div>
     </div>
     );
+  };
+
+  // ── DOCUMENTOS ────────────────────────────────────────────────────────────────
+  // Factura comercial / proforma (formato por país de destino), declaración de contenido,
+  // lista de empaque y autorización de inspección / carta de instrucciones, a partir de un WR.
+  const FC_DEFAULT={tituloPro:"FACTURA PROFORMA",tituloCom:"FACTURA COMERCIAL",idioma:"bi",idLabel:"ID / Tax ID",hs:"si",origenMerc:"si",incoterm:"DAP",moneda:"USD",
+    declaracion:"Declaro que la información contenida en esta factura es verdadera y correcta, y que el contenido de este envío es el aquí indicado."};
+  const DOC_TXT_DEFAULT={
+    declaracion:"Yo, {REMITENTE}, declaro bajo fe de juramento que el contenido de este envío corresponde a lo descrito en este documento, que es de lícita procedencia y que no contiene dinero en efectivo, armas, municiones, explosivos, drogas o sustancias controladas, materiales peligrosos, mercancía perecedera ni ningún otro artículo prohibido o restringido por las leyes del país de origen, de tránsito o de destino. Asumo toda la responsabilidad legal por la veracidad de esta declaración.",
+    autorizacion:"Yo, {REMITENTE}, autorizo a {EMPRESA} y a sus agentes a abrir, inspeccionar y verificar el contenido de mis envíos, y a preparar y presentar en mi nombre la documentación de exportación, aduana y transporte que sea necesaria. Instruyo a {EMPRESA} a transportar mis envíos según el servicio contratado y declaro conocer y aceptar sus términos y condiciones. Esta autorización es válida para todos mis envíos hasta que la revoque por escrito.",
+  };
+  const MOTIVOS_FC=["Venta","Regalo","Muestra sin valor comercial","Efectos personales","Uso personal","Devolución / reparación"];
+  const INCOTERMS=["DAP","DDP","EXW","FCA","FOB","CPT","CIF"];
+  const nomPais=v=>String(v||"").replace(/[^\p{L}\s.-]/gu,"").trim();
+  const fmtFCDe=pais=>{const P=paisCanon(pais);const k=Object.keys(fmtFC).find(x=>x!=="_default"&&paisCanon(x)===P);
+    const fmt={...FC_DEFAULT,...Object.fromEntries(Object.entries(fmtFC._default||{}).filter(([,v])=>v!==""&&v!=null)),
+      ...Object.fromEntries(Object.entries(k?fmtFC[k]:{}).filter(([,v])=>v!==""&&v!=null))};
+    return {...fmt,_pais:k||""};};
+  const guiaDeWR=w=>consolList.find(g=>(g.containers||[]).some(ct=>(ct.wr||[]).some(x=>x.id===w.id)));
+  const docLineasDeWR=w=>{
+    const dims=w.dims||[];const m=new Map();
+    (dims.length?dims:[{descripcion:w.descripcion,pk:w.pesoKg}]).forEach(d=>{
+      const k=String(d.descripcion||w.descripcion||"MERCANCÍA").trim().toUpperCase()||"MERCANCÍA";
+      if(!m.has(k))m.set(k,{cantidad:0,descripcion:k,hs:"",origen:nomPais(w.origCountry),pesoKg:0,valor:0,_tieneValor:false});
+      const x=m.get(k);x.cantidad++;x.pesoKg+=parseFloat(d.pk)||0;if(d.valor!=null&&d.valor!==""){x.valor+=parseFloat(d.valor)||0;x._tieneValor=true;}});
+    const lineas=[...m.values()];
+    if(!lineas.some(x=>x._tieneValor)){const tot=parseFloat(w.valor)||0;const n=lineas.reduce((t,x)=>t+x.cantidad,0)||1;lineas.forEach(x=>{x.valor=tot*x.cantidad/n;});}
+    return lineas.map(x=>({cantidad:String(x.cantidad),descripcion:x.descripcion,hs:"",origen:x.origen,pesoKg:String(r2(x.pesoKg)),valorUnit:String(r2(x.cantidad?x.valor/x.cantidad:0))}));
+  };
+  const docRemitente=w=>{
+    const rem=String(w.shipper||"").trim();const esEmp=!rem||sinAcentos(rem)===sinAcentos(empresaNombre||"");const E=docTextos.empresa||{};
+    if(esEmp)return {nombre:empresaNombre||"",dir:E.dir||"",tel:E.tel||"",email:E.email||"",doc:E.idFiscal||""};
+    const c=w.remitenteId?clients.find(x=>x.id===w.remitenteId):null;
+    return {nombre:rem,dir:w.remitenteDir||(c?[c.dir,c.municipio,c.estado,c.pais].filter(Boolean).join(", "):""),tel:w.remitenteTel||c?.tel1||"",email:w.remitenteEmail||c?.email||"",doc:w.remitenteDoc||c?.cedula||""};
+  };
+  const docDestinatario=w=>{const c=cliDeWRCon(w,clients);
+    return {nombre:c?fullName(c):(w.consignee||""),casillero:c?.casillero||w.casillero||"",dir:c?[c.dir,c.municipio,c.estado,c.pais||nomPais(w.destCountry)].filter(Boolean).join(", "):`${w.destCity||""} ${nomPais(w.destCountry)}`.trim(),
+      tel:c?.tel1||"",email:c?.email||"",doc:c?.cedula||""};};
+  const docAbrir=(w,tipo="factura")=>{
+    if(!w)return;const fmt=fmtFCDe(w.destCountry);
+    setDocEd({wr:w,tipo,motivo:"Efectos personales",incoterm:fmt.incoterm,moneda:fmt.moneda,lineas:docLineasDeWR(w)});
+  };
+  const docHTML=ed=>{
+    const w=ed.wr;const e=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
+    const fmt=fmtFCDe(w.destCountry);const R=docRemitente(w),D=docDestinatario(w);const g=guiaDeWR(w);const E=docTextos.empresa||{};
+    const T=(es,en)=>fmt.idioma==="en"&&ed.tipo==="factura"?en:fmt.idioma==="bi"&&ed.tipo==="factura"?`${es} / <i>${en}</i>`:es;
+    const reemp=t=>String(t||"").split("{EMPRESA}").join(empresaNombre||"").split("{REMITENTE}").join(R.nombre||"________________");
+    const css=`*{box-sizing:border-box}body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:0;padding:24px;font-size:12px}
+      .hd{display:flex;justify-content:space-between;border-bottom:3px solid #1A2B4A;padding-bottom:10px;margin-bottom:12px}
+      h1{margin:0;font-size:20px}h2{margin:0;font-size:18px;text-align:right}.r{text-align:right}.c{text-align:center}
+      .box{border:1px solid #999;padding:8px 10px;border-radius:4px}.box b.t{display:block;font-size:11px;color:#1A2B4A;text-transform:uppercase;margin-bottom:4px}
+      .g2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px}
+      table{width:100%;border-collapse:collapse;margin-bottom:10px}th{background:#1A2B4A;color:#fff;padding:5px 6px;text-align:left;font-size:11px}td{border-bottom:1px solid #ccc;padding:5px 6px}
+      .tot td{font-weight:800;border-top:2px solid #1A2B4A}.firma{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:40px}.firma div{border-top:1px solid #000;padding-top:4px;text-align:center;font-size:11px}
+      .nota{font-size:11px;margin:8px 0;text-align:justify}`;
+    const cab=(titulo,num)=>`<div class="hd"><div><h1>${e(empresaNombre||"")}</h1><div>${e([E.dir,E.tel,E.email].filter(Boolean).join(" · "))}</div>${E.idFiscal?`<div>${e(E.idFiscal)}</div>`:""}</div>
+      <div><h2>${titulo}</h2><div class="r">${num?`N° <b>${e(num)}</b><br>`:""}${T("Fecha","Date")}: ${fmtDate(new Date())}<br>WR: <b>${e(w.id)}</b>${g?`<br>${T("Guía","Airway bill")}: ${e(g.id)}${g.awb?` · AWB ${e(g.awb)}`:""}${g.bl?` · BL ${e(g.bl)}`:""}`:""}</div></div></div>`;
+    const partes=`<div class="g2"><div class="box"><b class="t">${T("Remitente","Shipper")}</b><b>${e(R.nombre)}</b><br>${e(R.dir)}<br>${e([R.tel,R.email].filter(Boolean).join(" · "))}${R.doc?`<br>ID: ${e(R.doc)}`:""}</div>
+      <div class="box"><b class="t">${T("Destinatario","Consignee")}</b><b>${e(D.nombre)}</b>${D.casillero?` · #${e(D.casillero)}`:""}<br>${e(D.dir)}<br>${e([D.tel,D.email].filter(Boolean).join(" · "))}<br>${e(fmt.idLabel)}: ${e(D.doc||"________________")}</div></div>`;
+    const dims=w.dims||[];const totKg=dims.reduce((t,d)=>t+(parseFloat(d.pk)||0),0)||parseFloat(w.pesoKg)||0;
+    const pie=`<script>window.addEventListener('load',()=>{if(window.__print)setTimeout(()=>window.print(),250);});</script>`;
+    if(ed.tipo==="factura"){
+      const com=ed.motivo==="Venta";const L=ed.lineas||[];const sum=L.reduce((t,x)=>t+(parseFloat(x.cantidad)||0)*(parseFloat(x.valorUnit)||0),0);
+      const hs=fmt.hs==="si",ori=fmt.origenMerc==="si";const mon=ed.moneda||"USD";
+      return `<html><head><meta charset="utf-8"><title>${e(com?fmt.tituloCom:fmt.tituloPro)} ${e(w.id)}</title><style>${css}</style></head><body>
+        ${cab(e(com?fmt.tituloCom:fmt.tituloPro),`${com?"CI":"PF"}-${w.id}`)}${partes}
+        <div class="g4">${[[T("Origen","Origin"),`${w.origCity||""} · ${nomPais(w.origCountry)}`],[T("Destino","Destination"),`${w.destCity||""} · ${nomPais(w.destCountry)}`],
+          [T("Envío","Service"),w.tipoEnvio||"—"],[T("Bultos","Packages"),String(dims.length||w.cajas||1)],[T("Peso total","Total weight"),`${r2(totKg)} kg · ${r2(totKg*2.20462)} lb`],
+          ["Incoterm",ed.incoterm||"—"],[T("Motivo","Reason for export"),ed.motivo],[T("Moneda","Currency"),mon]].map(([l,v])=>`<div class="box"><b class="t">${l}</b>${e(v)}</div>`).join("")}</div>
+        <table><thead><tr><th>${T("Cant.","Qty")}</th><th>${T("Descripción","Description")}</th>${hs?`<th>${T("Cód. arancelario","HS code")}</th>`:""}${ori?`<th>${T("País de origen","Country of origin")}</th>`:""}<th class="r">${T("Peso kg","Weight kg")}</th><th class="r">${T("Valor unit.","Unit value")}</th><th class="r">Total</th></tr></thead><tbody>
+        ${L.map(x=>{const q=parseFloat(x.cantidad)||0,u=parseFloat(x.valorUnit)||0;return `<tr><td>${e(x.cantidad)}</td><td>${e(x.descripcion)}</td>${hs?`<td>${e(x.hs)}</td>`:""}${ori?`<td>${e(x.origen)}</td>`:""}<td class="r">${e(x.pesoKg)}</td><td class="r">${fmtMoney(u,mon)}</td><td class="r">${fmtMoney(q*u,mon)}</td></tr>`;}).join("")}
+        <tr class="tot"><td colspan="${4+(hs?1:0)+(ori?1:0)}" class="r">${T("Valor total declarado","Total declared value")} (${mon})</td><td class="r">${fmtMoney(sum,mon)}</td></tr></tbody></table>
+        ${com?"":`<div class="nota"><b>${T("Sin valor comercial. Valor indicado solo para fines aduaneros.","No commercial value. Value for customs purposes only.")}</b></div>`}
+        <div class="nota">${e(fmt.declaracion)}</div>
+        <div class="firma"><div>${T("Firma del remitente","Shipper's signature")}<br>${e(R.nombre)}</div><div>${T("Fecha","Date")}</div></div>${pie}</body></html>`;
+    }
+    if(ed.tipo==="empaque"){
+      const rows=dims.length?dims:[{l:0,a:0,h:0,pk:parseFloat(w.pesoKg)||0,volKg:parseFloat(w.volKg)||0,descripcion:w.descripcion,tracking:w.tracking}];
+      const n=v=>r2(parseFloat(v)||0);
+      const tot=rows.reduce((t,d)=>({kg:t.kg+(parseFloat(d.pk)||0),vk:t.vk+(parseFloat(d.volKg)||0),m3:t.m3+(parseFloat(d.m3)||0)}),{kg:0,vk:0,m3:0});
+      return `<html><head><meta charset="utf-8"><title>Lista de empaque ${e(w.id)}</title><style>${css}</style></head><body>
+        ${cab("LISTA DE EMPAQUE<br><span style='font-size:13px'>PACKING LIST</span>","")}${partes}
+        <table><thead><tr><th>#</th><th>Tracking</th><th>Descripción</th><th class="r">L×A×H cm</th><th class="r">L×A×H in</th><th class="r">Peso kg</th><th class="r">Peso lb</th><th class="r">Vol. kg</th></tr></thead><tbody>
+        ${rows.map((d,i)=>`<tr><td>${i+1}/${rows.length}</td><td>${e(d.tracking||"")}</td><td>${e(d.descripcion||w.descripcion||"")}</td><td class="r">${d.l?`${n(d.l)}×${n(d.a)}×${n(d.h)}`:"—"}</td><td class="r">${d.l?`${n(d.l/2.54)}×${n(d.a/2.54)}×${n(d.h/2.54)}`:"—"}</td><td class="r">${n(d.pk)}</td><td class="r">${n((parseFloat(d.pk)||0)*2.20462)}</td><td class="r">${n(d.volKg)}</td></tr>`).join("")}
+        <tr class="tot"><td colspan="5">TOTAL · ${rows.length} bulto${rows.length===1?"":"s"}${tot.m3?` · ${Math.round(tot.m3*10000)/10000} m³`:""}</td><td class="r">${n(tot.kg)}</td><td class="r">${n(tot.kg*2.20462)}</td><td class="r">${n(tot.vk)}</td></tr></tbody></table>
+        <div class="firma"><div>Preparado por</div><div>Recibido por</div></div>${pie}</body></html>`;
+    }
+    if(ed.tipo==="declaracion"){
+      const L=ed.lineas||[];const mon=ed.moneda||"USD";const sum=L.reduce((t,x)=>t+(parseFloat(x.cantidad)||0)*(parseFloat(x.valorUnit)||0),0);
+      return `<html><head><meta charset="utf-8"><title>Declaración de contenido ${e(w.id)}</title><style>${css}</style></head><body>
+        ${cab("DECLARACIÓN DE CONTENIDO<br><span style='font-size:13px'>Y DE MERCANCÍA NO PROHIBIDA</span>","")}${partes}
+        <table><thead><tr><th>Cant.</th><th>Descripción del contenido</th><th class="r">Valor</th></tr></thead><tbody>
+        ${L.map(x=>`<tr><td>${e(x.cantidad)}</td><td>${e(x.descripcion)}</td><td class="r">${fmtMoney((parseFloat(x.cantidad)||0)*(parseFloat(x.valorUnit)||0),mon)}</td></tr>`).join("")}
+        <tr class="tot"><td colspan="2" class="r">Valor total declarado</td><td class="r">${fmtMoney(sum,mon)}</td></tr></tbody></table>
+        <div class="nota" style="font-size:13px">${e(reemp(docTextos.declaracion||DOC_TXT_DEFAULT.declaracion))}</div>
+        <div class="firma"><div>Firma del remitente<br>${e(R.nombre)}</div><div>ID: ${e(R.doc||"________________")}<br>Fecha: ____/____/______</div></div>${pie}</body></html>`;
+    }
+    return `<html><head><meta charset="utf-8"><title>Autorización ${e(R.nombre)}</title><style>${css}</style></head><body>
+      ${cab("AUTORIZACIÓN DE INSPECCIÓN<br><span style='font-size:13px'>Y CARTA DE INSTRUCCIONES</span>","")}
+      <div class="box" style="margin-bottom:12px"><b class="t">Remitente</b><b>${e(R.nombre)}</b><br>${e(R.dir)}<br>${e([R.tel,R.email].filter(Boolean).join(" · "))}<br>ID: ${e(R.doc||"________________")}</div>
+      <div class="nota" style="font-size:14px;line-height:1.6">${e(reemp(docTextos.autorizacion||DOC_TXT_DEFAULT.autorizacion))}</div>
+      <div class="firma"><div>Firma del remitente<br>${e(R.nombre)}</div><div>Fecha: ____/____/______</div></div>${pie}</body></html>`;
+  };
+  const docImprimir=ed=>{const w=window.open("","_blank","width=900,height=1100");if(!w){window.alert("El navegador bloqueó la ventana de impresión.");return;}
+    w.__print=true;w.document.write(docHTML(ed));w.document.close();logAction("Imprimió documento",`${({factura:"Factura comercial/proforma",declaracion:"Declaración de contenido",empaque:"Lista de empaque",autorizacion:"Autorización"})[ed.tipo]} · WR ${ed.wr.id}`);};
+  const DOC_TIPOS=[["factura","🧾 Factura comercial / proforma"],["declaracion","📝 Declaración de contenido"],["empaque","📦 Lista de empaque"],["autorizacion","✍️ Autorización e instrucciones"]];
+
+  const renderDocs=()=>{
+    const puedeFmt=hasPerm("editar_documento")||hasPerm("configuracion");
+    const TABS=[["generar","📑 Generar"],...(puedeFmt?[["formatos","🌎 Formatos por país"],["textos","⚙️ Empresa y textos"]]:[])];
+    const tab=TABS.some(t=>t[0]===docsTab)?docsTab:"generar";
+    const mono={fontFamily:"'DM Mono',monospace"};
+    return(
+    <div className="page-scroll">
+      <div style={{display:"flex",gap:3,background:"var(--bg4)",borderRadius:8,padding:3,border:"1px solid var(--b1)",marginBottom:12}}>
+        {TABS.map(([k,l])=><button key={k} onClick={()=>setDocsTab(k)} style={{flex:1,padding:"8px 10px",borderRadius:6,border:"none",cursor:"pointer",fontSize:14,fontWeight:600,background:tab===k?"var(--navy)":"transparent",color:tab===k?"#fff":"var(--t2)"}}>{l}</button>)}
+      </div>
+
+      {tab==="generar"&&(()=>{
+        const Q=sinAcentos(docsQ.trim());
+        const lista=wrList.filter(w=>!alcanceUsr||alcanceUsr.wrOk(w))
+          .filter(w=>!Q||sinAcentos(`${w.id} ${w.consignee||""} ${w.casillero||""} ${w.shipper||""} ${(w.dims||[]).map(d=>d.tracking).join(" ")}`).includes(Q))
+          .sort((a,b)=>String(b.id).localeCompare(String(a.id))).slice(0,30);
+        return(<>
+          <div className="card" style={{marginBottom:12}}><input className="fi" autoFocus style={{fontSize:15,padding:"9px 12px"}} placeholder="Buscar WR, consignatario, casillero, remitente o tracking…" value={docsQ} onChange={e=>setDocsQ(e.target.value)}/></div>
+          <div className="card" style={{padding:0}}>
+            {lista.length===0?<div style={{textAlign:"center",padding:40,color:"var(--t3)"}}>{Q?"Sin coincidencias.":"No hay WR."}</div>:lista.map(w=>(
+              <div key={w.id} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 14px",borderBottom:"1px solid var(--b1)",flexWrap:"wrap"}}>
+                <div style={{flex:1,minWidth:240}}><span style={{...mono,fontWeight:700,color:"var(--navy)"}}>{w.id}</span>
+                  <div style={{fontSize:13,color:"var(--t3)"}}>{w.shipper||"—"} → {w.consignee||"—"}{w.casillero?` #${w.casillero}`:""} · {nomPais(w.destCountry)||"—"}</div></div>
+                <StBadge st={w.status}/>
+                <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{DOC_TIPOS.map(([k,l])=><button key={k} className="btn-s" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>docAbrir(w,k)}>{l.split(" ")[0]} {l.split(" ")[1]}</button>)}</div>
+              </div>))}
+          </div></>);
+      })()}
+
+      {tab==="formatos"&&(()=>{
+        const Q=sinAcentos((fmtDraft?.q||"").trim());
+        const paises=[{k:"_default",l:"Predeterminado (todos los países)"},...COUNTRIES.map(c=>({k:c.name,l:c.name}))].filter(o=>o.k==="_default"||!Q||sinAcentos(o.l).includes(Q));
+        const sel=fmtSel;const guardado=fmtFC[sel]||{};
+        const v=fmtDraft&&fmtDraft.pais===sel?fmtDraft.v:guardado;
+        const set=x=>setFmtDraft(d=>({...(d||{}),pais:sel,v:{...v,...x}}));
+        const base=sel==="_default"?FC_DEFAULT:{...FC_DEFAULT,...Object.fromEntries(Object.entries(fmtFC._default||{}).filter(([,x])=>x!==""))};
+        const campo=(k,l,tipo="text")=>(<div className="fg"><div className="fl">{l}</div>
+          {tipo==="sel"?null:<input className="fi" value={v[k]??""} placeholder={String(base[k]??"")} onChange={e=>set({[k]:e.target.value})}/>}</div>);
+        const selF=(k,l,ops)=>(<div className="fg"><div className="fl">{l}</div><select className="fs" value={v[k]??""} onChange={e=>set({[k]:e.target.value})}>
+          <option value="">{sel==="_default"?"—":`Igual al predeterminado (${(ops.find(o=>o[0]===base[k])||[0,base[k]])[1]})`}</option>{ops.map(([a,b])=><option key={a} value={a}>{b}</option>)}</select></div>);
+        const cambiado=JSON.stringify(v)!==JSON.stringify(guardado);
+        const guardar=async()=>{const limpio=Object.fromEntries(Object.entries(v).filter(([,x])=>x!==""&&x!=null));const n={...fmtFC};
+          if(Object.keys(limpio).length)n[sel]=limpio;else delete n[sel];
+          const ok=await dbSetConfig('formatos_factura',n);if(ok===false){window.alert("No se pudo guardar.");return;}
+          setFmtFC(n);setFmtDraft(null);logAction("Editó formato de factura",sel==="_default"?"Predeterminado":sel);};
+        return(
+          <div style={{display:"grid",gridTemplateColumns:"280px minmax(0,1fr)",gap:14,alignItems:"start"}}>
+            <div className="card" style={{padding:0,overflow:"hidden"}}>
+              <div style={{padding:8,borderBottom:"1px solid var(--b1)",background:"var(--bg3)"}}><input className="fi" style={{fontSize:13,padding:"6px 8px"}} placeholder="Buscar país…" value={fmtDraft?.q||""} onChange={e=>setFmtDraft(d=>({...(d||{}),q:e.target.value}))}/></div>
+              <div style={{maxHeight:520,overflowY:"auto"}}>{paises.map(o=>{const on=o.k===sel;return(
+                <div key={o.k} onClick={()=>{setFmtSel(o.k);setFmtDraft(d=>({q:d?.q||""}));}} style={{padding:"9px 12px",cursor:"pointer",borderBottom:"1px solid var(--b2)",display:"flex",justifyContent:"space-between",gap:8,background:on?"var(--navy)":"transparent",color:on?"#fff":"var(--t1)",fontWeight:on?700:500,fontSize:14}}>
+                  <span>{o.l}</span>{o.k!=="_default"&&fmtFC[o.k]&&<span style={{fontSize:12,opacity:.8}}>✓ propio</span>}</div>);})}</div>
+            </div>
+            <div className="card">
+              <div style={{fontSize:16,fontWeight:700,color:"var(--navy)",marginBottom:10}}>🧾 {sel==="_default"?"Formato predeterminado":sel}</div>
+              <div className="fgrid g2" style={{gap:10,marginBottom:10}}>
+                {campo("tituloPro","Título proforma")}{campo("tituloCom","Título comercial (venta)")}
+                {selF("idioma","Idioma",[["es","Español"],["en","Inglés"],["bi","Bilingüe"]])}
+                {campo("idLabel","Documento del destinatario")}
+                {selF("hs","Código arancelario",[["si","Mostrar"],["no","No mostrar"]])}
+                {selF("origenMerc","País de origen de la mercancía",[["si","Mostrar"],["no","No mostrar"]])}
+                {selF("incoterm","Incoterm",INCOTERMS.map(x=>[x,x]))}
+                {selF("moneda","Moneda",[["USD","USD"],["EUR","EUR"]])}
+              </div>
+              <div className="fg"><div className="fl">Declaración al pie</div><textarea className="fi" rows={4} value={v.declaracion??""} placeholder={base.declaracion} onChange={e=>set({declaracion:e.target.value})} style={{resize:"vertical",textTransform:"none"}}/></div>
+              <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:10}}>
+                {sel!=="_default"&&fmtFC[sel]&&<button className="btn-s" onClick={()=>{if(window.confirm(`¿Quitar el formato propio de ${sel}?`)){setFmtDraft({pais:sel,v:{},q:fmtDraft?.q||""});}}}>Usar el predeterminado</button>}
+                {cambiado&&<button className="btn-s" onClick={()=>setFmtDraft(d=>({q:d?.q||""}))}>Descartar</button>}
+                <button className="btn-p" disabled={!cambiado} onClick={guardar}>💾 Guardar</button>
+              </div>
+            </div>
+          </div>);
+      })()}
+
+      {tab==="textos"&&(()=>{
+        const D=docTxtDraft||{empresa:{...(docTextos.empresa||{})},declaracion:docTextos.declaracion||"",autorizacion:docTextos.autorizacion||""};
+        const set=x=>setDocTxtDraft({...D,...x});
+        const guardar=async()=>{const n={empresa:D.empresa,declaracion:D.declaracion.trim(),autorizacion:D.autorizacion.trim()};
+          const ok=await dbSetConfig('documentos_textos',n);if(ok===false){window.alert("No se pudo guardar.");return;}
+          setDocTextos(n);setDocTxtDraft(null);logAction("Editó textos de documentos","");};
+        return(
+          <div className="card">
+            <div className="sdiv" style={{marginTop:0}}>DATOS DE LA EMPRESA EN LOS DOCUMENTOS</div>
+            <div className="fgrid g2" style={{gap:10,marginBottom:14}}>
+              {[["dir","Dirección"],["tel","Teléfono"],["email","Email"],["idFiscal","ID fiscal (RIF, EIN, NIF…)"]].map(([k,l])=>(
+                <div key={k} className="fg"><div className="fl">{l}</div><input className="fi" value={D.empresa[k]||""} onChange={e=>set({empresa:{...D.empresa,[k]:e.target.value}})} style={{textTransform:"none"}}/></div>))}
+            </div>
+            <div className="sdiv">DECLARACIÓN DE CONTENIDO</div>
+            <textarea className="fi" rows={5} value={D.declaracion} placeholder={DOC_TXT_DEFAULT.declaracion} onChange={e=>set({declaracion:e.target.value})} style={{width:"100%",resize:"vertical",textTransform:"none",marginBottom:12}}/>
+            <div className="sdiv">AUTORIZACIÓN DE INSPECCIÓN Y CARTA DE INSTRUCCIONES</div>
+            <textarea className="fi" rows={5} value={D.autorizacion} placeholder={DOC_TXT_DEFAULT.autorizacion} onChange={e=>set({autorizacion:e.target.value})} style={{width:"100%",resize:"vertical",textTransform:"none"}}/>
+            <div style={{fontSize:13,color:"var(--t3)",marginTop:6}}>{"{EMPRESA}"} = nombre de la empresa · {"{REMITENTE}"} = nombre del remitente</div>
+            <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:10}}>
+              {docTxtDraft&&<button className="btn-s" onClick={()=>setDocTxtDraft(null)}>Descartar</button>}
+              <button className="btn-p" disabled={!docTxtDraft} onClick={guardar}>💾 Guardar</button>
+            </div>
+          </div>);
+      })()}
+    </div>);
   };
 
   // ── CONFIGURACIÓN ───────────────────────────────────────────────────────────
@@ -11801,6 +12019,7 @@ export default function ENEXSystem(){
       case "cargorelease": return renderCargoRelease();
       case "entregasydespachos": return renderDeliveryNotes();
       case "alerts":       return renderAlertas();
+      case "docs":         return renderDocs();
       // case "entregas" — Notas de Entrega también accesible desde Impresión (etqMode="entregas")
       default:             return <div className="page-scroll"><div className="card" style={{textAlign:"center",padding:60,color:"var(--t3)"}}>{PAGE_TITLES[tab]} — Módulo próximamente</div></div>;
     }
@@ -13820,6 +14039,54 @@ export default function ENEXSystem(){
                   {["Entrega (nombre, ID y firma)","Recibe chofer / empresa (nombre y firma)"].map(l=><div key={l} style={{borderTop:"1px solid #000",paddingTop:4,fontSize:12,textAlign:"center"}}>{l}<br/>Fecha: ____/____/______</div>)}
                 </div>
               </div>
+            </div>
+          </div>
+        </div>);})()}
+      {docEd&&(()=>{const ed=docEd;const set=x=>setDocEd(d=>({...d,...x}));const fmt=fmtFCDe(ed.wr.destCountry);
+        const setL=(i,x)=>set({lineas:ed.lineas.map((l,j)=>j===i?{...l,...x}:l)});
+        const conLineas=["factura","declaracion"].includes(ed.tipo);const hs=fmt.hs==="si"&&ed.tipo==="factura",ori=fmt.origenMerc==="si"&&ed.tipo==="factura";
+        const sum=(ed.lineas||[]).reduce((t,x)=>t+(parseFloat(x.cantidad)||0)*(parseFloat(x.valorUnit)||0),0);
+        return(
+        <div className="ov">
+          <div className="modal mlg" style={{maxWidth:1100,width:"97%"}}>
+            <div className="mhd">
+              <div className="mt">📑 Documentos — WR {ed.wr.id}</div>
+              <div style={{display:"flex",gap:6}}>
+                <button className="btn-p" style={{fontSize:13,padding:"4px 12px"}} onClick={()=>docImprimir(ed)}>🖨️ Imprimir</button>
+                <button className="mcl" onClick={()=>setDocEd(null)}>✕</button>
+              </div>
+            </div>
+            <div className="mbd" style={{maxHeight:"84vh",overflow:"auto"}}>
+              <div style={{display:"flex",gap:3,background:"var(--bg4)",borderRadius:8,padding:3,border:"1px solid var(--b1)",marginBottom:10,flexWrap:"wrap"}}>
+                {DOC_TIPOS.map(([k,l])=><button key={k} onClick={()=>set({tipo:k})} style={{flex:"1 1 180px",padding:"7px 10px",borderRadius:6,border:"none",cursor:"pointer",fontSize:13,fontWeight:600,background:ed.tipo===k?"var(--navy)":"transparent",color:ed.tipo===k?"#fff":"var(--t2)"}}>{l}</button>)}
+              </div>
+              {ed.tipo==="factura"&&(
+                <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end",marginBottom:10}}>
+                  <div className="fg" style={{minWidth:220}}><div className="fl">Motivo</div><select className="fs" value={ed.motivo} onChange={e=>set({motivo:e.target.value})}>{MOTIVOS_FC.map(m=><option key={m}>{m}</option>)}</select></div>
+                  <div className="fg"><div className="fl">Incoterm</div><select className="fs" value={ed.incoterm} onChange={e=>set({incoterm:e.target.value})}>{INCOTERMS.map(x=><option key={x}>{x}</option>)}</select></div>
+                  <div className="fg"><div className="fl">Moneda</div><select className="fs" value={ed.moneda} onChange={e=>set({moneda:e.target.value})}><option>USD</option><option>EUR</option></select></div>
+                  <span style={{fontSize:13,fontWeight:700,color:"var(--navy)",marginLeft:"auto"}}>{ed.motivo==="Venta"?fmt.tituloCom:fmt.tituloPro} · formato {fmt._pais||"predeterminado"}</span>
+                </div>)}
+              {conLineas&&(<>
+                <table className="ct" style={{marginBottom:6}}>
+                  <thead><tr><th style={{width:70}}>Cant.</th><th>Descripción</th>{hs&&<th style={{width:120}}>Cód. arancelario</th>}{ori&&<th style={{width:130}}>País de origen</th>}{ed.tipo==="factura"&&<th style={{width:90}}>Peso kg</th>}<th style={{width:110}}>Valor unit.</th><th style={{width:100}}>Total</th><th style={{width:40}}></th></tr></thead>
+                  <tbody>{(ed.lineas||[]).map((x,i)=>(
+                    <tr key={i}>
+                      <td><input className="fi" type="number" value={x.cantidad} onChange={e=>setL(i,{cantidad:e.target.value})}/></td>
+                      <td><input className="fi" value={x.descripcion} onChange={e=>setL(i,{descripcion:e.target.value.toUpperCase()})}/></td>
+                      {hs&&<td><input className="fi" value={x.hs} onChange={e=>setL(i,{hs:e.target.value})}/></td>}
+                      {ori&&<td><input className="fi" value={x.origen} onChange={e=>setL(i,{origen:e.target.value.toUpperCase()})}/></td>}
+                      {ed.tipo==="factura"&&<td><input className="fi" type="number" value={x.pesoKg} onChange={e=>setL(i,{pesoKg:e.target.value})}/></td>}
+                      <td><input className="fi" type="number" value={x.valorUnit} onChange={e=>setL(i,{valorUnit:e.target.value})}/></td>
+                      <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700}}>{fmtMoney((parseFloat(x.cantidad)||0)*(parseFloat(x.valorUnit)||0),ed.moneda)}</td>
+                      <td>{ed.lineas.length>1&&<span className="ic-b" style={{color:"var(--red)"}} onClick={()=>set({lineas:ed.lineas.filter((_,j)=>j!==i)})}>🗑</span>}</td>
+                    </tr>))}</tbody>
+                </table>
+                <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+                  <button className="btn-s" style={{fontSize:13}} onClick={()=>set({lineas:[...ed.lineas,{cantidad:"1",descripcion:"",hs:"",origen:nomPais(ed.wr.origCountry),pesoKg:"",valorUnit:""}]})}>+ Agregar línea</button>
+                  <span style={{marginLeft:"auto",fontWeight:800,color:"var(--navy)"}}>Total declarado: {fmtMoney(sum,ed.moneda)}</span>
+                </div></>)}
+              <iframe title="Documento" srcDoc={docHTML(ed)} style={{width:"100%",height:"62vh",border:"1px solid var(--b1)",borderRadius:8,background:"#fff",display:"block"}}/>
             </div>
           </div>
         </div>);})()}
