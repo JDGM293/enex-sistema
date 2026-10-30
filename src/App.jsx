@@ -6087,7 +6087,7 @@ export default function SistemaCarga(){
     exp:{notaLegal:"",
       declaracion:"Yo, {REMITENTE}, declaro bajo fe de juramento que el contenido de este envío corresponde a lo descrito en este documento, que es de lícita procedencia y que no contiene dinero en efectivo, armas, municiones, explosivos, drogas o sustancias controladas, materiales peligrosos, mercancía perecedera ni ningún otro artículo prohibido o restringido por las leyes del país de origen, de tránsito o de destino. Asumo toda la responsabilidad legal por la veracidad de esta declaración.",
       autorizacion:"Yo, {REMITENTE}, autorizo a {EMPRESA} y a sus agentes a abrir, inspeccionar y verificar el contenido de mis envíos, y a preparar y presentar en mi nombre la documentación de exportación, aduana y transporte que sea necesaria. Instruyo a {EMPRESA} a transportar mis envíos según el servicio contratado y declaro conocer y aceptar sus términos y condiciones. Esta autorización es válida para todos mis envíos hasta que la revoque por escrito."},
-    imp:{tituloPro:"FACTURA PROFORMA",tituloCom:"FACTURA COMERCIAL",idioma:"bi",idLabel:"ID / Tax ID",hs:"si",origenMerc:"si",incoterm:"DAP",moneda:"USD",
+    imp:{tituloPro:"FACTURA PROFORMA",tituloCom:"FACTURA COMERCIAL",idioma:"bi",idLabel:"ID / Tax ID",hs:"si",origenMerc:"si",incoterm:"",moneda:"USD",
       declaracion:"Declaro que la información contenida en esta factura es verdadera y correcta, y que el contenido de este envío es el aquí indicado."},
   };
   const docPaisKey=pais=>{const P=paisCanon(pais);return P?Object.keys(docPais).find(x=>x!=="_default"&&paisCanon(x)===P)||"":"";};
@@ -6150,7 +6150,7 @@ export default function SistemaCarga(){
         ${cab(e(com?fmt.tituloCom:fmt.tituloPro),`${com?"CI":"PF"}-${w.id}`)}${partes}
         <div class="g4">${[[T("Origen","Origin"),`${w.origCity||""} · ${nomPais(w.origCountry)}`],[T("Destino","Destination"),`${w.destCity||""} · ${nomPais(w.destCountry)}`],
           [T("Envío","Service"),w.tipoEnvio||"—"],[T("Bultos","Packages"),String(dims.length||w.cajas||1)],[T("Peso total","Total weight"),`${r2(totKg)} kg · ${r2(totKg*2.20462)} lb`],
-          ["Incoterm",ed.incoterm||"—"],[T("Motivo","Reason for export"),ed.motivo],[T("Moneda","Currency"),mon]].map(([l,v])=>`<div class="box"><b class="t">${l}</b>${e(v)}</div>`).join("")}</div>
+          ...(ed.incoterm?[["Incoterm",ed.incoterm]]:[]),[T("Motivo","Reason for export"),ed.motivo],[T("Moneda","Currency"),mon]].map(([l,v])=>`<div class="box"><b class="t">${l}</b>${e(v)}</div>`).join("")}</div>
         <table><thead><tr><th>${T("Cant.","Qty")}</th><th>${T("Descripción","Description")}</th>${hs?`<th>${T("Cód. arancelario","HS code")}</th>`:""}${ori?`<th>${T("País de origen","Country of origin")}</th>`:""}<th class="r">${T("Peso kg","Weight kg")}</th><th class="r">${T("Valor unit.","Unit value")}</th><th class="r">Total</th></tr></thead><tbody>
         ${L.map(x=>{const q=parseFloat(x.cantidad)||0,u=parseFloat(x.valorUnit)||0;return `<tr><td>${e(x.cantidad)}</td><td>${e(x.descripcion)}</td>${hs?`<td>${e(x.hs)}</td>`:""}${ori?`<td>${e(x.origen)}</td>`:""}<td class="r">${e(x.pesoKg)}</td><td class="r">${fmtMoney(u,mon)}</td><td class="r">${fmtMoney(q*u,mon)}</td></tr>`;}).join("")}
         <tr class="tot"><td colspan="${4+(hs?1:0)+(ori?1:0)}" class="r">${T("Valor total declarado","Total declared value")} (${mon})</td><td class="r">${fmtMoney(sum,mon)}</td></tr></tbody></table>
@@ -14018,7 +14018,7 @@ export default function SistemaCarga(){
               {ed.tipo==="factura"&&(
                 <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end",marginBottom:10}}>
                   <div className="fg" style={{minWidth:220}}><div className="fl">Motivo</div><select className="fs" value={ed.motivo} onChange={e=>set({motivo:e.target.value})}>{MOTIVOS_FC.map(m=><option key={m}>{m}</option>)}</select></div>
-                  <div className="fg"><div className="fl">Incoterm</div><select className="fs" value={ed.incoterm} onChange={e=>set({incoterm:e.target.value})}>{INCOTERMS.map(x=><option key={x}>{x}</option>)}</select></div>
+                  <div className="fg"><div className="fl">Incoterm</div><select className="fs" value={ed.incoterm||""} onChange={e=>set({incoterm:e.target.value})}><option value="">Sin incoterm</option>{INCOTERMS.map(x=><option key={x}>{x}</option>)}</select></div>
                   <div className="fg"><div className="fl">Moneda</div><select className="fs" value={ed.moneda} onChange={e=>set({moneda:e.target.value})}><option>USD</option><option>EUR</option></select></div>
                   <span style={{fontSize:13,fontWeight:700,color:"var(--navy)",marginLeft:"auto"}}>{ed.motivo==="Venta"?fmt.tituloCom:fmt.tituloPro} · formato {fmt._pais||"predeterminado"}</span>
                 </div>)}
