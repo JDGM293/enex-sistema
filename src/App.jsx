@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, Fragment } from "react";
 import { createPortal } from "react-dom";
 import { dbGetPickups, dbUpsertPickup } from './supabase'
+import { descargarXlsx } from './xlsx'
 import { supabase, resolverLogin, cuentaGuardar, cuentaEliminar, dbGetClientes, dbUpsertCliente, dbDeleteCliente, dbGetWR, dbUpsertWR, dbDeleteWR, dbGetAgentes, dbUpsertAgente, dbDeleteAgente, dbGetOficinas, dbUpsertOficina, dbDeleteOficina, dbGetTarifas, dbUpsertTarifa, dbDeleteTarifa, dbGetConsolidaciones, dbUpsertConsolidacion, dbDeleteConsolidacion, dbGetCargoReleases, dbUpsertCargoRelease, dbDeleteCargoRelease, dbGetDeliveryNotes, dbUpsertDeliveryNote, dbDeleteDeliveryNote, dbGetFacturas, dbUpsertFactura, dbDeleteFactura, dbGetPagos, dbUpsertPago, dbDeletePago, storageUploadComprobante, dbLogActividad, dbGetActividad, dbGetConfig, dbSetConfig, dbGetScanLog, dbInsertScan, dbSetScanRegistered, dbDeleteScanIds, storageUploadFoto, storageDeleteFoto, dbGetFotosByWR, dbInsertFoto, dbDeleteFoto, storageUploadFotoConsol, storageDeleteFotoConsol, dbGetFotosByConsol, dbInsertFotoConsol, dbDeleteFotoConsol } from "./supabase";
 
 // ─── TEMA CLARO PROFESIONAL ───────────────────────────────────────────────────
@@ -2246,12 +2247,20 @@ export default function SistemaCarga(){
   //  empresa = datos de la empresa en ese país · exp = sale de ese país · imp = llega a ese país
   const [docPais,setDocPais]=useState({});
   const [docEd,setDocEd]=useState(null);
+  const [repSel,setRepSel]=useState("wr-estado");
+  const [repCfg,setRepCfg]=useState(null);
+  const [repPick,setRepPick]=useState(null);
+  const [repFEd,setRepFEd]=useState(null);
+  const [repFQ,setRepFQ]=useState("");
+  const [repListaQ,setRepListaQ]=useState("");
+  const [repGuardados,setRepGuardados]=useState([]);
   const [paisSel,setPaisSel]=useState("_default");
   const [paisSec,setPaisSec]=useState("empresa");
   const [paisDraft,setPaisDraft]=useState(null);
   const [paisQ,setPaisQ]=useState("");
   useEffect(()=>{
     if(!authUid)return;
+    dbGetConfig('reportes_guardados').then(v=>{if(Array.isArray(v))setRepGuardados(v);}).catch(()=>{});
     dbGetConfig('documentos_pais').then(v=>{if(v&&typeof v==="object"&&!Array.isArray(v))setDocPais(v);}).catch(()=>{});
   },[authUid]);
   const [cfgNewCity,setCfgNewCity]=useState("");
@@ -6246,6 +6255,301 @@ export default function SistemaCarga(){
             {cambiado&&<button className="btn-s" onClick={()=>setPaisDraft(null)}>Descartar</button>}
             <button className="btn-p" disabled={!cambiado} onClick={guardar}>💾 Guardar</button>
           </div>
+        </div>
+      </div>
+    </div>);
+  };
+
+  // ── REPORTES ──────────────────────────────────────────────────────────────────
+  // Motor único: cada reporte = fuente de datos + columnas + filtros + agrupación.
+  // Los reportes base vienen hechos; el usuario los ajusta y guarda los suyos.
+  const repDias=(a,b=new Date())=>a?Math.max(0,Math.floor((b-new Date(a))/86400000)):null;
+  const histPrimera=(w,codes)=>{const h=(w.historial||[]).find(x=>codes.includes(String(x.code)));return h?new Date(h.fecha):null;};
+  const estTxt=c=>{const s=WR_STATUSES.find(x=>x.code===c);return s?`${s.code} · ${s.label}`:c;};
+  const repFuentes=()=>{
+    // Índices de guía/contenedor y factura por WR
+    const gi=new Map();consolList.forEach(g=>(g.containers||[]).forEach((ct,ci)=>(ct.wr||[]).forEach(x=>gi.set(x.id,{guia:g.id,cont:`${ci+1} · ${ct.tipo||""}`.trim()}))));
+    const fi=new Map();facturas.filter(f=>f.tipo==="factura"&&f.status!=="anulada").forEach(f=>(f.wrIds||[]).forEach(id=>{if(!fi.has(id))fi.set(id,f);}));
+    const ctx=w=>{const cli=cliDeWR(w);const dom=dnDominioDeCliente(cli);const g=gi.get(w.id)||{};const f=fi.get(w.id);
+      const ult=(w.historial||[]).length?w.historial[w.historial.length-1]:null;const alerta=[...(w.historial||[])].reverse().find(h=>h.alerta);
+      const of=oficinas.find(o=>o.id===sucursalDeWR(w,cli));
+      return {w,cli,dom,g,f,ult,alerta,of,dims:w.dims||[]};};
+    const sumD=(r,k)=>r.dims.length?r.dims.reduce((t,d)=>t+(parseFloat(d[k])||0),0):null;
+    const wrCampos=[
+      {k:"id",l:"WR",t:"txt",v:r=>r.w.id},
+      {k:"fecha",l:"Fecha recepción",t:"fecha",v:r=>r.w.fecha},
+      {k:"estado",l:"Estado",t:"txt",v:r=>r.w.status?estTxt(r.w.status.code):"—"},
+      {k:"tipoEnvio",l:"Tipo de envío",t:"txt",v:r=>r.w.tipoEnvio||""},
+      {k:"tipoPago",l:"Tipo de pago",t:"txt",v:r=>r.w.tipoPago||""},
+      {k:"consignee",l:"Consignatario",t:"txt",v:r=>r.cli?fullName(r.cli):(r.w.consignee||"")},
+      {k:"casillero",l:"Casillero",t:"txt",v:r=>r.cli?.casillero||r.w.casillero||""},
+      {k:"idDest",l:"ID destinatario",t:"txt",v:r=>r.cli?.cedula||""},
+      {k:"telDest",l:"Teléfono destinatario",t:"txt",v:r=>r.cli?.tel1||""},
+      {k:"cuenta",l:"Cuenta (agente/autónomo)",t:"txt",v:r=>r.dom&&r.dom.tipo!=="oficina"?r.dom.nombre:"Directo"},
+      {k:"tipoCuenta",l:"Tipo de cuenta",t:"txt",v:r=>r.dom?.tipo==="agente"?"Agente":r.dom?.tipo==="autonomo"?"Autónomo":"Directo"},
+      {k:"remitente",l:"Remitente",t:"txt",v:r=>r.w.shipper||""},
+      {k:"paisOrig",l:"País origen",t:"txt",v:r=>nomPais(r.w.origCountry)},
+      {k:"ciudadOrig",l:"Ciudad origen",t:"txt",v:r=>ciudadNombre(r.w.origCity)},
+      {k:"paisDest",l:"País destino",t:"txt",v:r=>nomPais(r.w.destCountry)},
+      {k:"ciudadDest",l:"Ciudad destino",t:"txt",v:r=>ciudadNombre(r.w.destCity)},
+      {k:"ruta",l:"Ruta",t:"txt",v:r=>`${ciudadNombre(r.w.origCity)} → ${ciudadNombre(r.w.destCity)}`},
+      {k:"sucursal",l:"Sucursal de entrega",t:"txt",v:r=>r.of?.nombre||"Principal"},
+      {k:"guia",l:"Guía",t:"txt",v:r=>r.g.guia||""},
+      {k:"contenedor",l:"Contenedor",t:"txt",v:r=>r.g.cont||""},
+      {k:"cajas",l:"Cajas",t:"num",v:r=>r.dims.length||parseFloat(r.w.cajas)||0},
+      {k:"pesoKg",l:"Peso kg",t:"num",v:r=>r2(sumD(r,"pk")??parseFloat(r.w.pesoKg)??0)},
+      {k:"pesoLb",l:"Peso lb",t:"num",v:r=>r2(sumD(r,"pkLb")??parseFloat(r.w.pesoLb)??0)},
+      {k:"volKg",l:"Peso vol. kg",t:"num",v:r=>r2(sumD(r,"volKg")??parseFloat(r.w.volKg)??0)},
+      {k:"volLb",l:"Peso vol. lb",t:"num",v:r=>r2(sumD(r,"volLb")??parseFloat(r.w.volLb)??0)},
+      {k:"ft3",l:"Ft³",t:"num",v:r=>Math.round((sumD(r,"ft3")??parseFloat(r.w.ft3)??0)*1000)/1000},
+      {k:"m3",l:"M³",t:"num",v:r=>Math.round((sumD(r,"m3")??parseFloat(r.w.m3)??0)*10000)/10000},
+      {k:"valor",l:"Valor declarado",t:"num",v:r=>r2(r.w.valor)},
+      {k:"descripcion",l:"Descripción",t:"txt",v:r=>[...new Set(r.dims.map(d=>d.descripcion).filter(Boolean))].join(", ")||r.w.descripcion||""},
+      {k:"trackings",l:"Trackings",t:"txt",v:r=>[...new Set(r.dims.map(d=>d.tracking).filter(Boolean))].join(", ")||r.w.tracking||""},
+      {k:"factura",l:"Factura",t:"txt",v:r=>r.f?.id||""},
+      {k:"facturaEstado",l:"Estado factura",t:"txt",v:r=>r.f?(FAC_STATUS_LABEL[r.f.status]||r.f.status).replace(/^\S+\s/,""):"Sin factura"},
+      {k:"facturado",l:"Facturado",t:"money",v:r=>r.f?r2((r.f.total||0)/((r.f.wrIds||[]).length||1)):null,cur:r=>r.f?.moneda||"USD"},
+      {k:"diasEstado",l:"Días en estado actual",t:"dias",v:r=>repDias(r.ult?.fecha||r.w.fecha)},
+      {k:"diasRecepcion",l:"Días desde recepción",t:"dias",v:r=>repDias(r.w.fecha)},
+      {k:"fechaEntrega",l:"Fecha de entrega",t:"fecha",v:r=>histPrimera(r.w,["21"])},
+      {k:"diasTransito",l:"Días recepción → entrega",t:"dias",v:r=>{const e=histPrimera(r.w,["21"]);return e?repDias(r.w.fecha,e):null;}},
+      {k:"resolucion",l:"Resolución faltante/sobrante",t:"txt",v:r=>r.alerta?String(r.alerta.nota||"").split(" — ")[0]:""},
+      {k:"montoIndemnizado",l:"Monto indemnizado",t:"num",v:r=>r2((r.w.historial||[]).reduce((t,h)=>t+(parseFloat(h.montoCliente)||0),0))},
+      {k:"usuario",l:"Registrado por",t:"txt",v:r=>r.w.usuario||(r.w.historial?.[0]?.user)||""},
+      {k:"notas",l:"Notas",t:"txt",v:r=>r.w.notas||""},
+    ];
+    const vis=wrList.filter(w=>!alcanceUsr||alcanceUsr.wrOk(w));
+    const cajaCampos=[
+      {k:"wr",l:"WR",t:"txt",v:r=>r.w.id},
+      {k:"caja",l:"Caja",t:"txt",v:r=>`${r.i+1}/${r.n}`},
+      {k:"tracking",l:"Tracking",t:"txt",v:r=>r.d.tracking||""},
+      {k:"carrier",l:"Carrier",t:"txt",v:r=>r.d.carrier||""},
+      {k:"descripcion",l:"Descripción",t:"txt",v:r=>r.d.descripcion||r.w.descripcion||""},
+      {k:"medidasCm",l:"Medidas cm",t:"txt",v:r=>r.d.l?`${r2(r.d.l)}×${r2(r.d.a)}×${r2(r.d.h)}`:""},
+      {k:"medidasIn",l:"Medidas in",t:"txt",v:r=>r.d.l?`${r2(r.d.l/2.54)}×${r2(r.d.a/2.54)}×${r2(r.d.h/2.54)}`:""},
+      {k:"pesoKg",l:"Peso kg",t:"num",v:r=>r2(r.d.pk)},
+      {k:"pesoLb",l:"Peso lb",t:"num",v:r=>r2(r.d.pkLb||(parseFloat(r.d.pk)||0)*2.20462)},
+      {k:"volKg",l:"Peso vol. kg",t:"num",v:r=>r2(r.d.volKg)},
+      {k:"ft3",l:"Ft³",t:"num",v:r=>Math.round((parseFloat(r.d.ft3)||0)*1000)/1000},
+      {k:"m3",l:"M³",t:"num",v:r=>Math.round((parseFloat(r.d.m3)||0)*10000)/10000},
+      {k:"valor",l:"Valor",t:"num",v:r=>r2(r.d.valor)},
+      ...wrCampos.filter(c=>["fecha","estado","tipoEnvio","consignee","casillero","cuenta","paisDest","ciudadDest","guia","contenedor"].includes(c.k)).map(c=>({...c,v:r=>c.v(r)})),
+    ];
+    return {
+      wr:{l:"WR",fecha:"fecha",campos:wrCampos,filas:()=>vis.map(ctx)},
+      caja:{l:"Cajas",fecha:"fecha",campos:cajaCampos,filas:()=>vis.flatMap(w=>{const c=ctx(w);const n=c.dims.length;return c.dims.map((d,i)=>({...c,d,i,n}));})},
+    };
+  };
+  const REP_BASE=[
+    {id:"wr-estado",grupo:"Operación",nombre:"WR por estado",fuente:"wr",cols:["id","fecha","consignee","casillero","cuenta","ciudadDest","tipoEnvio","cajas","pesoKg","ft3"],agrupar:"estado",orden:{k:"fecha",dir:-1}},
+    {id:"por-consolidar",grupo:"Operación",nombre:"Confirmados por consolidar",fuente:"wr",filtros:[{k:"estado",vals:[estTxt("3")]}],cols:["id","fecha","consignee","casillero","cuenta","ciudadDest","cajas","pesoKg","volKg","ft3","valor"],agrupar:"tipoEnvio",orden:{k:"fecha",dir:1}},
+    {id:"manifiesto",grupo:"Operación",nombre:"Manifiesto de guía",fuente:"wr",filtros:[{k:"guia",conValor:true}],cols:["contenedor","id","remitente","consignee","idDest","ciudadDest","cajas","pesoKg","volKg","ft3","valor","descripcion"],agrupar:"guia",orden:{k:"contenedor",dir:1}},
+    {id:"packing",grupo:"Operación",nombre:"Packing list por guía",fuente:"caja",filtros:[{k:"guia",conValor:true}],cols:["contenedor","wr","caja","tracking","descripcion","medidasCm","pesoKg","volKg","ft3"],agrupar:"guia",orden:{k:"contenedor",dir:1}},
+    {id:"antiguedad",grupo:"Operación",nombre:"Antigüedad en almacén",fuente:"wr",filtros:[{k:"estado",vals:["1","2","3","17","19","20","20.2"].map(estTxt)}],cols:["id","estado","diasEstado","fecha","consignee","casillero","cuenta","ciudadDest"],agrupar:"",orden:{k:"diasEstado",dir:-1}},
+    {id:"faltantes",grupo:"Operación",nombre:"Faltantes y sobrantes",fuente:"wr",filtros:[{k:"estado",vals:["18","18.1","18.2","18.3","19"].map(estTxt)}],cols:["id","guia","consignee","casillero","cuenta","valor","resolucion","montoIndemnizado","diasEstado"],agrupar:"estado",orden:{k:"guia",dir:1}},
+  ];
+  const repCfgDe=b=>({fuente:b.fuente,cols:[...b.cols],filtros:(b.filtros||[]).map(f=>({...f})),agrupar:b.agrupar||"",soloTot:!!b.soloTot,orden:b.orden||{k:b.cols[0],dir:1},desde:b.desde||"",hasta:b.hasta||"",q:""});
+  // Aplica filtros, orden y agrupación
+  const repCalcular=cfg=>{
+    const F=repFuentes()[cfg.fuente];if(!F)return null;
+    const C=Object.fromEntries(F.campos.map(c=>[c.k,c]));
+    const cols=cfg.cols.map(k=>C[k]).filter(Boolean);
+    let filas=F.filas();
+    const fc=C[F.fecha];const d0=cfg.desde?new Date(cfg.desde+"T00:00:00"):null,d1=cfg.hasta?new Date(cfg.hasta+"T23:59:59.999"):null;
+    if(fc&&(d0||d1))filas=filas.filter(r=>{const v=fc.v(r);if(!v)return false;const d=new Date(v);return (!d0||d>=d0)&&(!d1||d<=d1);});
+    (cfg.filtros||[]).forEach(f=>{const c=C[f.k];if(!c)return;
+      if(f.conValor)filas=filas.filter(r=>{const v=c.v(r);return v!=null&&v!=="";});
+      else if(f.vals&&f.vals.length){const S=new Set(f.vals);filas=filas.filter(r=>S.has(String(c.v(r)??"")));}
+      else if(f.min!==""&&f.min!=null||f.max!==""&&f.max!=null){filas=filas.filter(r=>{const v=parseFloat(c.v(r));if(isNaN(v))return false;return (f.min===""||f.min==null||v>=parseFloat(f.min))&&(f.max===""||f.max==null||v<=parseFloat(f.max));});}
+    });
+    const Q=sinAcentos((cfg.q||"").trim());
+    if(Q)filas=filas.filter(r=>sinAcentos(cols.map(c=>String(c.v(r)??"")).join(" ")).includes(Q));
+    const oc=C[cfg.orden?.k];
+    if(oc){const dir=cfg.orden.dir||1;const val=r=>{const v=oc.v(r);return oc.t==="fecha"?(v?new Date(v).getTime():-Infinity):["num","money","dias"].includes(oc.t)?(v==null?-Infinity:parseFloat(v)):String(v??"");};
+      filas=[...filas].sort((a,b)=>{const x=val(a),y=val(b);return (typeof x==="string"?x.localeCompare(y,"es",{numeric:true}):x-y)*dir;});}
+    const agg=rows=>{const o={};cols.forEach(c=>{
+      if(c.t==="num")o[c.k]=r2(rows.reduce((t,r)=>t+(parseFloat(c.v(r))||0),0));
+      else if(c.t==="money"){const m={};rows.forEach(r=>{const v=c.v(r);if(v!=null){const k=c.cur(r);m[k]=r2((m[k]||0)+v);}});o[c.k]=m;}
+      else if(c.t==="dias"){const vs=rows.map(r=>c.v(r)).filter(v=>v!=null);o[c.k]=vs.length?Math.round(vs.reduce((t,v)=>t+v,0)/vs.length*10)/10:null;}});return o;};
+    const gc=cfg.agrupar?(C[cfg.agrupar.replace(/^mes:/,"")]):null;
+    const gval=r=>{if(!gc)return "";const v=gc.v(r);if(cfg.agrupar.startsWith("mes:")){if(!v)return "Sin fecha";const d=new Date(v);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;}return v==null||v===""?"(vacío)":String(v);};
+    let grupos=null;
+    if(gc){const m=new Map();filas.forEach(r=>{const k=gval(r);if(!m.has(k))m.set(k,[]);m.get(k).push(r);});
+      grupos=[...m.entries()].sort((a,b)=>a[0].localeCompare(b[0],"es",{numeric:true})).map(([k,rows])=>({k,rows,tot:agg(rows)}));}
+    return {F,C,cols,filas,grupos,tot:agg(filas),gc};
+  };
+  const repFmt=(c,v,r)=>{if(v==null||v==="")return "";
+    if(c.t==="fecha")return fmtDate(v);
+    if(c.t==="money")return typeof v==="object"?Object.entries(v).map(([m,x])=>fmtMoney(x,m)).join(" / "):fmtMoney(v,r?c.cur(r):"USD");
+    if(c.t==="num")return (Math.round(v*1000)/1000).toLocaleString("es",{maximumFractionDigits:3});
+    if(c.t==="dias")return String(v);
+    return String(v);};
+  const repNombreAgr=cfg=>{if(!cfg.agrupar)return "";const F=repFuentes()[cfg.fuente];const k=cfg.agrupar.replace(/^mes:/,"");const c=F?.campos.find(x=>x.k===k);return cfg.agrupar.startsWith("mes:")?`Mes de ${c?.l||k}`:(c?.l||k);};
+  const repExcel=(nombre,cfg)=>{const R=repCalcular(cfg);if(!R)return;
+    const val=(c,v)=>v==null?"":c.t==="fecha"?(v?new Date(v):""):c.t==="money"?(typeof v==="object"?Object.entries(v).map(([m,x])=>`${m} ${x}`).join(" / "):v):v;
+    let filas;
+    if(R.grupos&&cfg.soloTot)filas=[[repNombreAgr(cfg),"Cantidad",...R.cols.filter(c=>["num","money","dias"].includes(c.t)).map(c=>c.l)],
+      ...R.grupos.map(g=>[g.k,g.rows.length,...R.cols.filter(c=>["num","money","dias"].includes(c.t)).map(c=>val(c,g.tot[c.k]))])];
+    else{const conG=R.grupos&&!R.cols.some(c=>c.k===cfg.agrupar);const lista=R.grupos?R.grupos.flatMap(g=>g.rows.map(r=>[g.k,r])):R.filas.map(r=>["",r]);
+      filas=[[...(conG?[repNombreAgr(cfg)]:[]),...R.cols.map(c=>c.l)],...lista.map(([gk,r])=>[...(conG?[gk]:[]),...R.cols.map(c=>val(c,c.t==="money"?c.v(r):c.v(r)))])];}
+    descargarXlsx(filas,`${nombre} ${hoyISO()}`.replace(/[\\/:*?"<>|]/g,"-"),nombre);
+    logAction("Exportó reporte",nombre);};
+  const repImprimir=(nombre,cfg)=>{const R=repCalcular(cfg);if(!R)return;
+    const e=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
+    const numC=c=>["num","money","dias"].includes(c.t);
+    const filaTot=(lbl,n,tot)=>`<tr class="t"><td colspan="${Math.max(1,R.cols.findIndex(numC))}">${e(lbl)} (${n})</td>${R.cols.slice(Math.max(1,R.cols.findIndex(numC))).map(c=>`<td class="${numC(c)?"r":""}">${numC(c)?e(repFmt(c,tot[c.k])):""}</td>`).join("")}</tr>`;
+    let cuerpo="";const NC=R.cols.filter(numC);
+    if(R.grupos&&cfg.soloTot){
+      const fila=(k,n,t,cls="")=>`<tr class="${cls}"><td>${e(k)}</td><td class="r">${n}</td>${NC.map(c=>`<td class="r">${e(repFmt(c,t[c.k]))}</td>`).join("")}</tr>`;
+      cuerpo=R.grupos.map(g=>fila(g.k,g.rows.length,g.tot)).join("")+fila("TOTAL",R.filas.length,R.tot,"t");
+      const w=window.open("","_blank","width=1100,height=900");if(!w){window.alert("El navegador bloqueó la ventana de impresión.");return;}
+      w.document.write(`<html><head><meta charset="utf-8"><title>${e(nombre)}</title><style>body{font-family:Arial,Helvetica,sans-serif;font-size:11px;padding:18px;color:#111}h1{font-size:17px;margin:0}table{width:100%;border-collapse:collapse;margin-top:10px}th{background:#1A2B4A;color:#fff;padding:4px 5px;text-align:left}td{border-bottom:1px solid #ddd;padding:3px 5px}.r{text-align:right}.t td{font-weight:800;border-top:2px solid #1A2B4A;background:#f6f6f6}</style></head><body>
+        <h1>${e(empresaNombre)} · ${e(nombre)}</h1><div>${fmtDate(new Date())} ${fmtTime(new Date())}</div>
+        <table><thead><tr><th>${e(repNombreAgr(cfg))}</th><th class="r">Cantidad</th>${NC.map(c=>`<th class="r">${e(c.l)}</th>`).join("")}</tr></thead><tbody>${cuerpo}</tbody></table>
+        <script>window.addEventListener('load',()=>setTimeout(()=>window.print(),250));</script></body></html>`);w.document.close();return;}
+    if(R.grupos)R.grupos.forEach(g=>{if(!cfg.soloTot)cuerpo+=`<tr class="g"><td colspan="${R.cols.length}">${e(repNombreAgr(cfg))}: ${e(g.k)}</td></tr>`+g.rows.map(r=>`<tr>${R.cols.map(c=>`<td class="${numC(c)?"r":""}">${e(repFmt(c,c.v(r),r))}</td>`).join("")}</tr>`).join("");cuerpo+=filaTot(cfg.soloTot?g.k:`Subtotal ${g.k}`,g.rows.length,g.tot);});
+    else cuerpo=R.filas.map(r=>`<tr>${R.cols.map(c=>`<td class="${numC(c)?"r":""}">${e(repFmt(c,c.v(r),r))}</td>`).join("")}</tr>`).join("");
+    const filt=[(cfg.desde||cfg.hasta)?`Fechas: ${cfg.desde||"…"} a ${cfg.hasta||"…"}`:"",...(cfg.filtros||[]).map(f=>{const c=R.C[f.k];return c?`${c.l}: ${f.conValor?"con valor":f.vals?.length?f.vals.join(", "):`${f.min??""}–${f.max??""}`}`:"";})].filter(Boolean).join(" · ");
+    const w=window.open("","_blank","width=1100,height=900");if(!w){window.alert("El navegador bloqueó la ventana de impresión.");return;}
+    w.document.write(`<html><head><meta charset="utf-8"><title>${e(nombre)}</title><style>body{font-family:Arial,Helvetica,sans-serif;font-size:11px;padding:18px;color:#111}h1{font-size:17px;margin:0}table{width:100%;border-collapse:collapse;margin-top:10px}th{background:#1A2B4A;color:#fff;padding:4px 5px;text-align:left}td{border-bottom:1px solid #ddd;padding:3px 5px}.r{text-align:right}.g td{background:#EEF3FF;font-weight:700}.t td{font-weight:800;border-top:2px solid #1A2B4A;background:#f6f6f6}@page{size:landscape;margin:12mm}</style></head><body>
+      <h1>${e(empresaNombre)} · ${e(nombre)}</h1><div>${fmtDate(new Date())} ${fmtTime(new Date())}${filt?` · ${e(filt)}`:""}</div>
+      <table><thead><tr>${R.cols.map(c=>`<th class="${numC(c)?"r":""}">${e(c.l)}</th>`).join("")}</tr></thead><tbody>${cuerpo}${filaTot("TOTAL",R.filas.length,R.tot)}</tbody></table>
+      <script>window.addEventListener('load',()=>setTimeout(()=>window.print(),250));</script></body></html>`);w.document.close();};
+
+  const renderReportes=()=>{
+    const mono={fontFamily:"'DM Mono',monospace"};
+    const propios=repGuardados.filter(g=>g.compartido||g.owner===currentUser.id);
+    const lista=[...REP_BASE.map(b=>({...b,tipo:"base"})),...propios.map(g=>({...g,grupo:"Guardados",tipo:"guardado"}))];
+    const sel=lista.find(x=>x.id===repSel)||lista[0];
+    const cfg=repCfg&&repCfg._id===sel.id?repCfg:{...repCfgDe(sel.tipo==="guardado"?sel.cfg:sel),_id:sel.id};
+    const setC=x=>setRepCfg({...cfg,...x});
+    const R=repCalcular(cfg);
+    const F=R?.F;const C=R?.C||{};
+    const numC=c=>["num","money","dias"].includes(c.t);
+    const LQ=sinAcentos(repListaQ.trim());
+    const grupos=["Operación","Guardados"].map(g=>({g,items:lista.filter(x=>x.grupo===g&&(!LQ||sinAcentos(x.nombre).includes(LQ)))})).filter(x=>x.items.length);
+    const abrir=x=>{setRepSel(x.id);setRepCfg(null);setRepPick(null);};
+    const guardar=async(como)=>{
+      let nombre=sel.nombre;let compartido=sel.compartido??true;
+      if(como){nombre=window.prompt("Nombre del reporte:",sel.tipo==="base"?`${sel.nombre} (mío)`:`${sel.nombre} (copia)`);if(!nombre)return;compartido=window.confirm("¿Compartirlo con todos los usuarios?\n\nAceptar = para todos · Cancelar = solo para mí");}
+      const {_id,q,...limpio}=cfg;void _id;void q;
+      const nuevo={id:como?`R-${Date.now()}`:sel.id,nombre:nombre.trim(),owner:como?currentUser.id:sel.owner,compartido,cfg:limpio};
+      const n=como?[...repGuardados,nuevo]:repGuardados.map(g=>g.id===sel.id?nuevo:g);
+      const ok=await dbSetConfig('reportes_guardados',n);if(ok===false){window.alert("No se pudo guardar.");return;}
+      setRepGuardados(n);setRepSel(nuevo.id);setRepCfg(null);logAction(como?"Guardó reporte":"Actualizó reporte",nuevo.nombre);};
+    const borrar=async()=>{if(!window.confirm(`¿Borrar el reporte "${sel.nombre}"?`))return;const n=repGuardados.filter(g=>g.id!==sel.id);
+      const ok=await dbSetConfig('reportes_guardados',n);if(ok===false){window.alert("No se pudo borrar.");return;}setRepGuardados(n);setRepSel(REP_BASE[0].id);setRepCfg(null);};
+    const esMio=sel.tipo==="guardado"&&(sel.owner===currentUser.id||currentUser.rol==="A");
+    const cambiado=sel.tipo==="guardado"&&repCfg&&repCfg._id===sel.id;
+    const chip=(contenido,onX,extra={})=><span style={{display:"inline-flex",alignItems:"center",gap:4,fontSize:12,fontWeight:700,padding:"3px 9px",borderRadius:12,background:"#EEF3FF",color:"var(--navy)",border:"1px solid #B8C8F0",...extra}}>{contenido}{onX&&<span style={{cursor:"pointer",color:"var(--red)"}} onClick={onX}>✕</span>}</span>;
+    const buscadorCampos=(modo,excluir,onPick)=>{const Qp=sinAcentos(repPick?.q||"");
+      const ops=(F?.campos||[]).filter(c=>!excluir.includes(c.k)&&(!Qp||sinAcentos(c.l).includes(Qp))).slice(0,25);
+      return repPick?.modo===modo?<div className="fi-search" style={{position:"relative",display:"inline-block",minWidth:220}}>
+          <input className="fi" autoFocus style={{fontSize:12,padding:"4px 8px"}} placeholder="Buscar campo…" value={repPick.q||""} onChange={e=>setRepPick({...repPick,q:e.target.value})} onBlur={()=>setTimeout(()=>setRepPick(p=>p?.modo===modo?null:p),150)}/>
+          {ops.length>0&&<div className="fi-search-res">{ops.map(c=><div key={c.k} className="fi-search-item" onMouseDown={e=>{e.preventDefault();onPick(c);setRepPick(null);}}>{c.l}</div>)}</div>}
+        </div>:<button className="btn-s" style={{fontSize:12,padding:"3px 10px"}} onClick={()=>setRepPick({modo,q:""})}>+ {modo==="col"?"Columna":"Filtro"}</button>;};
+    // Editor del filtro activo
+    const fEd=repFEd!=null?cfg.filtros[repFEd]:null;const fEdC=fEd?C[fEd.k]:null;
+    const setF=(i,x)=>setC({filtros:cfg.filtros.map((f,j)=>j===i?{...f,...x}:f)});
+    const valoresDe=k=>{const c=C[k];if(!c||!F)return [];const m=new Map();F.filas().forEach(r=>{const v=String(c.v(r)??"");m.set(v,(m.get(v)||0)+1);});return [...m.entries()].sort((a,b)=>a[0].localeCompare(b[0],"es",{numeric:true}));};
+    const MAXF=1000;let mostradas=0;
+    return(
+    <div className="page-scroll">
+      <div style={{display:"grid",gridTemplateColumns:"250px minmax(0,1fr)",gap:14,alignItems:"start"}}>
+        <div className="card" style={{padding:0,overflow:"hidden"}}>
+          <div style={{padding:8,borderBottom:"1px solid var(--b1)",background:"var(--bg3)"}}><input className="fi" style={{fontSize:13,padding:"6px 8px"}} placeholder="Buscar reporte…" value={repListaQ} onChange={e=>setRepListaQ(e.target.value)}/></div>
+          <div style={{maxHeight:"75vh",overflowY:"auto"}}>{grupos.map(g=>(
+            <div key={g.g}><div style={{fontSize:11,fontWeight:800,color:"var(--t3)",padding:"8px 12px 4px",textTransform:"uppercase",letterSpacing:1}}>{g.g}</div>
+              {g.items.map(x=>{const on=x.id===sel.id;return <div key={x.id} onClick={()=>abrir(x)} style={{padding:"8px 12px",cursor:"pointer",fontSize:14,fontWeight:on?700:500,background:on?"var(--navy)":"transparent",color:on?"#fff":"var(--t1)"}}>{x.nombre}{x.tipo==="guardado"&&!x.compartido&&<span style={{fontSize:11,opacity:.7}}> · 🔒</span>}</div>;})}</div>))}</div>
+        </div>
+        <div>
+          <div className="card" style={{marginBottom:10}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:10}}>
+              <div style={{fontSize:17,fontWeight:700,color:"var(--navy)",flex:1}}>📈 {sel.nombre}</div>
+              {cambiado&&esMio&&<button className="btn-p" style={{fontSize:13}} onClick={()=>guardar(false)}>💾 Guardar</button>}
+              <button className="btn-s" style={{fontSize:13}} onClick={()=>guardar(true)}>💾 Guardar como…</button>
+              {esMio&&<button className="btn-s" style={{fontSize:13,color:"var(--red)",borderColor:"var(--red)"}} onClick={borrar}>🗑</button>}
+              <button className="btn-s" style={{fontSize:13}} onClick={()=>repExcel(sel.nombre,cfg)}>⬇️ Excel</button>
+              <button className="btn-s" style={{fontSize:13}} onClick={()=>repImprimir(sel.nombre,cfg)}>🖨️ Imprimir</button>
+              {repCfg&&repCfg._id===sel.id&&<button className="btn-s" style={{fontSize:13}} onClick={()=>{setRepCfg(null);setRepFEd(null);}}>↺ Restablecer</button>}
+            </div>
+            <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",marginBottom:8}}>
+              <span style={{fontSize:12,fontWeight:700,color:"var(--t3)",width:70}}>FECHAS</span>
+              <input className="fi" type="date" style={{width:150,fontSize:13,padding:"4px 6px"}} value={cfg.desde} onChange={e=>setC({desde:e.target.value})}/>
+              <span style={{fontSize:13}}>a</span>
+              <input className="fi" type="date" style={{width:150,fontSize:13,padding:"4px 6px"}} value={cfg.hasta} onChange={e=>setC({hasta:e.target.value})}/>
+              <span style={{fontSize:12,color:"var(--t3)"}}>({C[F?.fecha]?.l||"fecha"})</span>
+              <input className="fi" style={{marginLeft:"auto",width:220,fontSize:13,padding:"4px 8px"}} placeholder="Buscar en el reporte…" value={cfg.q||""} onChange={e=>setC({q:e.target.value})}/>
+            </div>
+            <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap",marginBottom:8}}>
+              <span style={{fontSize:12,fontWeight:700,color:"var(--t3)",width:70}}>FILTROS</span>
+              {cfg.filtros.map((f,i)=>{const c=C[f.k];if(!c)return null;
+                const txt=f.conValor?"con valor":f.vals?.length?(f.vals.length>2?`${f.vals.slice(0,2).join(", ")} +${f.vals.length-2}`:f.vals.join(", ")):(f.min!=null&&f.min!==""||f.max!=null&&f.max!=="")?`${f.min||"…"} a ${f.max||"…"}`:"(todos)";
+                return <span key={i} onClick={()=>setRepFEd(repFEd===i?null:i)} style={{cursor:"pointer"}}>{chip(<>{c.l}: <b>{txt}</b></>,e=>{e.stopPropagation();setC({filtros:cfg.filtros.filter((_,j)=>j!==i)});setRepFEd(null);},repFEd===i?{background:"var(--navy)",color:"#fff"}:{})}</span>;})}
+              {buscadorCampos("filtro",[],c=>{setC({filtros:[...cfg.filtros,c.t==="txt"?{k:c.k,vals:[]}:{k:c.k,min:"",max:""}]});setRepFEd(cfg.filtros.length);})}
+            </div>
+            {fEd&&fEdC&&(
+              <div style={{background:"var(--bg4)",border:"1px solid var(--b1)",borderRadius:8,padding:10,marginBottom:8}}>
+                <div style={{fontSize:13,fontWeight:700,marginBottom:6}}>{fEdC.l}</div>
+                {fEdC.t==="txt"?(()=>{const Qv=sinAcentos(repFQ.trim());const vals=valoresDe(fEd.k).filter(([v])=>!Qv||sinAcentos(v).includes(Qv));const S=new Set(fEd.vals||[]);
+                  return <><div style={{display:"flex",gap:6,marginBottom:6}}>
+                      <input className="fi" style={{fontSize:12,padding:"4px 8px",maxWidth:260}} placeholder="Buscar valor…" value={repFQ} onChange={e=>setRepFQ(e.target.value)}/>
+                      <button className={fEd.conValor?"btn-p":"btn-s"} style={{fontSize:12,padding:"3px 10px"}} onClick={()=>setF(repFEd,{conValor:!fEd.conValor,vals:[]})}>Solo con valor</button>
+                      {(fEd.vals||[]).length>0&&<button className="btn-s" style={{fontSize:12,padding:"3px 10px"}} onClick={()=>setF(repFEd,{vals:[]})}>Quitar todos</button>}
+                    </div>
+                    <div style={{display:"flex",flexWrap:"wrap",gap:5,maxHeight:150,overflowY:"auto"}}>{vals.slice(0,200).map(([v,n])=>{const on=S.has(v);return(
+                      <span key={v} onClick={()=>setF(repFEd,{conValor:false,vals:on?fEd.vals.filter(x=>x!==v):[...(fEd.vals||[]),v]})} style={{cursor:"pointer",fontSize:12,fontWeight:600,padding:"3px 9px",borderRadius:12,border:"1px solid",borderColor:on?"var(--navy)":"var(--b1)",background:on?"var(--navy)":"var(--bg2)",color:on?"#fff":"var(--t2)"}}>{v||"(vacío)"} <span style={{opacity:.6}}>{n}</span></span>);})}</div></>;})()
+                :<div style={{display:"flex",gap:8,alignItems:"center"}}>
+                  <input className="fi" type="number" style={{width:120,fontSize:13,padding:"4px 6px"}} placeholder="Desde" value={fEd.min??""} onChange={e=>setF(repFEd,{min:e.target.value})}/>
+                  <span>a</span><input className="fi" type="number" style={{width:120,fontSize:13,padding:"4px 6px"}} placeholder="Hasta" value={fEd.max??""} onChange={e=>setF(repFEd,{max:e.target.value})}/></div>}
+              </div>)}
+            <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap",marginBottom:8}}>
+              <span style={{fontSize:12,fontWeight:700,color:"var(--t3)",width:70}}>COLUMNAS</span>
+              {cfg.cols.map((k,i)=>{const c=C[k];if(!c)return null;return <span key={k}>{chip(<>
+                {i>0&&<span style={{cursor:"pointer",opacity:.6}} onClick={()=>{const a=[...cfg.cols];[a[i-1],a[i]]=[a[i],a[i-1]];setC({cols:a});}}>◀</span>}
+                {c.l}
+                {i<cfg.cols.length-1&&<span style={{cursor:"pointer",opacity:.6}} onClick={()=>{const a=[...cfg.cols];[a[i+1],a[i]]=[a[i],a[i+1]];setC({cols:a});}}>▶</span>}</>,
+                cfg.cols.length>1?()=>setC({cols:cfg.cols.filter(x=>x!==k)}):null)}</span>;})}
+              {buscadorCampos("col",cfg.cols,c=>setC({cols:[...cfg.cols,c.k]}))}
+            </div>
+            <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+              <span style={{fontSize:12,fontWeight:700,color:"var(--t3)",width:70}}>AGRUPAR</span>
+              <select className="fs" style={{width:240,fontSize:13}} value={cfg.agrupar} onChange={e=>setC({agrupar:e.target.value,soloTot:e.target.value?cfg.soloTot:false})}>
+                <option value="">Sin agrupar</option>
+                {(F?.campos||[]).filter(c=>c.t==="txt").map(c=><option key={c.k} value={c.k}>{c.l}</option>)}
+                {(F?.campos||[]).filter(c=>c.t==="fecha").map(c=><option key={"mes:"+c.k} value={"mes:"+c.k}>Mes de {c.l.toLowerCase()}</option>)}
+              </select>
+              {cfg.agrupar&&<button className={cfg.soloTot?"btn-p":"btn-s"} style={{fontSize:12,padding:"4px 10px"}} onClick={()=>setC({soloTot:!cfg.soloTot})}>Solo totales</button>}
+              <span style={{marginLeft:"auto",fontSize:13,fontWeight:700,color:"var(--navy)"}}>{R?.filas.length||0} registro{R?.filas.length===1?"":"s"}</span>
+            </div>
+          </div>
+
+          {R&&(
+          <div className="card" style={{padding:0,overflow:"auto",maxHeight:"62vh"}}>
+            {R.filas.length===0?<div style={{textAlign:"center",padding:40,color:"var(--t3)"}}>Sin resultados.</div>:(
+            <table className="ct" style={{fontSize:13}}>
+              <thead style={{position:"sticky",top:0,zIndex:1}}><tr>
+                {cfg.soloTot&&R.grupos&&<th>{repNombreAgr(cfg)}</th>}{cfg.soloTot&&R.grupos&&<th style={{textAlign:"right"}}>Cantidad</th>}
+                {(cfg.soloTot&&R.grupos?R.cols.filter(numC):R.cols).map(c=><th key={c.k} style={{cursor:"pointer",whiteSpace:"nowrap",textAlign:numC(c)?"right":"left"}} onClick={()=>setC({orden:{k:c.k,dir:cfg.orden?.k===c.k?-cfg.orden.dir:1}})}>
+                  {c.l}{cfg.orden?.k===c.k?(cfg.orden.dir>0?" ▲":" ▼"):""}</th>)}
+              </tr></thead>
+              <tbody>
+                {(()=>{const fila=(r,key)=><tr key={key}>{R.cols.map(c=><td key={c.k} style={{textAlign:numC(c)?"right":"left",...(numC(c)?mono:{}),whiteSpace:c.k==="descripcion"||c.k==="notas"?"normal":"nowrap"}}>{repFmt(c,c.v(r),r)}</td>)}</tr>;
+                  const tot=(lbl,n,t,key)=><tr key={key} style={{background:"var(--bg3)",fontWeight:800}}>
+                    {cfg.soloTot&&R.grupos?<><td>{lbl}</td><td style={{textAlign:"right",...mono}}>{n}</td>{R.cols.filter(numC).map(c=><td key={c.k} style={{textAlign:"right",...mono}}>{repFmt(c,t[c.k])}</td>)}</>
+                      :R.cols.map((c,i)=><td key={c.k} style={{textAlign:numC(c)?"right":"left",...(numC(c)?mono:{})}}>{i===0?`${lbl} (${n})`:numC(c)?repFmt(c,t[c.k]):""}</td>)}</tr>;
+                  const out=[];
+                  if(R.grupos)R.grupos.forEach((g,gi)=>{
+                    if(!cfg.soloTot){out.push(<tr key={"g"+gi}><td colSpan={R.cols.length} style={{background:"#EEF3FF",fontWeight:800,color:"var(--navy)"}}>{repNombreAgr(cfg)}: {g.k} · {g.rows.length}</td></tr>);
+                      g.rows.forEach((r,i)=>{if(mostradas++<MAXF)out.push(fila(r,`${gi}-${i}`));});out.push(tot(`Subtotal`,g.rows.length,g.tot,"s"+gi));}
+                    else out.push(tot(g.k,g.rows.length,g.tot,"s"+gi));});
+                  else R.filas.forEach((r,i)=>{if(i<MAXF)out.push(fila(r,i));});
+                  out.push(tot("TOTAL",R.filas.length,R.tot,"T"));
+                  return out;})()}
+              </tbody>
+            </table>)}
+            {R.filas.length>MAXF&&!cfg.soloTot&&<div style={{padding:10,textAlign:"center",fontSize:13,color:"var(--t3)"}}>Se muestran {MAXF} de {R.filas.length}. Excel e Imprimir incluyen todos.</div>}
+          </div>)}
         </div>
       </div>
     </div>);
@@ -11974,6 +12278,7 @@ export default function SistemaCarga(){
       case "cargorelease": return renderCargoRelease();
       case "entregasydespachos": return renderDeliveryNotes();
       case "alerts":       return renderAlertas();
+      case "reports":      return renderReportes();
       // case "entregas" — Notas de Entrega también accesible desde Impresión (etqMode="entregas")
       default:             return <div className="page-scroll"><div className="card" style={{textAlign:"center",padding:60,color:"var(--t3)"}}>{PAGE_TITLES[tab]} — Módulo próximamente</div></div>;
     }
