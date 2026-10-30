@@ -438,8 +438,13 @@ input.fi:not([type="email"]):not([type="password"]):not([type="number"]){text-tr
 .stats.stats-5{grid-template-columns:repeat(5,1fr)}
 @media(max-width:900px){.stats.stats-5{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:540px){.stats.stats-5{grid-template-columns:repeat(2,1fr)}}
+.tb-mnu{display:none;background:none;border:1px solid var(--b1);border-radius:8px;padding:6px 8px;color:var(--navy);cursor:pointer;font-size:18px;line-height:1;margin-right:10px}
+.sb-velo{display:none}
 @media(max-width:900px){
   .sb{display:none}
+  .sb.sb-mov{display:flex;position:fixed;left:0;top:0;bottom:0;height:100vh;z-index:900;box-shadow:4px 0 24px rgba(0,0,0,.25);overflow-y:auto}
+  .sb-velo{display:block;position:fixed;inset:0;background:rgba(10,20,40,.35);z-index:899}
+  .tb-mnu{display:inline-flex;align-items:center}
   .stats{grid-template-columns:repeat(4,1fr)}
   .dash-grid{grid-template-columns:1fr}
   .rp{display:none}
@@ -2155,6 +2160,7 @@ function PhotoGalleryModal({ wrId, currentUser, onClose }){
 
 // ─── MAIN APP ──────────────────────────────────────────────────────────────────
 export default function SistemaCarga(){
+  const [sbMov,setSbMov]=useState(false);
   // ── LOGIN STATE ────────────────────────────────────────────────────────────
   const [currentUser,setCurrentUser]=useState(null);
   // Sesión de Supabase Auth: contraseñas cifradas y login en el servidor
@@ -12572,7 +12578,8 @@ export default function SistemaCarga(){
     <><style>{S}</style>
     <div className="app" onClick={()=>setDimOpen(null)} translate="no" lang="en">
       {/* SIDEBAR */}
-      <div className="sb">
+      {sbMov&&<div className="sb-velo" onClick={()=>setSbMov(false)}/>}
+      <div className={`sb${sbMov?" sb-mov":""}`} onClick={e=>{if(e.target.closest(".ni"))setSbMov(false);}}>
         <div className="sb-logo">
           {marca.logo?<img src={marca.logo} alt="" style={{width:34,height:34,objectFit:"contain",borderRadius:8,background:"#fff",flexShrink:0}}/>
             :<div className="sb-mark">{marca.iniciales||String(marca.nombre||"?").slice(0,2).toUpperCase()}</div>}
@@ -12609,6 +12616,7 @@ export default function SistemaCarga(){
       {/* MAIN */}
       <div className="main">
         <div className="topbar">
+          <button className="tb-mnu" onClick={()=>setSbMov(v=>!v)} aria-label="Menú"><svg className="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
           <div className="tb-ttl">{tab==="contabilidad"&&["porguia","facturas"].includes(contabTab)?"Facturación":(PAGE_TITLES[tab]||tab)}</div>
           <div className="tb-srch">
             <span style={{color:"var(--t3)"}}><Ico e="🔍" solo/></span>
