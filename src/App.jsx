@@ -2415,7 +2415,7 @@ export default function SistemaCarga(){
   const [calcEnvio,setCalcEnvio]=useState({}); // tipo de envío → {div, modo, red}
   calcEnvioG=calcEnvio;
   const [calcDraft,setCalcDraft]=useState(null);
-  const calcDe=tipo=>({...CALC_DEF,...(calcEnvio[tipo]||{})});
+  const calcDe=tipo=>{const c={...CALC_DEF,...(calcEnvio[tipo]||{})};if(!(parseFloat(c.div)>0))c.div=CALC_DEF.div;return c;};
   const [PAY_TYPES,setPayTypes]=useState(PAY_TYPES_INIT);
   const [CHARGES_OPT,setChargesOpt]=useState([]); // antiguo (solo nombres)
   // Catálogo con precio: servicios y gastos adicionales
@@ -7060,7 +7060,7 @@ export default function SistemaCarga(){
         )}
         {cfgTab==="tipoenvio"&&(()=>{
           const D=calcDraft||calcEnvio;const set=(t,x)=>setCalcDraft({...D,[t]:{...CALC_DEF,...(D[t]||{}),...x}});
-          const guardar=async()=>{const ok=await dbSetConfig("calc_envio",D);if(!ok){window.alert("No se pudo guardar.");return;}
+          const guardar=async()=>{if(Object.entries(D).some(([,c])=>!(parseFloat(c.div)>0))){window.alert("Escribe un divisor mayor que cero.");return;}const ok=await dbSetConfig("calc_envio",D);if(!ok){window.alert("No se pudo guardar.");return;}
             // Los WR que aún no se han facturado toman el nuevo cálculo
             const facturados=new Set(facturas.filter(f=>f.status!=="anulada"&&f.status!=="borrador").flatMap(f=>f.wrIds||[]));
             const cambiados=[];
@@ -7079,14 +7079,14 @@ export default function SistemaCarga(){
             <div className="card-tt"><Ico e="🧮" sp/>Cálculo por tipo de envío</div>
             <table className="ct">
               <thead><tr><th>Tipo de envío</th><th>Factor volumétrico</th><th>Peso a cobrar</th><th>Redondeo</th></tr></thead>
-              <tbody>{SEND_TYPES.map(t=>{const C={...CALC_DEF,...(D[t]||{})};const aereo=tipoEsAereoG(t)||!tipoEsMaritimoG(t);const otro=!CALC_DIVS.some(o=>o.v===C.div);
+              <tbody>{SEND_TYPES.map(t=>{const C={...CALC_DEF,...(D[t]||{})};const aereo=tipoEsAereoG(t)||!tipoEsMaritimoG(t);const otro=!!C.divOtro||!CALC_DIVS.some(o=>o.v===C.div);
                 return(<tr key={t}>
                   <td style={{fontWeight:700}}>{t}</td>
                   {aereo?<>
                     <td><div style={{display:"flex",gap:6,alignItems:"center"}}>
-                      <select className="fs" value={otro?"otro":C.div} onChange={e=>set(t,{div:e.target.value==="otro"?(C.div||5000):parseFloat(e.target.value)})}>
+                      <select className="fs" value={otro?"otro":C.div} onChange={e=>set(t,e.target.value==="otro"?{divOtro:true}:{div:parseFloat(e.target.value),divOtro:false})}>
                         {CALC_DIVS.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}<option value="otro">Otro divisor (cm³/kg)</option></select>
-                      {otro&&<input className="fi" type="number" style={{width:90}} value={C.div} onChange={e=>set(t,{div:parseFloat(e.target.value)||0})}/>}</div></td>
+                      {otro&&<input className="fi" type="number" min="1" style={{width:100}} value={C.div||""} onChange={e=>set(t,{div:parseFloat(e.target.value)||0})}/>}</div></td>
                     <td><select className="fs" value={C.modo} onChange={e=>set(t,{modo:e.target.value})}>
                       <option value="wr">Total del WR: el mayor entre peso real y volumétrico</option>
                       <option value="caja">Caja por caja: el mayor de cada caja, sumado</option></select></td>
