@@ -13171,7 +13171,7 @@ export default function SistemaCarga(){
       {id:"reports",ic:<Ico e="📈"/>,l:"Reportes"},
     ]},
     {label:"Sistema",items:[
-      ...(hasPerm("configuracion")&&(currentUser.rol==="A"||ALL_PERMS.some(p=>/^cfg_.*_ver$/.test(p)&&hasPerm(p)))?[{id:"settings",ic:<Ico e="⚙️"/>,l:"Configuración"}]:[]),
+      ...(hasPerm("configuracion")&&(currentUser.rol==="A"||ALL_PERMS.some(p=>/^cfg_.*_ver$/.test(p)&&hasPerm(p)))?[{id:"settings",ic:<Ico e="⚙️"/>,l:"Configuración",onClick:()=>{setTab("settings");if(["agentes","oficinas"].includes(cfgTab))setCfgTab("");},activeWhen:()=>tab==="settings"&&!["agentes","oficinas"].includes(cfgTab)}]:[]),
       {id:"roles",ic:<Ico e="🔐"/>,l:"Roles & Permisos"},
       {id:"actividad",ic:<Ico e="📋"/>,l:"Actividad",onClick:()=>goSettingsTab("actividad"),activeWhen:()=>tab==="settings"&&cfgTab==="actividad"},
     ]},
