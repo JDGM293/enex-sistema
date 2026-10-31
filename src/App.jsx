@@ -583,13 +583,15 @@ const ALL_PERMS=[
   "crear_reporte","editar_reporte","borrar_reporte",
   // Permiso especial: salta los bloqueos del proceso por estado
   "saltar_bloqueos",
+  // Límites de edición, facturación PREPAID en origen
+  "editar_wr_destino","editar_guia_destino","fac_prepaid","cobrar_prepaid",
   // Configuración: cada pestaña con su ver / editar
   "cfg_empresa_ver","cfg_empresa_editar", "cfg_documentos_ver","cfg_documentos_editar", "cfg_numeracion_ver","cfg_numeracion_editar", "cfg_tipoenvio_ver","cfg_tipoenvio_editar", "cfg_servicios_ver","cfg_servicios_editar", "cfg_cargos_ver","cfg_cargos_editar", "cfg_pagos_ver","cfg_pagos_editar", "cfg_contenedores_ver","cfg_contenedores_editar", "cfg_paises_ver","cfg_paises_editar", "cfg_chat_ver","cfg_chat_editar",
 ];
 // Solo el Administrador puede borrar y ver el registro de actividad; no se asignan a otros roles
 const PERMS_SOLO_ADMIN=new Set([...ALL_PERMS.filter(p=>p.startsWith("borrar_")),"registro_actividad"]);
 
-const PERM_LBL={cfg_empresa_ver:"Config · Empresa (ver)",cfg_empresa_editar:"Config · Empresa (editar)",cfg_documentos_ver:"Config · Documentos por país (ver)",cfg_documentos_editar:"Config · Documentos por país (editar)",cfg_numeracion_ver:"Config · Numeración (ver)",cfg_numeracion_editar:"Config · Numeración (editar)",cfg_tipoenvio_ver:"Config · Tipo de Envío (ver)",cfg_tipoenvio_editar:"Config · Tipo de Envío (editar)",cfg_servicios_ver:"Config · Servicios Adicionales (ver)",cfg_servicios_editar:"Config · Servicios Adicionales (editar)",cfg_cargos_ver:"Config · Gastos Adicionales (ver)",cfg_cargos_editar:"Config · Gastos Adicionales (editar)",cfg_pagos_ver:"Config · Tipos de Pago (ver)",cfg_pagos_editar:"Config · Tipos de Pago (editar)",cfg_contenedores_ver:"Config · Tipos de Contenedor (ver)",cfg_contenedores_editar:"Config · Tipos de Contenedor (editar)",cfg_paises_ver:"Config · Países y Ciudades (ver)",cfg_paises_editar:"Config · Países y Ciudades (editar)",cfg_chat_ver:"Config · Canales de chat (ver)",cfg_chat_editar:"Config · Canales de chat (editar)",
+const PERM_LBL={editar_wr_destino:"Editar WR después de Liberado 3 (hasta entregado)",editar_guia_destino:"Editar guías después de Liberado 3",fac_prepaid:"Facturar PREPAID en origen (desde el WR)",cobrar_prepaid:"Cobrar facturas PREPAID",cfg_empresa_ver:"Config · Empresa (ver)",cfg_empresa_editar:"Config · Empresa (editar)",cfg_documentos_ver:"Config · Documentos por país (ver)",cfg_documentos_editar:"Config · Documentos por país (editar)",cfg_numeracion_ver:"Config · Numeración (ver)",cfg_numeracion_editar:"Config · Numeración (editar)",cfg_tipoenvio_ver:"Config · Tipo de Envío (ver)",cfg_tipoenvio_editar:"Config · Tipo de Envío (editar)",cfg_servicios_ver:"Config · Servicios Adicionales (ver)",cfg_servicios_editar:"Config · Servicios Adicionales (editar)",cfg_cargos_ver:"Config · Gastos Adicionales (ver)",cfg_cargos_editar:"Config · Gastos Adicionales (editar)",cfg_pagos_ver:"Config · Tipos de Pago (ver)",cfg_pagos_editar:"Config · Tipos de Pago (editar)",cfg_contenedores_ver:"Config · Tipos de Contenedor (ver)",cfg_contenedores_editar:"Config · Tipos de Contenedor (editar)",cfg_paises_ver:"Config · Países y Ciudades (ver)",cfg_paises_editar:"Config · Países y Ciudades (editar)",cfg_chat_ver:"Config · Canales de chat (ver)",cfg_chat_editar:"Config · Canales de chat (editar)",
   ver_usuarios:"Ver Usuarios",crear_usuario:"Crear Usuario",editar_usuario:"Editar Usuario",borrar_usuario:"Borrar Usuario",
   crear_cliente:"Crear Cliente",editar_cliente:"Editar Cliente",borrar_cliente:"Borrar Cliente",
   ver_agente:"Ver Agente",crear_agente:"Crear Agente",editar_agente:"Editar Agente",borrar_agente:"Borrar Agente",
@@ -909,12 +911,12 @@ const ROLE_DEFS={
 
   C:{code:"C",name:"Auxiliar",color:"rC",icon:<Ico e="🗂️"/>,
     desc:"Apoyo operativo y administrativo: WR hasta su entrega, facturación y cobro, clientes, usuarios, agentes y oficinas.",
-    perms:["ver_chat","enviar_chat","editar_mensaje","chat_directo","chat_adjuntar","ver_usuarios","crear_usuario","editar_usuario","crear_cliente","editar_cliente","ver_bd_clientes","ver_bd_usuarios","ver_agente","crear_agente","editar_agente","ver_autonomo","crear_autonomo","editar_autonomo","ver_oficina","crear_oficina","editar_oficina","ver_rp","ver_wr","editar_wr","status_origen","status_destino","ver_confirmacion","confirmar","desconfirmar","editar_confirmacion","ver_fotos","subir_foto","editar_foto","ver_booking","ver_reempaque","ver_guia","ver_recepcion_dest","ver_egreso","ver_entrega","entregar","editar_entrega","ver_alertas","crear_alerta","editar_alerta","ver_factura","facturar","crear_factura","editar_factura","registrar_cobro","registrar_pago","cobrar","editar_pago","ver_cuentas_cobrar","ver_reportes","rep_confirmados","rep_guia_op","rep_postal","rep_packing","rep_maestro","crear_reporte","editar_reporte","imp_wr","imp_guia","imp_etiq_caja","imp_etiq_guia","imp_rp","imp_booking","imp_reempaque","imp_lista_conf","imp_guia_op","imp_postal","imp_packing","imp_recibo_entrega","imp_factura","ver_estado_cuenta","ver_estado_cliente","ver_estado_agente","ver_estado_oficina","ver_prealerta","pre_tracking","pre_factura","editar_prealerta","ver_pickup","solicitar_pickup","editar_pickup","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","paquetes_sin_reclamo","configuracion","cfg_empresa_ver","cfg_empresa_editar"]},
+    perms:["editar_wr_destino","ver_chat","enviar_chat","editar_mensaje","chat_directo","chat_adjuntar","ver_usuarios","crear_usuario","editar_usuario","crear_cliente","editar_cliente","ver_bd_clientes","ver_bd_usuarios","ver_agente","crear_agente","editar_agente","ver_autonomo","crear_autonomo","editar_autonomo","ver_oficina","crear_oficina","editar_oficina","ver_rp","ver_wr","editar_wr","status_origen","status_destino","ver_confirmacion","confirmar","desconfirmar","editar_confirmacion","ver_fotos","subir_foto","editar_foto","ver_booking","ver_reempaque","ver_guia","ver_recepcion_dest","ver_egreso","ver_entrega","entregar","editar_entrega","ver_alertas","crear_alerta","editar_alerta","ver_factura","facturar","crear_factura","editar_factura","registrar_cobro","registrar_pago","cobrar","editar_pago","ver_cuentas_cobrar","ver_reportes","rep_confirmados","rep_guia_op","rep_postal","rep_packing","rep_maestro","crear_reporte","editar_reporte","imp_wr","imp_guia","imp_etiq_caja","imp_etiq_guia","imp_rp","imp_booking","imp_reempaque","imp_lista_conf","imp_guia_op","imp_postal","imp_packing","imp_recibo_entrega","imp_factura","ver_estado_cuenta","ver_estado_cliente","ver_estado_agente","ver_estado_oficina","ver_prealerta","pre_tracking","pre_factura","editar_prealerta","ver_pickup","solicitar_pickup","editar_pickup","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","paquetes_sin_reclamo","configuracion","cfg_empresa_ver","cfg_empresa_editar"]},
 
   D:{code:"D",name:"Jefe de Operaciones",color:"rD",icon:<Ico e="⚙️"/>,
     desc:"Supervisa y ejecuta operaciones completas — origen + destino.",
     subs:["D1","D2"],
-    perms:["ver_alertas","crear_alerta","editar_alerta","ver_chat","enviar_chat","editar_mensaje","borrar_mensaje","chat_directo","chat_adjuntar","ver_wr","crear_wr","editar_wr","ver_rp","hacer_rp","editar_rp","ver_booking","crear_booking","editar_booking","solicitar_reempaque","ver_reempaque","crear_reempaque","editar_reempaque","ver_guia","crear_guia","editar_guia","ver_confirmacion","confirmar","desconfirmar","ver_egreso","hacer_egreso","editar_egreso","ver_recepcion_dest","hacer_recepcion_dest","editar_recepcion_dest","ver_entrega","entregar","revertir_entrega","editar_entrega","status_origen","status_destino","ver_reportes","rep_confirmados","rep_guia_op","rep_postal","rep_packing","imp_wr","imp_guia","imp_etiq_caja","imp_etiq_guia","imp_rp","imp_booking","imp_reempaque","imp_lista_conf","imp_guia_op","imp_postal","imp_packing","imp_recibo_entrega","ver_estado_cuenta","ver_estado_cliente","ver_tracking","rastrear","ver_prealerta","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_tarifas","ver_bd_clientes","ver_fotos","subir_foto","borrar_foto","todas_sucursales"]},
+    perms:["ver_alertas","crear_alerta","editar_alerta","ver_chat","enviar_chat","editar_mensaje","chat_directo","chat_adjuntar","ver_wr","crear_wr","editar_wr","ver_rp","hacer_rp","editar_rp","ver_booking","crear_booking","editar_booking","solicitar_reempaque","ver_reempaque","crear_reempaque","editar_reempaque","ver_guia","crear_guia","editar_guia","ver_confirmacion","confirmar","desconfirmar","ver_egreso","hacer_egreso","editar_egreso","ver_recepcion_dest","hacer_recepcion_dest","editar_recepcion_dest","ver_entrega","entregar","revertir_entrega","editar_entrega","status_origen","status_destino","ver_reportes","rep_confirmados","rep_guia_op","rep_postal","rep_packing","imp_wr","imp_guia","imp_etiq_caja","imp_etiq_guia","imp_rp","imp_booking","imp_reempaque","imp_lista_conf","imp_guia_op","imp_postal","imp_packing","imp_recibo_entrega","ver_estado_cuenta","ver_estado_cliente","ver_tracking","rastrear","ver_prealerta","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_tarifas","ver_bd_clientes","ver_fotos","subir_foto","todas_sucursales","crear_cliente","ver_oficina","crear_oficina","ver_pickup","solicitar_pickup","editar_pickup","configuracion","cfg_contenedores_ver","cfg_contenedores_editar","cfg_documentos_ver","cfg_documentos_editar","imp_factura","pre_tracking","pre_factura","editar_prealerta","fac_prepaid","cobrar_prepaid"]},
 
   D1:{code:"D1",name:"Operaciones Origen",color:"rD1",icon:<Ico e="📤"/>,
     desc:"Ejecuta operaciones de origen: RP, WR, guías, consolidación, egreso. Estados 1→7.",
@@ -2598,7 +2600,7 @@ export default function SistemaCarga(){
   const [tarifaTipoTab,setTarifaTipoTab]=useState("aereo");
   const [showNewFactura,setShowNewFactura]=useState(false);
   const [date,setDate]=useState(new Date().toISOString().slice(0,10));
-  const [wrf,setWrf]=useState(emptyWRF(PAY_TYPES[0]));
+  const [wrf,setWrf]=useState(emptyWRF(""));
   const [clientSearch,setClientSearch]=useState("");
   const [clientResults,setClientResults]=useState([]);
   const [showLabels,setShowLabels]=useState(null);
@@ -3273,7 +3275,8 @@ export default function SistemaCarga(){
     logAction("Registró remitente como cliente",`${rem} → ${cas}`);
   };
   const submitWR=async ()=>{
-    if(editWR&&wrCerrado(editWR)){window.alert(`El WR ${editWR.id} ya fue entregado y no se puede modificar.`);return;}
+    if(editWR&&!wrEditable(editWR)){window.alert(`El WR ${editWR.id} ya no se puede modificar con tu rol (${editWR.status?.label||""}).`);return;}
+    if(!wrf.tipoPago){window.alert("Selecciona el tipo de pago.");return;}
     // Expand dims: each registro × cantidad generates individual dim entries
     const dims=[];
     cajaCalcs.forEach((c,i)=>{
@@ -3355,7 +3358,7 @@ export default function SistemaCarga(){
       setWrList(p=>p.map(x=>x.id===editWR.id?updated:x));
       dbUpsertWR(updated);
       setShowNewWR(false);setEditWR(null);
-      setWrf(emptyWRF(PAY_TYPES[0]));setClientSearch("");
+      setWrf(emptyWRF(""));setClientSearch("");
       logAction("Editó WR",editWR.id);
       if(uploadedCount>0) logAction("Subió fotos WR",`${editWR.id} (${uploadedCount})`);
     } else {
@@ -3420,13 +3423,13 @@ export default function SistemaCarga(){
       {const trks=new Set(wrf.cajas.flatMap(c=>[c.tracking,c.tracking2,c.tracking3]).map(normTrk).filter(Boolean));
        const pu=pickupList.find(x=>x.status!=="cancelado"&&!x.wrId&&(x.id===wrf.pickupId||trks.has(normTrk(x.id))));
        if(pu){n._pickupId=pu.id;puCambiar(pu,"recibido",{wrId:n.id},`WR ${n.id}`);}}
-      setWrf(emptyWRF(PAY_TYPES[0]));setClientSearch("");
+      setWrf(emptyWRF(""));setClientSearch("");
       if(esReempaque){logAction("Creó Reempaque",`${n.id} ← [${reempaqueIds.join(", ")}]`);setRpqSel([]);}
       logAction("Creó WR",wrNumPrev);
       if(uploadedCount>0) logAction("Subió fotos WR",`${n.id} (${uploadedCount})`);
       setShowLabels({wr:n,dims,remitente:wrf.remitente,tipoEnvio:wrf.tipoEnvio});
       // PREPAID: abrir su factura al guardar (si se marcó la opción)
-      if(String(n.tipoPago||"").toLowerCase().includes("prepa")&&wrf.facturarPrepaid!==false&&(hasPerm("crear_factura")||hasPerm("facturar"))){
+      if(String(n.tipoPago||"").toLowerCase().includes("prepa")&&wrf.facturarPrepaid!==false&&puedeFacturarWR(n)){
         if(!n.tipoEnvio)window.alert(`WR ${n.id} guardado.\nPara facturarlo como PREPAID asigna el tipo de envío; luego usa «Facturar PREPAID» en el WR.`);
         else facOpenNew(facConstruirWR(n));
       }
@@ -3526,7 +3529,7 @@ export default function SistemaCarga(){
   const renderWRToolbar=()=>(
     <div className="wr-toolbar">
       {/* Nuevo WR — IZQUIERDA */}
-      {hasPerm("crear_wr")&&<button className="btn-p" onClick={()=>{setWrf(emptyWRF(PAY_TYPES[0]));setShowNewWR(true);}}>+ Nuevo WR</button>}
+      {hasPerm("crear_wr")&&<button className="btn-p" onClick={()=>{setWrf(emptyWRF(""));setShowNewWR(true);}}>+ Nuevo WR</button>}
       {/* ATAJOS — abren el módulo en una ventana encima, sin salir de esta pantalla */}
       {[{id:"reempaque",ic:<Ico e="🔁"/>,l:"Reempaque",c:"#5B3FB5",p:"crear_reempaque"},{id:"cargorelease",ic:<Ico e="🚀"/>,l:"Cargo Release",c:"#0080CC",p:"hacer_egreso"}].filter(a=>hasPerm(a.p)).map(a=>(
         <button key={a.id} type="button" className="btn-s" title={`Abrir ${a.l} en una ventana, sin salir de esta pantalla`}
@@ -4066,7 +4069,7 @@ export default function SistemaCarga(){
       <div className="modal mxl" onClick={e=>e.stopPropagation()}>
         <div className="mhd">
           <div className="mt">{editWR?"Editar WR — "+editWR.id:"Nuevo Warehouse Receipt"} — {wrf.cajas.length} {wrf.cajas.length===1?"caja":"cajas"}</div>
-          <button className="mcl" onClick={()=>{setShowNewWR(false);setEditWR(null);setWrf(emptyWRF(PAY_TYPES[0]));setClientSearch("");}}>✕</button>
+          <button className="mcl" onClick={()=>{setShowNewWR(false);setEditWR(null);setWrf(emptyWRF(""));setClientSearch("");}}>✕</button>
         </div>
 
         {/* N° WR AUTOMÁTICO */}
@@ -4184,11 +4187,11 @@ export default function SistemaCarga(){
             </select>
           </div>
           <div className="fg"><div className="fl">Tipo de Pago
-            {!editWR&&String(wrf.tipoPago||"").toLowerCase().includes("prepa")&&(hasPerm("crear_factura")||hasPerm("facturar"))&&(
+            {!editWR&&String(wrf.tipoPago||"").toLowerCase().includes("prepa")&&puedeFacturarWR(wrf)&&(
               <label style={{marginLeft:10,fontWeight:700,color:"var(--navy)",textTransform:"none",letterSpacing:0,cursor:"pointer"}}>
                 <input type="checkbox" checked={wrf.facturarPrepaid!==false} onChange={e=>sw("facturarPrepaid",e.target.checked)} style={{marginRight:4}}/><Ico e="🧾" sp/>Facturar al guardar
               </label>)}
-          </div><select className="fs" value={wrf.tipoPago} onChange={e=>sw("tipoPago",e.target.value)}>{PAY_TYPES.map(t=><option key={t}>{t}</option>)}</select></div>
+          </div><select className="fs" value={wrf.tipoPago} onChange={e=>sw("tipoPago",e.target.value)}><option value="">— Selecciona —</option>{PAY_TYPES.map(t=><option key={t}>{t}</option>)}</select></div>
           <div className="fg">
             <div className="fl">Pertenece a</div>
             <div className="fi ro" style={{fontSize:13}}>
@@ -4311,7 +4314,7 @@ export default function SistemaCarga(){
                 </div>
 
                 {/* FOTOS DEL PAQUETE (por caja) */}
-                {hasPerm("subir_foto")&&!(editWR&&wrCerrado(editWR)) && (
+                {hasPerm("subir_foto")&&!(editWR&&!wrEditable(editWR)) && (
                   <div style={{marginTop:12,paddingTop:10,borderTop:"1px dashed var(--b1)"}}>
                     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
                       <div style={{fontSize:13,fontWeight:700,color:"var(--navy)",textTransform:"uppercase",letterSpacing:.8,display:"flex",alignItems:"center",gap:7}}>
@@ -4392,7 +4395,7 @@ export default function SistemaCarga(){
         </div>
 
         <div className="mft">
-          <button className="btn-s" onClick={()=>{setShowNewWR(false);setEditWR(null);setWrf(emptyWRF(PAY_TYPES[0]));setClientSearch("");}}>Cancelar</button>
+          <button className="btn-s" onClick={()=>{setShowNewWR(false);setEditWR(null);setWrf(emptyWRF(""));setClientSearch("");}}>Cancelar</button>
           <button className="btn-c"><Ico e="👁" sp/>Vista Previa</button>
           <button className="btn-p" onClick={submitWR}>{editWR?"Guardar Cambios ":"Registrar WR "}</button>
         </div>
@@ -4415,7 +4418,7 @@ export default function SistemaCarga(){
         <div className="mhd">
           <div className="mt"><Ico e="📋" sp/>Warehouse Receipt</div>
           <div style={{display:"flex",gap:6}}>
-            {hasPerm("editar_wr")&&!wrCerrado(selWR)&&<button className="btn-s" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>{
+            {hasPerm("editar_wr")&&wrEditable(selWR)&&<button className="btn-s" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>{
               setEditWR(selWR);
               // Reconstruir cajas desde dims (almacenadas en cm y kg) → convertir a pulg/lb para el form
               const _rawCajas=selWR.dims&&selWR.dims.length>0
@@ -4429,7 +4432,7 @@ export default function SistemaCarga(){
                     numFactura:d.factura||"",descripcion:cleanReempaqueDesc(d.descripcion||""),
                   }))
                 :[emptyCaja()];
-              setWrf({...emptyWRF(PAY_TYPES[0]),
+              setWrf({...emptyWRF(""),
                 unitDim:"in",unitPeso:"lb", // mostrar en pulg/lb (unidades originales)
                 cajas:_rawCajas,
                 consignee:selWR.consignee||"",casilleroSearch:selWR.casillero||"",casillero:selWR.casillero||"",clienteId:selWR.clienteId||"",
@@ -4443,10 +4446,13 @@ export default function SistemaCarga(){
             {hasPerm("borrar_wr")&&<button className="btn-s" style={{fontSize:12,padding:"4px 10px",color:"var(--red)",borderColor:"var(--red)"}} onClick={()=>{if(window.confirm(`¿Borrar WR ${selWR.id}? Esta acción no se puede deshacer.`)){setWrList(p=>p.filter(x=>x.id!==selWR.id));dbDeleteWR(selWR.id);logAction("Borró WR",selWR.id);setSelWR(null);}}}><Ico e="🗑" sp/>Borrar</button>}
             {crElegible(selWR)&&hasPerm("hacer_egreso")&&<button className="btn-s" style={{fontSize:12,padding:"4px 10px",background:"#E8F5E9",borderColor:"#81C784",color:"#2E7D32",fontWeight:700}} onClick={()=>{crOpenNew([selWR.id]);setSelWR(null);}} title="Registrar egreso individual de este WR"><Ico e="🚀" sp/>Egresar</button>}
             {dnElegible(selWR)&&hasPerm("entregar")&&<button className="btn-s" style={{fontSize:12,padding:"4px 10px",background:"#E3F2FD",borderColor:"#64B5F6",color:"#1565C0",fontWeight:700}} onClick={()=>{const w=selWR;setSelWR(null);dnEntregarDesdeWR(w);}}><Ico e="📝" sp/>Entregar</button>}
+            {(()=>{const f=esPrepaidWR(selWR)&&facturas.find(x=>["emitida","pagada_parcial"].includes(x.status)&&x.tipo!=="nota_credito"&&(x.wrIds||[]).includes(selWR.id)&&(x.saldo||0)>0.001);
+              return f&&(puedeCobrarGeneral()||hasPerm("cobrar_prepaid"))?<button className="btn-s" style={{fontSize:12,padding:"4px 10px",background:"#E8F5E9",borderColor:"#81C784",color:"#2E7D32",fontWeight:700}}
+                onClick={()=>{cobroAbrir(pagadorDeFactura(f),null,f);setSelWR(null);}}><Ico e="💰" sp/>Cobrar {f.id}</button>:null;})()}
             {/* Facturar — visible si el rol tiene permiso, el WR no está bloqueado
                 (no Reempacado 2.3 ni Egresado 25) y no tiene factura activa.
                 Para PREPAID factura al remitente; para COD al receptor según clienteTipo. */}
-            {(hasPerm("crear_factura")||hasPerm("facturar"))&&(hasPerm("saltar_bloqueos")||wrPuedeFacturarse(selWR))&&!facturas.some(f=>f.status!=="anulada"&&Array.isArray(f.wrIds)&&f.wrIds.includes(selWR.id))&&(()=>{
+            {puedeFacturarWR(selWR)&&(hasPerm("saltar_bloqueos")||wrPuedeFacturarse(selWR))&&!facturas.some(f=>f.status!=="anulada"&&Array.isArray(f.wrIds)&&f.wrIds.includes(selWR.id))&&(()=>{
               const esPrepaid=(selWR.tipoPago||"").toLowerCase().includes("prepa");
               return (
                 <button className="btn-s" style={{fontSize:12,padding:"4px 10px",background:"#FFF9E7",borderColor:"#F0C040",color:"#8B6914",fontWeight:700}}
@@ -5639,6 +5645,7 @@ export default function SistemaCarga(){
                         remitente:empresaNombre,tipoEnvio:c.tipoEnvio,
                       });
   const guiaEditar=async(c)=>{
+    if(!hasPerm("editar_guia")||!guiaEditable(c)){window.alert(`La guía ${c.id} ya no se puede editar con tu rol.`);return;}
     // Cargar fotos guardadas del bucket consol-fotos para esta guía
     let fotosByCont={};
     try{
@@ -6721,7 +6728,9 @@ export default function SistemaCarga(){
     {id:"ej-productividad",nombre:"Productividad por usuario",fuente:"actividad",cols:["fecha","hora","accion","detalle","cantidad"],filtros:[],agrupar:"usuario",soloTot:true,orden:{k:"fecha",dir:-1}},
   ].map(x=>({...x,owner:"",compartido:true}));
   const repLista=()=>{const base=repGuardados??REP_EJEMPLOS;const fs=repFuentes();
-    return base.filter(r=>(r.compartido||r.owner===currentUser.id)&&fs[r.fuente]);};
+    // A, B y C ven los compartidos; los demás roles solo los que Administrador o Gerente les autoricen
+    const ve=r=>r.owner===currentUser.id||(r.compartido!==false&&(["A","B","C"].includes(currentUser.rol)||(Array.isArray(r.roles)&&r.roles.includes(currentUser.rol))));
+    return base.filter(r=>ve(r)&&fs[r.fuente]);};
   // Ejecuta un reporte con sus parámetros: fechas y valores de filtros "preguntar"
   const repCalcular=(rep,par={})=>{
     const F=repFuentes()[rep.fuente];if(!F)return null;
@@ -6911,6 +6920,10 @@ export default function SistemaCarga(){
         {paso(1,"Nombre",<div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"center"}}>
           <input className="fi" style={{flex:1,minWidth:260,fontSize:15}} placeholder="Ej: Manifiesto Venezuela aéreo" value={d.nombre||""} onChange={e=>setD({nombre:e.target.value})}/>
           {seg([[true,"Para todos"],[false,"Solo para mí"]],d.compartido!==false,v=>setD({compartido:v}))}</div>)}
+        {["A","B"].includes(currentUser.rol)&&d.compartido!==false&&paso("·","Autorizado también para",<div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+          {ALL_ROLES.filter(r=>!["A","B","C"].includes(r.code)).map(r=>{const on=(d.roles||[]).includes(r.code);return(
+            <button key={r.code} type="button" className={on?"btn-p":"btn-s"} style={{fontSize:13,padding:"5px 10px"}} onClick={()=>setD({roles:on?(d.roles||[]).filter(x=>x!==r.code):[...(d.roles||[]),r.code]})}>{r.name}</button>);})}
+        </div>)}
         {paso(2,"¿De qué trata?",<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(190px,1fr))",gap:8}}>
           {Object.entries(fs).map(([k,f])=>{const on=d.fuente===k;return(
             <div key={k} onClick={()=>{if(on)return;if(d.cols.length&&!window.confirm("Al cambiar se borran los datos y filtros elegidos. ¿Continuar?"))return;
@@ -7013,7 +7026,7 @@ export default function SistemaCarga(){
   const paCrearWR=(pa,carrier)=>{
     if(!hasPerm("crear_wr")){window.alert("Tu rol no tiene permiso para crear WR.");return;}
     const c=clients.find(x=>x.id===pa.clienteId);
-    setWrf({...emptyWRF(PAY_TYPES[0]),consignee:c?fullName(c):pa.cliente.nombre,casillero:c?.casillero||pa.cliente.casillero||"",casilleroSearch:c?.casillero||pa.cliente.casillero||"",
+    setWrf({...emptyWRF(""),consignee:c?fullName(c):pa.cliente.nombre,casillero:c?.casillero||pa.cliente.casillero||"",casilleroSearch:c?.casillero||pa.cliente.casillero||"",
       clienteId:c?.id||"",sucursalEntrega:c?.oficinaId||"",notas:`PRE-ALERTA ${pa.id}`,prealertaId:pa.id,
       cajas:[{...emptyCaja(),carrier:carrier&&carrier!=="—"?carrier:pa.carrier,tracking:pa.tracking,descripcion:pa.descripcion,proveedor:pa.tienda,montoFactura:pa.valor===""?"":String(pa.valor)}]});
     setClientSearch(c?fullName(c):pa.cliente.nombre);setEditWR(null);setShowNewWR(true);
@@ -8576,7 +8589,7 @@ export default function SistemaCarga(){
     const cajas=(p.paquetes||[]).flatMap(x=>Array.from({length:Math.max(1,parseInt(x.cantidad)||1)},()=>({...emptyCaja(),descripcion:String(x.descripcion||"").toUpperCase(),
       pesoLb:x.pesoLb||"",largo:x.largo||"",ancho:x.ancho||"",alto:x.alto||""})));
     const cj=cajas.length?cajas:[emptyCaja()];cj[0]={...cj[0],carrier:"PICK-UP",tracking:p.id};
-    setWrf({...emptyWRF(PAY_TYPES[0]),consignee:c?fullName(c):p.clienteNombre,casillero:c?.casillero||p.casillero||"",casilleroSearch:c?.casillero||p.casillero||"",
+    setWrf({...emptyWRF(""),consignee:c?fullName(c):p.clienteNombre,casillero:c?.casillero||p.casillero||"",casilleroSearch:c?.casillero||p.casillero||"",
       clienteId:c?.id||"",sucursalEntrega:c?.oficinaId||"",cajas:cj,notas:`PICK-UP ${p.id}`,pickupId:p.id});
     setClientSearch(c?fullName(c):p.clienteNombre);
     setPickupSel(null);setEditWR(null);setShowNewWR(true);
@@ -9156,8 +9169,12 @@ export default function SistemaCarga(){
     return out;
   };
 
+  const esPrepaidWR=w=>String(w?.tipoPago||"").toLowerCase().includes("prepa");
+  const puedeFacturarWR=w=>hasPerm("crear_factura")||hasPerm("facturar")||(hasPerm("fac_prepaid")&&esPrepaidWR(w));
+  const puedeCobrarGeneral=()=>hasPerm("registrar_pago")||hasPerm("cobrar");
   const facOpenNew=(prefill={})=>{
-    if(!hasPerm("crear_factura")&&!hasPerm("facturar")){window.alert("Tu rol no tiene permiso para crear facturas.");return;}
+    const _soloPre=Array.isArray(prefill.wrIds)&&prefill.wrIds.length>0&&prefill.wrIds.every(id=>esPrepaidWR(wrList.find(w=>w.id===id)));
+    if(!hasPerm("crear_factura")&&!hasPerm("facturar")&&!(hasPerm("fac_prepaid")&&_soloPre)){window.alert("Tu rol no tiene permiso para crear facturas.");return;}
     // Si vienen wrIds, validar que ninguno esté Reempacado o Egresado
     if(Array.isArray(prefill.wrIds)&&prefill.wrIds.length>0){
       const bloqueados=prefill.wrIds.map(id=>wrList.find(w=>w.id===id)).filter(w=>w&&!hasPerm("saltar_bloqueos")&&!wrPuedeFacturarse(w));
@@ -9219,7 +9236,7 @@ export default function SistemaCarga(){
     if(fact.tipo==="nota_credito"||(fact.total||0)<=0)return;
     const ws=wrList.filter(w=>(fact.wrIds||[]).includes(w.id));
     if(!ws.length||!ws.every(w=>(w.tipoPago||"").toLowerCase().includes("prepa")))return;
-    if(!hasPerm("registrar_pago")&&!hasPerm("cobrar")){printFactura(fact);return;}
+    if(!puedeCobrarGeneral()&&!hasPerm("cobrar_prepaid")){printFactura(fact);return;}
     cobroAbrir(pagadorDeFactura(fact),null,{...fact,saldo:fact.total-(parseFloat(fact.pagado)||0)});
     setCobroModal(m=>m?{...m,imprimirFactura:fact}:m);
   };
@@ -9337,8 +9354,10 @@ export default function SistemaCarga(){
     pagos.filter(p=>!p.anulado&&!p.facturaId).forEach(p=>{const pg=pagadorDePago(p);if(pg)m.set(pagKey(pg),pg);});
     return [...m.values()].sort((a,b)=>String(a.nombre).localeCompare(String(b.nombre)));};
   const cobroAbrir=(pg,preSel=null,recien=null)=>{
-    if(!hasPerm("registrar_pago")&&!hasPerm("cobrar")){window.alert("Tu rol no tiene permiso para registrar pagos.");return;}
-    if(recien){setCobroModal({fecha:new Date(),tipoPago:"efectivo",referencia:"",nota:"",archivo:null,pagador:pg,moneda:recien.moneda||"USD",sel:{[recien.id]:true},usarSaldo:saldoFavorDe(pg,recien.moneda||"USD")>0,
+    // Con "cobrar_prepaid" solo se cobra la factura PREPAID indicada, sin ver las demás del pagador
+    const _soloPre=!puedeCobrarGeneral()&&hasPerm("cobrar_prepaid")&&recien&&(recien.wrIds||[]).length>0&&(recien.wrIds||[]).every(id=>esPrepaidWR(wrList.find(w=>w.id===id)));
+    if(!puedeCobrarGeneral()&&!_soloPre){window.alert("Tu rol no tiene permiso para registrar pagos.");return;}
+    if(recien){setCobroModal({soloIds:_soloPre?[recien.id]:null,fecha:new Date(),tipoPago:"efectivo",referencia:"",nota:"",archivo:null,pagador:pg,moneda:recien.moneda||"USD",sel:{[recien.id]:true},usarSaldo:saldoFavorDe(pg,recien.moneda||"USD")>0,
       monto:String(Math.max(0,Math.round(((recien.saldo??recien.total)-saldoFavorDe(pg,recien.moneda||"USD"))*100)/100))});return;}
     const base={fecha:new Date(),tipoPago:"efectivo",referencia:"",nota:"",archivo:null};
     if(!pg){setCobroModal({...base,pagador:null,moneda:"USD",sel:{},monto:"",usarSaldo:true});return;}
@@ -9353,7 +9372,7 @@ export default function SistemaCarga(){
   // Reparto: primero las facturas más antiguas; el saldo a favor se usa antes que el dinero recibido
   const cobroCalc=m=>{
     const r2_=v=>Math.round(v*100)/100;
-    const facs=m.pagador?facAbiertasDe(m.pagador).filter(f=>(f.moneda||"USD")===m.moneda):[];
+    const facs=m.pagador?facAbiertasDe(m.pagador).filter(f=>(f.moneda||"USD")===m.moneda&&(!m.soloIds||m.soloIds.includes(f.id))):[];
     const favorDisp=m.pagador?saldoFavorDe(m.pagador,m.moneda):0;
     const recibido=Math.max(0,parseFloat(m.monto)||0);
     let disp=recibido+(m.usarSaldo?favorDisp:0);
@@ -10504,6 +10523,9 @@ export default function SistemaCarga(){
   const wrEsModificable=(w)=>["1","2","3"].includes(w?.status?.code||"");
   // Entregado, por cobrar, cobrado o egresado: solo quien puede saltar bloqueos lo modifica
   const wrCerrado=(w)=>!hasPerm("saltar_bloqueos")&&["21","22","23","25"].includes(w?.status?.code||"");
+  // Hasta Liberado 3 (16) edita quien tenga editar_wr; después, solo con "editar_wr_destino" y hasta entregado
+  const wrEditable=(w)=>hasPerm("saltar_bloqueos")||(parseFloat(w?.status?.code||"1")||0)<16||(hasPerm("editar_wr_destino")&&!wrCerrado(w));
+  const guiaEditable=(c)=>hasPerm("saltar_bloqueos")||hasPerm("editar_guia_destino")||(parseFloat(guiaCode(c))||0)<16;
   // Tipo de envío fijo para todos (incluso con "saltar bloqueos"): ya en entrega, entregado, cobrado,
   // egresado, faltante o con factura activa
   const wrTipoFijo=(w)=>["2.3","18","18.1","18.2","18.3","20","20.1","20.2","21","22","23","25"].includes(w?.status?.code||"")
@@ -10815,7 +10837,7 @@ export default function SistemaCarga(){
       return;
     }
     const c=clientePrefill||null;
-    setWrf({...emptyWRF(PAY_TYPES[0]),
+    setWrf({...emptyWRF(""),
       consignee:c?fullName(c):"",
       casilleroSearch:c?c.casillero:"",
       casillero:c?c.casillero:"",
@@ -10832,7 +10854,7 @@ export default function SistemaCarga(){
   // Nuevo WR prellenado con un cliente (desde Estado de Cuenta)
   const openWRModalForClient=(c)=>{
     if(!hasPerm("crear_wr")){window.alert("Tu rol no tiene permiso para crear WR.");return;}
-    setWrf({...emptyWRF(PAY_TYPES[0]),
+    setWrf({...emptyWRF(""),
       consignee:fullName(c),
       casilleroSearch:c.casillero||"",
       casillero:c.casillero||"",
@@ -11982,7 +12004,7 @@ export default function SistemaCarga(){
                   {c.archivada&&hasPerm("imp_guia")&&(
                     <button className="btn-s" onClick={()=>printGuiaArchivada(c)}><Ico e="🖨" sp/>Imprimir guía</button>
                   )}
-                  {hasPerm("editar_guia")&&(
+                  {hasPerm("editar_guia")&&guiaEditable(c)&&(
                     <button className="btn-p" onClick={()=>{setRdArchView(null);setLmTab("master");setTab("loadingmaster");guiaEditar(c);}}><Ico e="✏️" sp/>Editar</button>
                   )}
                 </div>
@@ -12429,7 +12451,7 @@ export default function SistemaCarga(){
                             <button className="btn-s" style={{fontSize:12,padding:"3px 8px"}} title="Imprimir guía archivada"
                               onClick={()=>printGuiaArchivada(c)}><Ico e="🖨" sp/>Imprimir</button>
                           )}
-                          {hasPerm("editar_guia")&&(
+                          {hasPerm("editar_guia")&&guiaEditable(c)&&(
                             <button className="btn-s" style={{fontSize:12,padding:"3px 8px",color:"var(--orange)",borderColor:"var(--orange)"}} title="Desarchivar (volver a pendientes)"
                               onClick={()=>{
                                 // Desarchivar = revertir el cierre de recepción.
@@ -14709,7 +14731,7 @@ export default function SistemaCarga(){
                 </>)}
               </div>
               <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:16,paddingTop:12,borderTop:"1px solid var(--b1)"}}>
-                {m.pagador&&<button className="btn-s" style={{marginRight:"auto"}} onClick={()=>set({pagador:null})}>← Cambiar pagador</button>}
+                {m.pagador&&!m.soloIds&&<button className="btn-s" style={{marginRight:"auto"}} onClick={()=>set({pagador:null})}>← Cambiar pagador</button>}
                 <button className="btn-s" onClick={cobroCerrar}>Cancelar</button>
                 {m.pagador&&<button className="btn-p" onClick={cobroSubmit}><Ico e="💵" sp/>Registrar y emitir recibo</button>}
               </div>
