@@ -914,7 +914,7 @@ const ROLE_DEFS={
   D:{code:"D",name:"Jefe de Operaciones",color:"rD",icon:<Ico e="⚙️"/>,
     desc:"Supervisa y ejecuta operaciones completas — origen + destino.",
     subs:["D1","D2"],
-    perms:["ver_chat","enviar_chat","editar_mensaje","borrar_mensaje","chat_directo","chat_adjuntar","ver_wr","crear_wr","editar_wr","ver_rp","hacer_rp","editar_rp","ver_booking","crear_booking","editar_booking","solicitar_reempaque","ver_reempaque","crear_reempaque","editar_reempaque","ver_guia","crear_guia","editar_guia","ver_confirmacion","confirmar","desconfirmar","ver_egreso","hacer_egreso","editar_egreso","ver_recepcion_dest","hacer_recepcion_dest","editar_recepcion_dest","ver_entrega","entregar","revertir_entrega","editar_entrega","status_origen","status_destino","ver_reportes","rep_confirmados","rep_guia_op","rep_postal","rep_packing","imp_wr","imp_guia","imp_etiq_caja","imp_etiq_guia","imp_rp","imp_booking","imp_reempaque","imp_lista_conf","imp_guia_op","imp_postal","imp_packing","imp_recibo_entrega","ver_estado_cuenta","ver_estado_cliente","ver_tracking","rastrear","ver_prealerta","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_tarifas","ver_bd_clientes","ver_fotos","subir_foto","borrar_foto","todas_sucursales"]},
+    perms:["ver_alertas","crear_alerta","editar_alerta","ver_chat","enviar_chat","editar_mensaje","borrar_mensaje","chat_directo","chat_adjuntar","ver_wr","crear_wr","editar_wr","ver_rp","hacer_rp","editar_rp","ver_booking","crear_booking","editar_booking","solicitar_reempaque","ver_reempaque","crear_reempaque","editar_reempaque","ver_guia","crear_guia","editar_guia","ver_confirmacion","confirmar","desconfirmar","ver_egreso","hacer_egreso","editar_egreso","ver_recepcion_dest","hacer_recepcion_dest","editar_recepcion_dest","ver_entrega","entregar","revertir_entrega","editar_entrega","status_origen","status_destino","ver_reportes","rep_confirmados","rep_guia_op","rep_postal","rep_packing","imp_wr","imp_guia","imp_etiq_caja","imp_etiq_guia","imp_rp","imp_booking","imp_reempaque","imp_lista_conf","imp_guia_op","imp_postal","imp_packing","imp_recibo_entrega","ver_estado_cuenta","ver_estado_cliente","ver_tracking","rastrear","ver_prealerta","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_tarifas","ver_bd_clientes","ver_fotos","subir_foto","borrar_foto","todas_sucursales"]},
 
   D1:{code:"D1",name:"Operaciones Origen",color:"rD1",icon:<Ico e="📤"/>,
     desc:"Ejecuta operaciones de origen: RP, WR, guías, consolidación, egreso. Estados 1→7.",
@@ -922,7 +922,7 @@ const ROLE_DEFS={
 
   D2:{code:"D2",name:"Operaciones Destino",color:"rD2",icon:<Ico e="📥"/>,
     desc:"Ejecuta operaciones de destino: recepción, entrega. Estados 8→12P.",
-    perms:["ver_chat","enviar_chat","editar_mensaje","borrar_mensaje","chat_directo","chat_adjuntar","ver_wr","ver_rp","ver_guia","ver_recepcion_dest","hacer_recepcion_dest","editar_recepcion_dest","ver_entrega","entregar","revertir_entrega","editar_entrega","status_destino","ver_reportes","rep_confirmados","rep_guia_op","imp_wr","imp_guia","imp_etiq_caja","imp_lista_conf","imp_guia_op","imp_recibo_entrega","ver_tracking","rastrear","ver_estado_cliente","ver_bd_clientes","ver_fotos","subir_foto"]},
+    perms:["ver_alertas","crear_alerta","editar_alerta","ver_chat","enviar_chat","editar_mensaje","borrar_mensaje","chat_directo","chat_adjuntar","ver_wr","ver_rp","ver_guia","ver_recepcion_dest","hacer_recepcion_dest","editar_recepcion_dest","ver_entrega","entregar","revertir_entrega","editar_entrega","status_destino","ver_reportes","rep_confirmados","rep_guia_op","imp_wr","imp_guia","imp_etiq_caja","imp_lista_conf","imp_guia_op","imp_recibo_entrega","ver_tracking","rastrear","ver_estado_cliente","ver_bd_clientes","ver_fotos","subir_foto"]},
 
   E:{code:"E",name:"Agente",color:"rE",icon:<Ico e="🤝"/>,
     desc:"Agente externo. Gestiona sus clientes y WR propios.",
@@ -3028,6 +3028,7 @@ export default function SistemaCarga(){
 
   // Scan logic: register tracking in puerta
   const doScan=()=>{
+    if(!hasPerm("hacer_rp")){window.alert("Tu rol no tiene permiso para registrar en Recepción en Puerta.");return;}
     const trk=normTrk(scanV);
     if(!trk)return;
     const already=scanLog.find(s=>normTrk(s.tracking)===trk);
@@ -3272,6 +3273,7 @@ export default function SistemaCarga(){
     logAction("Registró remitente como cliente",`${rem} → ${cas}`);
   };
   const submitWR=async ()=>{
+    if(editWR&&wrCerrado(editWR)){window.alert(`El WR ${editWR.id} ya fue entregado y no se puede modificar.`);return;}
     // Expand dims: each registro × cantidad generates individual dim entries
     const dims=[];
     cajaCalcs.forEach((c,i)=>{
@@ -3670,7 +3672,7 @@ export default function SistemaCarga(){
     <div className="page-scroll">
       <div className="card" style={{marginBottom:14}}>
         <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:16,fontWeight:700,color:"var(--navy)",marginBottom:12}}><Ico e="📡" sp/>Recepción en Puerta — Control de Paquetería</div>
-        <div style={{display:"grid",gridTemplateColumns:"220px 1fr auto",gap:8,marginBottom:8}}>
+        {hasPerm("hacer_rp")&&<div style={{display:"grid",gridTemplateColumns:"220px 1fr auto",gap:8,marginBottom:8}}>
           <div className="fg">
             <div className="fl">Carrier / Transportista</div>
             <input className="fi" value={scanCarrier} onChange={e=>setScanCarrier(e.target.value.toUpperCase())} placeholder="UPS, FEDEX, DHL…" style={{textTransform:"uppercase",fontWeight:600}}/>
@@ -3685,7 +3687,7 @@ export default function SistemaCarga(){
             <div className="fl">&nbsp;</div>
             <button className="scan-btn" onClick={doScan}><Ico e="📡" sp/>Registrar</button>
           </div>
-        </div>
+        </div>}
         {scanAviso&&<div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",padding:"10px 14px",borderRadius:7,background:"#E8F5E9",border:"1px solid #A5D6A7",color:"#1B5E20"}}>
           <b style={{letterSpacing:.5}}>PRE-ALERTADO</b>
           <span style={{fontFamily:"'DM Mono',monospace",fontWeight:700}}>{scanAviso.trk}</span>
@@ -4309,7 +4311,7 @@ export default function SistemaCarga(){
                 </div>
 
                 {/* FOTOS DEL PAQUETE (por caja) */}
-                {hasPerm("subir_foto") && (
+                {hasPerm("subir_foto")&&!(editWR&&wrCerrado(editWR)) && (
                   <div style={{marginTop:12,paddingTop:10,borderTop:"1px dashed var(--b1)"}}>
                     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
                       <div style={{fontSize:13,fontWeight:700,color:"var(--navy)",textTransform:"uppercase",letterSpacing:.8,display:"flex",alignItems:"center",gap:7}}>
@@ -4413,7 +4415,7 @@ export default function SistemaCarga(){
         <div className="mhd">
           <div className="mt"><Ico e="📋" sp/>Warehouse Receipt</div>
           <div style={{display:"flex",gap:6}}>
-            {hasPerm("editar_wr")&&<button className="btn-s" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>{
+            {hasPerm("editar_wr")&&!wrCerrado(selWR)&&<button className="btn-s" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>{
               setEditWR(selWR);
               // Reconstruir cajas desde dims (almacenadas en cm y kg) → convertir a pulg/lb para el form
               const _rawCajas=selWR.dims&&selWR.dims.length>0
@@ -5531,6 +5533,7 @@ export default function SistemaCarga(){
   };
 
   const submitConsol=async()=>{
+    if(!hasPerm(editConsolId?"editar_guia":"crear_guia")){window.alert("Tu rol no tiene permiso para esta acción.");return;}
     // Validaciones — destino y tipoEnvio son obligatorios
     if(!cf.destino){window.alert("Debes seleccionar la Ciudad Destino antes de cerrar el embarque.");return;}
     if(!cf.tipoEnvio){window.alert("Debes seleccionar el Tipo de Envío antes de cerrar el embarque.");return;}
@@ -5698,7 +5701,7 @@ export default function SistemaCarga(){
         <div style={{flex:1}}>
           <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:18,fontWeight:700,color:"var(--navy)"}}><Ico e="🗂️" sp/>Master de Guías</div>
         </div>
-        <button className="btn-p" onClick={()=>{setCf(emptyConsol());setEditConsolId(null);setContScanVal({});setContScanErr({});setShowNewConsol(true);}}>+ Nuevo Embarque</button>
+        {hasPerm("crear_guia")&&<button className="btn-p" onClick={()=>{setCf(emptyConsol());setEditConsolId(null);setContScanVal({});setContScanErr({});setShowNewConsol(true);}}>+ Nuevo Embarque</button>}
       </div>
 
       {/* TARJETAS — estilo Dashboard, pero de guías. Click = filtrar la lista. */}
@@ -5732,7 +5735,7 @@ export default function SistemaCarga(){
       {consolList.length===0?(
         <div className="card" style={{textAlign:"center",padding:60,color:"var(--t3)"}}>
           No hay embarques consolidados aún.<br/>
-          <button className="btn-p" style={{marginTop:14}} onClick={()=>{setCf(emptyConsol());setEditConsolId(null);setContScanVal({});setContScanErr({});setShowNewConsol(true);}}>+ Crear primer embarque</button>
+          {hasPerm("crear_guia")&&<button className="btn-p" style={{marginTop:14}} onClick={()=>{setCf(emptyConsol());setEditConsolId(null);setContScanVal({});setContScanErr({});setShowNewConsol(true);}}>+ Crear primer embarque</button>}
         </div>
       ):(
         <div className="card" style={{padding:0}}>
@@ -10499,6 +10502,8 @@ export default function SistemaCarga(){
   // El permiso "saltar_bloqueos" solo se aplica en acciones sobre un WR concreto
   // (detalle del WR), nunca en listas ni tablas.
   const wrEsModificable=(w)=>["1","2","3"].includes(w?.status?.code||"");
+  // Entregado, por cobrar, cobrado o egresado: solo quien puede saltar bloqueos lo modifica
+  const wrCerrado=(w)=>!hasPerm("saltar_bloqueos")&&["21","22","23","25"].includes(w?.status?.code||"");
   // Tipo de envío fijo para todos (incluso con "saltar bloqueos"): ya en entrega, entregado, cobrado,
   // egresado, faltante o con factura activa
   const wrTipoFijo=(w)=>["2.3","18","18.1","18.2","18.3","20","20.1","20.2","21","22","23","25"].includes(w?.status?.code||"")
@@ -11067,7 +11072,7 @@ export default function SistemaCarga(){
   };
   const alertaResolver=(w,accion,datos={})=>{
     if(!w)return false;
-    if(!hasPerm("hacer_recepcion_dest")){window.alert("Tu rol no tiene permiso para resolver faltantes y sobrantes.");return false;}
+    if(!hasPerm("editar_alerta")){window.alert("Tu rol no tiene permiso para resolver faltantes y sobrantes.");return false;}
     const a=ALERTA_ACC[accion];if(!a)return false;
     const st=a.code?getStatus(a.code):w.status;
     const mC=parseFloat(datos.montoCliente)||0, mT=parseFloat(datos.montoTransportista)||0;
@@ -11815,7 +11820,7 @@ export default function SistemaCarga(){
           const isDone=cur>i, isCur=cur===i, isNext=cur+1===i;
           let editable,tip;
           if(ph.canal==="consolidacion"){
-            editable=!origenBloqueado&&statusInChannel(ph.advance,"consolidacion");
+            editable=hasPerm("editar_guia")&&!origenBloqueado&&statusInChannel(ph.advance,"consolidacion");
             tip=origenBloqueado?`${ph.label} — bloqueada (la guía ya pasó a Tránsito 2)`
               :`${ph.label} — click para fijar esta fase${ph.advance==="13"?"\nAl confirmar Tránsito 2 ya no se podrá retroceder.":""}`;
           }else{
@@ -12509,7 +12514,7 @@ export default function SistemaCarga(){
     const cerradosMes=cerrados.filter(k=>{const f=k.cierre?.fecha&&new Date(k.cierre.fecha);return f&&f.getMonth()===hoy.getMonth()&&f.getFullYear()===hoy.getFullYear();}).length;
     const delAnio=cerrados.filter(k=>{const f=k.cierre?.fecha&&new Date(k.cierre.fecha);return f&&f.getFullYear()===hoy.getFullYear();});
     const pagadoAnio=delAnio.reduce((t,k)=>t+k.mC,0), recupAnio=delAnio.reduce((t,k)=>t+k.mT,0);
-    const puede=hasPerm("hacer_recepcion_dest");
+    const puede=hasPerm("editar_alerta");
     const abrir=(w,accion)=>{setAlForm({montoCliente:"",montoTransportista:"",referencia:"",nota:""});setAlModal({w,accion});};
     const btn=(label,onClick,col)=><button className="btn-s" style={{fontSize:11,padding:"3px 7px",...(col?{color:col,borderColor:col}:{})}} onClick={onClick}>{label}</button>;
     const acciones=(k)=>{
