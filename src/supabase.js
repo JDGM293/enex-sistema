@@ -831,15 +831,17 @@ export const dbGetPrealertas = async () => {
   if (error) { console.error('getPrealertas:', error); return [] }
   return (data || []).map(paFromDB)
 }
-export const dbUpsertPrealerta = async (p) => {
-  const { error } = await supabase.from('prealertas').upsert({
+// nuevo=true: inserta sin pisar otra pre-alerta con el mismo número (devuelve 'dup' si ya existe)
+export const dbUpsertPrealerta = async (p, nuevo = false) => {
+  const q = supabase.from('prealertas')
+  const { error } = await q[nuevo ? 'insert' : 'upsert']({
     id: p.id, tracking: p.tracking, carrier: p.carrier || null, cliente_id: p.clienteId || null, cliente: p.cliente || {},
     tienda: p.tienda || null, descripcion: p.descripcion || null, valor: p.valor === '' || p.valor == null ? null : Number(p.valor), moneda: p.moneda || 'USD',
     archivos: p.archivos || [], notas: p.notas || null, status: p.status, wr_id: p.wrId || null,
     recibida: p.recibida ? new Date(p.recibida).toISOString() : null, creado: new Date(p.creado).toISOString(),
     creado_por: p.creadoPor || null, creado_por_nombre: p.creadoPorNombre || null,
   })
-  if (error) { console.error('upsertPrealerta:', error); return false }
+  if (error) { if (nuevo && error.code === '23505') return 'dup'; console.error('upsertPrealerta:', error); return false }
   return true
 }
 export const paSubirArchivo = async (file, paId) => {

@@ -4443,7 +4443,7 @@ export default function SistemaCarga(){
                 cajas:_rawCajas,
                 consignee:selWR.consignee||"",casilleroSearch:selWR.casillero||"",casillero:selWR.casillero||"",clienteId:selWR.clienteId||"",
                 sucursalEntrega:sucursalDeWR(selWR,cliDeWRCon(selWR,clients)),
-                remitente:selWR.shipper||"",remitenteDir:selWR.remitenteDir||"",remitenteTel:selWR.remitenteTel||"",remitenteEmail:selWR.remitenteEmail||"",remitenteDoc:selWR.remitenteDoc||"",remitenteId:selWR.remitenteId||"",tipoPago:selWR.tipoPago||PAY_TYPES[0]||"",tipoEnvio:selWR.tipoEnvio||"",
+                remitente:selWR.shipper||"",remitenteDir:selWR.remitenteDir||"",remitenteTel:selWR.remitenteTel||"",remitenteEmail:selWR.remitenteEmail||"",remitenteDoc:selWR.remitenteDoc||"",remitenteId:selWR.remitenteId||"",tipoPago:selWR.tipoPago||"",tipoEnvio:selWR.tipoEnvio||"",
                 notas:selWR.notas||"",cargos:selWR.cargos||[],
               });
               setShowNewWR(true);setSelWR(null);
@@ -7014,17 +7014,29 @@ export default function SistemaCarga(){
     const enWR=wrList.find(w=>normTrk(w.tracking)===trk||(w.dims||[]).some(d=>[d.tracking,d.tracking2,d.tracking3].some(t=>t&&normTrk(t)===trk)));
     if(enWR&&!m.id){window.alert(`Ese tracking ya llegó y está en el WR ${enWR.id}.`);return;}
     if(hasPerm("pre_factura")===false&&m.nuevos.length){window.alert("Tu rol no puede adjuntar facturas.");return;}
-    const n=m.id?null:Math.max(0,...paList.map(p=>parseInt(String(p.id).replace(/\D/g,""),10)||0))+1;
-    const id=m.id||`PA-${String(n).padStart(6,"0")}`;
-    const archivos=[...m.archivos];
-    for(const f of m.nuevos){if(f.size>15*1024*1024){window.alert(`"${f.name}" pasa de 15 MB.`);continue;}const a=await paSubirArchivo(f,id);if(a)archivos.push(a);}
-    const c=clients.find(x=>x.id===m.clienteId)||{};const prev=paList.find(p=>p.id===id);
-    const pa={...(prev||{}),id,tracking:trk,carrier:(m.carrier||"").toUpperCase(),clienteId:c.id,cliente:{nombre:fullName(c),casillero:c.casillero||""},
+    const c=clients.find(x=>x.id===m.clienteId)||{};
+    const armar=(id,prev,archivos)=>({...(prev||{}),id,tracking:trk,carrier:(m.carrier||"").toUpperCase(),clienteId:c.id,cliente:{nombre:fullName(c),casillero:c.casillero||""},
       tienda:(m.tienda||"").toUpperCase(),descripcion:(m.descripcion||"").toUpperCase(),valor:m.valor,moneda:m.moneda,archivos,notas:m.notas,
       status:prev?.status||"pendiente",wrId:prev?.wrId||"",recibida:prev?.recibida||null,creado:prev?.creado||new Date(),
-      creadoPor:prev?.creadoPor||currentUser.id,creadoPorNombre:prev?.creadoPorNombre||fullName(currentUser)};
-    const ok=await dbUpsertPrealerta(pa);if(!ok){window.alert("No se pudo guardar la pre-alerta.");return;}
-    setPaList(p=>prev?p.map(x=>x.id===id?pa:x):[pa,...p]);setPaModal(null);
+      creadoPor:prev?.creadoPor||currentUser.id,creadoPorNombre:prev?.creadoPorNombre||fullName(currentUser)});
+    const subir=async id=>{const out=[...m.archivos];for(const f of m.nuevos){if(f.size>15*1024*1024){window.alert(`"${f.name}" pasa de 15 MB.`);continue;}const a=await paSubirArchivo(f,id);if(a)out.push(a);}return out;};
+    const prev=m.id?paList.find(p=>p.id===m.id):null;
+    let pa;
+    if(prev){pa=armar(prev.id,prev,await subir(prev.id));if(!(await dbUpsertPrealerta(pa))){window.alert("No se pudo guardar la pre-alerta.");return;}}
+    else{
+      // Número siguiente; si otro usuario lo tomó al mismo tiempo, se vuelve a leer y se usa el próximo
+      let lista=paList,res="dup";
+      for(let i=0;i<5&&res==="dup";i++){
+        const n=Math.max(0,...lista.map(p=>parseInt(String(p.id).replace(/\D/g,""),10)||0))+1;
+        pa=armar(`PA-${String(n).padStart(6,"0")}`,null,[...m.archivos]);
+        res=await dbUpsertPrealerta(pa,true);
+        if(res==="dup")lista=await dbGetPrealertas();
+      }
+      if(res!==true){window.alert("No se pudo guardar la pre-alerta.");return;}
+      if(m.nuevos.length){pa={...pa,archivos:await subir(pa.id)};await dbUpsertPrealerta(pa);}
+    }
+    const id=pa.id;
+    setPaList(p=>prev?p.map(x=>x.id===id?pa:x):[pa,...p.filter(x=>x.id!==id)]);setPaModal(null);
     logAction(prev?"Editó pre-alerta":"Creó pre-alerta",`${id} · ${trk} · ${pa.cliente.nombre}`);
   };
   const paCambiar=async(pa,cambios,accion)=>{const n={...pa,...cambios};if(!(await dbUpsertPrealerta(n)))return null;setPaList(p=>p.map(x=>x.id===n.id?n:x));if(accion)logAction(accion,`${n.id} · ${n.tracking}`);return n;};
@@ -10850,6 +10862,7 @@ export default function SistemaCarga(){
       casillero:c?c.casillero:"",
       clienteId:c?c.id:"",
       reempaqueDe:[...parentIds],
+      tipoPago:(()=>{const t=[...new Set(wrList.filter(w=>parentIds.includes(w.id)).map(w=>w.tipoPago||""))];return t.length===1?t[0]:"";})(),
       notas:`Reempaque de: ${parentIds.join(", ")}`,
     });
     setEditWR(null);
@@ -13892,7 +13905,7 @@ export default function SistemaCarga(){
         );
       })()}
 
-      {showNewCl&&<ClientModal tiposOk={tiposCrear} rolesOk={rolesAsignables} agentes={agentes} oficinas={oficinas} autonomos={clients.filter(c=>c.tipo==="usuario"&&c.rol==="F")} allClients={clients} title="Nuevo Registro" initial={{tipo:"cliente",clienteTipo:"matriz",primerNombre:"",segundoNombre:"",primerApellido:"",segundoApellido:"",cedula:"",dir:"",municipio:"",estado:"",pais:"",cp:"",tel1:"",tel2:"",email:"",casillero:"",rol:"I",password:"",...presetDominio()}} onClose={()=>setShowNewCl(false)} onSave={f=>{const esUser=f.tipo==="usuario";const newId=sigIdRegistro(esUser);const casillero=(!esUser&&!f.casillero)?nextCasillero():f.casillero;const newRec={...f,id:newId,casillero,clienteTipo:f.clienteTipo||"matriz",password:""};setClients(p=>[...p,newRec]);setShowNewCl(false);logAction("Creó registro",`${newId} — ${f.primerNombre} ${f.primerApellido}`);(async()=>{await dbUpsertCliente(newRec);await sincronizarCuenta(newRec,f.password);})();}}/>}
+      {showNewCl&&<ClientModal tiposOk={tiposCrear} rolesOk={rolesAsignables} agentes={agentes} oficinas={oficinas} autonomos={clients.filter(c=>c.tipo==="usuario"&&c.rol==="F")} allClients={clients} title="Nuevo Registro" initial={{tipo:tiposCrear[0]||"cliente",clienteTipo:"matriz",primerNombre:"",segundoNombre:"",primerApellido:"",segundoApellido:"",cedula:"",dir:"",municipio:"",estado:"",pais:"",cp:"",tel1:"",tel2:"",email:"",casillero:"",rol:"I",password:"",...presetDominio()}} onClose={()=>setShowNewCl(false)} onSave={f=>{const esUser=f.tipo==="usuario";const newId=sigIdRegistro(esUser);const casillero=(!esUser&&!f.casillero)?nextCasillero():f.casillero;const newRec={...f,id:newId,casillero,clienteTipo:f.clienteTipo||"matriz",password:""};setClients(p=>[...p,newRec]);setShowNewCl(false);logAction("Creó registro",`${newId} — ${f.primerNombre} ${f.primerApellido}`);(async()=>{await dbUpsertCliente(newRec);await sincronizarCuenta(newRec,f.password);})();}}/>}
       {showEditCl&&<ClientModal tiposOk={[showEditCl.tipo]} rolesOk={rolesAsignables} agentes={agentes} oficinas={oficinas} autonomos={clients.filter(c=>c.tipo==="usuario"&&c.rol==="F")} allClients={clients} title={`Editar — ${fullName(showEditCl)}`} initial={showEditCl} onClose={()=>setShowEditCl(null)} onSave={f=>{const ant=showEditCl;const rec={...f,clienteTipo:f.clienteTipo||"matriz",password:""};setClients(p=>p.map(c=>c.id===f.id?rec:c));logAction("Editó registro",`${f.id} — ${f.primerNombre} ${f.primerApellido}`);setShowEditCl(null);(async()=>{await dbUpsertCliente(rec);await sincronizarCuenta(rec,f.password,ant);})();}}/>}
 
       {/* ── Cargo Release — MODAL FORMULARIO ───────────────────────────────── */}
