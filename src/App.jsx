@@ -1950,6 +1950,7 @@ const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomo
           {f.tipo==="cliente"
             ?<div className="fg"><div className="fl">Casillero (auto)</div><input className="fi" value={f.casillero} onChange={e=>ff("casillero",e.target.value)} placeholder="Se genera automático" style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)"}}/></div>
             :<div className="fg"><div className="fl">Rol del Sistema</div><select className="fs" value={f.rol==="I"?"":(f.rol||"")} onChange={e=>ff("rol",e.target.value)}><option value="">— Selecciona el rol —</option>{ALL_ROLES.filter(r=>r.code!=="I").map(r=><option key={r.code} value={r.code}>{r.code} — {r.name}</option>)}</select></div>}
+            {f.tipo==="usuario"&&f.rol==="F"&&<div className="fg"><div className="fl">Dirección en los WR de sus clientes</div><select className="fs" value={f.wrDir||"matriz"} onChange={e=>ff("wrDir",e.target.value)}><option value="matriz">Dirección de la casa matriz</option><option value="origen">Dirección de la oficina de origen del WR</option></select></div>}
           {f.tipo==="usuario"&&<div className="fg"><div className="fl">Login (usuario)</div><input className="fi" value={f.login||f.email} onChange={e=>ff("login",e.target.value)} placeholder="usuario@email.com o nick"/></div>}
         </div>
         {/* Password para todos los registros */}
@@ -6101,10 +6102,12 @@ export default function SistemaCarga(){
     const cl=clients.find(c=>c.id===w.clienteId)||clients.find(c=>c.casillero&&c.casillero===w.casillero);
     const of=oficinas.find(o=>(o.ciudad||"").toUpperCase().startsWith((w.origCity||"").toUpperCase()))||_origOff;
     const ct=cl?.clienteTipo||"matriz";let emisor=null;
+    // Agentes y autónomos: su nombre, teléfono y correo; la dirección es la de la matriz o la de la oficina de origen
+    const dirDe=pref=>pref==="origen"&&of&&(of.dir||of.ciudad)?[of.dir,lineaCiudad(of)]:[marca.dir,lineaCiudad(marca)];
     if(ct==="agente"||ct==="vendedor_agente"){const ag=agentes.find(a=>a.id===cl?.agenteId);
-      if(ag)emisor={nombre:String(ag.nombre||ag.codigo||"").toUpperCase(),lineas:[ag.dir,lineaCiudad(ag),[ag.tel,ag.email].filter(Boolean).join(" · ")],powered:`Powered by ${empresaNombre}`};}
+      if(ag)emisor={nombre:String(ag.nombre||ag.codigo||"").toUpperCase(),lineas:[...dirDe(ag.wr_dir),[ag.tel,ag.email].filter(Boolean).join(" · ")],powered:`Powered by ${empresaNombre}`};}
     else if(ct==="autonomo"){const au=clients.find(c=>c.id===cl?.autonomoId);
-      if(au)emisor={nombre:fullName(au).toUpperCase(),lineas:[au.dir,lineaCiudad(au),[au.tel1,au.email].filter(Boolean).join(" · ")],powered:`Powered by ${empresaNombre}`};}
+      if(au)emisor={nombre:fullName(au).toUpperCase(),lineas:[...dirDe(au.wrDir),[au.tel1,au.email].filter(Boolean).join(" · ")],powered:`Powered by ${empresaNombre}`};}
     else if(ct==="oficina"||ct==="vendedor_oficina"){const ofc=oficinas.find(o=>o.id===cl?.oficinaId);
       if(ofc)emisor={nombre:`${empresaNombre} — ${String(ofc.nombre||"").toUpperCase()}`,lineas:[ofc.dir,lineaCiudad(ofc),[ofc.tel,ofc.email].filter(Boolean).join(" · ")],logo:marca.logo};}
     const usr=clients.find(c=>c.id===w.usuario);
@@ -7337,6 +7340,7 @@ export default function SistemaCarga(){
                     <div className="fg"><div className="fl">Código postal</div><input className="fi" value={agForm.cp||""} onChange={e=>setAgForm(p=>({...p,cp:e.target.value.toUpperCase()}))}/></div>
                     <div className="fg"><div className="fl">Teléfono</div><input className="fi" value={agForm.tel} onChange={e=>setAgForm(p=>({...p,tel:e.target.value.toUpperCase()}))}/></div>
                     <div className="fg"><div className="fl">Email</div><input className="fi" type="email" value={agForm.email} onChange={e=>setAgForm(p=>({...p,email:e.target.value}))}/></div>
+                    <div className="fg full"><div className="fl">Dirección en los WR de sus clientes</div><select className="fs" value={agForm.wr_dir||"matriz"} onChange={e=>setAgForm(p=>({...p,wr_dir:e.target.value}))}><option value="matriz">Dirección de la casa matriz</option><option value="origen">Dirección de la oficina de origen del WR</option></select></div>
                     <div className="fg full"><div className="fl">Persona de Contacto</div><input className="fi" value={agForm.contacto} onChange={e=>setAgForm(p=>({...p,contacto:e.target.value.toUpperCase()}))}/></div>
                     <div className="fg full"><div className="fl">Notas</div><input className="fi" value={agForm.notas} onChange={e=>setAgForm(p=>({...p,notas:e.target.value.toUpperCase()}))}/></div>
                   </div>
@@ -7425,8 +7429,11 @@ export default function SistemaCarga(){
                         ))}
                       </div>
                     </div>
+                    <div className="fg full"><div className="fl">Dirección</div><input className="fi" value={ofForm.dir||""} onChange={e=>setOfForm(p=>({...p,dir:e.target.value.toUpperCase()}))}/></div>
                     <div className="fg"><div className="fl">Ciudad</div><input className="fi" value={ofForm.ciudad} onChange={e=>setOfForm(p=>({...p,ciudad:e.target.value.toUpperCase()}))}/></div>
+                    <div className="fg"><div className="fl">Estado / provincia</div><input className="fi" value={ofForm.estado||""} onChange={e=>setOfForm(p=>({...p,estado:e.target.value.toUpperCase()}))}/></div>
                     <div className="fg"><div className="fl">País</div><input className="fi" value={ofForm.pais} onChange={e=>setOfForm(p=>({...p,pais:e.target.value.toUpperCase()}))}/></div>
+                    <div className="fg"><div className="fl">Código postal</div><input className="fi" value={ofForm.cp||""} onChange={e=>setOfForm(p=>({...p,cp:e.target.value.toUpperCase()}))}/></div>
                     <div className="fg"><div className="fl">Teléfono</div><input className="fi" value={ofForm.tel} onChange={e=>setOfForm(p=>({...p,tel:e.target.value.toUpperCase()}))}/></div>
                     <div className="fg"><div className="fl">Email</div><input className="fi" type="email" value={ofForm.email} onChange={e=>setOfForm(p=>({...p,email:e.target.value}))}/></div>
                     <div className="fg full"><div className="fl">Persona de Contacto</div><input className="fi" value={ofForm.contacto} onChange={e=>setOfForm(p=>({...p,contacto:e.target.value.toUpperCase()}))}/></div>

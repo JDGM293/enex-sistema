@@ -42,7 +42,7 @@ export const clienteFromDB = (r) => r ? ({
   password: r.password, clienteTipo: r.cliente_tipo || 'matriz',
   agenteId: r.agente_id, oficinaId: r.oficina_id,
   autonomoId: r.autonomo_id, vendedorId: r.vendedor_id || '', activo: r.activo,
-  authId: r.auth_id || null, password: '',
+  authId: r.auth_id || null, password: '', wrDir: r.wr_dir || '',
 }) : null
 
 export const clienteToDB = (c) => ({
@@ -56,6 +56,7 @@ export const clienteToDB = (c) => ({
   password: '', cliente_tipo: c.clienteTipo || 'matriz',
   agente_id: c.agenteId, oficina_id: c.oficinaId,
   autonomo_id: c.autonomoId, vendedor_id: c.vendedorId || null, activo: c.activo ?? true,
+  wr_dir: c.wrDir || null,
 })
 
 export const wrFromDB = (r) => r ? ({
@@ -165,8 +166,10 @@ export const dbGetOficinas = async () => {
   return data
 }
 
+const OFICINA_COLS = ['id','codigo','nombre','ciudad','pais','activo','tel','email','contacto','notas','dir','estado','cp','tipo']
 export const dbUpsertOficina = async (of) => {
-  const { error } = await supabase.from('oficinas').upsert(of)
+  const fila = Object.fromEntries(OFICINA_COLS.filter(k => of[k] !== undefined).map(k => [k, of[k]]))
+  const { error } = await supabase.from('oficinas').upsert(fila)
   if (error) console.error('upsertOficina:', error)
 }
 
