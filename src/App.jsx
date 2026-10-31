@@ -808,16 +808,18 @@ const siglaUsuario=(u,clients=[],agentes=[],oficinas=[])=>{
 // se ven en una vista previa idéntica a lo impreso y se imprimen sin capturar la pantalla.
 const prnE=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
 const PRN_CSS=`
-@page{size:letter portrait;margin:12mm 12mm 14mm}
+@page{size:letter portrait;margin:0}
 *{box-sizing:border-box}
 html,body{background:#fff}
 body{font-family:Arial,Helvetica,sans-serif;color:#1b1f24;margin:0;padding:28px 32px;font-size:12px;line-height:1.4}
-@media print{body{padding:0}}
+@media print{body{padding:0 13mm}}
+table.pg{width:100%;border-collapse:collapse}table.pg>thead>tr>td,table.pg>tfoot>tr>td{height:12mm;padding:0}table.pg>tbody>tr>td{padding:0}
+@media screen{table.pg>thead,table.pg>tfoot{display:none}}
 .hd{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;border-bottom:3px solid #1A2B4A;padding-bottom:12px;margin-bottom:16px}
-.emp{display:flex;gap:12px;align-items:flex-start;min-width:0}
+.emp{display:flex;gap:14px;align-items:center;min-width:0}
 .emp img{max-height:58px;max-width:150px;object-fit:contain}
-.emp .n{font-size:20px;font-weight:800;color:#1A2B4A;letter-spacing:.4px;line-height:1.15}
-.emp .l{font-size:11px;color:#4a5566;margin-top:2px}
+.emp .n{font-size:20px;font-weight:800;color:#1A2B4A;letter-spacing:.4px;line-height:1.15;margin-bottom:4px}
+.emp .l{font-size:11px;color:#4a5566;line-height:1.45}
 .emp .pw{font-size:9.5px;color:#8a94a3;margin-top:4px}
 .doc{text-align:right;flex-shrink:0}
 .doc .t{font-size:14px;font-weight:800;color:#1A2B4A;text-transform:uppercase;letter-spacing:1px}
@@ -1158,6 +1160,7 @@ const calcVol = (l,a,h,unit="cm",div=5000,divFt3=1728) => {
 const CALC_DEF={div:5000,divFt3:1728,modo:"wr",red:"0.01"};
 const CALC_DIVS=[{v:6000,l:"6000 cm³/kg · 166 in³/lb (IATA, carga aérea internacional)"},{v:5000,l:"5000 cm³/kg · 139 in³/lb (courier EE. UU.)"}];
 const CALC_REDS=[{v:"0.01",l:"Exacto (2 decimales)"},{v:"0.1",l:"Hacia arriba, a la décima"},{v:"0.5",l:"Hacia arriba, a la media unidad"},{v:"1",l:"Hacia arriba, a la unidad"}];
+const lineaCiudad=o=>[o?.ciudad||o?.municipio,[o?.estado,o?.cp].filter(Boolean).join(" "),o?.pais].filter(Boolean).join(", ");
 const nm2=v=>(Math.round(v*100)/100).toFixed(2);
 const redondearArriba=(v,paso)=>{const p=parseFloat(paso)||0.01;if(p<0.01)return Math.round(v/p)*p;if(p===0.01)return Math.round(v*100)/100;return Math.round(Math.ceil(v/p-1e-9)*p*100)/100;};
 
@@ -6053,13 +6056,13 @@ export default function SistemaCarga(){
   const prnEmisor=(pais,emisor)=>{
     const E=docCfg(pais||"","empresa");
     if(emisor)return {nombre:emisor.nombre,lineas:(emisor.lineas||[]).filter(Boolean),logo:emisor.logo||"",powered:emisor.powered};
-    return {nombre:E.razon||empresaNombre||"",lineas:[E.dir,[E.tel,E.email].filter(Boolean).join(" · "),E.idFiscal].filter(Boolean),logo:marca.logo||""};
+    return {nombre:E.razon||empresaNombre||"",lineas:[E.dir,E.dir2,[E.tel,E.email].filter(Boolean).join(" · "),[E.web,E.idFiscal&&`ID fiscal ${E.idFiscal}`].filter(Boolean).join(" · ")].filter(Boolean),logo:marca.logo||""};
   };
   const prnBarcode=v=>renderToStaticMarkup(<WRBarcode value={String(v)} height={40} width={1.6}/>);
   const prnHTML=({titulo,numero="",meta=[],pais="",emisor=null,cuerpo="",barcode=false,anulado=null,horizontal=false})=>{
     const em=prnEmisor(pais,emisor);const ahora=new Date();
-    const css=PRN_CSS+(horizontal?"@page{size:letter landscape}":"");
-    return `<!doctype html><html><head><meta charset="utf-8"><title>${prnE(titulo)}${numero?` ${prnE(numero)}`:""}</title><style>${css}</style></head><body>
+    const css=PRN_CSS+(horizontal?"@page{size:letter landscape;margin:0}":"");
+    return `<!doctype html><html><head><meta charset="utf-8"><title>${prnE(titulo)}${numero?` ${prnE(numero)}`:""}</title><style>${css}</style></head><body><table class="pg"><thead><tr><td></td></tr></thead><tfoot><tr><td></td></tr></tfoot><tbody><tr><td>
       ${anulado?`<div class="anul">${anulado.texto||"ANULADO"}${anulado.motivo?`<small>${prnE(anulado.motivo)}</small>`:""}</div>`:""}
       <div class="hd">
         <div class="emp">${em.logo?`<img src="${prnE(em.logo)}" alt="">`:""}<div><div class="n">${prnE(em.nombre)}</div>${em.lineas.map(l=>`<div class="l">${prnE(l)}</div>`).join("")}${em.powered?`<div class="pw">${prnE(em.powered)}</div>`:""}</div></div>
@@ -6068,7 +6071,7 @@ export default function SistemaCarga(){
       </div>
       ${cuerpo}
       <div class="pie"><span>${prnE(em.nombre)}${numero?` · ${prnE(numero)}`:""}</span><span>Impreso el ${fmtDate(ahora)} ${fmtTime(ahora)} · ${prnE(fullName(currentUser))}</span></div>
-    </body></html>`;
+    </td></tr></tbody></table></body></html>`;
   };
   // Piezas comunes del cuerpo
   const pSec=t=>`<div class="sec">${t}</div>`;
@@ -6097,9 +6100,13 @@ export default function SistemaCarga(){
     if(!w)return "";
     const cl=clients.find(c=>c.id===w.clienteId)||clients.find(c=>c.casillero&&c.casillero===w.casillero);
     const of=oficinas.find(o=>(o.ciudad||"").toUpperCase().startsWith((w.origCity||"").toUpperCase()))||_origOff;
-    const cab=getHeaderName(w,clients,agentes,oficinas,empresaNombre);
-    const propio=sinAcentos(cab)===sinAcentos(empresaNombre||"");
-    const emisor=propio?null:{nombre:cab,lineas:[[of?.ciudad||w.origCity,of?.pais].filter(Boolean).join(", "),[of?.tel,of?.email].filter(Boolean).join(" · ")],powered:`${empresaNombre}`};
+    const ct=cl?.clienteTipo||"matriz";let emisor=null;
+    if(ct==="agente"||ct==="vendedor_agente"){const ag=agentes.find(a=>a.id===cl?.agenteId);
+      if(ag)emisor={nombre:String(ag.nombre||ag.codigo||"").toUpperCase(),lineas:[ag.dir,lineaCiudad(ag),[ag.tel,ag.email].filter(Boolean).join(" · ")],powered:`Powered by ${empresaNombre}`};}
+    else if(ct==="autonomo"){const au=clients.find(c=>c.id===cl?.autonomoId);
+      if(au)emisor={nombre:fullName(au).toUpperCase(),lineas:[au.dir,lineaCiudad(au),[au.tel1,au.email].filter(Boolean).join(" · ")],powered:`Powered by ${empresaNombre}`};}
+    else if(ct==="oficina"||ct==="vendedor_oficina"){const ofc=oficinas.find(o=>o.id===cl?.oficinaId);
+      if(ofc)emisor={nombre:`${empresaNombre} — ${String(ofc.nombre||"").toUpperCase()}`,lineas:[ofc.dir,lineaCiudad(ofc),[ofc.tel,ofc.email].filter(Boolean).join(" · ")],logo:marca.logo};}
     const usr=clients.find(c=>c.id===w.usuario);
     const dest=cl?[cl.dir,cl.municipio,cl.estado,cl.pais].filter(Boolean).join(", "):"";
     const tipoCli=!cl?"":({matriz:"Casa matriz",agente:"Agente",vendedor_agente:"Vendedor de agente",oficina:"Oficina",vendedor_oficina:"Vendedor de oficina",autonomo:"Autónomo"})[cl.clienteTipo||"matriz"]||"";
@@ -6256,7 +6263,7 @@ export default function SistemaCarga(){
   // Valores efectivos de una sección para un país: base del sistema → predeterminado → país
   const docCfg=(pais,sec)=>{const k=docPaisKey(pais);
     const base={...DOC_DEF[sec],...(sec==="exp"?{notaLegal:NOTA_LEGAL_DEFAULT}:{}),
-      ...(sec==="empresa"?sinVacios({razon:marca.razon,dir:[marca.dir,[marca.ciudad,marca.cp].filter(Boolean).join(" "),marca.pais].filter(Boolean).join(", "),tel:marca.tel,email:[marca.email,marca.web].filter(Boolean).join(" · "),idFiscal:marca.idFiscal}):{})};
+      ...(sec==="empresa"?sinVacios({razon:marca.razon,dir:marca.dir,dir2:lineaCiudad(marca),tel:marca.tel,email:marca.email,web:marca.web,idFiscal:marca.idFiscal}):{})};
     return {...base,...sinVacios(docPais._default?.[sec]),...sinVacios(k?docPais[k]?.[sec]:null),_pais:k};};
   const fmtFCDe=pais=>docCfg(pais,"imp");
   const MOTIVOS_FC=["Venta","Regalo","Muestra sin valor comercial","Efectos personales","Uso personal","Devolución / reparación"];
@@ -6919,7 +6926,7 @@ export default function SistemaCarga(){
             const k=Math.min(1,240/Math.max(img.width,img.height));const c=document.createElement("canvas");c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);
             c.getContext("2d").drawImage(img,0,0,c.width,c.height);set({logo:c.toDataURL("image/png")});};img.src=rd.result;};rd.readAsDataURL(f);};
           const guardar=async()=>{const n={nombre:(m.nombre||"").trim(),subtitulo:(m.subtitulo||"").trim(),iniciales:(m.iniciales||"").trim().toUpperCase(),logo:m.logo||"",
-              razon:(m.razon||"").trim(),idFiscal:(m.idFiscal||"").trim(),dir:(m.dir||"").trim(),ciudad:(m.ciudad||"").trim(),pais:(m.pais||"").trim(),cp:(m.cp||"").trim(),tel:(m.tel||"").trim(),email:(m.email||"").trim(),web:(m.web||"").trim()};
+              razon:(m.razon||"").trim(),idFiscal:(m.idFiscal||"").trim(),dir:(m.dir||"").trim(),ciudad:(m.ciudad||"").trim(),estado:(m.estado||"").trim(),pais:(m.pais||"").trim(),cp:(m.cp||"").trim(),tel:(m.tel||"").trim(),email:(m.email||"").trim(),web:(m.web||"").trim()};
             if(!n.nombre){window.alert("Escribe el nombre de la empresa.");return;}
             const ok=await dbSetConfig('marca',n);if(ok===false){window.alert("No se pudo guardar.");return;}
             setMarca(n);setMarcaDraft(null);try{localStorage.setItem("marca",JSON.stringify(n));}catch{/* sin almacenamiento */}logAction("Editó datos de la empresa",n.nombre);};
@@ -6944,11 +6951,10 @@ export default function SistemaCarga(){
                 <div className="fg"><div className="fl">Razón social</div><input className="fi" value={m.razon||""} onChange={e=>set({razon:e.target.value.toUpperCase()})}/></div>
                 <div className="fg"><div className="fl">ID fiscal (RIF / EIN / NIF)</div><input className="fi" value={m.idFiscal||""} onChange={e=>set({idFiscal:e.target.value.toUpperCase()})}/></div>
                 <div className="fg" style={{gridColumn:"1/-1"}}><div className="fl">Dirección</div><input className="fi" value={m.dir||""} onChange={e=>set({dir:e.target.value.toUpperCase()})}/></div>
-                <div className="fg"><div className="fl">Ciudad / estado</div><input className="fi" value={m.ciudad||""} onChange={e=>set({ciudad:e.target.value.toUpperCase()})}/></div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 120px",gap:10}}>
-                  <div className="fg"><div className="fl">País</div><input className="fi" value={m.pais||""} onChange={e=>set({pais:e.target.value.toUpperCase()})}/></div>
-                  <div className="fg"><div className="fl">Código postal</div><input className="fi" value={m.cp||""} onChange={e=>set({cp:e.target.value.toUpperCase()})}/></div>
-                </div>
+                <div className="fg"><div className="fl">Ciudad</div><input className="fi" value={m.ciudad||""} onChange={e=>set({ciudad:e.target.value.toUpperCase()})}/></div>
+                <div className="fg"><div className="fl">Estado / provincia</div><input className="fi" value={m.estado||""} onChange={e=>set({estado:e.target.value.toUpperCase()})}/></div>
+                <div className="fg"><div className="fl">País</div><input className="fi" value={m.pais||""} onChange={e=>set({pais:e.target.value.toUpperCase()})}/></div>
+                <div className="fg"><div className="fl">Código postal</div><input className="fi" value={m.cp||""} onChange={e=>set({cp:e.target.value.toUpperCase()})}/></div>
                 <div className="fg"><div className="fl">Teléfono</div><input className="fi" value={m.tel||""} onChange={e=>set({tel:e.target.value})}/></div>
                 <div className="fg"><div className="fl">Correo</div><input className="fi" style={{textTransform:"none"}} value={m.email||""} onChange={e=>set({email:e.target.value.toLowerCase()})}/></div>
                 <div className="fg"><div className="fl">Sitio web</div><input className="fi" style={{textTransform:"none"}} value={m.web||""} onChange={e=>set({web:e.target.value.toLowerCase()})}/></div>
@@ -7324,8 +7330,11 @@ export default function SistemaCarga(){
                   <div className="mhd"><div className="mt">{editAgente?"Editar Agente":"Nuevo Agente"}</div><button className="mcl" onClick={()=>{setShowNewAgente(false);setEditAgente(null);}}>✕</button></div>
                   <div className="fgrid g2" style={{marginBottom:10}}>
                     <div className="fg full"><div className="fl">Nombre del Agente *</div><input className="fi" value={agForm.nombre} onChange={e=>setAgForm(p=>({...p,nombre:e.target.value.toUpperCase()}))} placeholder="Nombre completo o razón social"/></div>
+                    <div className="fg full"><div className="fl">Dirección</div><input className="fi" value={agForm.dir||""} onChange={e=>setAgForm(p=>({...p,dir:e.target.value.toUpperCase()}))}/></div>
                     <div className="fg"><div className="fl">Ciudad</div><input className="fi" value={agForm.ciudad} onChange={e=>setAgForm(p=>({...p,ciudad:e.target.value.toUpperCase()}))}/></div>
+                    <div className="fg"><div className="fl">Estado / provincia</div><input className="fi" value={agForm.estado||""} onChange={e=>setAgForm(p=>({...p,estado:e.target.value.toUpperCase()}))}/></div>
                     <div className="fg"><div className="fl">País</div><input className="fi" value={agForm.pais} onChange={e=>setAgForm(p=>({...p,pais:e.target.value.toUpperCase()}))}/></div>
+                    <div className="fg"><div className="fl">Código postal</div><input className="fi" value={agForm.cp||""} onChange={e=>setAgForm(p=>({...p,cp:e.target.value.toUpperCase()}))}/></div>
                     <div className="fg"><div className="fl">Teléfono</div><input className="fi" value={agForm.tel} onChange={e=>setAgForm(p=>({...p,tel:e.target.value.toUpperCase()}))}/></div>
                     <div className="fg"><div className="fl">Email</div><input className="fi" type="email" value={agForm.email} onChange={e=>setAgForm(p=>({...p,email:e.target.value}))}/></div>
                     <div className="fg full"><div className="fl">Persona de Contacto</div><input className="fi" value={agForm.contacto} onChange={e=>setAgForm(p=>({...p,contacto:e.target.value.toUpperCase()}))}/></div>
