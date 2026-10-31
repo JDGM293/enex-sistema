@@ -1142,24 +1142,18 @@ const CONS_POOL=[];
 // En pulgadas: L×A×H / 139 = lb volumétrico
 // Pies cúbicos: L(in)×A(in)×H(in) / 1728
 // Metros cúbicos: L(cm)×A(cm)×H(cm) / 1,000,000
-const calcVol = (l,a,h,unit="cm") => {
-  if(unit==="cm"){
-    const volKg = parseFloat((l*a*h/5000).toFixed(2));
-    const volLb = parseFloat((volKg*2.205).toFixed(2));
-    const m3    = parseFloat((l*a*h/1000000).toFixed(4));
-    const lIn=l/2.54, aIn=a/2.54, hIn=h/2.54;
-    const ft3   = parseFloat((lIn*aIn*hIn/1728).toFixed(3));
-    return {volKg, volLb, m3, ft3};
-  } else {
-    // pulgadas
-    const volLb = parseFloat((l*a*h/139).toFixed(2));
-    const volKg = parseFloat((volLb/2.205).toFixed(2));
-    const ft3   = parseFloat((l*a*h/1728).toFixed(3));
-    const lCm=l*2.54, aCm=a*2.54, hCm=h*2.54;
-    const m3    = parseFloat((lCm*aCm*hCm/1000000).toFixed(4));
-    return {volKg, volLb, m3, ft3};
-  }
+const calcVol = (l,a,h,unit="cm",div=5000) => {
+  // div: divisor volumétrico en cm³/kg (5000 ≈ 139 in³/lb · 6000 ≈ 166 in³/lb)
+  const cm3=unit==="cm"?l*a*h:l*a*h*16.387064;
+  const volKg=cm3/(div||5000);
+  return {volKg:parseFloat(volKg.toFixed(2)),volLb:parseFloat((volKg*LB_KG).toFixed(2)),m3:parseFloat((cm3/1e6).toFixed(4)),ft3:parseFloat((cm3/28316.846592).toFixed(3))};
 };
+// Cálculo por tipo de envío (Configuración › Tipo de envío)
+const CALC_DEF={div:5000,modo:"wr",red:"0.01"};
+const CALC_DIVS=[{v:6000,l:"6000 cm³/kg · 166 in³/lb (IATA, carga aérea internacional)"},{v:5000,l:"5000 cm³/kg · 139 in³/lb (courier EE. UU.)"}];
+const CALC_REDS=[{v:"0.01",l:"Exacto (2 decimales)"},{v:"0.1",l:"Hacia arriba, a la décima"},{v:"0.5",l:"Hacia arriba, a la media unidad"},{v:"1",l:"Hacia arriba, a la unidad"}];
+let calcEnvioG={}; // copia para componentes fuera del principal
+const redondearArriba=(v,paso)=>{const p=parseFloat(paso)||0.01;if(p<=0.01)return Math.round(v*100)/100;return Math.round(Math.ceil(v/p-1e-9)*p*100)/100;};
 
 // ─── WR INICIAL VACÍO ─────────────────────────────────────────────────────────
 const WR_INIT=[];
@@ -1169,7 +1163,8 @@ const fmtDate=d=>{if(!d)return"—";const dt=d instanceof Date?d:new Date(d);ret
 const fmtTime=d=>{if(!d)return"";const dt=d instanceof Date?d:new Date(d);return dt.toLocaleTimeString("es-VE",{hour:"2-digit",minute:"2-digit"});};
 const fullName=p=>`${p.primerNombre} ${p.segundoNombre||""} ${p.primerApellido} ${p.segundoApellido||""}`.replace(/\s+/," ").trim();
 const initials=p=>((p.primerNombre||"?")[0]+(p.primerApellido||"?")[0]).toUpperCase();
-const toLb=v=>parseFloat((v*2.205).toFixed(1));
+const LB_KG=2.20462;
+const toLb=v=>parseFloat((v*LB_KG).toFixed(1));
 const toIn=v=>parseFloat((v/2.54).toFixed(1));
 // Limpia el prefijo "Reempaque de: WR-X, WR-Y" de un texto (sólo va en Notas, nunca en Descripción)
 const cleanReempaqueDesc=t=>String(t||"").replace(/^Reempaque de:\s*[^|]*(?:\s*\|\s*)?/i,"").trim();
@@ -1471,7 +1466,7 @@ const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[
   const fmtDim=(d)=>isIn?`${toIn(d)}`:`${d}`;
   const fmtW=(pk)=>isLb?`${toLb(pk)}lb`:`${pk}kg`;
   const fmtVol=(l,a,h)=>{
-    const v=calcVol(l,a,h,"cm");
+    const v=calcVol(l,a,h,"cm",(calcEnvioG[w.tipoEnvio]||{}).div||5000);
     return isLb?`${v.volLb}lb`:`${v.volKg}kg`;
   };
 
@@ -2415,6 +2410,10 @@ export default function SistemaCarga(){
 
   // ── CONFIGURACIÓN — listas editables ──────────────────────────────────────
   const [SEND_TYPES,setSendTypes]=useState(SEND_TYPES_INIT);
+  const [calcEnvio,setCalcEnvio]=useState({}); // tipo de envío → {div, modo, red}
+  calcEnvioG=calcEnvio;
+  const [calcDraft,setCalcDraft]=useState(null);
+  const calcDe=tipo=>({...CALC_DEF,...(calcEnvio[tipo]||{})});
   const [PAY_TYPES,setPayTypes]=useState(PAY_TYPES_INIT);
   const [CHARGES_OPT,setChargesOpt]=useState([]); // antiguo (solo nombres)
   // Catálogo con precio: servicios y gastos adicionales
@@ -2755,6 +2754,7 @@ export default function SistemaCarga(){
       if(pgs&&pgs.length>0)setPagos(pgs);
       if(sendT&&sendT.length>0){
         setSendTypes(sendT);
+        dbGetConfig("calc_envio").then(v=>{if(v&&typeof v==="object")setCalcEnvio(v);});
         // La calculadora sí queda con el primer tipo cargado por conveniencia.
         // El embarque (cf) NO se autocompleta — debe quedar vacío para que el usuario elija.
         setCalcForm(p=>({...p,tipoEnvio:p.tipoEnvio||sendT[0]}));
@@ -3118,17 +3118,18 @@ export default function SistemaCarga(){
     const qty=parseInt(c.cantidad)||1;
     const lCm=wrf.unitDim==="in"?l*2.54:l, aCm=wrf.unitDim==="in"?a*2.54:a, hCm=wrf.unitDim==="in"?h*2.54:h;
     // Convertir peso según unidad seleccionada
-    const pkKg=wrf.unitPeso==="kg"?rawW:parseFloat((rawW/2.205).toFixed(2));
-    const pkLb=wrf.unitPeso==="kg"?parseFloat((rawW*2.205).toFixed(1)):rawW;
-    const vc=lCm&&aCm&&hCm?calcVol(lCm,aCm,hCm,"cm"):{volKg:0,volLb:0,ft3:0,m3:0};
-    return {l,a,h,pkLb,pkKg,lCm,aCm,hCm,qty,...vc};
+    const pkKg=wrf.unitPeso==="kg"?rawW:parseFloat((rawW/LB_KG).toFixed(2));
+    const pkLb=wrf.unitPeso==="kg"?parseFloat((rawW*LB_KG).toFixed(1)):rawW;
+    const vc=lCm&&aCm&&hCm?calcVol(lCm,aCm,hCm,"cm",calcDe(wrf.tipoEnvio).div):{volKg:0,volLb:0,ft3:0,m3:0};
+    const cm3=lCm*aCm*hCm;const vkx=cm3/calcDe(wrf.tipoEnvio).div;
+    return {l,a,h,pkLb,pkKg,lCm,aCm,hCm,qty,...vc,_vk:vkx,_vl:vkx*LB_KG,_ft3:cm3/28316.846592,_m3:cm3/1e6};
   });
   const totalPesoLb=parseFloat(cajaCalcs.reduce((s,c)=>s+c.pkLb*c.qty,0).toFixed(1));
   const totalPesoKg=parseFloat(cajaCalcs.reduce((s,c)=>s+c.pkKg*c.qty,0).toFixed(2));
-  const totalVolLb=parseFloat(cajaCalcs.reduce((s,c)=>s+c.volLb*c.qty,0).toFixed(2));
-  const totalVolKg=parseFloat(cajaCalcs.reduce((s,c)=>s+c.volKg*c.qty,0).toFixed(2));
-  const totalFt3=parseFloat(cajaCalcs.reduce((s,c)=>s+c.ft3*c.qty,0).toFixed(3));
-  const totalM3=parseFloat(cajaCalcs.reduce((s,c)=>s+c.m3*c.qty,0).toFixed(4));
+  const totalVolLb=parseFloat(cajaCalcs.reduce((s,c)=>s+c._vl*c.qty,0).toFixed(2));
+  const totalVolKg=parseFloat(cajaCalcs.reduce((s,c)=>s+c._vk*c.qty,0).toFixed(2));
+  const totalFt3=parseFloat(cajaCalcs.reduce((s,c)=>s+c._ft3*c.qty,0).toFixed(3));
+  const totalM3=parseFloat(cajaCalcs.reduce((s,c)=>s+c._m3*c.qty,0).toFixed(4));
   const totalCajasCount=cajaCalcs.reduce((s,c)=>s+c.qty,0);
   const dimCalc={volKg:totalVolKg,volLb:totalVolLb,ft3:totalFt3,m3:totalM3};
 
@@ -3419,7 +3420,7 @@ export default function SistemaCarga(){
     const preConfirmCodes=["1","2"];
     const shouldConfirm=preConfirmCodes.includes(currentCode)&&stConfirmado;
     const upd={
-      ...w,
+      ...conVolDeTipo(w,tipo),
       tipoEnvio:tipo,
       ...(shouldConfirm?{
         status:stConfirmado,
@@ -4325,7 +4326,7 @@ export default function SistemaCarga(){
                     largo:d.l?parseFloat((d.l/2.54).toFixed(2)):"",
                     ancho:d.a?parseFloat((d.a/2.54).toFixed(2)):"",
                     alto:d.h?parseFloat((d.h/2.54).toFixed(2)):"",
-                    pesoLb:d.pk?parseFloat((d.pk*2.205).toFixed(1)):"",
+                    pesoLb:d.pk?parseFloat((d.pk*LB_KG).toFixed(1)):"",
                     cantidad:1,
                     carrier:d.carrier||"",tracking:d.tracking||"",
                     numFactura:d.factura||"",descripcion:cleanReempaqueDesc(d.descripcion||""),
@@ -4516,7 +4517,7 @@ export default function SistemaCarga(){
                   ))}
                 </div>
                 {selWR.dims.map((d,i)=>{
-                  const dv=calcVol(d.l,d.a,d.h,"cm");
+                  const dv=calcVol(d.l,d.a,d.h,"cm",calcDe(selWR.tipoEnvio).div);
                   const trk=d.tracking||selWR.tracking||"—";
                   const car=d.carrier||selWR.carrier||"—";
                   return (
@@ -6095,7 +6096,7 @@ export default function SistemaCarga(){
     const dest=cl?[cl.dir,cl.municipio,cl.estado,cl.pais].filter(Boolean).join(", "):"";
     const tipoCli=!cl?"":({matriz:"Casa matriz",agente:"Agente",vendedor_agente:"Vendedor de agente",oficina:"Oficina",vendedor_oficina:"Vendedor de oficina",autonomo:"Autónomo"})[cl.clienteTipo||"matriz"]||"";
     const dims=(w.dims||[]).length?w.dims:[];
-    const filas=dims.map((d,i)=>{const hay=d.l||d.a||d.h;const v=hay?calcVol(d.l||0,d.a||0,d.h||0,"cm"):{volLb:0,ft3:0,m3:0};
+    const filas=dims.map((d,i)=>{const hay=d.l||d.a||d.h;const v=hay?calcVol(d.l||0,d.a||0,d.h||0,"cm",calcDe(w.tipoEnvio).div):{volLb:0,ft3:0,m3:0};
       return `<tr><td>${i+1}</td><td>${hay?`${toIn(d.l)}×${toIn(d.a)}×${toIn(d.h)}`:"—"}${d.carrier?`<div class="sub">${prnE(d.carrier)}</div>`:""}</td>
         <td><span class="mono">${prnE(d.tracking||"")}</span>${d.descripcion?`<div>${prnE(d.descripcion)}</div>`:""}${d.factura?`<div class="sub">Fact.: ${prnE(d.factura)}</div>`:""}</td>
         <td class="r"><b>${d.pk?toLb(d.pk):"—"}</b></td><td class="r">${hay?v.volLb:"—"}</td><td class="r">${hay?v.ft3:"—"}</td><td class="r">${hay?v.m3:"—"}</td></tr>`;}).join("");
@@ -6184,7 +6185,7 @@ export default function SistemaCarga(){
   const htmlRelease=cr=>{
     if(!cr)return "";
     const wrs=(cr.wrIds||[]).map(id=>wrList.find(w=>w.id===id)).filter(Boolean);
-    const lbW=w=>(w.dims||[]).reduce((a,d)=>a+parseFloat(d.pkLb||d.pk*2.205||0),0)||parseFloat(w.pesoLb)||0;
+    const lbW=w=>(w.dims||[]).reduce((a,d)=>a+parseFloat(d.pkLb||d.pk*LB_KG||0),0)||parseFloat(w.pesoLb)||0;
     const cuerpo=pGrid(4,[pBox("Agente de carga",`<b>${prnE(cr.agenteCarga||"—")}</b>`),pBox("Contacto",prnE(cr.contacto||"—")),pBox("Identificación",prnE(cr.documento||"—")),pBox("Vehículo",prnE(cr.vehiculo||"—"))])+
       (cr.notas?`<div class="nota"><b>Notas:</b> ${prnE(cr.notas)}</div>`:"")+
       pSec("Detalle de la carga")+
@@ -6292,7 +6293,7 @@ export default function SistemaCarga(){
       const hs=fmt.hs==="si",ori=fmt.origenMerc==="si";
       return doc(e(com?fmt.tituloCom:fmt.tituloPro),`${com?"CI":"PF"}-${w.id}`,partes+
         pGrid(4,[pBox(T("Origen","Origin"),e(`${w.origCity||""} · ${nomPais(w.origCountry)}`)),pBox(T("Destino","Destination"),e(`${w.destCity||""} · ${nomPais(w.destCountry)}`)),
-          pBox(T("Envío","Service"),e(w.tipoEnvio||"—")),pBox(T("Bultos","Packages"),String(dims.length||w.cajas||1)),pBox(T("Peso total","Total weight"),`${nm(totKg)} kg · ${nm(totKg*2.20462)} lb`),
+          pBox(T("Envío","Service"),e(w.tipoEnvio||"—")),pBox(T("Bultos","Packages"),String(dims.length||w.cajas||1)),pBox(T("Peso total","Total weight"),`${nm(totKg)} kg · ${nm(totKg*LB_KG)} lb`),
           ed.incoterm&&pBox("Incoterm",e(ed.incoterm)),pBox(T("Motivo","Reason for export"),e(ed.motivo)),pBox(T("Moneda","Currency"),e(mon))])+
         pTabla([{l:T("Cant.","Qty")},{l:T("Descripción","Description")},...(hs?[{l:T("Cód. arancelario","HS code")}]:[]),...(ori?[{l:T("País de origen","Country of origin")}]:[]),{l:T("Peso kg","Weight kg"),r:1},{l:T("Valor unit.","Unit value"),r:1},{l:"Total",r:1}],
           L.map(x=>{const q=parseFloat(x.cantidad)||0,u=parseFloat(x.valorUnit)||0;return `<tr><td>${e(x.cantidad)}</td><td>${e(x.descripcion)}</td>${hs?`<td>${e(x.hs)}</td>`:""}${ori?`<td>${e(x.origen)}</td>`:""}<td class="r">${e(x.pesoKg)}</td><td class="r">${fmtMoney(u,mon)}</td><td class="r">${fmtMoney(q*u,mon)}</td></tr>`;}).join(""),
@@ -6305,8 +6306,8 @@ export default function SistemaCarga(){
       const tot=rows.reduce((t,d)=>({kg:t.kg+(parseFloat(d.pk)||0),vk:t.vk+(parseFloat(d.volKg)||0),m3:t.m3+(parseFloat(d.m3)||0)}),{kg:0,vk:0,m3:0});
       return doc("Lista de empaque","",partes+
         pTabla([{l:"#"},{l:"Tracking"},{l:"Descripción"},{l:"L×A×H cm",r:1},{l:"L×A×H in",r:1},{l:"Peso kg",r:1},{l:"Peso lb",r:1},{l:"Vol. kg",r:1}],
-          rows.map((d,i)=>`<tr><td>${i+1}/${rows.length}</td><td class="mono">${e(d.tracking||"")}</td><td>${e(d.descripcion||w.descripcion||"")}</td><td class="r">${d.l?`${nm(d.l)}×${nm(d.a)}×${nm(d.h)}`:"—"}</td><td class="r">${d.l?`${nm(d.l/2.54)}×${nm(d.a/2.54)}×${nm(d.h/2.54)}`:"—"}</td><td class="r">${nm(d.pk)}</td><td class="r">${nm((parseFloat(d.pk)||0)*2.20462)}</td><td class="r">${nm(d.volKg)}</td></tr>`).join(""),
-          `<tr class="tot"><td colspan="5">Total · ${rows.length} bulto${rows.length===1?"":"s"}${tot.m3?` · ${nm(tot.m3,4)} m³`:""}</td><td class="r">${nm(tot.kg)}</td><td class="r">${nm(tot.kg*2.20462)}</td><td class="r">${nm(tot.vk)}</td></tr>`)+
+          rows.map((d,i)=>`<tr><td>${i+1}/${rows.length}</td><td class="mono">${e(d.tracking||"")}</td><td>${e(d.descripcion||w.descripcion||"")}</td><td class="r">${d.l?`${nm(d.l)}×${nm(d.a)}×${nm(d.h)}`:"—"}</td><td class="r">${d.l?`${nm(d.l/2.54)}×${nm(d.a/2.54)}×${nm(d.h/2.54)}`:"—"}</td><td class="r">${nm(d.pk)}</td><td class="r">${nm((parseFloat(d.pk)||0)*LB_KG)}</td><td class="r">${nm(d.volKg)}</td></tr>`).join(""),
+          `<tr class="tot"><td colspan="5">Total · ${rows.length} bulto${rows.length===1?"":"s"}${tot.m3?` · ${nm(tot.m3,4)} m³`:""}</td><td class="r">${nm(tot.kg)}</td><td class="r">${nm(tot.kg*LB_KG)}</td><td class="r">${nm(tot.vk)}</td></tr>`)+
         pFirmas([["Preparado por"],["Recibido por"]]));
     }
     if(ed.tipo==="declaracion"){
@@ -6458,7 +6459,7 @@ export default function SistemaCarga(){
       W("Caja","descCaja","Descripción de la caja","txt",r=>r.d.descripcion||""),
       W("Caja","medidasCm","Medidas cm","txt",r=>r.d.l?`${r2(r.d.l)}×${r2(r.d.a)}×${r2(r.d.h)}`:""),
       W("Caja","medidasIn","Medidas in","txt",r=>r.d.l?`${r2(r.d.l/2.54)}×${r2(r.d.a/2.54)}×${r2(r.d.h/2.54)}`:""),
-      W("Caja","pesoCajaKg","Peso caja kg","num",r=>r2(r.d.pk)),W("Caja","pesoCajaLb","Peso caja lb","num",r=>r2(r.d.pkLb||(parseFloat(r.d.pk)||0)*2.20462)),
+      W("Caja","pesoCajaKg","Peso caja kg","num",r=>r2(r.d.pk)),W("Caja","pesoCajaLb","Peso caja lb","num",r=>r2(r.d.pkLb||(parseFloat(r.d.pk)||0)*LB_KG)),
       W("Caja","volCajaKg","Peso vol. caja kg","num",r=>r2(r.d.volKg)),W("Caja","ft3Caja","Ft³ caja","num",r=>n3(r.d.ft3)),
       W("Caja","valorCaja","Valor caja","num",r=>r2(r.d.valor)),
       ...wrC.filter(c=>!["Medidas","Facturación"].includes(c.g)),
@@ -7039,6 +7040,33 @@ export default function SistemaCarga(){
             onDelete={i=>{const n=SEND_TYPES.filter((_,j)=>j!==i);setSendTypes(n);dbSetConfig('send_types',n);}}
             placeholder="Ej: Aéreo Premium, Courier…"/>
         )}
+        {cfgTab==="tipoenvio"&&(()=>{
+          const D=calcDraft||calcEnvio;const set=(t,x)=>setCalcDraft({...D,[t]:{...CALC_DEF,...(D[t]||{}),...x}});
+          const guardar=async()=>{const ok=await dbSetConfig("calc_envio",D);if(!ok){window.alert("No se pudo guardar.");return;}setCalcEnvio(D);setCalcDraft(null);logAction("Cambió cálculo por tipo de envío",Object.keys(D).join(", "));};
+          return(
+          <div className="card" style={{marginTop:14}}>
+            <div className="card-tt"><Ico e="🧮" sp/>Cálculo por tipo de envío</div>
+            <table className="ct">
+              <thead><tr><th>Tipo de envío</th><th>Factor volumétrico</th><th>Peso a cobrar</th><th>Redondeo</th></tr></thead>
+              <tbody>{SEND_TYPES.map(t=>{const C={...CALC_DEF,...(D[t]||{})};const aereo=tipoEsAereoG(t)||!tipoEsMaritimoG(t);const otro=!CALC_DIVS.some(o=>o.v===C.div);
+                return(<tr key={t}>
+                  <td style={{fontWeight:700}}>{t}</td>
+                  {aereo?<>
+                    <td><div style={{display:"flex",gap:6,alignItems:"center"}}>
+                      <select className="fs" value={otro?"otro":C.div} onChange={e=>set(t,{div:e.target.value==="otro"?(C.div||5000):parseFloat(e.target.value)})}>
+                        {CALC_DIVS.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}<option value="otro">Otro divisor (cm³/kg)</option></select>
+                      {otro&&<input className="fi" type="number" style={{width:90}} value={C.div} onChange={e=>set(t,{div:parseFloat(e.target.value)||0})}/>}</div></td>
+                    <td><select className="fs" value={C.modo} onChange={e=>set(t,{modo:e.target.value})}>
+                      <option value="wr">Total del WR: el mayor entre peso real y volumétrico</option>
+                      <option value="caja">Caja por caja: el mayor de cada caja, sumado</option></select></td>
+                    <td><select className="fs" value={C.red} onChange={e=>set(t,{red:e.target.value})}>{CALC_REDS.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}</select></td>
+                  </>:<td colSpan={3} style={{color:"var(--t2)"}}>Pies cúbicos: largo × ancho × alto (in) ÷ 1728</td>}
+                </tr>);})}</tbody>
+            </table>
+            {calcDraft&&<div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:10}}>
+              <button className="btn-s" onClick={()=>setCalcDraft(null)}>Descartar</button>
+              <button className="btn-p" onClick={guardar}><Ico e="💾" sp/>Guardar</button></div>}
+          </div>);})()}
 
         {/* ── SERVICIOS ADICIONALES ── */}
         {cfgTab==="servicios"&&(
@@ -8261,22 +8289,24 @@ export default function SistemaCarga(){
     if(!cajas.length)return null;
     const aCm=v=>(parseFloat(v)||0)*(f.unitDim==="in"?2.54:1);
     const aKg=v=>(parseFloat(v)||0)/(f.unitPeso==="lb"?2.20462:1);
-    let bultos=0,kg=0,volKg=0,m3=0,factKg=0,factLb=0;
+    const C=calcDe(f.tipoEnvio);
+    let bultos=0,kg=0,volKg=0,m3=0,cajaKg=0,cajaLb=0;
     cajas.forEach(c=>{
       const q=Math.max(1,parseInt(c.cantidad)||1);
       const cm3=aCm(c.largo)*aCm(c.ancho)*aCm(c.alto);
-      const k=aKg(c.peso), vk=cm3/5000;
+      const k=aKg(c.peso), vk=cm3/C.div;
       bultos+=q;kg+=k*q;volKg+=vk*q;m3+=cm3/1e6*q;
-      factKg+=Math.max(k,vk)*q;factLb+=Math.max(k*2.20462,vk*2.20462)*q;
+      cajaKg+=Math.max(k,vk)*q;cajaLb+=Math.max(k,vk)*LB_KG*q;
     });
-    const r={bultos,kg:r2(kg),lb:r2(kg*2.20462),volKg:r2(volKg),volLb:r2(volKg*2.20462),m3:Math.round(m3*10000)/10000,ft3:Math.round(m3*35.3147*1000)/1000};
+    const factKg=redondearArriba(C.modo==="caja"?cajaKg:Math.max(kg,volKg),C.red), factLb=redondearArriba(C.modo==="caja"?cajaLb:Math.max(kg,volKg)*LB_KG,C.red);
+    const r={bultos,kg:r2(kg),lb:r2(kg*LB_KG),volKg:r2(volKg),volLb:r2(volKg*LB_KG),m3:Math.round(m3*10000)/10000,ft3:Math.round(m3*35.3146667*1000)/1000};
     if(!f.orig||!f.dest||!f.tipoEnvio)return {...r,falta:true};
     const w={origCountry:f.orig.pais,origCity:f.orig.ciudad,destCountry:f.dest.pais,destCity:f.dest.ciudad};
     const tf=tarifaParaWR(w,f.tipoEnvio,calcPara);
     if(!tf)return {...r,sinTarifa:true};
     const aereo=tipoEsAereoG(f.tipoEnvio), maritimo=tipoEsMaritimoG(f.tipoEnvio);
     const uni=unidadTarifa(tf,aereo||!maritimo);
-    const cant=uni==="kg"?r2(factKg):uni==="lb"?r2(factLb):uni==="m3"?r.m3:r.ft3;
+    const cant=uni==="kg"?factKg:uni==="lb"?factLb:uni==="m3"?r.m3:r.ft3;
     const precio=parseFloat(maritimo?tf.porFt3:tf.porLb)||0;
     const flete=r2(cant*precio), min=parseFloat(tf.min)||0;
     return {...r,tf,uni,cant,precio,flete,min,total:r2(Math.max(flete,min)),usoMinimo:min>flete,moneda:tf.moneda||"USD"};
@@ -10908,7 +10938,29 @@ export default function SistemaCarga(){
   //        más que su peso bruto.
   // Marítimo: ft³ (también devolvemos m³ para mostrar ambos).
   // unidad: "lb" o "kg" (aéreo: el mayor entre peso real y volumétrico), "ft3" o "m3" (marítimo)
+  // Volumen de un WR según el cálculo de su tipo de envío (sobre las cajas, sin redondear por caja)
+  const volDeWR=(w,tipo=w?.tipoEnvio)=>{
+    const C=calcDe(tipo);const dims=Array.isArray(w?.dims)?w.dims:[];
+    const cajas=dims.map(d=>{const cm3=(parseFloat(d.l)||0)*(parseFloat(d.a)||0)*(parseFloat(d.h)||0);const vk=cm3/C.div;const pl=parseFloat(d.pkLb)||(parseFloat(d.pk)||0)*LB_KG;const pk=parseFloat(d.pk)||pl/LB_KG;
+      return {pk,pl,vk,vl:vk*LB_KG,ft3:cm3/28316.846592,m3:cm3/1e6};});
+    const S=k=>cajas.reduce((t,c)=>t+c[k],0);
+    return {C,cajas,volKg:S("vk"),volLb:S("vl"),pesoKg:S("pk"),pesoLb:S("pl"),ft3:S("ft3"),m3:S("m3")};
+  };
+  // Vuelve a calcular el volumétrico guardado en el WR con el cálculo de su tipo de envío
+  const conVolDeTipo=(w,tipo=w?.tipoEnvio)=>{
+    if(!Array.isArray(w?.dims)||!w.dims.length)return w;
+    const C=calcDe(tipo);
+    const dims=w.dims.map(d=>{const v=calcVol(parseFloat(d.l)||0,parseFloat(d.a)||0,parseFloat(d.h)||0,"cm",C.div);return {...d,volKg:v.volKg,volLb:v.volLb};});
+    const V=volDeWR({...w,dims},tipo);
+    return {...w,dims,volKg:r2(V.volKg),volLb:r2(V.volLb)};
+  };
   const wrPesoFacturable=(w,isAereo,unidad="")=>{
+    if(isAereo&&Array.isArray(w?.dims)&&w.dims.length&&w.dims.some(d=>parseFloat(d.l))){
+      const kg=unidad==="kg";const V=volDeWR(w);
+      const real=kg?V.pesoKg:V.pesoLb, vol=kg?V.volKg:V.volLb;
+      const base=V.C.modo==="caja"?V.cajas.reduce((t,c)=>t+Math.max(kg?c.pk:c.pl,kg?c.vk:c.vl),0):Math.max(real,vol);
+      return {valor:redondearArriba(base,V.C.red),unidad:kg?"kg":"lb",real:r2(real),vol:r2(vol)};
+    }
     if(isAereo){
       const kg=unidad==="kg";
       const real=parseFloat(kg?w.pesoKg:w.pesoLb)||0;
@@ -12924,7 +12976,7 @@ export default function SistemaCarga(){
         const LabelCaja1=({d,idx,total})=>{
           const bval=`${_lwr?.id||""}-${idx}/${total}`;
           const dimStr=d.l&&d.a&&d.h?`${parseFloat((d.l/2.54).toFixed(1))}×${parseFloat((d.a/2.54).toFixed(1))}×${parseFloat((d.h/2.54).toFixed(1))}"`:"—";
-          const pkLb=d.pkLb||(d.pk?parseFloat((d.pk*2.205).toFixed(1)):null);
+          const pkLb=d.pkLb||(d.pk?parseFloat((d.pk*LB_KG).toFixed(1)):null);
           const pvLb=d.volLb||d.pv||null;
           const ft3=d.ft3||null;
           const m3=d.m3||null;
@@ -12993,7 +13045,7 @@ export default function SistemaCarga(){
         const LabelCaja2=({d,idx,total})=>{
           const bval=`${_lwr?.id||""}-${idx}/${total}`;
           const dimStr=d.l&&d.a&&d.h?`${parseFloat((d.l/2.54).toFixed(1))}×${parseFloat((d.a/2.54).toFixed(1))}×${parseFloat((d.h/2.54).toFixed(1))}"`:"—";
-          const pkLb=d.pkLb||(d.pk?parseFloat((d.pk*2.205).toFixed(1)):null);
+          const pkLb=d.pkLb||(d.pk?parseFloat((d.pk*LB_KG).toFixed(1)):null);
           const pvLb=d.volLb||d.pv||null;
           return(
             <div className="label-card label-4x6" style={{width:384,height:576,border:"2px solid #000",background:"#fff",color:"#000",display:"flex",flexDirection:"column",pageBreakInside:"avoid",fontFamily:"Arial,sans-serif"}}>
@@ -13069,7 +13121,7 @@ export default function SistemaCarga(){
         const LabelCaja3=({d,idx,total})=>{
           const bval=`${_lwr?.id||""}-${idx}/${total}`;
           const dimStr=d.l&&d.a&&d.h?`${parseFloat((d.l/2.54).toFixed(1))}×${parseFloat((d.a/2.54).toFixed(1))}×${parseFloat((d.h/2.54).toFixed(1))}"`:"—";
-          const pkLb=d.pkLb||(d.pk?parseFloat((d.pk*2.205).toFixed(1)):null);
+          const pkLb=d.pkLb||(d.pk?parseFloat((d.pk*LB_KG).toFixed(1)):null);
           return(
             <div className="label-card label-4x2" style={{width:384,height:192,border:"2px solid #000",background:"#fff",color:"#000",display:"flex",flexDirection:"column",pageBreakInside:"avoid",fontFamily:"Arial,sans-serif"}}>
               {/* Franja 1 — Col 1 Nombre | Col 2 Consignatario */}
@@ -13114,7 +13166,7 @@ export default function SistemaCarga(){
         const LabelCaja4=({d,idx,total})=>{
           const bval=`${_lwr?.id||""}-${idx}/${total}`;
           const dimStr=d.l&&d.a&&d.h?`${parseFloat((d.l/2.54).toFixed(1))}×${parseFloat((d.a/2.54).toFixed(1))}×${parseFloat((d.h/2.54).toFixed(1))}"`:"—";
-          const pkLb=d.pkLb||(d.pk?parseFloat((d.pk*2.205).toFixed(1)):null);
+          const pkLb=d.pkLb||(d.pk?parseFloat((d.pk*LB_KG).toFixed(1)):null);
           return(
             <div className="label-card label-4x2" style={{width:384,height:192,border:"2px solid #000",background:"#fff",color:"#000",display:"flex",flexDirection:"column",pageBreakInside:"avoid",fontFamily:"Arial,sans-serif"}}>
               {/* Franja 1 — Col1 (más pequeña) Nombre | Col2 WR# + barcode */}
