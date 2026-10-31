@@ -7311,7 +7311,9 @@ export default function SistemaCarga(){
   // ── CONFIGURACIÓN ───────────────────────────────────────────────────────────
 
   const renderSettings=()=>{
-    if(!hasPerm("configuracion"))return <div className="page-scroll"><div className="card" style={{textAlign:"center",padding:60,color:"var(--t3)"}}>Sin acceso.</div></div>;
+    // Agentes y Oficinas del menú izquierdo abren esta misma pantalla con su pestaña
+    const porMenu={agentes:"ver_agente",oficinas:"ver_oficina"};
+    if(!hasPerm("configuracion")&&!(porMenu[cfgTab]&&hasPerm(porMenu[cfgTab])))return <div className="page-scroll"><div className="card" style={{textAlign:"center",padding:60,color:"var(--t3)"}}>Sin acceso.</div></div>;
 
     const CFG_TABS=[
       {k:"empresa",l:"Empresa",ic:<Ico e="🏢"/>},
@@ -7332,9 +7334,10 @@ export default function SistemaCarga(){
 
     const cfgVer=k=>({actividad:"registro_actividad"})[k]||`cfg_${k}_ver`;
     const cfgEdita=k=>["agentes","oficinas","tarifas","actividad"].includes(k)||hasPerm(`cfg_${k}_editar`);
-    const TABS_OK=CFG_TABS.filter(t=>hasPerm(cfgVer(t.k)));
-    if(!TABS_OK.length)return <div className="page-scroll"><div className="card" style={{textAlign:"center",padding:60,color:"var(--t3)"}}>Sin acceso.</div></div>;
-    const tabAct=TABS_OK.some(t=>t.k===cfgTab)?cfgTab:TABS_OK[0].k;
+    const TABS_OK=hasPerm("configuracion")?CFG_TABS.filter(t=>hasPerm(cfgVer(t.k))):[];
+    const tabMenu=porMenu[cfgTab]&&hasPerm(porMenu[cfgTab]);
+    if(!TABS_OK.length&&!tabMenu)return <div className="page-scroll"><div className="card" style={{textAlign:"center",padding:60,color:"var(--t3)"}}>Sin acceso.</div></div>;
+    const tabAct=tabMenu||TABS_OK.some(t=>t.k===cfgTab)?cfgTab:TABS_OK[0].k;
     if(tabAct!==cfgTab)setTimeout(()=>setCfgTab(tabAct),0);
     return (
       <div className="page-scroll">
