@@ -584,6 +584,8 @@ const ALL_PERMS=[
   // Permiso especial: salta los bloqueos del proceso por estado
   "saltar_bloqueos",
 ];
+// Solo el Administrador puede borrar y ver el registro de actividad; no se asignan a otros roles
+const PERMS_SOLO_ADMIN=new Set([...ALL_PERMS.filter(p=>p.startsWith("borrar_")),"registro_actividad"]);
 
 const PERM_LBL={
   ver_usuarios:"Ver Usuarios",crear_usuario:"Crear Usuario",editar_usuario:"Editar Usuario",borrar_usuario:"Borrar Usuario",
@@ -628,33 +630,33 @@ const PERM_LBL={
 
 // Tabla de Roles & Permisos: cada módulo con sus 4 acciones
 const PERM_MODULES=[
-  {m:"Usuarios",ic:<Ico e="👤"/>,ver:"ver_usuarios",crear:"crear_usuario",editar:"editar_usuario",borrar:"borrar_usuario"},
-  {m:"Clientes",ic:<Ico e="👥"/>,ver:"ver_bd_clientes",crear:"crear_cliente",editar:"editar_cliente",borrar:"borrar_cliente"},
-  {m:"Agentes",ic:<Ico e="🤝"/>,ver:"ver_agente",crear:"crear_agente",editar:"editar_agente",borrar:"borrar_agente"},
-  {m:"Autónomos",ic:<Ico e="🧑‍💻"/>,ver:"ver_autonomo",crear:"crear_autonomo",editar:"editar_autonomo",borrar:"borrar_autonomo"},
-  {m:"Oficinas",ic:<Ico e="🏢"/>,ver:"ver_oficina",crear:"crear_oficina",editar:"editar_oficina",borrar:"borrar_oficina"},
-  {m:"Recepción en Puerta",ic:<Ico e="📡"/>,ver:"ver_rp",crear:"hacer_rp",editar:"editar_rp",borrar:"borrar_rp"},
-  {m:"WR (Warehouse Receipt)",ic:<Ico e="📦"/>,ver:"ver_wr",crear:"crear_wr",editar:"editar_wr",borrar:"borrar_wr"},
-  {m:"Booking",ic:<Ico e="📑"/>,ver:"ver_booking",crear:"crear_booking",editar:"editar_booking",borrar:"borrar_booking"},
-  {m:"Reempaque",ic:<Ico e="🔁"/>,ver:"ver_reempaque",crear:"crear_reempaque",editar:"editar_reempaque",borrar:"borrar_reempaque"},
-  {m:"Guías / Consolidación",ic:<Ico e="🚢"/>,ver:"ver_guia",crear:"crear_guia",editar:"editar_guia",borrar:"borrar_guia"},
-  {m:"Confirmación",ic:<Ico e="✅"/>,ver:"ver_confirmacion",crear:"confirmar",editar:"editar_confirmacion",borrar:"desconfirmar"},
-  {m:"Cargo Release (Egreso)",ic:<Ico e="🚀"/>,ver:"ver_egreso",crear:"hacer_egreso",editar:"editar_egreso",borrar:"borrar_egreso"},
-  {m:"Recepción en Almacén",ic:<Ico e="📥"/>,ver:"ver_recepcion_dest",crear:"hacer_recepcion_dest",editar:"editar_recepcion_dest",borrar:"borrar_recepcion_dest"},
-  {m:"Entregas",ic:<Ico e="📝"/>,ver:"ver_entrega",crear:"entregar",editar:"editar_entrega",borrar:"borrar_entrega"},
-  {m:"Alertas",ic:<Ico e="🔔"/>,ver:"ver_alertas",crear:"crear_alerta",editar:"editar_alerta",borrar:"borrar_alerta"},
-  {m:"Facturas",ic:<Ico e="🧾"/>,ver:"ver_factura",crear:"crear_factura",editar:"editar_factura",borrar:"borrar_factura"},
-  {m:"Pagos y Cobros",ic:<Ico e="💰"/>,ver:"ver_cuentas_cobrar",crear:"registrar_pago",editar:"editar_pago",borrar:"anular_pago"},
-  {m:"Tarifas",ic:<Ico e="💲"/>,ver:"ver_tarifas",crear:"crear_tarifa",editar:"editar_tarifa",borrar:"borrar_tarifa"},
-  {m:"Servicios",ic:<Ico e="🛠️"/>,ver:"ver_servicios",crear:"crear_servicio",editar:"editar_servicio",borrar:"borrar_servicio"},
-  {m:"Adicionales",ic:<Ico e="➕"/>,ver:"ver_adicionales",crear:"crear_adicional",editar:"editar_adicional",borrar:"borrar_adicional"},
-  {m:"Pick-up",ic:<Ico e="🚐"/>,ver:"ver_pickup",crear:"solicitar_pickup",editar:"editar_pickup",borrar:"borrar_pickup"},
-  {m:"Pre-alertas",ic:<Ico e="📨"/>,ver:"ver_prealerta",crear:"pre_tracking",editar:"editar_prealerta",borrar:"borrar_prealerta"},
-  {m:"Fotos",ic:<Ico e="📷"/>,ver:"ver_fotos",crear:"subir_foto",editar:"editar_foto",borrar:"borrar_foto"},
-  {m:"Documentos",ic:<Ico e="📋"/>,ver:"ver_documentos",crear:"crear_documento",editar:"editar_documento",borrar:"borrar_documento"},
-  {m:"Reportes",ic:<Ico e="📈"/>,ver:"ver_reportes",crear:"crear_reporte",editar:"editar_reporte",borrar:"borrar_reporte"},
-  {m:"Chat",ic:<Ico e="💬"/>,ver:"ver_chat",crear:"enviar_chat",editar:"editar_mensaje",borrar:"borrar_mensaje"},
-  {m:"Facturas propias",ic:<Ico e="🧾"/>,ver:"ver_fac_propia",crear:"crear_fac_propia",editar:"cobrar_fac_propia",borrar:"anular_fac_propia"},
+  {m:"Usuarios",ic:"👤",ver:"ver_usuarios",crear:"crear_usuario",editar:"editar_usuario",borrar:"borrar_usuario"},
+  {m:"Clientes",ic:"👥",ver:"ver_bd_clientes",crear:"crear_cliente",editar:"editar_cliente",borrar:"borrar_cliente"},
+  {m:"Agentes",ic:"🤝",ver:"ver_agente",crear:"crear_agente",editar:"editar_agente",borrar:"borrar_agente"},
+  {m:"Autónomos",ic:"🧑‍💻",ver:"ver_autonomo",crear:"crear_autonomo",editar:"editar_autonomo",borrar:"borrar_autonomo"},
+  {m:"Oficinas",ic:"🏢",ver:"ver_oficina",crear:"crear_oficina",editar:"editar_oficina",borrar:"borrar_oficina"},
+  {m:"Recepción en Puerta",ic:"📡",ver:"ver_rp",crear:"hacer_rp",editar:"editar_rp",borrar:"borrar_rp"},
+  {m:"WR (Warehouse Receipt)",ic:"📦",ver:"ver_wr",crear:"crear_wr",editar:"editar_wr",borrar:"borrar_wr"},
+  {m:"Booking",ic:"📑",ver:"ver_booking",crear:"crear_booking",editar:"editar_booking",borrar:"borrar_booking"},
+  {m:"Reempaque",ic:"🔁",ver:"ver_reempaque",crear:"crear_reempaque",editar:"editar_reempaque",borrar:"borrar_reempaque"},
+  {m:"Guías / Consolidación",ic:"🚢",ver:"ver_guia",crear:"crear_guia",editar:"editar_guia",borrar:"borrar_guia"},
+  {m:"Confirmación",ic:"✅",ver:"ver_confirmacion",crear:"confirmar",editar:"editar_confirmacion",borrar:"desconfirmar"},
+  {m:"Cargo Release (Egreso)",ic:"🚀",ver:"ver_egreso",crear:"hacer_egreso",editar:"editar_egreso",borrar:"borrar_egreso"},
+  {m:"Recepción en Almacén",ic:"📥",ver:"ver_recepcion_dest",crear:"hacer_recepcion_dest",editar:"editar_recepcion_dest",borrar:"borrar_recepcion_dest"},
+  {m:"Entregas",ic:"📝",ver:"ver_entrega",crear:"entregar",editar:"editar_entrega",borrar:"borrar_entrega"},
+  {m:"Alertas",ic:"🔔",ver:"ver_alertas",crear:"crear_alerta",editar:"editar_alerta",borrar:"borrar_alerta"},
+  {m:"Facturas",ic:"🧾",ver:"ver_factura",crear:"crear_factura",editar:"editar_factura",borrar:"borrar_factura"},
+  {m:"Pagos y Cobros",ic:"💰",ver:"ver_cuentas_cobrar",crear:"registrar_pago",editar:"editar_pago",borrar:"anular_pago"},
+  {m:"Tarifas",ic:"💲",ver:"ver_tarifas",crear:"crear_tarifa",editar:"editar_tarifa",borrar:"borrar_tarifa"},
+  {m:"Servicios",ic:"🛠️",ver:"ver_servicios",crear:"crear_servicio",editar:"editar_servicio",borrar:"borrar_servicio"},
+  {m:"Adicionales",ic:"➕",ver:"ver_adicionales",crear:"crear_adicional",editar:"editar_adicional",borrar:"borrar_adicional"},
+  {m:"Pick-up",ic:"🚐",ver:"ver_pickup",crear:"solicitar_pickup",editar:"editar_pickup",borrar:"borrar_pickup"},
+  {m:"Pre-alertas",ic:"📨",ver:"ver_prealerta",crear:"pre_tracking",editar:"editar_prealerta",borrar:"borrar_prealerta"},
+  {m:"Fotos",ic:"📷",ver:"ver_fotos",crear:"subir_foto",editar:"editar_foto",borrar:"borrar_foto"},
+  {m:"Documentos",ic:"📋",ver:"ver_documentos",crear:"crear_documento",editar:"editar_documento",borrar:"borrar_documento"},
+  {m:"Reportes",ic:"📈",ver:"ver_reportes",crear:"crear_reporte",editar:"editar_reporte",borrar:"borrar_reporte"},
+  {m:"Chat",ic:"💬",ver:"ver_chat",crear:"enviar_chat",editar:"editar_mensaje",borrar:"borrar_mensaje"},
+  {m:"Facturas propias",ic:"🧾",ver:"ver_fac_propia",crear:"crear_fac_propia",editar:"cobrar_fac_propia",borrar:"anular_fac_propia"},
 ];
 const PERM_ACTIONS=[{k:"ver",l:"Ver"},{k:"crear",l:"Crear"},{k:"editar",l:"Editar"},{k:"borrar",l:"Borrar"}];
 const PERMS_EN_TABLA=new Set(PERM_MODULES.flatMap(m=>PERM_ACTIONS.map(a=>m[a.k])));
@@ -890,8 +892,8 @@ const ROLE_DEFS={
     perms:ALL_PERMS},
 
   B:{code:"B",name:"Gerente",color:"rB",icon:<Ico e="🏛️"/>,
-    desc:"Gestión general. Todo menos borrar registros y registro de actividad. Gestiona los roles de Auxiliar para abajo.",
-    perms:ALL_PERMS.filter(p=>!["borrar_usuario","borrar_cliente","borrar_agente","borrar_autonomo","borrar_oficina","borrar_wr","borrar_rp","borrar_booking","borrar_reempaque","borrar_guia","borrar_egreso","borrar_recepcion_dest","borrar_entrega","borrar_alerta","borrar_pickup","borrar_prealerta","borrar_documento","borrar_reporte","registro_actividad","saltar_bloqueos"].includes(p))},
+    desc:"Gestión general. Todo menos borrar y ver el registro de actividad. Gestiona los roles de Auxiliar para abajo.",
+    perms:ALL_PERMS.filter(p=>!["borrar_usuario","borrar_cliente","borrar_agente","borrar_autonomo","borrar_oficina","borrar_wr","borrar_rp","borrar_booking","borrar_reempaque","borrar_guia","borrar_egreso","borrar_recepcion_dest","borrar_entrega","borrar_alerta","borrar_pickup","borrar_prealerta","borrar_documento","borrar_reporte","registro_actividad"].includes(p))},
 
   C:{code:"C",name:"Auxiliar",color:"rC",icon:<Ico e="🗂️"/>,
     desc:"Apoyo operativo. Crear y editar WR, reportes, confirmaciones.",
@@ -2045,7 +2047,7 @@ const ListEditor=({title,items,onAdd,onDelete,placeholder,mono})=>{
         {items.map((it,i)=>(
           <div key={i} style={{display:"inline-flex",alignItems:"center",gap:6,background:"var(--bg4)",border:"1px solid var(--b1)",borderRadius:6,padding:"4px 10px",fontSize:14}}>
             <span style={{fontFamily:mono?"'DM Mono',monospace":"inherit",fontWeight:600,color:"var(--t1)"}}>{it}</span>
-            <span onClick={()=>onDelete(i)} style={{color:"var(--red)",cursor:"pointer",fontSize:16,fontWeight:700,lineHeight:1}}>×</span>
+            {onDelete&&<span onClick={()=>onDelete(i)} style={{color:"var(--red)",cursor:"pointer",fontSize:16,fontWeight:700,lineHeight:1}}>×</span>}
           </div>
         ))}
       </div>
@@ -2930,7 +2932,7 @@ export default function SistemaCarga(){
   };
 
   // El Administrador (A) siempre tiene todo, para que nadie quede fuera del sistema.
-  const hasPerm=p=>currentUser.rol==="A"||(rolePerms[currentUser.rol]||[]).includes(p);
+  const hasPerm=p=>currentUser.rol==="A"||(!PERMS_SOLO_ADMIN.has(p)&&(rolePerms[currentUser.rol]||[]).includes(p));
   const canEdit=hasPerm("crear_wr")||hasPerm("editar_wr");
   // Al crear clientes, quedan bajo el dominio de quien los crea (agente, vendedor o autónomo)
   const presetDominio=()=>{
@@ -3883,7 +3885,7 @@ export default function SistemaCarga(){
     const puedeEditar=hasPerm("gestionar_roles");
     const r=selRole?ROLE_DEFS[selRole]:null;
     const esAdmin=selRole==="A";
-    const permsDe=code=>code==="A"?ALL_PERMS:(roleDraft[code]??rolePerms[code]??[]);
+    const permsDe=code=>code==="A"?ALL_PERMS:(roleDraft[code]??rolePerms[code]??[]).filter(p=>!PERMS_SOLO_ADMIN.has(p));
     const activos=new Set(selRole?permsDe(selRole):[]);
     // Solo el Administrador cambia los roles A y B; los demás gestionan de Auxiliar para abajo
     const rolBajo=c=>!["A","B"].includes(c);
@@ -3893,7 +3895,8 @@ export default function SistemaCarga(){
       if(!editable)return;
       setRoleDraft(d=>{
         const base=new Set(d[selRole]??rolePerms[selRole]??[]);
-        perms.forEach(p=>{if(on)base.add(p);else base.delete(p);});
+        perms.forEach(p=>{if(on&&!PERMS_SOLO_ADMIN.has(p))base.add(p);else base.delete(p);});
+        PERMS_SOLO_ADMIN.forEach(p=>base.delete(p));
         return {...d,[selRole]:ALL_PERMS.filter(p=>base.has(p))};
       });
     };
@@ -3911,10 +3914,10 @@ export default function SistemaCarga(){
       if(!r||!window.confirm(`¿Restaurar los permisos predeterminados del rol ${r.name}?\nLos cambios se aplican al pulsar "Guardar cambios".`))return;
       setRoleDraft(d=>({...d,[selRole]:[...DEFAULT_ROLE_PERMS[selRole]]}));
     };
-    const chk=(on,onChange,title)=>(
-      <input type="checkbox" checked={on} disabled={!editable} onChange={e=>onChange(e.target.checked)} title={title}
-        style={{width:18,height:18,accentColor:"#1A2B4A",cursor:editable?"pointer":"default"}}/>
-    );
+    const chk=(on,onChange,title,perms)=>{const fijo=!esAdmin&&(perms||[]).length>0&&perms.every(p=>PERMS_SOLO_ADMIN.has(p));return(
+      <input type="checkbox" checked={on} disabled={!editable||fijo} onChange={e=>onChange(e.target.checked)} title={fijo?"Solo el Administrador":title}
+        style={{width:18,height:18,accentColor:"#1A2B4A",cursor:editable&&!fijo?"pointer":"default",opacity:fijo?.35:1}}/>
+    );};
     const otrosGrupos=[
       ...PERM_GROUPS.map(g=>({label:g.label,perms:g.perms.filter(p=>ALL_PERMS.includes(p)&&!PERMS_EN_TABLA.has(p))})),
       {label:"Otros",perms:ALL_PERMS.filter(p=>!PERMS_EN_TABLA.has(p)&&!PERM_GROUPS.some(g=>g.perms.includes(p)))},
@@ -3961,6 +3964,7 @@ export default function SistemaCarga(){
                 {puedeEditar&&<button className="btn-p" style={{fontSize:12,padding:"5px 12px"}} disabled={!hayCambios||roleSaving} onClick={guardar}>{roleSaving?"Guardando…":"Guardar cambios"}</button>}
               </div>
             </div>
+            {puedeEditar&&!editable&&<div style={{padding:"10px 16px",background:"#FDE8EA",color:"var(--red)",fontSize:14,fontWeight:700,borderBottom:"1px solid #F0A0A8"}}>No tienes permitido modificar este rol.</div>}
             {!puedeEditar&&<div style={{padding:"8px 16px",background:"var(--bg4)",color:"var(--t2)",fontSize:13,borderBottom:"1px solid var(--b1)"}}>Solo lectura: tu rol no tiene el permiso "Gestionar Roles".</div>}
 
             <div style={{padding:"14px 16px",maxHeight:"68vh",overflowY:"auto"}}>
@@ -3976,7 +3980,7 @@ export default function SistemaCarga(){
                         return <th key={a.k} style={th}>
                           <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
                             {a.l}
-                            {chk(todos,on=>toggle(col,on),`${a.l} en todos los módulos`)}
+                            {chk(todos&&col.some(p=>activos.has(p)),on=>toggle(col,on),`${a.l} en todos los módulos`,col)}
                           </div>
                         </th>;
                       })}
@@ -3988,10 +3992,10 @@ export default function SistemaCarga(){
                       const fila=PERM_ACTIONS.map(a=>m[a.k]);
                       return (
                         <tr key={m.m} style={{background:i%2?"var(--bg3)":"var(--bg2)",borderTop:"1px solid var(--b2)"}}>
-                          <td style={{padding:"7px 10px",fontWeight:600,color:"var(--t1)",whiteSpace:"nowrap"}}><span style={{marginRight:6}}>{m.ic}</span>{m.m}</td>
+                          <td style={{padding:"7px 10px",fontWeight:600,color:"var(--t1)",whiteSpace:"nowrap"}}><span style={{marginRight:6}}><Ico e={m.ic}/></span>{m.m}</td>
                           {PERM_ACTIONS.map(a=>(
                             <td key={a.k} style={{textAlign:"center",padding:"6px"}}>
-                              {chk(activos.has(m[a.k]),on=>toggle([m[a.k]],on),PERM_LBL[m[a.k]]||m[a.k])}
+                              {chk(activos.has(m[a.k]),on=>toggle([m[a.k]],on),PERM_LBL[m[a.k]]||m[a.k],[m[a.k]])}
                             </td>
                           ))}
                           <td style={{textAlign:"center",padding:"6px",borderLeft:"1px solid var(--b2)"}}>
@@ -4015,7 +4019,7 @@ export default function SistemaCarga(){
                       return (
                         <label key={p} style={{display:"inline-flex",alignItems:"center",gap:6,padding:"4px 10px",borderRadius:6,fontSize:13,fontWeight:600,cursor:editable?"pointer":"default",
                           background:on?"#E8F8EE":"var(--bg4)",color:on?"var(--green)":"var(--t3)",border:`1px solid ${on?"#80D0A0":"var(--b2)"}`}}>
-                          {chk(on,v=>toggle([p],v))}
+                          {chk(on,v=>toggle([p],v),PERM_LBL[p]||p,[p])}
                           {PERM_LBL[p]||p}
                         </label>
                       );
@@ -6802,7 +6806,7 @@ export default function SistemaCarga(){
               {repPuedeEditar(r)&&<div style={{display:"flex",gap:4}} onClick={e=>e.stopPropagation()}>
                 <span className="ic-b" title="Editar" onClick={()=>repEditar(r)}><Ico e="✏️" solo/></span>
                 <span className="ic-b" title="Duplicar" onClick={()=>repEditar({...r,id:"",nombre:`${r.nombre} (copia)`,owner:currentUser.id})}>⧉</span>
-                <span className="ic-b" style={{color:"var(--red)"}} title="Borrar" onClick={async()=>{if(!window.confirm(`¿Borrar el reporte "${r.nombre}"?`))return;if(await repGuardarLista((repGuardados??REP_EJEMPLOS).filter(x=>x.id!==r.id)))logAction("Borró reporte",r.nombre);}}><Ico e="🗑" solo/></span>
+                {hasPerm("borrar_reporte")&&<span className="ic-b" style={{color:"var(--red)"}} title="Borrar" onClick={async()=>{if(!window.confirm(`¿Borrar el reporte "${r.nombre}"?`))return;if(await repGuardarLista((repGuardados??REP_EJEMPLOS).filter(x=>x.id!==r.id)))logAction("Borró reporte",r.nombre);}}><Ico e="🗑" solo/></span>}
               </div>}
             </div>))}
         </div>}
@@ -7272,7 +7276,7 @@ export default function SistemaCarga(){
       {k:"oficinas",l:"Oficinas",ic:<Ico e="🏢"/>},
       {k:"tarifas",l:"Tarifas",ic:<Ico e="💰"/>},
       {k:"chat",l:"Chat",ic:<Ico e="💬"/>},
-      {k:"actividad",l:"Registro de Actividad",ic:<Ico e="📋"/>},
+      ...(hasPerm("registro_actividad")?[{k:"actividad",l:"Registro de Actividad",ic:<Ico e="📋"/>}]:[]),
     ];
 
     return (
@@ -7439,7 +7443,7 @@ export default function SistemaCarga(){
         {cfgTab==="tipoenvio"&&(
           <ListEditor title="Tipos de Envío" items={SEND_TYPES}
             onAdd={v=>{const n=[...SEND_TYPES,v];setSendTypes(n);dbSetConfig('send_types',n);}}
-            onDelete={i=>{const n=SEND_TYPES.filter((_,j)=>j!==i);setSendTypes(n);dbSetConfig('send_types',n);}}
+            onDelete={currentUser.rol!=="A"?undefined:i=>{const n=SEND_TYPES.filter((_,j)=>j!==i);setSendTypes(n);dbSetConfig('send_types',n);}}
             placeholder="Ej: Aéreo Premium, Courier…"/>
         )}
         {cfgTab==="tipoenvio"&&(()=>{
@@ -7507,7 +7511,7 @@ export default function SistemaCarga(){
         {cfgTab==="pagos"&&(
           <ListEditor title="Tipos de Pago" items={PAY_TYPES}
             onAdd={v=>{const n=[...PAY_TYPES,v];setPayTypes(n);dbSetConfig('pay_types',n);}}
-            onDelete={i=>{const n=PAY_TYPES.filter((_,j)=>j!==i);setPayTypes(n);dbSetConfig('pay_types',n);}}
+            onDelete={currentUser.rol!=="A"?undefined:i=>{const n=PAY_TYPES.filter((_,j)=>j!==i);setPayTypes(n);dbSetConfig('pay_types',n);}}
             placeholder="Ej: Zelle, Pago Móvil, Transferencia…"/>
         )}
 
@@ -7550,7 +7554,7 @@ export default function SistemaCarga(){
                     <td style={{fontFamily:"'DM Mono',monospace",fontWeight:600}}>{(c.maxLb||0).toLocaleString()}lb</td>
                     <td><div style={{display:"flex",gap:4}}>
                       <button className="btn-s" style={{fontSize:12,padding:"2px 8px"}} onClick={()=>{setCfgNewCont({code:c.code,name:c.name,dim:c.dim,maxLb:c.maxLb});setCfgEditContIdx(i);}}><Ico e="✏️" sp/>Editar</button>
-                      <button className="btn-d" style={{fontSize:12,padding:"2px 8px"}} onClick={()=>{const n=CONTAINER_TYPES.filter((_,j)=>j!==i);setContainerTypes(n);dbSetConfig('container_types',n);if(cfgEditContIdx===i){setCfgEditContIdx(null);setCfgNewCont({code:"",name:"",dim:"",maxLb:""});}}}><Ico e="🗑" solo/></button>
+                      {currentUser.rol==="A"&&<button className="btn-d" style={{fontSize:12,padding:"2px 8px"}} onClick={()=>{const n=CONTAINER_TYPES.filter((_,j)=>j!==i);setContainerTypes(n);dbSetConfig('container_types',n);if(cfgEditContIdx===i){setCfgEditContIdx(null);setCfgNewCont({code:"",name:"",dim:"",maxLb:""});}}}><Ico e="🗑" solo/></button>}
                     </div></td>
                   </tr>
                 ))}
@@ -7588,7 +7592,7 @@ export default function SistemaCarga(){
                       <div style={{fontWeight:600,fontSize:14}}>{c.name}</div>
                       <div style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--t3)"}}>+{c.dial} · {c.cities.length} ciudades</div>
                     </div>
-                    <span onClick={e=>{e.stopPropagation();const n=COUNTRIES.filter((_,j)=>j!==i);setCountries(n);dbSetConfig('countries',n);if(cfgSelPais>=i)setCfgSelPais(Math.max(0,cfgSelPais-1));}} style={{color:"var(--red)",cursor:"pointer",fontSize:15,fontWeight:700}}>×</span>
+                    {currentUser.rol==="A"&&<span onClick={e=>{e.stopPropagation();const n=COUNTRIES.filter((_,j)=>j!==i);setCountries(n);dbSetConfig('countries',n);if(cfgSelPais>=i)setCfgSelPais(Math.max(0,cfgSelPais-1));}} style={{color:"var(--red)",cursor:"pointer",fontSize:15,fontWeight:700}}>×</span>}
                   </div>
                 ))}
               </div>
@@ -7619,7 +7623,7 @@ export default function SistemaCarga(){
                       <div key={ci} style={{display:"inline-flex",alignItems:"center",gap:5,background:"var(--bg4)",border:"1px solid var(--b1)",borderRadius:6,padding:"4px 10px",fontSize:14}}>
                         <span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",fontSize:13}}>{c.code}</span>
                         <span style={{color:"var(--t2)"}}>{c.name}</span>
-                        <span onClick={()=>{const n=COUNTRIES.map((co,i)=>i===cfgSelPais?{...co,cities:co.cities.filter((_,j)=>j!==ci)}:co);setCountries(n);dbSetConfig('countries',n);}} style={{color:"var(--red)",cursor:"pointer",fontSize:16,fontWeight:700}}>×</span>
+                        {currentUser.rol==="A"&&<span onClick={()=>{const n=COUNTRIES.map((co,i)=>i===cfgSelPais?{...co,cities:co.cities.filter((_,j)=>j!==ci)}:co);setCountries(n);dbSetConfig('countries',n);}} style={{color:"var(--red)",cursor:"pointer",fontSize:16,fontWeight:700}}>×</span>}
                       </div>
                     ))}
                     {(COUNTRIES[cfgSelPais]?.cities||[]).length===0&&<div style={{color:"var(--t3)",fontSize:13,padding:"8px 0"}}>No hay ciudades registradas.</div>}
@@ -8017,7 +8021,7 @@ export default function SistemaCarga(){
           );
         })()}
 
-        {cfgTab==="actividad"&&(
+        {cfgTab==="actividad"&&hasPerm("registro_actividad")&&(
           <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,overflow:"hidden"}}>
             <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",display:"flex",alignItems:"center",gap:10}}>
               <span style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:15,fontWeight:700,color:"var(--navy)"}}><Ico e="📋" sp/>Registro de Actividad</span>
@@ -8265,7 +8269,7 @@ export default function SistemaCarga(){
     setChatMsgs(p=>{const l=p[chatConv]||[];return l.some(x=>x.id===m.id)?p:{...p,[chatConv]:[...l,m]};});
   };
   const chatPuedeEditar=m=>m.autorId===chatYo&&!m.borrado&&hasPerm("editar_mensaje")&&Date.now()-m.creado<15*60000;
-  const chatPuedeBorrar=m=>!m.borrado&&((m.autorId===chatYo&&hasPerm("borrar_mensaje")&&Date.now()-m.creado<15*60000)||hasPerm("chat_moderar"));
+  const chatPuedeBorrar=m=>!m.borrado&&((m.autorId===chatYo&&hasPerm("borrar_mensaje")&&Date.now()-m.creado<15*60000)||(hasPerm("chat_moderar")&&hasPerm("borrar_mensaje")));
   const chatGuardarEdit=async()=>{
     const t=(chatEdit?.texto||"").trim();if(!t)return;
     const ok=await dbChatEditar(chatEdit.id,{texto:t,editado:new Date().toISOString()});
@@ -8306,7 +8310,7 @@ export default function SistemaCarga(){
           <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8}}>
             <Ico n="hash"/>
             <input className="fi" style={{flex:1,fontWeight:700}} value={c.nombre} placeholder="Nombre del canal" onChange={e=>set(L.map((x,j)=>j===i?{...x,nombre:e.target.value}:x))}/>
-            <button className="btn-d" style={{padding:"5px 10px"}} onClick={()=>{if(window.confirm(`¿Borrar el canal "${c.nombre||"sin nombre"}"? Sus mensajes dejarán de verse.`))set(L.filter((_,j)=>j!==i));}}><Ico e="🗑" sp/>Borrar</button>
+            {currentUser.rol==="A"&&<button className="btn-d" style={{padding:"5px 10px"}} onClick={()=>{if(window.confirm(`¿Borrar el canal "${c.nombre||"sin nombre"}"? Sus mensajes dejarán de verse.`))set(L.filter((_,j)=>j!==i));}}><Ico e="🗑" sp/>Borrar</button>}
           </div>
           <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
             {ROLES_CHAT.map(r=>{const on=(c.roles||[]).includes(r.code);return(
