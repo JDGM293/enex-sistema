@@ -890,8 +890,8 @@ const ROLE_DEFS={
     perms:ALL_PERMS},
 
   B:{code:"B",name:"Gerente",color:"rB",icon:<Ico e="🏛️"/>,
-    desc:"Gestión general. Todo menos borrar registros y registro de actividad.",
-    perms:ALL_PERMS.filter(p=>!["borrar_usuario","borrar_cliente","borrar_agente","borrar_autonomo","borrar_oficina","borrar_wr","borrar_rp","borrar_booking","borrar_reempaque","borrar_guia","borrar_egreso","borrar_recepcion_dest","borrar_entrega","borrar_alerta","borrar_pickup","borrar_prealerta","borrar_documento","borrar_reporte","registro_actividad","configuracion","gestionar_roles","saltar_bloqueos"].includes(p))},
+    desc:"Gestión general. Todo menos borrar registros y registro de actividad. Gestiona los roles de Auxiliar para abajo.",
+    perms:ALL_PERMS.filter(p=>!["borrar_usuario","borrar_cliente","borrar_agente","borrar_autonomo","borrar_oficina","borrar_wr","borrar_rp","borrar_booking","borrar_reempaque","borrar_guia","borrar_egreso","borrar_recepcion_dest","borrar_entrega","borrar_alerta","borrar_pickup","borrar_prealerta","borrar_documento","borrar_reporte","registro_actividad","saltar_bloqueos"].includes(p))},
 
   C:{code:"C",name:"Auxiliar",color:"rC",icon:<Ico e="🗂️"/>,
     desc:"Apoyo operativo. Crear y editar WR, reportes, confirmaciones.",
@@ -2952,7 +2952,6 @@ export default function SistemaCarga(){
     const t=docCfg(w?.origCountry,"exp").notaLegal||NOTA_LEGAL_DEFAULT;
     return String(t).split("{EMPRESA}").join(empresaNombre||"");
   };
-  const canAdmin=currentUser.rol==="A";
   const canStatus=hasPerm("status_origen")||hasPerm("status_destino")||["A","B","C"].includes(currentUser.rol);
 
   const handleSort=col=>{if(sortCol===col)setSortDir(d=>d==="asc"?"desc":"asc");else{setSortCol(col);setSortDir("desc");}setSortCol(col);};
@@ -3886,7 +3885,9 @@ export default function SistemaCarga(){
     const esAdmin=selRole==="A";
     const permsDe=code=>code==="A"?ALL_PERMS:(roleDraft[code]??rolePerms[code]??[]);
     const activos=new Set(selRole?permsDe(selRole):[]);
-    const editable=puedeEditar&&!!selRole&&!esAdmin;
+    // Solo el Administrador cambia los roles A y B; los demás gestionan de Auxiliar para abajo
+    const rolBajo=c=>!["A","B"].includes(c);
+    const editable=puedeEditar&&!!selRole&&!esAdmin&&(currentUser.rol==="A"||rolBajo(selRole));
     const hayCambios=Object.keys(roleDraft).length>0;
     const toggle=(perms,on)=>{
       if(!editable)return;
@@ -7255,7 +7256,7 @@ export default function SistemaCarga(){
   // ── CONFIGURACIÓN ───────────────────────────────────────────────────────────
 
   const renderSettings=()=>{
-    if(!canAdmin)return <div className="page-scroll"><div className="card" style={{textAlign:"center",padding:60,color:"var(--t3)"}}>Solo Administradores pueden acceder a Configuración.</div></div>;
+    if(!hasPerm("configuracion"))return <div className="page-scroll"><div className="card" style={{textAlign:"center",padding:60,color:"var(--t3)"}}>Sin acceso.</div></div>;
 
     const CFG_TABS=[
       {k:"empresa",l:"Empresa",ic:<Ico e="🏢"/>},
@@ -13091,7 +13092,7 @@ export default function SistemaCarga(){
       {id:"reports",ic:<Ico e="📈"/>,l:"Reportes"},
     ]},
     {label:"Sistema",items:[
-      ...(canAdmin?[{id:"settings",ic:<Ico e="⚙️"/>,l:"Configuración"}]:[]),
+      ...(hasPerm("configuracion")?[{id:"settings",ic:<Ico e="⚙️"/>,l:"Configuración"}]:[]),
       {id:"roles",ic:<Ico e="🔐"/>,l:"Roles & Permisos"},
       {id:"actividad",ic:<Ico e="📋"/>,l:"Actividad",onClick:()=>goSettingsTab("actividad"),activeWhen:()=>tab==="settings"&&cfgTab==="actividad"},
     ]},
