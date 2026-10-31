@@ -584,14 +584,14 @@ const ALL_PERMS=[
   // Permiso especial: salta los bloqueos del proceso por estado
   "saltar_bloqueos",
   // Límites de edición, facturación PREPAID en origen
-  "editar_wr_destino","editar_guia_destino","fac_prepaid","cobrar_prepaid",
+  "editar_wr_destino","editar_guia_destino","fac_prepaid","cobrar_prepaid","cfg_agentes_ver","cfg_oficinas_ver","cfg_tarifas_ver",
   // Configuración: cada pestaña con su ver / editar
   "cfg_empresa_ver","cfg_empresa_editar", "cfg_documentos_ver","cfg_documentos_editar", "cfg_numeracion_ver","cfg_numeracion_editar", "cfg_tipoenvio_ver","cfg_tipoenvio_editar", "cfg_servicios_ver","cfg_servicios_editar", "cfg_cargos_ver","cfg_cargos_editar", "cfg_pagos_ver","cfg_pagos_editar", "cfg_contenedores_ver","cfg_contenedores_editar", "cfg_paises_ver","cfg_paises_editar", "cfg_chat_ver","cfg_chat_editar",
 ];
 // Solo el Administrador puede borrar y ver el registro de actividad; no se asignan a otros roles
 const PERMS_SOLO_ADMIN=new Set([...ALL_PERMS.filter(p=>p.startsWith("borrar_")),"registro_actividad"]);
 
-const PERM_LBL={editar_wr_destino:"Editar WR después de Liberado 3 (hasta entregado)",editar_guia_destino:"Editar guías después de Liberado 3",fac_prepaid:"Facturar PREPAID en origen (desde el WR)",cobrar_prepaid:"Cobrar facturas PREPAID",cfg_empresa_ver:"Config · Empresa (ver)",cfg_empresa_editar:"Config · Empresa (editar)",cfg_documentos_ver:"Config · Documentos por país (ver)",cfg_documentos_editar:"Config · Documentos por país (editar)",cfg_numeracion_ver:"Config · Numeración (ver)",cfg_numeracion_editar:"Config · Numeración (editar)",cfg_tipoenvio_ver:"Config · Tipo de Envío (ver)",cfg_tipoenvio_editar:"Config · Tipo de Envío (editar)",cfg_servicios_ver:"Config · Servicios Adicionales (ver)",cfg_servicios_editar:"Config · Servicios Adicionales (editar)",cfg_cargos_ver:"Config · Gastos Adicionales (ver)",cfg_cargos_editar:"Config · Gastos Adicionales (editar)",cfg_pagos_ver:"Config · Tipos de Pago (ver)",cfg_pagos_editar:"Config · Tipos de Pago (editar)",cfg_contenedores_ver:"Config · Tipos de Contenedor (ver)",cfg_contenedores_editar:"Config · Tipos de Contenedor (editar)",cfg_paises_ver:"Config · Países y Ciudades (ver)",cfg_paises_editar:"Config · Países y Ciudades (editar)",cfg_chat_ver:"Config · Canales de chat (ver)",cfg_chat_editar:"Config · Canales de chat (editar)",
+const PERM_LBL={cfg_agentes_ver:"Config · Agentes (ver)",cfg_oficinas_ver:"Config · Oficinas (ver)",cfg_tarifas_ver:"Config · Tarifas (ver)",editar_wr_destino:"Editar WR después de Liberado 3 (hasta entregado)",editar_guia_destino:"Editar guías después de Liberado 3",fac_prepaid:"Facturar PREPAID en origen (desde el WR)",cobrar_prepaid:"Cobrar facturas PREPAID",cfg_empresa_ver:"Config · Empresa (ver)",cfg_empresa_editar:"Config · Empresa (editar)",cfg_documentos_ver:"Config · Documentos por país (ver)",cfg_documentos_editar:"Config · Documentos por país (editar)",cfg_numeracion_ver:"Config · Numeración (ver)",cfg_numeracion_editar:"Config · Numeración (editar)",cfg_tipoenvio_ver:"Config · Tipo de Envío (ver)",cfg_tipoenvio_editar:"Config · Tipo de Envío (editar)",cfg_servicios_ver:"Config · Servicios Adicionales (ver)",cfg_servicios_editar:"Config · Servicios Adicionales (editar)",cfg_cargos_ver:"Config · Gastos Adicionales (ver)",cfg_cargos_editar:"Config · Gastos Adicionales (editar)",cfg_pagos_ver:"Config · Tipos de Pago (ver)",cfg_pagos_editar:"Config · Tipos de Pago (editar)",cfg_contenedores_ver:"Config · Tipos de Contenedor (ver)",cfg_contenedores_editar:"Config · Tipos de Contenedor (editar)",cfg_paises_ver:"Config · Países y Ciudades (ver)",cfg_paises_editar:"Config · Países y Ciudades (editar)",cfg_chat_ver:"Config · Canales de chat (ver)",cfg_chat_editar:"Config · Canales de chat (editar)",
   ver_usuarios:"Ver Usuarios",crear_usuario:"Crear Usuario",editar_usuario:"Editar Usuario",borrar_usuario:"Borrar Usuario",
   crear_cliente:"Crear Cliente",editar_cliente:"Editar Cliente",borrar_cliente:"Borrar Cliente",
   ver_agente:"Ver Agente",crear_agente:"Crear Agente",editar_agente:"Editar Agente",borrar_agente:"Borrar Agente",
@@ -671,6 +671,9 @@ const PERM_MODULES=[
   {m:"Configuración · Tipos de Contenedor",ic:"⚙️",ver:"cfg_contenedores_ver",editar:"cfg_contenedores_editar"},
   {m:"Configuración · Países y Ciudades",ic:"⚙️",ver:"cfg_paises_ver",editar:"cfg_paises_editar"},
   {m:"Configuración · Canales de chat",ic:"⚙️",ver:"cfg_chat_ver",editar:"cfg_chat_editar"},
+  {m:"Configuración · Agentes",ic:"⚙️",ver:"cfg_agentes_ver"},
+  {m:"Configuración · Oficinas",ic:"⚙️",ver:"cfg_oficinas_ver"},
+  {m:"Configuración · Tarifas",ic:"⚙️",ver:"cfg_tarifas_ver"},
 ];
 const PERM_ACTIONS=[{k:"ver",l:"Ver"},{k:"crear",l:"Crear"},{k:"editar",l:"Editar"},{k:"borrar",l:"Borrar"}];
 const PERMS_EN_TABLA=new Set(PERM_MODULES.flatMap(m=>PERM_ACTIONS.map(a=>m[a.k])).filter(Boolean));
@@ -7315,7 +7318,7 @@ export default function SistemaCarga(){
       ...(hasPerm("registro_actividad")?[{k:"actividad",l:"Registro de Actividad",ic:<Ico e="📋"/>}]:[]),
     ];
 
-    const cfgVer=k=>({agentes:"ver_agente",oficinas:"ver_oficina",tarifas:"ver_tarifas",actividad:"registro_actividad"})[k]||`cfg_${k}_ver`;
+    const cfgVer=k=>({actividad:"registro_actividad"})[k]||`cfg_${k}_ver`;
     const cfgEdita=k=>["agentes","oficinas","tarifas","actividad"].includes(k)||hasPerm(`cfg_${k}_editar`);
     const TABS_OK=CFG_TABS.filter(t=>hasPerm(cfgVer(t.k)));
     if(!TABS_OK.length)return <div className="page-scroll"><div className="card" style={{textAlign:"center",padding:60,color:"var(--t3)"}}>Sin acceso.</div></div>;
@@ -13152,7 +13155,7 @@ export default function SistemaCarga(){
       {id:"reports",ic:<Ico e="📈"/>,l:"Reportes"},
     ]},
     {label:"Sistema",items:[
-      ...(hasPerm("configuracion")&&(currentUser.rol==="A"||ALL_PERMS.some(p=>/^cfg_.*_ver$/.test(p)&&hasPerm(p))||["ver_agente","ver_oficina","ver_tarifas"].some(hasPerm))?[{id:"settings",ic:<Ico e="⚙️"/>,l:"Configuración"}]:[]),
+      ...(hasPerm("configuracion")&&(currentUser.rol==="A"||ALL_PERMS.some(p=>/^cfg_.*_ver$/.test(p)&&hasPerm(p)))?[{id:"settings",ic:<Ico e="⚙️"/>,l:"Configuración"}]:[]),
       {id:"roles",ic:<Ico e="🔐"/>,l:"Roles & Permisos"},
       {id:"actividad",ic:<Ico e="📋"/>,l:"Actividad",onClick:()=>goSettingsTab("actividad"),activeWhen:()=>tab==="settings"&&cfgTab==="actividad"},
     ]},
