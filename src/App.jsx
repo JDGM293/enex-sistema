@@ -1153,7 +1153,7 @@ const CALC_DEF={div:5000,modo:"wr",red:"0.01"};
 const CALC_DIVS=[{v:6000,l:"6000 cm³/kg · 166 in³/lb (IATA, carga aérea internacional)"},{v:5000,l:"5000 cm³/kg · 139 in³/lb (courier EE. UU.)"}];
 const CALC_REDS=[{v:"0.01",l:"Exacto (2 decimales)"},{v:"0.1",l:"Hacia arriba, a la décima"},{v:"0.5",l:"Hacia arriba, a la media unidad"},{v:"1",l:"Hacia arriba, a la unidad"}];
 let calcEnvioG={}; // copia para componentes fuera del principal
-const redondearArriba=(v,paso)=>{const p=parseFloat(paso)||0.01;if(p<=0.01)return Math.round(v*100)/100;return Math.round(Math.ceil(v/p-1e-9)*p*100)/100;};
+const redondearArriba=(v,paso)=>{const p=parseFloat(paso)||0.01;if(p<0.01)return Math.round(v/p)*p;if(p===0.01)return Math.round(v*100)/100;return Math.round(Math.ceil(v/p-1e-9)*p*100)/100;};
 
 // ─── WR INICIAL VACÍO ─────────────────────────────────────────────────────────
 const WR_INIT=[];
@@ -1164,8 +1164,10 @@ const fmtTime=d=>{if(!d)return"";const dt=d instanceof Date?d:new Date(d);return
 const fullName=p=>`${p.primerNombre} ${p.segundoNombre||""} ${p.primerApellido} ${p.segundoApellido||""}`.replace(/\s+/," ").trim();
 const initials=p=>((p.primerNombre||"?")[0]+(p.primerApellido||"?")[0]).toUpperCase();
 const LB_KG=2.20462;
-const toLb=v=>parseFloat((v*LB_KG).toFixed(1));
-const toIn=v=>parseFloat((v/2.54).toFixed(1));
+const toLb=v=>parseFloat((v*LB_KG).toFixed(2));
+const toIn=v=>parseFloat((v/2.54).toFixed(2));
+// Pesos y volúmenes siempre con decimales fijos (2; m³ con 3)
+const fmtDec=(v,d=2,alt)=>{const x=parseFloat(v);if(alt!==undefined&&!x)return alt;return (isNaN(x)?0:x).toFixed(d);};
 // Limpia el prefijo "Reempaque de: WR-X, WR-Y" de un texto (sólo va en Notas, nunca en Descripción)
 const cleanReempaqueDesc=t=>String(t||"").replace(/^Reempaque de:\s*[^|]*(?:\s*\|\s*)?/i,"").trim();
 const toUp=v=>typeof v==="string"?v.toUpperCase():v;
@@ -1452,8 +1454,8 @@ const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[
       document.removeEventListener("mousedown",onDoc);
     };
   },[dimOpen,w.dims]);
-  const showVol = isLb ? `${w.volLb}lb` : `${w.volKg}kg`;
-  const showPeso = isLb ? `${w.pesoLb}lb` : `${w.pesoKg}kg`;
+  const showVol = isLb ? `${fmtDec(w.volLb,2)}lb` : `${fmtDec(w.volKg,2)}kg`;
+  const showPeso = isLb ? `${fmtDec(w.pesoLb,2)}lb` : `${fmtDec(w.pesoKg,2)}kg`;
 
   // Valores que pueden variar caja por caja (cada entrada de dims guarda su
   // propio carrier / tracking / factura / descripcion). Si difieren, la celda
@@ -1463,11 +1465,11 @@ const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[
   const trkDist=distintos("tracking");
   const descDist=distintos("descripcion");
 
-  const fmtDim=(d)=>isIn?`${toIn(d)}`:`${d}`;
-  const fmtW=(pk)=>isLb?`${toLb(pk)}lb`:`${pk}kg`;
+  const fmtDim=(d)=>isIn?`${fmtDec(toIn(d))}`:`${fmtDec(d)}`;
+  const fmtW=(pk)=>isLb?`${fmtDec(toLb(pk))}lb`:`${fmtDec(pk)}kg`;
   const fmtVol=(l,a,h)=>{
     const v=calcVol(l,a,h,"cm",(calcEnvioG[w.tipoEnvio]||{}).div||5000);
-    return isLb?`${v.volLb}lb`:`${v.volKg}kg`;
+    return isLb?`${fmtDec(v.volLb,2)}lb`:`${fmtDec(v.volKg,2)}kg`;
   };
 
   const dimCell=w.dims.length===1?(
@@ -1502,19 +1504,19 @@ const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[
           <div style={{marginTop:10,paddingTop:10,borderTop:"2px solid var(--b1)",display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,fontSize:13}}>
             <div style={{background:"var(--bg4)",borderRadius:6,padding:"6px 8px"}}>
               <div style={{color:"var(--t3)",fontSize:11,marginBottom:2}}>TOTAL PESO</div>
-              <div style={{fontWeight:700,color:"var(--navy)",fontFamily:"'DM Mono',monospace"}}>{isLb?`${w.pesoLb}lb`:`${w.pesoKg}kg`}</div>
+              <div style={{fontWeight:700,color:"var(--navy)",fontFamily:"'DM Mono',monospace"}}>{isLb?`${fmtDec(w.pesoLb,2)}lb`:`${fmtDec(w.pesoKg,2)}kg`}</div>
             </div>
             <div style={{background:"#FEF0E8",borderRadius:6,padding:"6px 8px"}}>
               <div style={{color:"var(--t3)",fontSize:11,marginBottom:2}}>TOTAL P.VOL.</div>
-              <div style={{fontWeight:700,color:"var(--orange)",fontFamily:"'DM Mono',monospace"}}>{isLb?`${w.volLb}lb`:`${w.volKg}kg`}</div>
+              <div style={{fontWeight:700,color:"var(--orange)",fontFamily:"'DM Mono',monospace"}}>{isLb?`${fmtDec(w.volLb,2)}lb`:`${fmtDec(w.volKg,2)}kg`}</div>
             </div>
             <div style={{background:"#EEF4FE",borderRadius:6,padding:"6px 8px"}}>
               <div style={{color:"var(--t3)",fontSize:11,marginBottom:2}}>FT³</div>
-              <div style={{fontWeight:700,color:"var(--sky)",fontFamily:"'DM Mono',monospace"}}>{w.ft3}</div>
+              <div style={{fontWeight:700,color:"var(--sky)",fontFamily:"'DM Mono',monospace"}}>{fmtDec(w.ft3,2)}</div>
             </div>
             <div style={{background:"#E8F6F4",borderRadius:6,padding:"6px 8px"}}>
               <div style={{color:"var(--t3)",fontSize:11,marginBottom:2}}>M³</div>
-              <div style={{fontWeight:700,color:"var(--teal)",fontFamily:"'DM Mono',monospace"}}>{w.m3}</div>
+              <div style={{fontWeight:700,color:"var(--teal)",fontFamily:"'DM Mono',monospace"}}>{fmtDec(w.m3,3)}</div>
             </div>
           </div>
         </div>
@@ -1621,8 +1623,8 @@ const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[
       <td>{dimCell}</td>
       <td style={{textAlign:"right"}}><span className="c-wt">{showPeso}</span></td>
       <td style={{textAlign:"right"}}><span className="c-wtvol">{showVol}</span></td>
-      <td style={{textAlign:"right"}}><span className="c-ft3">{w.ft3||"—"}</span></td>
-      <td style={{textAlign:"right"}}><span className="c-m3">{w.m3||"—"}</span></td>
+      <td style={{textAlign:"right"}}><span className="c-ft3">{fmtDec(w.ft3,2,"—")}</span></td>
+      <td style={{textAlign:"right"}}><span className="c-m3">{fmtDec(w.m3,3,"—")}</span></td>
       <td><span className="c-note">{w.notas||"—"}</span></td>
       {/* FOTO — abre el visor de fotos del WR (Supabase Storage) */}
       <td style={{textAlign:"center"}} onClick={e=>e.stopPropagation()}>
@@ -3119,12 +3121,12 @@ export default function SistemaCarga(){
     const lCm=wrf.unitDim==="in"?l*2.54:l, aCm=wrf.unitDim==="in"?a*2.54:a, hCm=wrf.unitDim==="in"?h*2.54:h;
     // Convertir peso según unidad seleccionada
     const pkKg=wrf.unitPeso==="kg"?rawW:parseFloat((rawW/LB_KG).toFixed(2));
-    const pkLb=wrf.unitPeso==="kg"?parseFloat((rawW*LB_KG).toFixed(1)):rawW;
+    const pkLb=wrf.unitPeso==="kg"?parseFloat((rawW*LB_KG).toFixed(2)):rawW;
     const vc=lCm&&aCm&&hCm?calcVol(lCm,aCm,hCm,"cm",calcDe(wrf.tipoEnvio).div):{volKg:0,volLb:0,ft3:0,m3:0};
     const cm3=lCm*aCm*hCm;const vkx=cm3/calcDe(wrf.tipoEnvio).div;
     return {l,a,h,pkLb,pkKg,lCm,aCm,hCm,qty,...vc,_vk:vkx,_vl:vkx*LB_KG,_ft3:cm3/28316.846592,_m3:cm3/1e6};
   });
-  const totalPesoLb=parseFloat(cajaCalcs.reduce((s,c)=>s+c.pkLb*c.qty,0).toFixed(1));
+  const totalPesoLb=parseFloat(cajaCalcs.reduce((s,c)=>s+c.pkLb*c.qty,0).toFixed(2));
   const totalPesoKg=parseFloat(cajaCalcs.reduce((s,c)=>s+c.pkKg*c.qty,0).toFixed(2));
   const totalVolLb=parseFloat(cajaCalcs.reduce((s,c)=>s+c._vl*c.qty,0).toFixed(2));
   const totalVolKg=parseFloat(cajaCalcs.reduce((s,c)=>s+c._vk*c.qty,0).toFixed(2));
@@ -4326,7 +4328,7 @@ export default function SistemaCarga(){
                     largo:d.l?parseFloat((d.l/2.54).toFixed(2)):"",
                     ancho:d.a?parseFloat((d.a/2.54).toFixed(2)):"",
                     alto:d.h?parseFloat((d.h/2.54).toFixed(2)):"",
-                    pesoLb:d.pk?parseFloat((d.pk*LB_KG).toFixed(1)):"",
+                    pesoLb:d.pk?parseFloat((d.pk*LB_KG).toFixed(2)):"",
                     cantidad:1,
                     carrier:d.carrier||"",tracking:d.tracking||"",
                     numFactura:d.factura||"",descripcion:cleanReempaqueDesc(d.descripcion||""),
@@ -4526,11 +4528,11 @@ export default function SistemaCarga(){
                         <div style={{fontWeight:700,color:"var(--navy)",fontSize:16}}>{i+1}</div>
                         <div style={{fontFamily:"'DM Mono',monospace",fontSize:16}}>{toIn(d.l)}×{toIn(d.a)}×{toIn(d.h)}"</div>
                         <div style={{fontFamily:"'DM Mono',monospace",fontSize:16,fontWeight:600}}>{toLb(d.pk)}</div>
-                        <div style={{fontFamily:"'DM Mono',monospace",fontSize:16,color:"var(--orange)",fontWeight:700}}>{dv.volLb}</div>
-                        <div style={{fontFamily:"'DM Mono',monospace",fontSize:16,color:"var(--sky)"}}>{dv.ft3}</div>
-                        <div style={{fontFamily:"'DM Mono',monospace",fontSize:16,color:"var(--teal)"}}>{dv.m3}</div>
+                        <div style={{fontFamily:"'DM Mono',monospace",fontSize:16,color:"var(--orange)",fontWeight:700}}>{fmtDec(dv.volLb,2)}</div>
+                        <div style={{fontFamily:"'DM Mono',monospace",fontSize:16,color:"var(--sky)"}}>{fmtDec(dv.ft3,2)}</div>
+                        <div style={{fontFamily:"'DM Mono',monospace",fontSize:16,color:"var(--teal)"}}>{fmtDec(dv.m3,3)}</div>
                         <div style={{fontFamily:"'DM Mono',monospace",fontSize:16,color:"var(--t2)"}}>{d.pk?.toFixed?.(2)||"—"}</div>
-                        <div style={{fontFamily:"'DM Mono',monospace",fontSize:16,color:"var(--orange)"}}>{dv.volKg}</div>
+                        <div style={{fontFamily:"'DM Mono',monospace",fontSize:16,color:"var(--orange)"}}>{fmtDec(dv.volKg,2)}</div>
                         <div style={{fontFamily:"'DM Mono',monospace",fontSize:16,color:"var(--cyan)",fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{trk}</div>
                         <div style={{fontWeight:700,fontSize:16,color:"var(--navy)"}}>{car}</div>
                       </div>
@@ -4541,7 +4543,7 @@ export default function SistemaCarga(){
                 })}
                 {/* Totales */}
                 <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginTop:10}}>
-                  {[["Peso Total",`${selWR.pesoLb}lb / ${selWR.pesoKg}kg`,"var(--t1)"],["P.Vol. Total",`${selWR.volLb||"—"}lb / ${selWR.volKg}kg`,"var(--orange)"],["Ft³",String(selWR.ft3),"var(--sky)"],["M³",String(selWR.m3),"var(--teal)"],["Descripción",cleanReempaqueDesc(selWR.descripcion)||"—","var(--t1)"],["Valor Declarado",`$${typeof selWR.valor==="number"?selWR.valor.toFixed(2):selWR.valor}`,"var(--green)"]].map(([l,v,c])=>(
+                  {[["Peso Total",`${fmtDec(selWR.pesoLb,2)}lb / ${fmtDec(selWR.pesoKg,2)}kg`,"var(--t1)"],["P.Vol. Total",`${fmtDec(selWR.volLb,2,"—")}lb / ${fmtDec(selWR.volKg,2)}kg`,"var(--orange)"],["Ft³",String(selWR.ft3),"var(--sky)"],["M³",String(selWR.m3),"var(--teal)"],["Descripción",cleanReempaqueDesc(selWR.descripcion)||"—","var(--t1)"],["Valor Declarado",`$${typeof selWR.valor==="number"?selWR.valor.toFixed(2):selWR.valor}`,"var(--green)"]].map(([l,v,c])=>(
                     <div key={l} className="wf"><div className="wfl" style={{fontSize:12}}>{l}</div><div className="wfv" style={{color:c,fontSize:18,fontWeight:700}}>{v}</div></div>
                   ))}
                 </div>
@@ -4599,7 +4601,7 @@ export default function SistemaCarga(){
                   <td><CarBadge c={w.carrier}/></td>
                   <td><span className="c-trk">{w.tracking}</span></td>
                   <td><span className="c-val">${w.valor.toFixed(2)}</span></td>
-                  <td><span className="c-wt">{w.pesoKg}kg</span></td>
+                  <td><span className="c-wt">{fmtDec(w.pesoKg,2)}kg</span></td>
                   <td><StBadge st={w.status}/></td>
                   <td><TypeBadge t={w.tipoEnvio}/></td>
                 </tr>
@@ -4863,8 +4865,8 @@ export default function SistemaCarga(){
       return filtrarPorTab(ecFiltro,w);
     });
 
-    const totalPesoLbC=wrCliente.reduce((s,w)=>s+(w.pesoLb||0),0).toFixed(1);
-    const totalVolLbC=wrCliente.reduce((s,w)=>s+(w.volLb||0),0).toFixed(1);
+    const totalPesoLbC=wrCliente.reduce((s,w)=>s+(w.pesoLb||0),0).toFixed(2);
+    const totalVolLbC=wrCliente.reduce((s,w)=>s+(w.volLb||0),0).toFixed(2);
     const totalFt3C=wrCliente.reduce((s,w)=>s+(w.ft3||0),0).toFixed(2);
     const totalM3C=wrCliente.reduce((s,w)=>s+(w.m3||0),0).toFixed(3);
     const totalValorC=wrCliente.reduce((s,w)=>s+(w.valor||0),0).toFixed(2);
@@ -5154,10 +5156,10 @@ export default function SistemaCarga(){
                         )}
                         {/* Cajas — número simple, sin click */}
                         <td style={{padding:"7px 8px",textAlign:"center",fontWeight:700,color:"var(--navy)"}}>{w.cajas}</td>
-                        <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",fontWeight:600,color:"var(--t1)"}}>{w.pesoLb}lb</td>
-                        <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",fontWeight:600,color:"var(--orange)"}}>{w.volLb||"—"}lb</td>
-                        <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",color:"var(--sky)"}}>{w.ft3}</td>
-                        <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",color:"var(--teal)"}}>{w.m3}</td>
+                        <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",fontWeight:600,color:"var(--t1)"}}>{fmtDec(w.pesoLb,2)}lb</td>
+                        <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",fontWeight:600,color:"var(--orange)"}}>{fmtDec(w.volLb,2,"—")}lb</td>
+                        <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",color:"var(--sky)"}}>{fmtDec(w.ft3,2)}</td>
+                        <td style={{padding:"7px 8px",fontFamily:"'DM Mono',monospace",color:"var(--teal)"}}>{fmtDec(w.m3,3)}</td>
                         {/* Tracking — igual que en el Dashboard: si las cajas traen
                             seguimientos distintos, botón con el detalle caja por caja
                             (MultiCell); si no, el número con ⤢ cuando se corta (TxtCell). */}
@@ -5439,12 +5441,12 @@ export default function SistemaCarga(){
     if(!cf.tipoEnvio){window.alert("Debes seleccionar el Tipo de Envío antes de cerrar el embarque.");return;}
     const now=new Date();
     const allWR=(cf.containers||[]).flatMap(c=>c.wr||[]);
-    const totalLb=parseFloat(allWR.reduce((s,w)=>s+(w.pesoLb||0),0).toFixed(1));
+    const totalLb=parseFloat(allWR.reduce((s,w)=>s+(w.pesoLb||0),0).toFixed(2));
     const totalFt3=parseFloat(allWR.reduce((s,w)=>s+(w.ft3||0),0).toFixed(2));
     const totalM3=0; // calcular si es necesario
     const totalWR=allWR.length;
     const totalCajas=allWR.reduce((s,w)=>s+(w.cajas||1),0);
-    const totalVolLb=parseFloat(allWR.reduce((s,w)=>s+(w.volLb||0),0).toFixed(1));
+    const totalVolLb=parseFloat(allWR.reduce((s,w)=>s+(w.volLb||0),0).toFixed(2));
 
     const existing=editConsolId?consolList.find(c=>c.id===editConsolId):null;
     const n={
@@ -5761,7 +5763,7 @@ export default function SistemaCarga(){
                     onMouseLeave={e=>{e.currentTarget.style.background="#fff";e.currentTarget.style.transform="";}}>
                     <Num t="wr" id={w.id}/>
                     <span style={{color:"var(--t2)",fontSize:13}}>{w.consignee}</span>
-                    <span style={{color:"var(--t3)",fontSize:12,background:"var(--bg4)",padding:"1px 5px",borderRadius:3}}>{w.cajas}cj · {w.pesoLb}lb</span>
+                    <span style={{color:"var(--t3)",fontSize:12,background:"var(--bg4)",padding:"1px 5px",borderRadius:3}}>{w.cajas}cj · {fmtDec(w.pesoLb,2)}lb</span>
                     <span style={{color:"var(--green)",fontSize:14}}>+</span>
                   </div>
                 ));
@@ -5771,7 +5773,7 @@ export default function SistemaCarga(){
             {/* CONTAINERS */}
             <div className="sdiv">CONTENEDORES</div>
             {cf.containers.map((cont,ci)=>{
-              const contWRPeso=parseFloat(cont.wr.reduce((s,w)=>s+(w.pesoLb||0),0).toFixed(1));
+              const contWRPeso=parseFloat(cont.wr.reduce((s,w)=>s+(w.pesoLb||0),0).toFixed(2));
               const contWRCajas=cont.wr.reduce((s,w)=>s+(w.cajas||1),0);
               const contType=CONTAINER_TYPES.find(t=>t.code===cont.tipo);
               const maxLb=contType?.maxLb||0;
@@ -5861,8 +5863,8 @@ export default function SistemaCarga(){
                                 <td><Num t="wr" id={w.id}/></td>
                                 <td style={{fontWeight:600}}>{w.consignee}</td>
                                 <td style={{textAlign:"center"}}>{w.cajas}</td>
-                                <td style={{fontFamily:"'DM Mono',monospace",fontWeight:600}}>{w.pesoLb}lb</td>
-                                <td style={{fontFamily:"'DM Mono',monospace",color:"var(--sky)"}}>{w.ft3}</td>
+                                <td style={{fontFamily:"'DM Mono',monospace",fontWeight:600}}>{fmtDec(w.pesoLb,2)}lb</td>
+                                <td style={{fontFamily:"'DM Mono',monospace",color:"var(--sky)"}}>{fmtDec(w.ft3,2)}</td>
                                 <td style={{color:"var(--t2)"}}>{cleanReempaqueDesc(w.descripcion)||"—"}</td>
                                 <td><span style={{cursor:"pointer",color:"var(--red)",fontSize:14}} onClick={()=>{
                                   scCont(ci,"wr",cont.wr.filter(r=>r.id!==w.id));
@@ -5929,7 +5931,7 @@ export default function SistemaCarga(){
             {/* TOTALES */}
             {(()=>{
               const allWR=cf.containers.flatMap(c=>c.wr);
-              const tLb=parseFloat(allWR.reduce((s,w)=>s+(w.pesoLb||0),0).toFixed(1));
+              const tLb=parseFloat(allWR.reduce((s,w)=>s+(w.pesoLb||0),0).toFixed(2));
               const tFt3=parseFloat(allWR.reduce((s,w)=>s+(w.ft3||0),0).toFixed(2));
               const tWR=allWR.length;
               const tCajas=allWR.reduce((s,w)=>s+(w.cajas||1),0);
@@ -6070,7 +6072,7 @@ export default function SistemaCarga(){
   const pFirmas=lista=>`<div class="firmas" style="grid-template-columns:repeat(${lista.length},1fr)">${lista.map(([t,s])=>`<div>${prnE(t)}${s?`<small>${prnE(s)}</small>`:""}</div>`).join("")}</div>`;
   const pTotales=filas=>`<div class="totales">${filas.filter(Boolean).map(([k,v,cls])=>`<div class="f ${cls||""}"><span>${k}</span><span>${v}</span></div>`).join("")}</div>`;
   const nombreUsuario=id=>{const c=clients.find(x=>x.id===id||x.email===id);return c?fullName(c):(id||"");};
-  const nm=(v,d=2)=>(Math.round((parseFloat(v)||0)*10**d)/10**d).toLocaleString("en-US",{minimumFractionDigits:0,maximumFractionDigits:d});
+  const nm=(v,d=2)=>(Math.round((parseFloat(v)||0)*10**d)/10**d).toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d});
 
   // Vista previa y salida a impresora
   const prnVer=(titulo,html)=>{if(html)setPrnVista({titulo,html});};
@@ -6100,7 +6102,7 @@ export default function SistemaCarga(){
       return `<tr><td>${i+1}</td><td>${hay?`${toIn(d.l)}×${toIn(d.a)}×${toIn(d.h)}`:"—"}${d.carrier?`<div class="sub">${prnE(d.carrier)}</div>`:""}</td>
         <td><span class="mono">${prnE(d.tracking||"")}</span>${d.descripcion?`<div>${prnE(d.descripcion)}</div>`:""}${d.factura?`<div class="sub">Fact.: ${prnE(d.factura)}</div>`:""}</td>
         <td class="r"><b>${d.pk?toLb(d.pk):"—"}</b></td><td class="r">${hay?v.volLb:"—"}</td><td class="r">${hay?v.ft3:"—"}</td><td class="r">${hay?v.m3:"—"}</td></tr>`;}).join("");
-    const tot=`<tr class="tot"><td colspan="3">${w.cajas||dims.length||0} pieza${(w.cajas||dims.length)===1?"":"s"}</td><td class="r">${w.pesoLb||0}</td><td class="r">${w.volLb||"—"}</td><td class="r">${w.ft3||"—"}</td><td class="r">${w.m3||"—"}</td></tr>`;
+    const tot=`<tr class="tot"><td colspan="3">${w.cajas||dims.length||0} pieza${(w.cajas||dims.length)===1?"":"s"}</td><td class="r">${fmtDec(w.pesoLb,2)}</td><td class="r">${fmtDec(w.volLb,2,"—")}</td><td class="r">${fmtDec(w.ft3,2,"—")}</td><td class="r">${fmtDec(w.m3,3,"—")}</td></tr>`;
     const cuerpo=
       pGrid(2,[pBox("Remitente",`<b>${prnE(w.shipper||"—")}</b>`,prnE([w.remitenteDir,[w.remitenteTel,w.remitenteEmail].filter(Boolean).join(" · ")].filter(Boolean).join(" · "))),
         pBox("Consignatario",`<b>${prnE(w.consignee||"—")}</b>${w.casillero?` · #${prnE(w.casillero)}`:""}`,prnE([dest,`${w.destCity||""} ${nomPais(w.destCountry)}`.trim()].filter(Boolean).join(" · ")))])+
@@ -6121,15 +6123,15 @@ export default function SistemaCarga(){
     const tot={wr:c.totalWR||all.length,cajas:c.totalCajas||all.reduce((a,w)=>a+(w.cajas||1),0),lb:c.totalLb||all.reduce((a,w)=>a+(parseFloat(w.pesoLb)||0),0),ft3:c.totalFt3||all.reduce((a,w)=>a+(parseFloat(w.ft3)||0),0)};
     const bloques=cts.map((ct,i)=>{
       const dimsTxt=[ct.largo,ct.ancho,ct.alto].filter(Boolean).join(" × ");
-      return pSec(`Contenedor ${i+1}${ct.tipo?` · ${prnE(ct.tipo)}`:""}${dimsTxt?` · ${prnE(dimsTxt)} in`:""}${ct.sello?` · Sello ${prnE(ct.sello)}`:""}${ct.pesoLb?` · ${ct.pesoLb} lb`:""}`)+
+      return pSec(`Contenedor ${i+1}${ct.tipo?` · ${prnE(ct.tipo)}`:""}${dimsTxt?` · ${prnE(dimsTxt)} in`:""}${ct.sello?` · Sello ${prnE(ct.sello)}`:""}${ct.pesoLb?` · ${fmtDec(ct.pesoLb,2)} lb`:""}`)+
         pTabla([{l:"#"},{l:"N° WR"},{l:"Consignatario"},{l:"Cajas",c:1},{l:"Peso lb",r:1},{l:"Ft³",r:1},{l:"Descripción"}],
-          (ct.wr||[]).map((w,wi)=>`<tr><td>${wi+1}</td><td class="mono"><b>${prnE(w.id)}</b></td><td>${prnE(w.consignee||"—")}</td><td class="c">${w.cajas||0}</td><td class="r">${nm(w.pesoLb,1)}</td><td class="r">${w.ft3||"—"}</td><td>${prnE(cleanReempaqueDesc(w.descripcion||"")||"—")}</td></tr>`).join(""));
+          (ct.wr||[]).map((w,wi)=>`<tr><td>${wi+1}</td><td class="mono"><b>${prnE(w.id)}</b></td><td>${prnE(w.consignee||"—")}</td><td class="c">${w.cajas||0}</td><td class="r">${nm(w.pesoLb,2)}</td><td class="r">${fmtDec(w.ft3,2,"—")}</td><td>${prnE(cleanReempaqueDesc(w.descripcion||"")||"—")}</td></tr>`).join(""));
     }).join("");
     const cuerpo=pGrid(4,[pBox("Destino",prnE(c.destino||"—")),pBox("Tipo de envío",prnE(c.tipoEnvio||"—")),pBox("Vuelo / barco",prnE(c.numVuelo||"—")),pBox("Estado",prnE(c.status||"—")),
         pBox("Salida",fmtDate(c.fechaSalida)),pBox("Llegada",fmtDate(fechaLlegadaGuia(c))),pBox("Recibida en almacén",fmtDate(c.fechaRecibidaAlmacen)),pBox("AWB / BL",prnE([c.awb,c.bl].filter(Boolean).join(" · ")||"—"))])+
       (c.notas?`<div class="nota"><b>Notas:</b> ${prnE(c.notas)}</div>`:"")+
       (bloques||`<div class="nota">Sin contenedores.</div>`)+
-      pGrid(4,[pBox("Total WR",`<b>${tot.wr}</b>`),pBox("Total cajas",`<b>${tot.cajas}</b>`),pBox("Peso total",`<b>${nm(tot.lb,1)} lb</b>`),pBox("Ft³ total",`<b>${nm(tot.ft3,2)}</b>`)]);
+      pGrid(4,[pBox("Total WR",`<b>${tot.wr}</b>`),pBox("Total cajas",`<b>${tot.cajas}</b>`),pBox("Peso total",`<b>${nm(tot.lb,2)} lb</b>`),pBox("Ft³ total",`<b>${nm(tot.ft3,2)}</b>`)]);
     return prnHTML({titulo:"Guía",numero:c.id,barcode:true,meta:[["Fecha",fmtDate(c.fecha)]],cuerpo});
   };
 
@@ -6142,8 +6144,8 @@ export default function SistemaCarga(){
         pBox("Contacto",prnE([grupo.email,grupo.tel].filter(Boolean).join(" · ")||"—"),`${grupo.nClientes} cliente${grupo.nClientes===1?"":"s"}`)])
       :pGrid(2,[pBox("Cliente",`<b>${prnE(fullName(cli))}</b>${cli.casillero?` · #${prnE(cli.casillero)}`:""}`,prnE([cli.municipio,cli.estado,cli.pais].filter(Boolean).join(", "))),
         pBox("Contacto",prnE([cli.email,cli.tel1].filter(Boolean).join(" · ")||"—"),b?prnE(`${b.nombre} (${b.tipo})`):"")]);
-    const filas=wrs.map(w=>{const c=grupo?grupo.cliDe(w):null;return `<tr><td>${prnE(w.status?.label||"—")}</td><td class="mono"><b>${prnE(w.id)}</b></td><td class="mono">${prnE(getNumGuia(w)||"—")}</td>${grupo?`<td>${prnE(c?fullName(c):(w.consignee||"—"))}<div class="sub">${prnE(c?.casillero||w.casillero||"")}</div></td>`:""}<td class="c">${w.cajas||0}</td><td class="r">${w.pesoLb||0}</td><td class="r">${w.volLb||"—"}</td><td class="r">${w.ft3||"—"}</td><td>${prnE(w.tipoEnvio||"—")}</td><td>${prnE((cleanReempaqueDesc(w.descripcion)||"—").slice(0,60))}</td><td class="r">${fmtMoney(w.valor||0,"USD")}</td></tr>`;}).join("");
-    const totF=wrs.length?`<tr class="tot"><td colspan="${grupo?4:3}">Totales · ${wrs.length} WR</td><td class="c">${wrs.reduce((s,w)=>s+(w.cajas||0),0)}</td><td class="r">${totales.pesoLb}</td><td class="r">${totales.volLb}</td><td class="r">${totales.ft3}</td><td colspan="2"></td><td class="r">${fmtMoney(totales.valor,"USD")}</td></tr>`:"";
+    const filas=wrs.map(w=>{const c=grupo?grupo.cliDe(w):null;return `<tr><td>${prnE(w.status?.label||"—")}</td><td class="mono"><b>${prnE(w.id)}</b></td><td class="mono">${prnE(getNumGuia(w)||"—")}</td>${grupo?`<td>${prnE(c?fullName(c):(w.consignee||"—"))}<div class="sub">${prnE(c?.casillero||w.casillero||"")}</div></td>`:""}<td class="c">${w.cajas||0}</td><td class="r">${fmtDec(w.pesoLb,2)}</td><td class="r">${fmtDec(w.volLb,2,"—")}</td><td class="r">${fmtDec(w.ft3,2,"—")}</td><td>${prnE(w.tipoEnvio||"—")}</td><td>${prnE((cleanReempaqueDesc(w.descripcion)||"—").slice(0,60))}</td><td class="r">${fmtMoney(w.valor||0,"USD")}</td></tr>`;}).join("");
+    const totF=wrs.length?`<tr class="tot"><td colspan="${grupo?4:3}">Totales · ${wrs.length} WR</td><td class="c">${wrs.reduce((s,w)=>s+(w.cajas||0),0)}</td><td class="r">${fmtDec(totales.pesoLb,2)}</td><td class="r">${fmtDec(totales.volLb,2)}</td><td class="r">${fmtDec(totales.ft3,2)}</td><td colspan="2"></td><td class="r">${fmtMoney(totales.valor,"USD")}</td></tr>`:"";
     const cuerpo=cab+pSec(`Envíos · ${prnE(tabLabel)}`)+pTabla([{l:"Estado"},{l:"N° WR"},{l:"Guía"},...(grupo?[{l:"Cliente"}]:[]),{l:"Cajas",c:1},{l:"Peso lb",r:1},{l:"Vol. lb",r:1},{l:"Ft³",r:1},{l:"Envío"},{l:"Descripción"},{l:"Valor",r:1}],filas,totF);
     return prnHTML({titulo:"Estado de cuenta",meta:[["Fecha",fmtDate(new Date())],["Período",periodo],["Filtro",tabLabel]],cuerpo,horizontal:true});
   };
@@ -6167,12 +6169,12 @@ export default function SistemaCarga(){
     const cols=[{l:"#"},{l:"N° WR"},...(desp?[{l:"Cliente"}]:[]),{l:"Descripción"},{l:"Cajas",c:1},...(aereo?[{l:"Peso lb",r:1},{l:"Vol. lb",r:1},{l:"A cobrar lb",r:1}]:[{l:"Peso lb",r:1},{l:"Ft³",r:1},{l:"M³",r:1}])];
     const fila=(w,i)=>{const c=cliDeWR(w);const f=wrPesoFacturable(w,aereo);
       return `<tr><td>${i+1}</td><td class="mono"><b>${prnE(w.id)}</b></td>${desp?`<td>${prnE(c?`${c.primerNombre} ${c.primerApellido}`:(w.consignee||"—"))}${c?.casillero?`<div class="sub">${prnE(c.casillero)}</div>`:""}</td>`:""}<td>${prnE((cleanReempaqueDesc(w.descripcion)||"—").slice(0,70))}</td><td class="c">${w.cajas||1}</td>
-        ${aereo?`<td class="r">${nm(w.pesoLb,1)}</td><td class="r">${nm(w.volLb,1)}</td><td class="r"><b>${nm(f.valor,1)}</b></td>`:`<td class="r">${nm(w.pesoLb,1)}</td><td class="r"><b>${nm(w.ft3,2)}</b></td><td class="r">${nm(w.m3,3)}</td>`}</tr>`;};
+        ${aereo?`<td class="r">${nm(w.pesoLb,2)}</td><td class="r">${nm(w.volLb,2)}</td><td class="r"><b>${nm(f.valor,2)}</b></td>`:`<td class="r">${nm(w.pesoLb,2)}</td><td class="r"><b>${nm(w.ft3,2)}</b></td><td class="r">${nm(w.m3,3)}</td>`}</tr>`;};
     let filas="";let i=0;
     if(desp){const m=new Map();wrs.forEach(w=>{const c=cliDeWR(w);const k=c?.id||w.consignee||"-";if(!m.has(k))m.set(k,{n:c?`${c.primerNombre} ${c.primerApellido}`:(w.consignee||"—"),cas:c?.casillero||"",wrs:[]});m.get(k).wrs.push(w);});
       [...m.values()].forEach(g=>{filas+=`<tr class="grp"><td colspan="${cols.length}">${prnE(g.n)}${g.cas?` · ${prnE(g.cas)}`:""} (${g.wrs.length} WR)</td></tr>`;g.wrs.forEach(w=>{filas+=fila(w,i++);});});}
     else filas=wrs.map((w,j)=>fila(w,j)).join("");
-    const tot=`<tr class="tot"><td colspan="${desp?4:3}">Totales · ${wrs.length} WR</td><td class="c">${S("cajas")}</td>${aereo?`<td class="r">${nm(S("pesoLb"),1)}</td><td class="r">${nm(S("volLb"),1)}</td><td class="r">${nm(wrs.reduce((s,w)=>s+wrPesoFacturable(w,true).valor,0),1)} lb</td>`:`<td class="r">${nm(S("pesoLb"),1)}</td><td class="r">${nm(S("ft3"),2)} ft³</td><td class="r">${nm(S("m3"),3)} m³</td>`}</tr>`;
+    const tot=`<tr class="tot"><td colspan="${desp?4:3}">Totales · ${wrs.length} WR</td><td class="c">${S("cajas")}</td>${aereo?`<td class="r">${nm(S("pesoLb"),2)}</td><td class="r">${nm(S("volLb"),2)}</td><td class="r">${nm(wrs.reduce((s,w)=>s+wrPesoFacturable(w,true).valor,0),1)} lb</td>`:`<td class="r">${nm(S("pesoLb"),2)}</td><td class="r">${nm(S("ft3"),2)} ft³</td><td class="r">${nm(S("m3"),3)} m³</td>`}</tr>`;
     const cuerpo=`<div class="lst">${datos.map(([k,v])=>`<div class="k">${prnE(k)}</div><div>${prnE(v||"—")}</div>`).join("")}</div>`+
       pSec("Detalle")+pTabla(cols,filas,tot)+
       `<div class="decl"><b>Declaración de recepción:</b> el receptor declara haber recibido conforme, en buen estado y en la cantidad indicada, la mercancía descrita en esta nota. Cualquier discrepancia o daño visible debe reportarse al momento de la firma. Una vez firmada, ${prnE(empresaNombre)} queda liberado de toda responsabilidad sobre la mercancía entregada.</div>`+
@@ -6190,7 +6192,7 @@ export default function SistemaCarga(){
       (cr.notas?`<div class="nota"><b>Notas:</b> ${prnE(cr.notas)}</div>`:"")+
       pSec("Detalle de la carga")+
       pTabla([{l:"#"},{l:"N° WR"},{l:"Consignatario"},{l:"Tracking"},{l:"Cajas",c:1},{l:"Peso lb",r:1}],
-        wrs.map((w,i)=>`<tr><td>${i+1}</td><td class="mono"><b>${prnE(w.id)}</b></td><td>${prnE(w.consignee||"—")}</td><td class="mono">${prnE(w.tracking||"—")}</td><td class="c">${(w.dims||[]).length||w.cajas||0}</td><td class="r">${nm(lbW(w),1)}</td></tr>`).join(""),
+        wrs.map((w,i)=>`<tr><td>${i+1}</td><td class="mono"><b>${prnE(w.id)}</b></td><td>${prnE(w.consignee||"—")}</td><td class="mono">${prnE(w.tracking||"—")}</td><td class="c">${(w.dims||[]).length||w.cajas||0}</td><td class="r">${nm(lbW(w),2)}</td></tr>`).join(""),
         wrs.length?`<tr class="tot"><td colspan="4">Totales · ${wrs.length} WR</td><td class="c">${wrs.reduce((s,w)=>s+((w.dims||[]).length||w.cajas||0),0)}</td><td class="r">${nm(wrs.reduce((s,w)=>s+lbW(w),0),1)}</td></tr>`:"")+
       `<div class="decl">La firma confirma la recepción conforme de los WR listados. Cualquier discrepancia debe reportarse al momento de la entrega.</div>`+
       pFirmas([[`Entrega ${empresaNombre}`,"Firma y sello"],["Recibe (agente de carga)",[cr.agenteCarga,cr.documento].filter(Boolean).join(" · ")]]);
@@ -6199,7 +6201,7 @@ export default function SistemaCarga(){
   };
   const htmlReleaseRecibo=({cr,wr,cliente})=>{
     if(!cr||!wr)return "";
-    const cuerpo=pGrid(2,[pBox("WR",`<b class="mono">${prnE(wr.id)}</b> · ${wr.cajas||0} caja${wr.cajas===1?"":"s"} · ${wr.pesoLb||0} lb`,prnE(wr.descripcion||"")),
+    const cuerpo=pGrid(2,[pBox("WR",`<b class="mono">${prnE(wr.id)}</b> · ${wr.cajas||0} caja${wr.cajas===1?"":"s"} · ${fmtDec(wr.pesoLb,2)} lb`,prnE(wr.descripcion||"")),
         pBox("Consignatario",`<b>${prnE(wr.consignee||"—")}</b>`,`Casillero ${prnE(wr.casillero||cliente?.casillero||"—")} · Valor declarado ${fmtMoney(wr.valor||0,"USD")}`)])+
       pGrid(2,[pBox("Retira",`<b>${prnE(cr.agenteCarga||"—")}</b>`,`ID ${prnE(cr.documento||"—")}`),pBox("Empresa",prnE(cr.contacto||"—"),cr.notas?prnE(cr.notas):"")])+
       `<div class="decl">El receptor certifica haber recibido la mercancía descrita en buenas condiciones. Este documento es comprobante de egreso y libera de responsabilidad a ${prnE(empresaNombre)}.</div>`+
@@ -6215,8 +6217,8 @@ export default function SistemaCarga(){
       pGrid(4,[pBox("Fecha preferida",prnE([p.fechaDeseada,p.franja].filter(Boolean).join(" · ")||"—")),pBox("Fecha programada",prnE(p.fechaProgramada||"—")),pBox("Empresa / carrier",prnE(p.transportista||"—")),pBox("Chofer",prnE(p.chofer||"—"))])+
       pSec("Paquetes (aproximado)")+
       pTabla([{l:"Cant.",c:1},{l:"Contenido"},{l:"Peso c/u",r:1},{l:"Medidas c/u (in)"},{l:"Peso total",r:1}],
-        (p.paquetes||[]).map(x=>`<tr><td class="c">${x.cantidad||1}</td><td>${prnE(x.descripcion||"—")}</td><td class="r">${x.pesoLb?`${x.pesoLb} lb`:"—"}</td><td>${x.largo&&x.ancho&&x.alto?`${x.largo}×${x.ancho}×${x.alto}`:"—"}</td><td class="r">${x.pesoLb?`${nm((parseFloat(x.pesoLb)||0)*(parseInt(x.cantidad)||1),1)} lb`:"—"}</td></tr>`).join(""),
-        `<tr class="tot"><td class="c">${t.bultos}</td><td>Total aproximado</td><td></td><td>${t.ft3?`${t.ft3} ft³`:""}</td><td class="r">${t.lb?`${t.lb} lb`:"—"}</td></tr>`)+
+        (p.paquetes||[]).map(x=>`<tr><td class="c">${x.cantidad||1}</td><td>${prnE(x.descripcion||"—")}</td><td class="r">${x.pesoLb?`${fmtDec(x.pesoLb,2)} lb`:"—"}</td><td>${x.largo&&x.ancho&&x.alto?`${x.largo}×${x.ancho}×${x.alto}`:"—"}</td><td class="r">${x.pesoLb?`${nm((parseFloat(x.pesoLb)||0)*(parseInt(x.cantidad)||1),1)} lb`:"—"}</td></tr>`).join(""),
+        `<tr class="tot"><td class="c">${t.bultos}</td><td>Total aproximado</td><td></td><td>${t.ft3?`${fmtDec(t.ft3,2)} ft³`:""}</td><td class="r">${t.lb?`${t.lb} lb`:"—"}</td></tr>`)+
       (p.notas?`<div class="nota"><b>Notas:</b> ${prnE(p.notas)}</div>`:"")+
       `<div class="decl">Contenido, peso, medidas, fecha y horario son aproximados o preferidos. Los datos definitivos se registran al recibir la mercancía en el almacén.</div>`+
       pFirmas([["Entrega","Nombre, ID y firma"],["Recibe chofer / empresa","Nombre y firma"]]);
@@ -6226,7 +6228,7 @@ export default function SistemaCarga(){
 
   const htmlStatLista=(titulo,rows)=>prnHTML({titulo,meta:[["Fecha",fmtDate(new Date())],["Registros",String(rows.length)]],horizontal:true,
     cuerpo:pTabla([{l:"N° WR"},{l:"Fecha"},{l:"Consignatario"},{l:"Casillero"},{l:"Carrier"},{l:"Tracking"},{l:"Valor",r:1},{l:"Peso kg",r:1},{l:"Estado"},{l:"Envío"}],
-      rows.map(w=>`<tr><td class="mono"><b>${prnE(w.id)}</b></td><td>${fmtDate(w.fecha)}</td><td>${prnE(w.consignee||"")}</td><td>${prnE(w.casillero||"")}</td><td>${prnE(w.carrier||"")}</td><td class="mono">${prnE(w.tracking||"")}</td><td class="r">${fmtMoney(w.valor||0,"USD")}</td><td class="r">${w.pesoKg||0}</td><td>${prnE(w.status?.label||"")}</td><td>${prnE(w.tipoEnvio||"")}</td></tr>`).join(""))});
+      rows.map(w=>`<tr><td class="mono"><b>${prnE(w.id)}</b></td><td>${fmtDate(w.fecha)}</td><td>${prnE(w.consignee||"")}</td><td>${prnE(w.casillero||"")}</td><td>${prnE(w.carrier||"")}</td><td class="mono">${prnE(w.tracking||"")}</td><td class="r">${fmtMoney(w.valor||0,"USD")}</td><td class="r">${fmtDec(w.pesoKg,2)}</td><td>${prnE(w.status?.label||"")}</td><td>${prnE(w.tipoEnvio||"")}</td></tr>`).join(""))});
 
   const htmlActividad=lista=>prnHTML({titulo:"Registro de actividad",meta:[["Fecha",fmtDate(new Date())],["Eventos",String(lista.length)]],horizontal:true,
     cuerpo:pTabla([{l:"Fecha / hora"},{l:"Usuario"},{l:"Rol"},{l:"Acción"},{l:"Detalle"}],
@@ -6247,7 +6249,8 @@ export default function SistemaCarga(){
   const sinVacios=o=>Object.fromEntries(Object.entries(o||{}).filter(([,v])=>v!==""&&v!=null));
   // Valores efectivos de una sección para un país: base del sistema → predeterminado → país
   const docCfg=(pais,sec)=>{const k=docPaisKey(pais);
-    const base={...DOC_DEF[sec],...(sec==="exp"?{notaLegal:NOTA_LEGAL_DEFAULT}:{})};
+    const base={...DOC_DEF[sec],...(sec==="exp"?{notaLegal:NOTA_LEGAL_DEFAULT}:{}),
+      ...(sec==="empresa"?sinVacios({razon:marca.razon,dir:[marca.dir,[marca.ciudad,marca.cp].filter(Boolean).join(" "),marca.pais].filter(Boolean).join(", "),tel:marca.tel,email:[marca.email,marca.web].filter(Boolean).join(" · "),idFiscal:marca.idFiscal}):{})};
     return {...base,...sinVacios(docPais._default?.[sec]),...sinVacios(k?docPais[k]?.[sec]:null),_pais:k};};
   const fmtFCDe=pais=>docCfg(pais,"imp");
   const MOTIVOS_FC=["Venta","Regalo","Muestra sin valor comercial","Efectos personales","Uso personal","Devolución / reparación"];
@@ -6909,7 +6912,8 @@ export default function SistemaCarga(){
           const subirLogo=f=>{if(!f)return;const rd=new FileReader();rd.onload=()=>{const img=new Image();img.onload=()=>{
             const k=Math.min(1,240/Math.max(img.width,img.height));const c=document.createElement("canvas");c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);
             c.getContext("2d").drawImage(img,0,0,c.width,c.height);set({logo:c.toDataURL("image/png")});};img.src=rd.result;};rd.readAsDataURL(f);};
-          const guardar=async()=>{const n={nombre:(m.nombre||"").trim(),subtitulo:(m.subtitulo||"").trim(),iniciales:(m.iniciales||"").trim().toUpperCase(),logo:m.logo||""};
+          const guardar=async()=>{const n={nombre:(m.nombre||"").trim(),subtitulo:(m.subtitulo||"").trim(),iniciales:(m.iniciales||"").trim().toUpperCase(),logo:m.logo||"",
+              razon:(m.razon||"").trim(),idFiscal:(m.idFiscal||"").trim(),dir:(m.dir||"").trim(),ciudad:(m.ciudad||"").trim(),pais:(m.pais||"").trim(),cp:(m.cp||"").trim(),tel:(m.tel||"").trim(),email:(m.email||"").trim(),web:(m.web||"").trim()};
             if(!n.nombre){window.alert("Escribe el nombre de la empresa.");return;}
             const ok=await dbSetConfig('marca',n);if(ok===false){window.alert("No se pudo guardar.");return;}
             setMarca(n);setMarcaDraft(null);try{localStorage.setItem("marca",JSON.stringify(n));}catch{/* sin almacenamiento */}logAction("Editó datos de la empresa",n.nombre);};
@@ -6928,6 +6932,20 @@ export default function SistemaCarga(){
                   <div className="fg" style={{marginBottom:10}}><div className="fl">Subtítulo</div><input className="fi" style={{textTransform:"none"}} value={m.subtitulo} placeholder="International Courier" onChange={e=>set({subtitulo:e.target.value})}/></div>
                   <div className="fg" style={{marginBottom:10,maxWidth:160}}><div className="fl">Iniciales (sin logo)</div><input className="fi" maxLength={4} value={m.iniciales} onChange={e=>set({iniciales:e.target.value.toUpperCase()})}/></div>
                 </div>
+              </div>
+              <div className="sdiv" style={{marginTop:6}}>Datos de la empresa</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                <div className="fg"><div className="fl">Razón social</div><input className="fi" value={m.razon||""} onChange={e=>set({razon:e.target.value.toUpperCase()})}/></div>
+                <div className="fg"><div className="fl">ID fiscal (RIF / EIN / NIF)</div><input className="fi" value={m.idFiscal||""} onChange={e=>set({idFiscal:e.target.value.toUpperCase()})}/></div>
+                <div className="fg" style={{gridColumn:"1/-1"}}><div className="fl">Dirección</div><input className="fi" value={m.dir||""} onChange={e=>set({dir:e.target.value.toUpperCase()})}/></div>
+                <div className="fg"><div className="fl">Ciudad / estado</div><input className="fi" value={m.ciudad||""} onChange={e=>set({ciudad:e.target.value.toUpperCase()})}/></div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 120px",gap:10}}>
+                  <div className="fg"><div className="fl">País</div><input className="fi" value={m.pais||""} onChange={e=>set({pais:e.target.value.toUpperCase()})}/></div>
+                  <div className="fg"><div className="fl">Código postal</div><input className="fi" value={m.cp||""} onChange={e=>set({cp:e.target.value.toUpperCase()})}/></div>
+                </div>
+                <div className="fg"><div className="fl">Teléfono</div><input className="fi" value={m.tel||""} onChange={e=>set({tel:e.target.value})}/></div>
+                <div className="fg"><div className="fl">Correo</div><input className="fi" style={{textTransform:"none"}} value={m.email||""} onChange={e=>set({email:e.target.value.toLowerCase()})}/></div>
+                <div className="fg"><div className="fl">Sitio web</div><input className="fi" style={{textTransform:"none"}} value={m.web||""} onChange={e=>set({web:e.target.value.toLowerCase()})}/></div>
               </div>
               <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:10}}>
                 {marcaDraft&&<button className="btn-s" onClick={()=>setMarcaDraft(null)}>Descartar</button>}
@@ -7042,7 +7060,20 @@ export default function SistemaCarga(){
         )}
         {cfgTab==="tipoenvio"&&(()=>{
           const D=calcDraft||calcEnvio;const set=(t,x)=>setCalcDraft({...D,[t]:{...CALC_DEF,...(D[t]||{}),...x}});
-          const guardar=async()=>{const ok=await dbSetConfig("calc_envio",D);if(!ok){window.alert("No se pudo guardar.");return;}setCalcEnvio(D);setCalcDraft(null);logAction("Cambió cálculo por tipo de envío",Object.keys(D).join(", "));};
+          const guardar=async()=>{const ok=await dbSetConfig("calc_envio",D);if(!ok){window.alert("No se pudo guardar.");return;}
+            // Los WR que aún no se han facturado toman el nuevo cálculo
+            const facturados=new Set(facturas.filter(f=>f.status!=="anulada"&&f.status!=="borrador").flatMap(f=>f.wrIds||[]));
+            const cambiados=[];
+            const nueva=wrList.map(w=>{if(facturados.has(w.id)||wrTipoFijo(w)||!(w.dims||[]).length)return w;
+              const C={...CALC_DEF,...(D[w.tipoEnvio]||{})};
+              const dims=w.dims.map(d=>{const v=calcVol(parseFloat(d.l)||0,parseFloat(d.a)||0,parseFloat(d.h)||0,"cm",C.div);return {...d,volKg:v.volKg,volLb:v.volLb};});
+              const vk=w.dims.reduce((t,d)=>t+(parseFloat(d.l)||0)*(parseFloat(d.a)||0)*(parseFloat(d.h)||0)/C.div,0);
+              const n={...w,dims,volKg:r2(vk),volLb:r2(vk*LB_KG)};
+              if(n.volLb!==parseFloat(w.volLb)||n.volKg!==parseFloat(w.volKg)){cambiados.push(n);return n;}return w;});
+            setCalcEnvio(D);setCalcDraft(null);
+            if(cambiados.length){setWrList(nueva);for(const w of cambiados)await dbUpsertWR(w);}
+            logAction("Cambió cálculo por tipo de envío",`${Object.keys(D).join(", ")} · ${cambiados.length} WR recalculados`);
+            window.alert(`Guardado. ${cambiados.length} WR sin facturar se recalcularon con el nuevo cálculo.`);};
           return(
           <div className="card" style={{marginTop:14}}>
             <div className="card-tt"><Ico e="🧮" sp/>Cálculo por tipo de envío</div>
@@ -7060,7 +7091,10 @@ export default function SistemaCarga(){
                       <option value="wr">Total del WR: el mayor entre peso real y volumétrico</option>
                       <option value="caja">Caja por caja: el mayor de cada caja, sumado</option></select></td>
                     <td><select className="fs" value={C.red} onChange={e=>set(t,{red:e.target.value})}>{CALC_REDS.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}</select></td>
-                  </>:<td colSpan={3} style={{color:"var(--t2)"}}>Pies cúbicos: largo × ancho × alto (in) ÷ 1728</td>}
+                  </>:<>
+                    <td colSpan={2} style={{color:"var(--t2)"}}>Pies cúbicos: largo × ancho × alto (in) ÷ 1728 · suma de todas las cajas del WR</td>
+                    <td><select className="fs" value={C.red} onChange={e=>set(t,{red:e.target.value})}>{CALC_REDS.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}</select></td>
+                  </>}
                 </tr>);})}</tbody>
             </table>
             {calcDraft&&<div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:10}}>
@@ -8178,8 +8212,8 @@ export default function SistemaCarga(){
               <div className="sdiv">BULTOS ({puBultos(sel)})</div>
               <table className="ct" style={{marginBottom:12}}>
                 <thead><tr><th>Cant.</th><th>Contenido aprox.</th><th>Peso c/u</th><th>Medidas c/u (in)</th><th>Peso total</th></tr></thead>
-                <tbody>{(sel.paquetes||[]).map((x,i)=><tr key={i}><td style={{fontWeight:700}}>{x.cantidad||1}</td><td>{x.descripcion||"—"}</td><td style={mono}>{x.pesoLb?`${x.pesoLb} lb`:"—"}</td><td style={mono}>{x.largo&&x.ancho&&x.alto?`${x.largo}×${x.ancho}×${x.alto}`:"—"}</td><td style={{...mono,fontWeight:700}}>{x.pesoLb?`${Math.round((parseFloat(x.pesoLb)||0)*(parseInt(x.cantidad)||1)*100)/100} lb`:"—"}</td></tr>)}
-                  {(()=>{const t=puTot(sel);return <tr style={{background:"var(--bg3)"}}><td style={{fontWeight:800}}>{t.bultos}</td><td style={{fontWeight:800}}>Total aprox.</td><td/><td style={{...mono,fontWeight:700}}>{t.ft3?`${t.ft3} ft³`:""}</td><td style={{...mono,fontWeight:800}}>{t.lb?`${t.lb} lb`:"—"}</td></tr>;})()}</tbody>
+                <tbody>{(sel.paquetes||[]).map((x,i)=><tr key={i}><td style={{fontWeight:700}}>{x.cantidad||1}</td><td>{x.descripcion||"—"}</td><td style={mono}>{x.pesoLb?`${fmtDec(x.pesoLb,2)} lb`:"—"}</td><td style={mono}>{x.largo&&x.ancho&&x.alto?`${x.largo}×${x.ancho}×${x.alto}`:"—"}</td><td style={{...mono,fontWeight:700}}>{x.pesoLb?`${Math.round((parseFloat(x.pesoLb)||0)*(parseInt(x.cantidad)||1)*100)/100} lb`:"—"}</td></tr>)}
+                  {(()=>{const t=puTot(sel);return <tr style={{background:"var(--bg3)"}}><td style={{fontWeight:800}}>{t.bultos}</td><td style={{fontWeight:800}}>Total aprox.</td><td/><td style={{...mono,fontWeight:700}}>{t.ft3?`${fmtDec(t.ft3,2)} ft³`:""}</td><td style={{...mono,fontWeight:800}}>{t.lb?`${t.lb} lb`:"—"}</td></tr>;})()}</tbody>
               </table>
               {puGestiona&&sel.status==="solicitado"&&(
                 <div className="card" style={{background:"var(--bg4)",marginBottom:12}}>
@@ -8258,7 +8292,7 @@ export default function SistemaCarga(){
               </div>);})}
             <div style={{display:"flex",alignItems:"center",gap:16,marginBottom:14,flexWrap:"wrap"}}>
               <button className="btn-s" onClick={()=>setPuf(p=>({...p,paquetes:[...p.paquetes,{descripcion:"",largo:"",ancho:"",alto:"",pesoLb:"",cantidad:1}]}))}>+ Agregar paquete</button>
-              {(()=>{const t=puTot(puf);return <span style={{fontSize:14,fontWeight:700,color:"var(--navy)"}}>Total aprox.: {t.bultos} bulto{t.bultos===1?"":"s"}{t.lb?` · ${t.lb} lb`:""}{t.ft3?` · ${t.ft3} ft³`:""}</span>;})()}
+              {(()=>{const t=puTot(puf);return <span style={{fontSize:14,fontWeight:700,color:"var(--navy)"}}>Total aprox.: {t.bultos} bulto{t.bultos===1?"":"s"}{t.lb?` · ${t.lb} lb`:""}{t.ft3?` · ${fmtDec(t.ft3,2)} ft³`:""}</span>;})()}
             </div>
             <div className="mft">
               <button className="btn-s" onClick={()=>setShowNewPickup(false)}>Cancelar</button>
@@ -8306,7 +8340,7 @@ export default function SistemaCarga(){
     if(!tf)return {...r,sinTarifa:true};
     const aereo=tipoEsAereoG(f.tipoEnvio), maritimo=tipoEsMaritimoG(f.tipoEnvio);
     const uni=unidadTarifa(tf,aereo||!maritimo);
-    const cant=uni==="kg"?factKg:uni==="lb"?factLb:uni==="m3"?r.m3:r.ft3;
+    const cant=uni==="kg"?factKg:uni==="lb"?factLb:uni==="m3"?redondearArriba(m3,C.red==="0.01"?"0.0001":C.red):redondearArriba(m3*35.3146667,C.red);
     const precio=parseFloat(maritimo?tf.porFt3:tf.porLb)||0;
     const flete=r2(cant*precio), min=parseFloat(tf.min)||0;
     return {...r,tf,uni,cant,precio,flete,min,total:r2(Math.max(flete,min)),usoMinimo:min>flete,moneda:tf.moneda||"USD"};
@@ -8383,7 +8417,7 @@ export default function SistemaCarga(){
 
         {R&&(<>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:10,marginBottom:12}}>
-            {[["Bultos",R.bultos],["Peso real",f.unitPeso==="kg"?`${R.kg} kg`:`${R.lb} lb`],["Peso vol.",f.unitPeso==="kg"?`${R.volKg} kg`:`${R.volLb} lb`],["Ft³",R.ft3],["M³",R.m3]].map(([l,v])=>(
+            {[["Bultos",R.bultos],["Peso real",f.unitPeso==="kg"?`${R.kg} kg`:`${R.lb} lb`],["Peso vol.",f.unitPeso==="kg"?`${fmtDec(R.volKg,2)} kg`:`${fmtDec(R.volLb,2)} lb`],["Ft³",R.ft3],["M³",R.m3]].map(([l,v])=>(
               <div key={l} className="card" style={{textAlign:"center",padding:12}}><div style={{fontSize:13,color:"var(--t3)"}}>{l}</div><div style={{...mono,fontSize:20,fontWeight:800,color:"var(--navy)"}}>{v}</div></div>))}
           </div>
           {R.falta?<div className="card" style={{textAlign:"center",color:"var(--t3)",padding:20}}>Elige origen, destino y tipo de envío.</div>
@@ -10967,8 +11001,10 @@ export default function SistemaCarga(){
       const vol =parseFloat(kg?w.volKg:w.volLb )||0;
       return {valor:Math.max(real,vol), unidad:kg?"kg":"lb", real, vol};
     }
-    if(unidad==="m3")return {valor:parseFloat(w.m3)||0, unidad:"m3", ft3:parseFloat(w.ft3)||0, m3:parseFloat(w.m3)||0};
-    return {valor:parseFloat(w.ft3)||0, unidad:"ft3", ft3:parseFloat(w.ft3)||0, m3:parseFloat(w.m3)||0};
+    const Cm=calcDe(w?.tipoEnvio);const Vm=(w?.dims||[]).some(d=>parseFloat(d.l))?volDeWR(w):null;
+    const ft3=Vm?Vm.ft3:parseFloat(w.ft3)||0, m3=Vm?Vm.m3:parseFloat(w.m3)||0;
+    if(unidad==="m3")return {valor:redondearArriba(m3,Cm.red==="0.01"?"0.0001":Cm.red), unidad:"m3", ft3:r2(ft3), m3};
+    return {valor:redondearArriba(ft3,Cm.red), unidad:"ft3", ft3:r2(ft3), m3};
   };
   // Resuelve a qué "dominio" pertenece un cliente:
   //   matriz → null (sin dominio, es cliente directo)
@@ -11482,7 +11518,7 @@ export default function SistemaCarga(){
                         <div style={{flex:1}}/>
                         <span style={{fontSize:12,color:"rgba(255,255,255,.7)"}}>
                           {[ct.largo,ct.ancho,ct.alto].filter(Boolean).join(" × ")}{[ct.largo,ct.ancho,ct.alto].filter(Boolean).length===3?" in":""}
-                          {ct.sello?` · Sello: ${ct.sello}`:""}{ct.pesoLb?` · ${ct.pesoLb}lb`:""}
+                          {ct.sello?` · Sello: ${ct.sello}`:""}{ct.pesoLb?` · ${fmtDec(ct.pesoLb,2)}lb`:""}
                         </span>
                       </div>
                       {(ct.wr||[]).length>0?(
@@ -11495,8 +11531,8 @@ export default function SistemaCarga(){
                                 <td><Num t="wr" id={w.id}/></td>
                                 <td style={{fontWeight:600}}>{w.consignee}</td>
                                 <td style={{textAlign:"center"}}>{w.cajas}</td>
-                                <td style={{fontFamily:"'DM Mono',monospace",fontWeight:600}}>{w.pesoLb}lb</td>
-                                <td style={{fontFamily:"'DM Mono',monospace",color:"var(--sky)"}}>{w.ft3}</td>
+                                <td style={{fontFamily:"'DM Mono',monospace",fontWeight:600}}>{fmtDec(w.pesoLb,2)}lb</td>
+                                <td style={{fontFamily:"'DM Mono',monospace",color:"var(--sky)"}}>{fmtDec(w.ft3,2)}</td>
                                 <td style={{color:"var(--t2)"}}>{cleanReempaqueDesc(w.descripcion)||"—"}</td>
                               </tr>
                             ))}
@@ -12975,8 +13011,8 @@ export default function SistemaCarga(){
         // ── Tipo 1 Básica — 4"×6" (portrait) 7 franjas ──────────────────────
         const LabelCaja1=({d,idx,total})=>{
           const bval=`${_lwr?.id||""}-${idx}/${total}`;
-          const dimStr=d.l&&d.a&&d.h?`${parseFloat((d.l/2.54).toFixed(1))}×${parseFloat((d.a/2.54).toFixed(1))}×${parseFloat((d.h/2.54).toFixed(1))}"`:"—";
-          const pkLb=d.pkLb||(d.pk?parseFloat((d.pk*LB_KG).toFixed(1)):null);
+          const dimStr=d.l&&d.a&&d.h?`${parseFloat((d.l/2.54).toFixed(2))}×${parseFloat((d.a/2.54).toFixed(2))}×${parseFloat((d.h/2.54).toFixed(2))}"`:"—";
+          const pkLb=d.pkLb||(d.pk?parseFloat((d.pk*LB_KG).toFixed(2)):null);
           const pvLb=d.volLb||d.pv||null;
           const ft3=d.ft3||null;
           const m3=d.m3||null;
@@ -13044,8 +13080,8 @@ export default function SistemaCarga(){
         // ── Tipo 2 Completa — 4"×6" (portrait) 5 franjas ────────────────────
         const LabelCaja2=({d,idx,total})=>{
           const bval=`${_lwr?.id||""}-${idx}/${total}`;
-          const dimStr=d.l&&d.a&&d.h?`${parseFloat((d.l/2.54).toFixed(1))}×${parseFloat((d.a/2.54).toFixed(1))}×${parseFloat((d.h/2.54).toFixed(1))}"`:"—";
-          const pkLb=d.pkLb||(d.pk?parseFloat((d.pk*LB_KG).toFixed(1)):null);
+          const dimStr=d.l&&d.a&&d.h?`${parseFloat((d.l/2.54).toFixed(2))}×${parseFloat((d.a/2.54).toFixed(2))}×${parseFloat((d.h/2.54).toFixed(2))}"`:"—";
+          const pkLb=d.pkLb||(d.pk?parseFloat((d.pk*LB_KG).toFixed(2)):null);
           const pvLb=d.volLb||d.pv||null;
           return(
             <div className="label-card label-4x6" style={{width:384,height:576,border:"2px solid #000",background:"#fff",color:"#000",display:"flex",flexDirection:"column",pageBreakInside:"avoid",fontFamily:"Arial,sans-serif"}}>
@@ -13067,8 +13103,8 @@ export default function SistemaCarga(){
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:2,fontFamily:"'DM Mono',monospace",fontWeight:700}}>
                     <span>Peso: {pkLb?`${pkLb} lb`:"—"}</span>
                     <span>P.Vol: {pvLb?`${pvLb} lb`:"—"}</span>
-                    <span>ft³: {d.ft3||"—"}</span>
-                    <span>m³: {d.m3||"—"}</span>
+                    <span>ft³: {fmtDec(d.ft3,2,"—")}</span>
+                    <span>m³: {fmtDec(d.m3,3,"—")}</span>
                   </div>
                   <div><span style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Medidas </span><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700}}>{dimStr}</span></div>
                 </div>
@@ -13120,8 +13156,8 @@ export default function SistemaCarga(){
         // ── Tipo 3 Básica — 4"×2" (landscape) 3 franjas ─────────────────────
         const LabelCaja3=({d,idx,total})=>{
           const bval=`${_lwr?.id||""}-${idx}/${total}`;
-          const dimStr=d.l&&d.a&&d.h?`${parseFloat((d.l/2.54).toFixed(1))}×${parseFloat((d.a/2.54).toFixed(1))}×${parseFloat((d.h/2.54).toFixed(1))}"`:"—";
-          const pkLb=d.pkLb||(d.pk?parseFloat((d.pk*LB_KG).toFixed(1)):null);
+          const dimStr=d.l&&d.a&&d.h?`${parseFloat((d.l/2.54).toFixed(2))}×${parseFloat((d.a/2.54).toFixed(2))}×${parseFloat((d.h/2.54).toFixed(2))}"`:"—";
+          const pkLb=d.pkLb||(d.pk?parseFloat((d.pk*LB_KG).toFixed(2)):null);
           return(
             <div className="label-card label-4x2" style={{width:384,height:192,border:"2px solid #000",background:"#fff",color:"#000",display:"flex",flexDirection:"column",pageBreakInside:"avoid",fontFamily:"Arial,sans-serif"}}>
               {/* Franja 1 — Col 1 Nombre | Col 2 Consignatario */}
@@ -13165,8 +13201,8 @@ export default function SistemaCarga(){
         // ── Tipo 4 Completa — 4"×2" (landscape) 3 franjas 2-col ─────────────
         const LabelCaja4=({d,idx,total})=>{
           const bval=`${_lwr?.id||""}-${idx}/${total}`;
-          const dimStr=d.l&&d.a&&d.h?`${parseFloat((d.l/2.54).toFixed(1))}×${parseFloat((d.a/2.54).toFixed(1))}×${parseFloat((d.h/2.54).toFixed(1))}"`:"—";
-          const pkLb=d.pkLb||(d.pk?parseFloat((d.pk*LB_KG).toFixed(1)):null);
+          const dimStr=d.l&&d.a&&d.h?`${parseFloat((d.l/2.54).toFixed(2))}×${parseFloat((d.a/2.54).toFixed(2))}×${parseFloat((d.h/2.54).toFixed(2))}"`:"—";
+          const pkLb=d.pkLb||(d.pk?parseFloat((d.pk*LB_KG).toFixed(2)):null);
           return(
             <div className="label-card label-4x2" style={{width:384,height:192,border:"2px solid #000",background:"#fff",color:"#000",display:"flex",flexDirection:"column",pageBreakInside:"avoid",fontFamily:"Arial,sans-serif"}}>
               {/* Franja 1 — Col1 (más pequeña) Nombre | Col2 WR# + barcode */}
@@ -13301,7 +13337,7 @@ export default function SistemaCarga(){
                 </div>
                 <div style={{flex:"0 0 88px",padding:"6px 6px",textAlign:"center"}}>
                   <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Peso</div>
-                  <div style={{fontFamily:"'DM Mono',monospace",fontSize:15,fontWeight:900,marginTop:2}}>{ct.pesoLb?`${ct.pesoLb} lb`:"—"}</div>
+                  <div style={{fontFamily:"'DM Mono',monospace",fontSize:15,fontWeight:900,marginTop:2}}>{ct.pesoLb?`${fmtDec(ct.pesoLb,2)} lb`:"—"}</div>
                 </div>
               </div>
               {/* Franja 5 — Barcode + Pieza + recuadro paquetes + fecha/hora */}
@@ -13348,7 +13384,7 @@ export default function SistemaCarga(){
                 </div>
                 <div style={{display:"flex",justifyContent:"space-between",fontSize:11,fontFamily:"'DM Mono',monospace",fontWeight:700,marginTop:2}}>
                   <span>{cd.tipo} {cd.dim}</span>
-                  <span>{ct.pesoLb?`${ct.pesoLb}lb`:"—"}</span>
+                  <span>{ct.pesoLb?`${fmtDec(ct.pesoLb,2)}lb`:"—"}</span>
                 </div>
               </div>
               {/* Franja 3 — Barcode + Pieza + Paquetes */}
@@ -13561,7 +13597,7 @@ export default function SistemaCarga(){
                             <td style={{padding:"6px 8px"}}>{cl?fullName(cl):(w.consignee||"—")}</td>
                             <td style={{padding:"6px 8px",fontFamily:"'DM Mono',monospace",color:"var(--gold2)",fontWeight:700}}>{cl?.casillero||w.casillero||"—"}</td>
                             <td style={{padding:"6px 8px"}}>{w.cajas||1}</td>
-                            <td style={{padding:"6px 8px",fontFamily:"'DM Mono',monospace"}}>{w.pesoLb||0} lb</td>
+                            <td style={{padding:"6px 8px",fontFamily:"'DM Mono',monospace"}}>{fmtDec(w.pesoLb,2)} lb</td>
                           </tr>
                         );
                       })}
@@ -13826,8 +13862,8 @@ export default function SistemaCarga(){
                                 <td style={{padding:"4px 6px",color:"var(--t2)"}}>{cli?[cli.primerNombre,cli.primerApellido].filter(Boolean).join(" "):w.consignee||"—"}</td>
                                 <td style={{padding:"4px 6px",color:"var(--t2)",maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{cleanReempaqueDesc(w.descripcion)||"—"}</td>
                                 <td style={{padding:"4px 6px",textAlign:"center"}}>{w.cajas||1}</td>
-                                <td style={{padding:"4px 6px",textAlign:"right",fontFamily:"'DM Mono',monospace"}}>{w.pesoLb||0}lb</td>
-                                <td style={{padding:"4px 6px",textAlign:"right",fontFamily:"'DM Mono',monospace",color:"var(--orange)"}}>{isAereo?`${w.volLb||0}lb`:(w.m3||0)}</td>
+                                <td style={{padding:"4px 6px",textAlign:"right",fontFamily:"'DM Mono',monospace"}}>{fmtDec(w.pesoLb,2)}lb</td>
+                                <td style={{padding:"4px 6px",textAlign:"right",fontFamily:"'DM Mono',monospace",color:"var(--orange)"}}>{isAereo?`${fmtDec(w.volLb,2)}lb`:(w.m3||0)}</td>
                                 <td style={{padding:"4px 6px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontWeight:700,color:"#E65100",background:"#FFF8E1"}}>{fact.valor.toFixed(isAereo?1:2)}{isAereo?" lb":" ft³"}</td>
                               </tr>
                             );
