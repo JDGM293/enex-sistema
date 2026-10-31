@@ -12900,10 +12900,10 @@ export default function SistemaCarga(){
       {id:"cargorelease",ic:<Ico e="🚀"/>,l:"Cargo Release"},
     ]},
     {label:"Administración",items:[
-      {id:"misfacturas",ic:<Ico e="🧾"/>,l:fpMiEmisor?"Mis facturas":"Facturas de agentes"},
       {id:"facturacion",ic:<Ico e="🧾"/>,l:"Facturación",onClick:()=>{setTab("contabilidad");setContabTab("porguia");setFacGuiaSel(null);},activeWhen:()=>tab==="contabilidad"&&["porguia","facturas"].includes(contabTab)},
       {id:"entregasydespachos",ic:<Ico e="📝"/>,l:"Entregas y Despachos"},
       {id:"contabilidad",ic:<Ico e="💰"/>,l:"Contabilidad",onClick:()=>{setTab("contabilidad");setContabTab("cuentas");setCuadreSel(null);},activeWhen:()=>tab==="contabilidad"&&!["porguia","facturas"].includes(contabTab)},
+      {id:"misfacturas",ic:<Ico e="🧾"/>,l:fpMiEmisor?"Mis facturas":"Facturas de agentes"},
     ]},
     {label:"Gestión",items:[
       {id:"clients",ic:<Ico e="👥"/>,l:"Clientes & Usuarios"},
