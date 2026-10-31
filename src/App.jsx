@@ -2944,12 +2944,12 @@ export default function SistemaCarga(){
   };
 
   // El Administrador (A) siempre tiene todo, para que nadie quede fuera del sistema.
+  const hasPerm=p=>currentUser.rol==="A"||(!PERMS_SOLO_ADMIN.has(p)&&(rolePerms[currentUser.rol]||[]).includes(p));
   // Jerarquía: cada quien gestiona usuarios de roles por debajo del suyo (el Administrador, todos)
   const RANGO_ROL=c=>c==="A"?0:c==="B"?1:c==="C"?2:3;
   const rolesAsignables=currentUser.rol==="A"?null:ALL_ROLES.map(r=>r.code).filter(c=>RANGO_ROL(c)>RANGO_ROL(currentUser.rol));
   const puedeEditarReg=c=>c.tipo==="usuario"?hasPerm("editar_usuario")&&(currentUser.rol==="A"||RANGO_ROL(c.rol)>RANGO_ROL(currentUser.rol)):hasPerm("editar_cliente");
   const tiposCrear=[hasPerm("crear_cliente")&&"cliente",hasPerm("crear_usuario")&&"usuario"].filter(Boolean);
-  const hasPerm=p=>currentUser.rol==="A"||(!PERMS_SOLO_ADMIN.has(p)&&(rolePerms[currentUser.rol]||[]).includes(p));
   const canEdit=hasPerm("crear_wr")||hasPerm("editar_wr");
   // Al crear clientes, quedan bajo el dominio de quien los crea (agente, vendedor o autónomo)
   const presetDominio=()=>{
