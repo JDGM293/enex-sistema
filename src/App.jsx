@@ -1132,7 +1132,7 @@ let calcEnvioG={}; // copia de la configuración para funciones fuera del compon
 // Cómo se cobra cada tipo de envío: por peso (real o volumétrico) o por volumen (ft³ / m³).
 // Se define en Configuración › Tipo de envío; si no está definido se deduce del nombre.
 const tipoNombreMaritimo=te=>{const t=sinAcentos(te||"").toLowerCase();return t.includes("maritimo")||t.includes("fcl")||t.includes("lcl")||t.includes("terrestre");};
-const tipoPorPeso=te=>{const c=calcEnvioG[te];if(c&&c.base)return c.base==="peso";return !tipoNombreMaritimo(te);};
+const tipoPorPeso=te=>!tipoNombreMaritimo(te);
 const tipoEsAereoG=te=>tipoPorPeso(te);
 const tipoEsMaritimoG=te=>!tipoPorPeso(te);
 const precioTarifa=(tf,porPeso)=>parseFloat(porPeso?tf?.porLb:tf?.porFt3)||parseFloat(porPeso?tf?.porFt3:tf?.porLb)||0;
@@ -1148,14 +1148,14 @@ const CONS_POOL=[];
 // En pulgadas: L×A×H / 139 = lb volumétrico
 // Pies cúbicos: L(in)×A(in)×H(in) / 1728
 // Metros cúbicos: L(cm)×A(cm)×H(cm) / 1,000,000
-const calcVol = (l,a,h,unit="cm",div=5000) => {
+const calcVol = (l,a,h,unit="cm",div=5000,divFt3=1728) => {
   // div: divisor volumétrico en cm³/kg (5000 ≈ 139 in³/lb · 6000 ≈ 166 in³/lb)
   const cm3=unit==="cm"?l*a*h:l*a*h*16.387064;
   const volKg=cm3/(div||5000);
-  return {volKg:parseFloat(volKg.toFixed(2)),volLb:parseFloat((volKg*LB_KG).toFixed(2)),m3:parseFloat((cm3/1e6).toFixed(4)),ft3:parseFloat((cm3/28316.846592).toFixed(3))};
+  return {volKg:parseFloat(volKg.toFixed(2)),volLb:parseFloat((volKg*LB_KG).toFixed(2)),m3:parseFloat((cm3/1e6).toFixed(4)),ft3:parseFloat((cm3/16.387064/(divFt3||1728)).toFixed(3))};
 };
 // Cálculo por tipo de envío (Configuración › Tipo de envío)
-const CALC_DEF={div:5000,modo:"wr",red:"0.01",wm:false,kgm3:1000};
+const CALC_DEF={div:5000,divFt3:1728,modo:"wr",red:"0.01"};
 const CALC_DIVS=[{v:6000,l:"6000 cm³/kg · 166 in³/lb (IATA, carga aérea internacional)"},{v:5000,l:"5000 cm³/kg · 139 in³/lb (courier EE. UU.)"}];
 const CALC_REDS=[{v:"0.01",l:"Exacto (2 decimales)"},{v:"0.1",l:"Hacia arriba, a la décima"},{v:"0.5",l:"Hacia arriba, a la media unidad"},{v:"1",l:"Hacia arriba, a la unidad"}];
 const nm2=v=>(Math.round(v*100)/100).toFixed(2);
@@ -1474,7 +1474,7 @@ const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[
   const fmtDim=(d)=>isIn?`${fmtDec(toIn(d))}`:`${fmtDec(d)}`;
   const fmtW=(pk)=>isLb?`${fmtDec(toLb(pk))}lb`:`${fmtDec(pk)}kg`;
   const fmtVol=(l,a,h)=>{
-    const v=calcVol(l,a,h,"cm",(calcEnvioG[w.tipoEnvio]||{}).div||5000);
+    const v=calcVol(l,a,h,"cm",(calcEnvioG[w.tipoEnvio]||{}).div||5000,(calcEnvioG[w.tipoEnvio]||{}).divFt3||1728);
     return isLb?`${fmtDec(v.volLb,2)}lb`:`${fmtDec(v.volKg,2)}kg`;
   };
 
@@ -2421,7 +2421,7 @@ export default function SistemaCarga(){
   const [calcEnvio,setCalcEnvio]=useState({}); // tipo de envío → {div, modo, red}
   calcEnvioG=calcEnvio;
   const [calcDraft,setCalcDraft]=useState(null);
-  const calcDe=tipo=>{const c={...CALC_DEF,...(calcEnvio[tipo]||{})};if(!(parseFloat(c.div)>0))c.div=CALC_DEF.div;return c;};
+  const calcDe=tipo=>{const c={...CALC_DEF,...(calcEnvio[tipo]||{})};if(!(parseFloat(c.div)>0))c.div=CALC_DEF.div;if(!(parseFloat(c.divFt3)>0))c.divFt3=CALC_DEF.divFt3;return c;};
   const [PAY_TYPES,setPayTypes]=useState(PAY_TYPES_INIT);
   const [CHARGES_OPT,setChargesOpt]=useState([]); // antiguo (solo nombres)
   // Catálogo con precio: servicios y gastos adicionales
@@ -3128,9 +3128,9 @@ export default function SistemaCarga(){
     // Convertir peso según unidad seleccionada
     const pkKg=wrf.unitPeso==="kg"?rawW:parseFloat((rawW/LB_KG).toFixed(2));
     const pkLb=wrf.unitPeso==="kg"?parseFloat((rawW*LB_KG).toFixed(2)):rawW;
-    const vc=lCm&&aCm&&hCm?calcVol(lCm,aCm,hCm,"cm",calcDe(wrf.tipoEnvio).div):{volKg:0,volLb:0,ft3:0,m3:0};
+    const vc=lCm&&aCm&&hCm?calcVol(lCm,aCm,hCm,"cm",calcDe(wrf.tipoEnvio).div,calcDe(wrf.tipoEnvio).divFt3):{volKg:0,volLb:0,ft3:0,m3:0};
     const cm3=lCm*aCm*hCm;const vkx=cm3/calcDe(wrf.tipoEnvio).div;
-    return {l,a,h,pkLb,pkKg,lCm,aCm,hCm,qty,...vc,_vk:vkx,_vl:vkx*LB_KG,_ft3:cm3/28316.846592,_m3:cm3/1e6};
+    return {l,a,h,pkLb,pkKg,lCm,aCm,hCm,qty,...vc,_vk:vkx,_vl:vkx*LB_KG,_ft3:cm3/16.387064/calcDe(wrf.tipoEnvio).divFt3,_m3:cm3/1e6};
   });
   const totalPesoLb=parseFloat(cajaCalcs.reduce((s,c)=>s+c.pkLb*c.qty,0).toFixed(2));
   const totalPesoKg=parseFloat(cajaCalcs.reduce((s,c)=>s+c.pkKg*c.qty,0).toFixed(2));
@@ -4525,7 +4525,7 @@ export default function SistemaCarga(){
                   ))}
                 </div>
                 {selWR.dims.map((d,i)=>{
-                  const dv=calcVol(d.l,d.a,d.h,"cm",calcDe(selWR.tipoEnvio).div);
+                  const dv=calcVol(d.l,d.a,d.h,"cm",calcDe(selWR.tipoEnvio).div,calcDe(selWR.tipoEnvio).divFt3);
                   const trk=d.tracking||selWR.tracking||"—";
                   const car=d.carrier||selWR.carrier||"—";
                   return (
@@ -6104,7 +6104,7 @@ export default function SistemaCarga(){
     const dest=cl?[cl.dir,cl.municipio,cl.estado,cl.pais].filter(Boolean).join(", "):"";
     const tipoCli=!cl?"":({matriz:"Casa matriz",agente:"Agente",vendedor_agente:"Vendedor de agente",oficina:"Oficina",vendedor_oficina:"Vendedor de oficina",autonomo:"Autónomo"})[cl.clienteTipo||"matriz"]||"";
     const dims=(w.dims||[]).length?w.dims:[];
-    const filas=dims.map((d,i)=>{const hay=d.l||d.a||d.h;const v=hay?calcVol(d.l||0,d.a||0,d.h||0,"cm",calcDe(w.tipoEnvio).div):{volLb:0,ft3:0,m3:0};
+    const filas=dims.map((d,i)=>{const hay=d.l||d.a||d.h;const v=hay?calcVol(d.l||0,d.a||0,d.h||0,"cm",calcDe(w.tipoEnvio).div,calcDe(w.tipoEnvio).divFt3):{volLb:0,ft3:0,m3:0};
       return `<tr><td>${i+1}</td><td>${hay?`${toIn(d.l)}×${toIn(d.a)}×${toIn(d.h)}`:"—"}${d.carrier?`<div class="sub">${prnE(d.carrier)}</div>`:""}</td>
         <td><span class="mono">${prnE(d.tracking||"")}</span>${d.descripcion?`<div>${prnE(d.descripcion)}</div>`:""}${d.factura?`<div class="sub">Fact.: ${prnE(d.factura)}</div>`:""}</td>
         <td class="r"><b>${d.pk?toLb(d.pk):"—"}</b></td><td class="r">${hay?v.volLb:"—"}</td><td class="r">${hay?v.ft3:"—"}</td><td class="r">${hay?v.m3:"—"}</td></tr>`;}).join("");
@@ -7066,16 +7066,16 @@ export default function SistemaCarga(){
         )}
         {cfgTab==="tipoenvio"&&(()=>{
           const D=calcDraft||calcEnvio;const set=(t,x)=>setCalcDraft({...D,[t]:{...CALC_DEF,...(D[t]||{}),...x}});
-          const guardar=async()=>{if(Object.entries(D).some(([,c])=>!(parseFloat(c.div??5000)>0)||(c.wm&&!(parseFloat(c.kgm3)>0)))){window.alert("Escribe un factor mayor que cero.");return;}const ok=await dbSetConfig("calc_envio",D);if(!ok){window.alert("No se pudo guardar.");return;}
+          const guardar=async()=>{if(Object.entries(D).some(([,c])=>!(parseFloat(c.div??5000)>0)||!(parseFloat(c.divFt3??1728)>0))){window.alert("Escribe un divisor mayor que cero.");return;}const ok=await dbSetConfig("calc_envio",D);if(!ok){window.alert("No se pudo guardar.");return;}
             // Los WR que aún no se han facturado toman el nuevo cálculo
             const facturados=new Set(facturas.filter(f=>f.status!=="anulada"&&f.status!=="borrador").flatMap(f=>f.wrIds||[]));
             const cambiados=[];
             const nueva=wrList.map(w=>{if(facturados.has(w.id)||wrTipoFijo(w)||!(w.dims||[]).length)return w;
               const C={...CALC_DEF,...(D[w.tipoEnvio]||{})};
-              const dims=w.dims.map(d=>{const v=calcVol(parseFloat(d.l)||0,parseFloat(d.a)||0,parseFloat(d.h)||0,"cm",C.div);return {...d,volKg:v.volKg,volLb:v.volLb};});
-              const vk=w.dims.reduce((t,d)=>t+(parseFloat(d.l)||0)*(parseFloat(d.a)||0)*(parseFloat(d.h)||0)/C.div,0);
-              const n={...w,dims,volKg:r2(vk),volLb:r2(vk*LB_KG)};
-              if(n.volLb!==parseFloat(w.volLb)||n.volKg!==parseFloat(w.volKg)){cambiados.push(n);return n;}return w;});
+              const dims=w.dims.map(d=>{const v=calcVol(parseFloat(d.l)||0,parseFloat(d.a)||0,parseFloat(d.h)||0,"cm",C.div,C.divFt3);return {...d,volKg:v.volKg,volLb:v.volLb,ft3:v.ft3};});
+              const cm3=w.dims.reduce((t,d)=>t+(parseFloat(d.l)||0)*(parseFloat(d.a)||0)*(parseFloat(d.h)||0),0);
+              const n={...w,dims,volKg:r2(cm3/C.div),volLb:r2(cm3/C.div*LB_KG),ft3:Math.round(cm3/16.387064/C.divFt3*1000)/1000};
+              if(n.volLb!==parseFloat(w.volLb)||n.volKg!==parseFloat(w.volKg)||n.ft3!==parseFloat(w.ft3)){cambiados.push(n);return n;}return w;});
             setCalcEnvio(D);setCalcDraft(null);
             if(cambiados.length){setWrList(nueva);for(const w of cambiados)await dbUpsertWR(w);}
             logAction("Cambió cálculo por tipo de envío",`${Object.keys(D).join(", ")} · ${cambiados.length} WR recalculados`);
@@ -7084,15 +7084,12 @@ export default function SistemaCarga(){
           <div className="card" style={{marginTop:14}}>
             <div className="card-tt"><Ico e="🧮" sp/>Cálculo por tipo de envío</div>
             <table className="ct">
-              <thead><tr><th>Tipo de envío</th><th>Se cobra por</th><th>Factor</th><th>Cobro</th><th>Redondeo</th></tr></thead>
-              <tbody>{SEND_TYPES.map(t=>{const C={...CALC_DEF,...(D[t]||{})};const base=C.base||(tipoNombreMaritimo(t)?"volumen":"peso");
-                const otro=!!C.divOtro||!CALC_DIVS.some(o=>o.v===C.div);
-                const red=<td><select className="fs" value={C.red} onChange={e=>set(t,{red:e.target.value})}>{CALC_REDS.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}</select></td>;
+              <thead><tr><th>Tipo de envío</th><th>Divisor</th><th>Cálculo</th><th>Redondeo</th></tr></thead>
+              <tbody>{SEND_TYPES.map(t=>{const C={...CALC_DEF,...(D[t]||{})};const porPeso=tipoPorPeso(t);
+                const otro=!!C.divOtro||!CALC_DIVS.some(o=>o.v===C.div);const otroF=!!C.divFt3Otro||C.divFt3!==1728;
                 return(<tr key={t}>
                   <td style={{fontWeight:700}}>{t}</td>
-                  <td><select className="fs" value={base} onChange={e=>set(t,{base:e.target.value})}>
-                    <option value="peso">Peso (lb / kg)</option><option value="volumen">Volumen (ft³ / m³)</option></select></td>
-                  {base==="peso"?<>
+                  {porPeso?<>
                     <td><div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
                       <select className="fs" value={otro?"otro":C.div} onChange={e=>set(t,e.target.value==="otro"?{divOtro:true}:{div:parseFloat(e.target.value),divOtro:false})}>
                         {CALC_DIVS.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}<option value="otro">Otro divisor (cm³/kg)</option></select>
@@ -7103,14 +7100,12 @@ export default function SistemaCarga(){
                       <option value="caja">Caja por caja: el mayor de cada caja, sumado</option></select></td>
                   </>:<>
                     <td><div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
-                      {C.wm?<><input className="fi" type="number" min="1" style={{width:100}} value={C.kgm3||""} onChange={e=>set(t,{kgm3:parseFloat(e.target.value)||0})}/>
-                        <span style={{fontSize:13,color:"var(--t2)",whiteSpace:"nowrap"}}>kg por m³ ≈ {C.kgm3>0?nm2(C.kgm3*LB_KG/35.3146667):"—"} lb por ft³</span></>
-                      :<span style={{fontSize:13,color:"var(--t2)"}}>Ft³ = L × A × H (in) ÷ 1728</span>}</div></td>
-                    <td><select className="fs" value={C.wm?"wm":"vol"} onChange={e=>set(t,{wm:e.target.value==="wm",kgm3:C.kgm3||1000})}>
-                      <option value="vol">Solo volumen de todas las cajas</option>
-                      <option value="wm">El mayor entre volumen y peso (W/M)</option></select></td>
+                      <select className="fs" value={otroF?"otro":"1728"} onChange={e=>set(t,e.target.value==="otro"?{divFt3Otro:true}:{divFt3:1728,divFt3Otro:false})}>
+                        <option value="1728">1728 in³ por ft³ (pie cúbico estándar)</option><option value="otro">Otro divisor (in³ por ft³)</option></select>
+                      {otroF&&<input className="fi" type="number" min="1" style={{width:100}} value={C.divFt3||""} onChange={e=>set(t,{divFt3:parseFloat(e.target.value)||0})}/>}</div></td>
+                    <td style={{color:"var(--t2)"}}>Ft³ = L × A × H (in) ÷ {C.divFt3||1728} · suma de todas las cajas</td>
                   </>}
-                  {red}
+                  <td><select className="fs" value={C.red} onChange={e=>set(t,{red:e.target.value})}>{CALC_REDS.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}</select></td>
                 </tr>);})}</tbody>
             </table>
             {calcDraft&&<div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:10}}>
@@ -8348,15 +8343,15 @@ export default function SistemaCarga(){
       cajaKg+=Math.max(k,vk)*q;cajaLb+=Math.max(k,vk)*LB_KG*q;
     });
     const factKg=redondearArriba(C.modo==="caja"?cajaKg:Math.max(kg,volKg),C.red), factLb=redondearArriba(C.modo==="caja"?cajaLb:Math.max(kg,volKg)*LB_KG,C.red);
-    const r={bultos,kg:r2(kg),lb:r2(kg*LB_KG),volKg:r2(volKg),volLb:r2(volKg*LB_KG),m3:Math.round(m3*10000)/10000,ft3:Math.round(m3*35.3146667*1000)/1000};
+    const ft3c=m3*1e6/16.387064/C.divFt3;
+    const r={bultos,kg:r2(kg),lb:r2(kg*LB_KG),volKg:r2(volKg),volLb:r2(volKg*LB_KG),m3:Math.round(m3*10000)/10000,ft3:Math.round(ft3c*1000)/1000};
     if(!f.orig||!f.dest||!f.tipoEnvio)return {...r,falta:true};
     const w={origCountry:f.orig.pais,origCity:f.orig.ciudad,destCountry:f.dest.pais,destCity:f.dest.ciudad};
     const tf=tarifaParaWR(w,f.tipoEnvio,calcPara);
     if(!tf)return {...r,sinTarifa:true};
     const aereo=tipoEsAereoG(f.tipoEnvio), maritimo=tipoEsMaritimoG(f.tipoEnvio);
     const uni=unidadTarifa(tf,aereo||!maritimo);
-    const m3c=C.wm?Math.max(m3,kg/(parseFloat(C.kgm3)||1000)):m3;
-    const cant=uni==="kg"?factKg:uni==="lb"?factLb:uni==="m3"?redondearArriba(m3c,C.red==="0.01"?"0.0001":C.red):redondearArriba(m3c*35.3146667,C.red);
+    const cant=uni==="kg"?factKg:uni==="lb"?factLb:uni==="m3"?redondearArriba(m3,C.red==="0.01"?"0.0001":C.red):redondearArriba(ft3c,C.red);
     const precio=precioTarifa(tf,!maritimo);
     const flete=r2(cant*precio), min=parseFloat(tf.min)||0;
     return {...r,tf,uni,cant,precio,flete,min,total:r2(Math.max(flete,min)),usoMinimo:min>flete,moneda:tf.moneda||"USD"};
@@ -10989,7 +10984,7 @@ export default function SistemaCarga(){
   const volDeWR=(w,tipo=w?.tipoEnvio)=>{
     const C=calcDe(tipo);const dims=Array.isArray(w?.dims)?w.dims:[];
     const cajas=dims.map(d=>{const cm3=(parseFloat(d.l)||0)*(parseFloat(d.a)||0)*(parseFloat(d.h)||0);const vk=cm3/C.div;const pl=parseFloat(d.pkLb)||(parseFloat(d.pk)||0)*LB_KG;const pk=parseFloat(d.pk)||pl/LB_KG;
-      return {pk,pl,vk,vl:vk*LB_KG,ft3:cm3/28316.846592,m3:cm3/1e6};});
+      return {pk,pl,vk,vl:vk*LB_KG,ft3:cm3/16.387064/C.divFt3,m3:cm3/1e6};});
     const S=k=>cajas.reduce((t,c)=>t+c[k],0);
     return {C,cajas,volKg:S("vk"),volLb:S("vl"),pesoKg:S("pk"),pesoLb:S("pl"),ft3:S("ft3"),m3:S("m3")};
   };
@@ -10997,9 +10992,9 @@ export default function SistemaCarga(){
   const conVolDeTipo=(w,tipo=w?.tipoEnvio)=>{
     if(!Array.isArray(w?.dims)||!w.dims.length)return w;
     const C=calcDe(tipo);
-    const dims=w.dims.map(d=>{const v=calcVol(parseFloat(d.l)||0,parseFloat(d.a)||0,parseFloat(d.h)||0,"cm",C.div);return {...d,volKg:v.volKg,volLb:v.volLb};});
+    const dims=w.dims.map(d=>{const v=calcVol(parseFloat(d.l)||0,parseFloat(d.a)||0,parseFloat(d.h)||0,"cm",C.div,C.divFt3);return {...d,volKg:v.volKg,volLb:v.volLb,ft3:v.ft3};});
     const V=volDeWR({...w,dims},tipo);
-    return {...w,dims,volKg:r2(V.volKg),volLb:r2(V.volLb)};
+    return {...w,dims,volKg:r2(V.volKg),volLb:r2(V.volLb),ft3:Math.round(V.ft3*1000)/1000};
   };
   const wrPesoFacturable=(w,isAereo,unidad="")=>{
     if(isAereo&&Array.isArray(w?.dims)&&w.dims.length&&w.dims.some(d=>parseFloat(d.l))){
@@ -11016,8 +11011,7 @@ export default function SistemaCarga(){
     }
     const Cm=calcDe(w?.tipoEnvio);const Vm=(w?.dims||[]).some(d=>parseFloat(d.l))?volDeWR(w):null;
     let ft3=Vm?Vm.ft3:parseFloat(w.ft3)||0, m3=Vm?Vm.m3:parseFloat(w.m3)||0;
-    if(Cm.wm){const kg=Vm?Vm.pesoKg:(parseFloat(w.pesoKg)||(parseFloat(w.pesoLb)||0)/LB_KG);const m3p=kg/(parseFloat(Cm.kgm3)||1000);
-      if(m3p>m3){m3=m3p;ft3=m3p*35.3146667;}}
+
     if(unidad==="m3")return {valor:redondearArriba(m3,Cm.red==="0.01"?"0.0001":Cm.red), unidad:"m3", ft3:r2(ft3), m3};
     return {valor:redondearArriba(ft3,Cm.red), unidad:"ft3", ft3:r2(ft3), m3};
   };
