@@ -4675,6 +4675,7 @@ export default function SistemaCarga(){
     if(t==="release")return ir(cargoReleases.find(c=>c.id===id),setCrPrint);
     if(t==="pickup")return ir(pickupList.find(p=>p.id===id),setPuPrint);
     if(t==="recibo")return ir(pagos.some(p=>p.reciboId===id)?id:null,setReciboVer);
+    if(t==="fpropia")return ir(fpList.find(f=>f.id===id),f=>prnVer(`Factura ${f.id}`,fpHTML(f)));
     return false;
   };
   const branchDeCliente=(cl)=>{
@@ -6996,7 +6997,7 @@ export default function SistemaCarga(){
           <thead><tr><th>N° Factura</th><th>Fecha</th>{!em&&<th>Emisor</th>}<th>Cliente</th><th>Guía</th><th>WR</th><th>Total</th><th>Cobrado</th><th>Saldo</th><th>Estado</th><th></th></tr></thead>
           <tbody>{pagSlice("fpropias",lista).map(f=>(
             <tr key={f.id}>
-              <td><span className="c-wr">{f.id}</span></td>
+              <td><Num t="fpropia" id={f.id}/></td>
               <td style={{fontFamily:"'DM Mono',monospace",fontSize:13}}>{fmtDate(f.fecha)}</td>
               {!em&&<td style={{fontWeight:600}}>{fpNombreEmisor(f.emisorTipo,f.emisorId)}</td>}
               <td style={{fontWeight:600}}>{f.cliente.nombre}<div style={{fontSize:12,color:"var(--gold2)",fontFamily:"'DM Mono',monospace"}}>{f.cliente.casillero}</div></td>
