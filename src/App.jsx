@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { dbGetPickups, dbUpsertPickup } from './supabase'
 import { descargarXlsx } from './xlsx'
 import { dbGetActividadReporte } from './supabase'
+import { dbGetFacturasPropias, dbUpsertFacturaPropia } from './supabase'
 import { chatFromDB, dbChatMensajes, dbChatEnviar, dbChatEditar, dbChatNoLeidos, dbChatMarcarLeido, chatSubirAdjunto, chatUrlAdjunto } from './supabase'
 import { supabase, resolverLogin, cuentaGuardar, cuentaEliminar, dbGetClientes, dbUpsertCliente, dbDeleteCliente, dbGetWR, dbUpsertWR, dbDeleteWR, dbGetAgentes, dbUpsertAgente, dbDeleteAgente, dbGetOficinas, dbUpsertOficina, dbDeleteOficina, dbGetTarifas, dbUpsertTarifa, dbDeleteTarifa, dbGetConsolidaciones, dbUpsertConsolidacion, dbDeleteConsolidacion, dbGetCargoReleases, dbUpsertCargoRelease, dbDeleteCargoRelease, dbGetDeliveryNotes, dbUpsertDeliveryNote, dbDeleteDeliveryNote, dbGetFacturas, dbUpsertFactura, dbDeleteFactura, dbGetPagos, dbUpsertPago, dbDeletePago, storageUploadComprobante, dbLogActividad, dbGetActividad, dbGetConfig, dbSetConfig, dbGetScanLog, dbInsertScan, dbSetScanRegistered, dbDeleteScanIds, storageUploadFoto, storageDeleteFoto, dbGetFotosByWR, dbInsertFoto, dbDeleteFoto, storageUploadFotoConsol, storageDeleteFotoConsol, dbGetFotosByConsol, dbInsertFotoConsol, dbDeleteFotoConsol } from "./supabase";
 
@@ -558,6 +559,7 @@ const ALL_PERMS=[
   "override_estado",
   // Chat
   "ver_chat","enviar_chat","editar_mensaje","borrar_mensaje","chat_directo","chat_adjuntar","chat_moderar","chat_canales",
+  "ver_fac_propia","crear_fac_propia","cobrar_fac_propia","anular_fac_propia",
   // Pick-up
   "ver_pickup","solicitar_pickup",
   // Servicios & Adicionales
@@ -620,7 +622,7 @@ const PERM_LBL={
   editar_pago:"Editar Pago",editar_pickup:"Editar Pick-up",borrar_pickup:"Borrar Pick-up",editar_foto:"Editar Foto",
   editar_prealerta:"Editar Pre-alerta",borrar_prealerta:"Borrar Pre-alerta",
   ver_documentos:"Ver Documentos",crear_documento:"Crear Documento",editar_documento:"Editar Documento",borrar_documento:"Borrar Documento",
-  crear_reporte:"Crear Reporte",editar_reporte:"Editar Reporte",borrar_reporte:"Borrar Reporte",
+  ver_fac_propia:"Ver facturas propias",crear_fac_propia:"Emitir facturas propias",cobrar_fac_propia:"Cobrar facturas propias",anular_fac_propia:"Anular facturas propias",crear_reporte:"Crear Reporte",editar_reporte:"Editar Reporte",borrar_reporte:"Borrar Reporte",
   saltar_bloqueos:"Saltar bloqueos de estado",
 };
 
@@ -652,6 +654,7 @@ const PERM_MODULES=[
   {m:"Documentos",ic:<Ico e="📋"/>,ver:"ver_documentos",crear:"crear_documento",editar:"editar_documento",borrar:"borrar_documento"},
   {m:"Reportes",ic:<Ico e="📈"/>,ver:"ver_reportes",crear:"crear_reporte",editar:"editar_reporte",borrar:"borrar_reporte"},
   {m:"Chat",ic:<Ico e="💬"/>,ver:"ver_chat",crear:"enviar_chat",editar:"editar_mensaje",borrar:"borrar_mensaje"},
+  {m:"Facturas propias",ic:<Ico e="🧾"/>,ver:"ver_fac_propia",crear:"crear_fac_propia",editar:"cobrar_fac_propia",borrar:"anular_fac_propia"},
 ];
 const PERM_ACTIONS=[{k:"ver",l:"Ver"},{k:"crear",l:"Crear"},{k:"editar",l:"Editar"},{k:"borrar",l:"Borrar"}];
 const PERMS_EN_TABLA=new Set(PERM_MODULES.flatMap(m=>PERM_ACTIONS.map(a=>m[a.k])));
@@ -904,19 +907,19 @@ const ROLE_DEFS={
   E:{code:"E",name:"Agente",color:"rE",icon:<Ico e="🤝"/>,
     desc:"Agente externo. Gestiona sus clientes y WR propios.",
     subs:["E1"],
-    perms:["ver_chat","enviar_chat","editar_mensaje","borrar_mensaje","chat_directo","chat_adjuntar","crear_cliente","editar_cliente","crear_wr","editar_wr","ver_wr","ver_booking","ver_confirmacion","imp_wr","imp_factura","ver_estado_cuenta","ver_estado_agente","ver_tracking","rastrear","ver_prealerta","pre_tracking","pre_factura","ver_pickup","solicitar_pickup","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_factura","ver_fotos","subir_foto"]},
+    perms:["ver_fac_propia","crear_fac_propia","cobrar_fac_propia","anular_fac_propia","ver_chat","enviar_chat","editar_mensaje","borrar_mensaje","chat_directo","chat_adjuntar","crear_cliente","editar_cliente","crear_wr","editar_wr","ver_wr","ver_booking","ver_confirmacion","imp_wr","imp_factura","ver_estado_cuenta","ver_estado_agente","ver_tracking","rastrear","ver_prealerta","pre_tracking","pre_factura","ver_pickup","solicitar_pickup","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_factura","ver_fotos","subir_foto"]},
 
   E1:{code:"E1",name:"Vendedor / Agente",color:"rE1",icon:<Ico e="💼"/>,
     desc:"Vendedor bajo un agente. Solo sus clientes.",
-    perms:["ver_chat","enviar_chat","editar_mensaje","borrar_mensaje","chat_directo","chat_adjuntar","crear_cliente","editar_cliente","crear_wr","ver_wr","ver_booking","imp_wr","imp_factura","ver_estado_cuenta","ver_estado_agente","ver_tracking","rastrear","ver_prealerta","pre_tracking","pre_factura","ver_pickup","solicitar_pickup","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_factura","ver_fotos","subir_foto"]},
+    perms:["ver_fac_propia","crear_fac_propia","cobrar_fac_propia","anular_fac_propia","ver_chat","enviar_chat","editar_mensaje","borrar_mensaje","chat_directo","chat_adjuntar","crear_cliente","editar_cliente","crear_wr","ver_wr","ver_booking","imp_wr","imp_factura","ver_estado_cuenta","ver_estado_agente","ver_tracking","rastrear","ver_prealerta","pre_tracking","pre_factura","ver_pickup","solicitar_pickup","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_factura","ver_fotos","subir_foto"]},
 
   F:{code:"F",name:"Autónomo",color:"rF",icon:<Ico e="🧑‍💻"/>,
     desc:"Operador independiente. Gestiona sus propios clientes.",
-    perms:["ver_chat","enviar_chat","editar_mensaje","borrar_mensaje","chat_directo","chat_adjuntar","crear_cliente","editar_cliente","crear_wr","editar_wr","ver_wr","ver_confirmacion","imp_wr","imp_factura","ver_estado_cuenta","ver_estado_cliente","ver_tracking","rastrear","ver_prealerta","pre_tracking","pre_factura","ver_pickup","solicitar_pickup","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_factura","ver_fotos","subir_foto"]},
+    perms:["ver_fac_propia","crear_fac_propia","cobrar_fac_propia","anular_fac_propia","ver_chat","enviar_chat","editar_mensaje","borrar_mensaje","chat_directo","chat_adjuntar","crear_cliente","editar_cliente","crear_wr","editar_wr","ver_wr","ver_confirmacion","imp_wr","imp_factura","ver_estado_cuenta","ver_estado_cliente","ver_tracking","rastrear","ver_prealerta","pre_tracking","pre_factura","ver_pickup","solicitar_pickup","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_factura","ver_fotos","subir_foto"]},
 
   G:{code:"G",name:"Oficina",color:"rG",icon:<Ico e="🏢"/>,
     desc:"Sucursal de la empresa. Ve la carga que recibe o que se envió por ella.",
-    perms:["ver_chat","enviar_chat","editar_mensaje","borrar_mensaje","chat_directo","chat_adjuntar","crear_cliente","editar_cliente","crear_wr","editar_wr","ver_wr","ver_rp","hacer_rp","editar_rp","ver_booking","crear_booking","editar_booking","ver_reempaque","ver_guia","crear_guia","ver_confirmacion","ver_entrega","entregar","ver_reportes","rep_confirmados","imp_wr","imp_guia","imp_etiq_caja","imp_etiq_guia","imp_rp","imp_lista_conf","imp_recibo_entrega","imp_factura","ver_estado_cuenta","ver_estado_oficina","ver_tracking","rastrear","ver_prealerta","pre_tracking","pre_factura","ver_pickup","solicitar_pickup","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_tarifas","ver_factura","registrar_cobro","ver_cuentas_cobrar","ver_bd_clientes","paquetes_sin_reclamo","ver_fotos","subir_foto"]},
+    perms:["ver_fac_propia","crear_fac_propia","cobrar_fac_propia","anular_fac_propia","ver_chat","enviar_chat","editar_mensaje","borrar_mensaje","chat_directo","chat_adjuntar","crear_cliente","editar_cliente","crear_wr","editar_wr","ver_wr","ver_rp","hacer_rp","editar_rp","ver_booking","crear_booking","editar_booking","ver_reempaque","ver_guia","crear_guia","ver_confirmacion","ver_entrega","entregar","ver_reportes","rep_confirmados","imp_wr","imp_guia","imp_etiq_caja","imp_etiq_guia","imp_rp","imp_lista_conf","imp_recibo_entrega","imp_factura","ver_estado_cuenta","ver_estado_oficina","ver_tracking","rastrear","ver_prealerta","pre_tracking","pre_factura","ver_pickup","solicitar_pickup","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_tarifas","ver_factura","registrar_cobro","ver_cuentas_cobrar","ver_bd_clientes","paquetes_sin_reclamo","ver_fotos","subir_foto"]},
 
   I:{code:"I",name:"Cliente",color:"rH2",icon:<Ico e="📦"/>,
     desc:"Cliente externo. Solo ve sus propios envíos, estado de cuenta, tracking y factura.",
@@ -2632,6 +2635,12 @@ export default function SistemaCarga(){
   },[tab,chatCanales,dashWide]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(()=>{[chatScroll.current,chatMiniScroll.current].forEach(el=>{if(el)el.scrollTop=el.scrollHeight;});},[chatConv,(chatMsgs[chatConv]||[]).length,tab]);
   const [pickupList,setPickupList]=useState([]);
+  const [fpList,setFpList]=useState([]);            // facturas propias
+  const [fpModal,setFpModal]=useState(null);
+  const [fpCobro,setFpCobro]=useState(null);
+  const [fpDatos,setFpDatos]=useState({});
+  const [fpDatosEd,setFpDatosEd]=useState(null);
+  const [fpFil,setFpFil]=useState({q:"",status:"",emisor:""});
   const [showNewPickup,setShowNewPickup]=useState(false);
   const [pickupSel,setPickupSel]=useState(null);
   const [puPrint,setPuPrint]=useState(null);   // comprobante de pick-up en vista previa
@@ -2725,6 +2734,8 @@ export default function SistemaCarga(){
       ]);
       if(cls.length>0)setClients(cls);
       dbGetPickups().then(setPickupList);
+      dbGetFacturasPropias().then(setFpList);
+      supabase.from('configuracion').select('clave,valor').like('clave','fp_datos:%').then(({data})=>{if(data)setFpDatos(Object.fromEntries(data.map(r=>[r.clave.slice(9),r.valor])));});
       // Usuario de la sesión: el registro enlazado a la cuenta
       {const u=cls.find(c=>c.authId===authUid&&c.activo!==false);
        if(u)setCurrentUser(u);
@@ -6881,6 +6892,191 @@ export default function SistemaCarga(){
             <tbody>{d.soloTot&&prev.grupos?prev.grupos.slice(0,15).map(g=><tr key={g.k}><td>{g.k}</td><td>{g.rows.length}</td>{prev.cols.filter(repNum).map(c=><td key={c.k}>{repFmt(c,g.tot[c.k])}</td>)}</tr>)
               :(prev.grupos?prev.grupos.flatMap(g=>g.rows):prev.filas).slice(0,15).map((r,i)=><tr key={i}>{prev.cols.map(c=><td key={c.k}>{repFmt(c,c.v(r),r)}</td>)}</tr>)}</tbody></table></div>)}
       </div>
+    </div>);
+  };
+
+  // ── FACTURAS PROPIAS ─────────────────────────────────────────────────────────
+  // Agentes, autónomos y oficinas facturan a sus propios clientes con su nombre.
+  // Quedan registradas aparte: no entran en Cuentas, Caja, comisiones ni reportes de la matriz.
+  const FP_ST={emitida:{l:"Pendiente",cls:"s4"},pagada_parcial:{l:"Abonada",cls:"s2"},pagada:{l:"Pagada",cls:"s3"},anulada:{l:"Anulada",cls:"s6"}};
+  const fpMiEmisor=(()=>{const u=currentUser;
+    if(["E","E1"].includes(u.rol)&&u.agenteId){const a=agentes.find(x=>x.id===u.agenteId);return a?{tipo:"agente",id:a.id,nombre:a.nombre||a.codigo,codigo:`AG${parseInt(a.codigo,10)||""}`}:null;}
+    if(u.rol==="F")return {tipo:"autonomo",id:u.id,nombre:fullName(u),codigo:siglaUsuario(u,clients,agentes,oficinas)};
+    if(u.rol==="G"&&u.oficinaId){const o=oficinas.find(x=>x.id===u.oficinaId);return o?{tipo:"oficina",id:o.id,nombre:o.nombre,codigo:`OF${parseInt(o.codigo,10)||""}`}:null;}
+    return null;})();
+  const fpKey=em=>`${em.tipo}:${em.id}`;
+  const fpNombreEmisor=(tipo,id)=>tipo==="agente"?(agentes.find(a=>a.id===id)?.nombre||id):tipo==="oficina"?(oficinas.find(o=>o.id===id)?.nombre||id):(()=>{const c=clients.find(x=>x.id===id);return c?fullName(c):id;})();
+  const fpDatosBase=em=>{
+    if(em.tipo==="agente"){const a=agentes.find(x=>x.id===em.id)||{};return {razon:a.nombre||"",idFiscal:"",dir:a.dir||"",ciudad:a.ciudad||"",estado:a.estado||"",pais:a.pais||"",cp:a.cp||"",tel:a.tel||"",email:a.email||""};}
+    if(em.tipo==="oficina"){const o=oficinas.find(x=>x.id===em.id)||{};return {razon:`${empresaNombre} — ${o.nombre||""}`,idFiscal:"",dir:o.dir||"",ciudad:o.ciudad||"",estado:o.estado||"",pais:o.pais||"",cp:o.cp||"",tel:o.tel||"",email:o.email||""};}
+    const c=clients.find(x=>x.id===em.id)||{};return {razon:fullName(c),idFiscal:c.cedula||"",dir:c.dir||"",ciudad:c.municipio||"",estado:c.estado||"",pais:c.pais||"",cp:c.cp||"",tel:c.tel1||"",email:c.email||""};
+  };
+  const fpDatosDe=em=>({...fpDatosBase(em),...(fpDatos[fpKey(em)]||{})});
+  const fpClientesDe=em=>clients.filter(c=>c.tipo==="cliente"&&(em.tipo==="agente"?["agente","vendedor_agente"].includes(c.clienteTipo)&&c.agenteId===em.id
+    :em.tipo==="autonomo"?c.clienteTipo==="autonomo"&&c.autonomoId===em.id:["oficina","vendedor_oficina"].includes(c.clienteTipo)&&c.oficinaId===em.id));
+  const fpWRsFacturados=em=>new Set(fpList.filter(f=>f.emisorTipo===em.tipo&&f.emisorId===em.id&&f.status!=="anulada").flatMap(f=>f.wrIds));
+  const fpRecalc=f=>{const lineas=(f.lineas||[]).map(l=>({...l,total:r2((parseFloat(l.cantidad)||0)*(parseFloat(l.precio)||0))}));
+    const total=r2(lineas.reduce((t,l)=>t+l.total,0));const pagado=r2((f.pagos||[]).reduce((t,p)=>t+(parseFloat(p.monto)||0),0));
+    return {...f,lineas,total,pagado,saldo:r2(Math.max(0,total-pagado)),status:f.status==="anulada"?"anulada":pagado<=0?"emitida":pagado+0.004>=total?"pagada":"pagada_parcial"};};
+  const fpNueva=()=>{if(!fpMiEmisor)return;setFpModal({guiaId:"",clienteId:"",lineas:[],moneda:"USD",notas:""});};
+  const fpCargarLineas=(guiaId,clienteId)=>{
+    const g=consolList.find(x=>x.id===guiaId);if(!g||!clienteId)return [];
+    const ya=fpWRsFacturados(fpMiEmisor);const porPeso=tipoPorPeso(g.tipoEnvio);
+    return (g.containers||[]).flatMap(ct=>ct.wr||[]).map(x=>wrList.find(w=>w.id===x.id)||x).filter(w=>!ya.has(w.id)&&cliDeWR(w)?.id===clienteId)
+      .map(w=>{const pf=wrPesoFacturable(w,porPeso);return {tipo:"flete",wrId:w.id,descripcion:`Flete WR ${w.id}`,cantidad:String(pf.valor),unidad:pf.unidad,precio:""};});
+  };
+  const fpGuardar=async()=>{
+    const m=fpModal;const em=fpMiEmisor;if(!m||!em)return;
+    const lineas=m.lineas.filter(l=>String(l.descripcion||"").trim());
+    if(!m.clienteId||!lineas.some(l=>l.tipo==="flete")){window.alert("Escoge la guía y el cliente.");return;}
+    if(lineas.some(l=>!(parseFloat(l.precio)>0)||!(parseFloat(l.cantidad)>0))){window.alert("Cada línea necesita cantidad y precio.");return;}
+    const numero=Math.max(0,...fpList.filter(f=>f.emisorTipo===em.tipo&&f.emisorId===em.id).map(f=>f.numero||0))+1;
+    const c=clients.find(x=>x.id===m.clienteId)||{};const D=fpDatosDe(em);
+    const f=fpRecalc({id:`${em.codigo}-${String(numero).padStart(6,"0")}`,emisorTipo:em.tipo,emisorId:em.id,numero,emisor:D,
+      clienteId:c.id,cliente:{nombre:fullName(c),casillero:c.casillero||"",doc:c.cedula||"",dir:[c.dir,lineaCiudad(c)].filter(Boolean).join(", "),tel:c.tel1||"",email:c.email||""},
+      guiaId:m.guiaId,wrIds:lineas.filter(l=>l.wrId).map(l=>l.wrId),lineas,moneda:m.moneda,pagos:[],notas:m.notas,fecha:new Date(),usuario:currentUser.id,status:"emitida"});
+    const ok=await dbUpsertFacturaPropia(f);if(!ok){window.alert("No se pudo guardar la factura.");return;}
+    setFpList(p=>[f,...p]);setFpModal(null);logAction("Emitió factura propia",`${f.id} · ${f.cliente.nombre} · ${fmtMoney(f.total,f.moneda)}`);
+    prnVer(`Factura ${f.id}`,fpHTML(f));
+  };
+  const fpCobrar=async()=>{
+    const m=fpCobro;const f=fpList.find(x=>x.id===m?.id);if(!f)return;const monto=parseFloat(m.monto)||0;
+    if(monto<=0){window.alert("Escribe el monto cobrado.");return;}
+    if(monto>f.saldo+0.004){window.alert(`El monto pasa del saldo (${fmtMoney(f.saldo,f.moneda)}).`);return;}
+    const n=fpRecalc({...f,pagos:[...f.pagos,{fecha:new Date(m.fecha||Date.now()).toISOString(),monto,metodo:m.metodo,ref:m.ref||"",usuario:currentUser.id}]});
+    const ok=await dbUpsertFacturaPropia(n);if(!ok){window.alert("No se pudo registrar el cobro.");return;}
+    setFpList(p=>p.map(x=>x.id===n.id?n:x));setFpCobro(null);logAction("Registró cobro de factura propia",`${n.id} · ${fmtMoney(monto,n.moneda)}`);
+  };
+  const fpAnular=async f=>{
+    const motivo=window.prompt(`Motivo para anular la factura ${f.id}:`);if(!motivo||!motivo.trim())return;
+    const n={...f,status:"anulada",motivoAnulacion:motivo.trim()};
+    const ok=await dbUpsertFacturaPropia(n);if(!ok){window.alert("No se pudo anular.");return;}
+    setFpList(p=>p.map(x=>x.id===n.id?n:x));logAction("Anuló factura propia",`${n.id} · ${motivo.trim()}`);
+  };
+  const fpHTML=f=>{
+    const e=prnE,$=v=>fmtMoney(v,f.moneda),D=f.emisor||{};
+    const fl=f.lineas.filter(l=>l.tipo==="flete"),ad=f.lineas.filter(l=>l.tipo!=="flete");
+    const UL={lb:"lb",kg:"kg",ft3:"ft³",m3:"m³"};
+    let cuerpo=pGrid(2,[pBox("Cliente",`<b>${e(f.cliente.nombre||"—")}</b>${f.cliente.casillero?` · #${e(f.cliente.casillero)}`:""}`,e([f.cliente.doc&&`ID ${f.cliente.doc}`,f.cliente.tel,f.cliente.email].filter(Boolean).join(" · "))),
+      pBox("Dirección",e(f.cliente.dir||"—"),f.guiaId?`Guía ${e(f.guiaId)}`:"")]);
+    if(fl.length)cuerpo+=pSec("WR y flete")+pTabla([{l:"N° WR"},{l:"Cantidad",r:1},{l:"Precio",r:1},{l:"Importe",r:1}],
+      fl.map(l=>`<tr><td class="mono"><b>${e(l.wrId)}</b></td><td class="r">${nm(l.cantidad)} ${UL[l.unidad]||""}</td><td class="r">${$(l.precio)}</td><td class="r"><b>${$(l.total)}</b></td></tr>`).join(""));
+    if(ad.length)cuerpo+=pSec("Cobros adicionales")+pTabla([{l:"Concepto"},{l:"Cant.",r:1},{l:"Precio",r:1},{l:"Importe",r:1}],
+      ad.map(l=>`<tr><td>${e(l.descripcion)}</td><td class="r">${nm(l.cantidad)}</td><td class="r">${$(l.precio)}</td><td class="r"><b>${$(l.total)}</b></td></tr>`).join(""));
+    cuerpo+=pTotales([["Total",$(f.total),"gt"],f.pagado>0&&["Cobrado",$(f.pagado)],f.pagado>0&&["<b>Saldo</b>",`<b>${$(f.saldo)}</b>`]]);
+    if(f.pagos.length)cuerpo+=pSec("Cobros")+pTabla([{l:"Fecha"},{l:"Forma"},{l:"Referencia"},{l:"Monto",r:1}],
+      f.pagos.map(p=>`<tr><td>${fmtDate(p.fecha)}</td><td>${e(metodoLbl(p.metodo))}</td><td>${e(p.ref||"")}</td><td class="r">${$(p.monto)}</td></tr>`).join(""));
+    if(f.notas)cuerpo+=`<div class="nota"><b>Notas:</b> ${e(f.notas)}</div>`;
+    return prnHTML({titulo:"Factura",numero:f.id,meta:[["Fecha",fmtDate(f.fecha)],["Moneda",f.moneda]],cuerpo,
+      emisor:{nombre:D.razon||fpNombreEmisor(f.emisorTipo,f.emisorId),lineas:[D.dir,lineaCiudad(D),[D.tel,D.email].filter(Boolean).join(" · "),D.idFiscal&&`ID fiscal ${D.idFiscal}`]},
+      anulado:f.status==="anulada"?{texto:"ANULADA",motivo:f.motivoAnulacion}:null});
+  };
+
+  const renderFacturasPropias=()=>{
+    const em=fpMiEmisor;const Q=sinAcentos(fpFil.q.trim());
+    const lista=fpList.filter(f=>(!em||(f.emisorTipo===em.tipo&&f.emisorId===em.id))&&(!fpFil.status||f.status===fpFil.status)&&(!fpFil.emisor||`${f.emisorTipo}:${f.emisorId}`===fpFil.emisor)
+      &&(!Q||sinAcentos(`${f.id} ${f.cliente.nombre} ${f.cliente.casillero} ${f.guiaId} ${f.wrIds.join(" ")}`).includes(Q)));
+    const sumMon=k=>{const o={};lista.filter(f=>f.status!=="anulada").forEach(f=>{o[f.moneda]=r2((o[f.moneda]||0)+f[k]);});return Object.entries(o).map(([m,v])=>fmtMoney(v,m)).join(" · ")||"—";};
+    const emisores=[...new Map(fpList.map(f=>[`${f.emisorTipo}:${f.emisorId}`,fpNombreEmisor(f.emisorTipo,f.emisorId)])).entries()];
+    return(
+    <div className="page-scroll">
+      <div className="card" style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap",marginBottom:12}}>
+        <input className="fi" style={{flex:1,minWidth:220}} value={fpFil.q} onChange={e=>setFpFil(p=>({...p,q:e.target.value}))} placeholder="Buscar factura, cliente, casillero, guía o WR…"/>
+        <select className="fs" style={{width:160}} value={fpFil.status} onChange={e=>setFpFil(p=>({...p,status:e.target.value}))}><option value="">Todos los estados</option>{Object.entries(FP_ST).map(([k,v])=><option key={k} value={k}>{v.l}</option>)}</select>
+        {!em&&<select className="fs" style={{width:220}} value={fpFil.emisor} onChange={e=>setFpFil(p=>({...p,emisor:e.target.value}))}><option value="">Todos los emisores</option>{emisores.map(([k,n])=><option key={k} value={k}>{n}</option>)}</select>}
+        {em&&hasPerm("crear_fac_propia")&&<button className="btn-s" onClick={()=>setFpDatosEd(fpDatosDe(em))}><Ico e="🏢" sp/>Mis datos</button>}
+        {em&&hasPerm("crear_fac_propia")&&<button className="btn-p" onClick={fpNueva}><Ico e="➕" sp/>Nueva factura</button>}
+      </div>
+      <div className="stats stats-5" style={{gridTemplateColumns:"repeat(3,1fr)",marginBottom:12}}>
+        {[["Facturado",sumMon("total")],["Cobrado",sumMon("pagado")],["Por cobrar",sumMon("saldo")]].map(([l,v])=>(
+          <div key={l} className="card" style={{padding:14}}><div style={{fontSize:13,color:"var(--t3)",fontWeight:700}}>{l}</div><div style={{fontSize:18,fontWeight:800,color:"var(--navy)",fontFamily:"'DM Mono',monospace",marginTop:4}}>{v}</div></div>))}
+      </div>
+      <div className="card" style={{padding:0}}>
+        <><table className="ct">
+          <thead><tr><th>N° Factura</th><th>Fecha</th>{!em&&<th>Emisor</th>}<th>Cliente</th><th>Guía</th><th>WR</th><th>Total</th><th>Cobrado</th><th>Saldo</th><th>Estado</th><th></th></tr></thead>
+          <tbody>{pagSlice("fpropias",lista).map(f=>(
+            <tr key={f.id}>
+              <td><span className="c-wr">{f.id}</span></td>
+              <td style={{fontFamily:"'DM Mono',monospace",fontSize:13}}>{fmtDate(f.fecha)}</td>
+              {!em&&<td style={{fontWeight:600}}>{fpNombreEmisor(f.emisorTipo,f.emisorId)}</td>}
+              <td style={{fontWeight:600}}>{f.cliente.nombre}<div style={{fontSize:12,color:"var(--gold2)",fontFamily:"'DM Mono',monospace"}}>{f.cliente.casillero}</div></td>
+              <td><Num t="guia" id={f.guiaId}/></td>
+              <td style={{fontSize:12}}><div style={{display:"flex",flexWrap:"wrap",gap:4}}>{f.wrIds.map(id=><Num key={id} t="wr" id={id} style={{fontSize:12,padding:"1px 6px"}}/>)}</div></td>
+              <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700}}>{fmtMoney(f.total,f.moneda)}</td>
+              <td style={{fontFamily:"'DM Mono',monospace",color:"var(--green)"}}>{fmtMoney(f.pagado,f.moneda)}</td>
+              <td style={{fontFamily:"'DM Mono',monospace",fontWeight:800,color:f.saldo>0&&f.status!=="anulada"?"var(--orange)":"var(--t3)"}}>{fmtMoney(f.status==="anulada"?0:f.saldo,f.moneda)}</td>
+              <td><span className={`st ${FP_ST[f.status]?.cls||"s5"}`}><span className="st-dot"/>{FP_ST[f.status]?.l||f.status}</span></td>
+              <td style={{whiteSpace:"nowrap"}}>
+                <button className="btn-s" style={{fontSize:12,padding:"3px 6px",marginRight:4}} title="Ver / imprimir" onClick={()=>prnVer(`Factura ${f.id}`,fpHTML(f))}><Ico e="🖨️" solo/></button>
+                {em&&f.status!=="anulada"&&f.saldo>0&&hasPerm("cobrar_fac_propia")&&<button className="btn-p" style={{fontSize:12,padding:"3px 8px",marginRight:4}} onClick={()=>setFpCobro({id:f.id,monto:String(f.saldo),fecha:new Date().toISOString().slice(0,10),metodo:"efectivo",ref:""})}><Ico e="💵" sp/>Cobro</button>}
+                {em&&f.status!=="anulada"&&hasPerm("anular_fac_propia")&&<button className="btn-s" style={{fontSize:12,padding:"3px 6px",color:"var(--red)",borderColor:"var(--red)"}} title="Anular" onClick={()=>fpAnular(f)}>✕</button>}
+              </td>
+            </tr>))}
+            {lista.length===0&&<tr><td colSpan={em?10:11} style={{textAlign:"center",padding:30,color:"var(--t3)"}}>No hay facturas.</td></tr>}
+          </tbody></table>{pagPie("fpropias",lista.length)}</>
+      </div>
+
+      {fpModal&&(()=>{const m=fpModal;const set=x=>setFpModal(p=>({...p,...x}));
+        const misCli=new Set(fpClientesDe(em).map(c=>c.id));
+        const guias=consolList.filter(g=>(g.containers||[]).some(ct=>(ct.wr||[]).some(x=>misCli.has(cliDeWR(wrList.find(w=>w.id===x.id)||x)?.id)))).sort((a,b)=>new Date(b.fecha||0)-new Date(a.fecha||0));
+        const g=consolList.find(x=>x.id===m.guiaId);
+        const cliG=g?[...new Map((g.containers||[]).flatMap(ct=>ct.wr||[]).map(x=>cliDeWR(wrList.find(w=>w.id===x.id)||x)).filter(c=>c&&misCli.has(c.id)).map(c=>[c.id,c])).values()]:[];
+        const setL=(i,x)=>set({lineas:m.lineas.map((l,j)=>j===i?{...l,...x}:l)});
+        const tot=m.lineas.reduce((t,l)=>t+(parseFloat(l.cantidad)||0)*(parseFloat(l.precio)||0),0);
+        const UL={lb:"lb",kg:"kg",ft3:"ft³",m3:"m³"};
+        return(
+        <div className="ov"><div className="modal mlg" onClick={e=>e.stopPropagation()}>
+          <div className="mhd"><div className="mt"><Ico e="🧾" sp/>Nueva factura<div className="mst">{fpDatosDe(em).razon||em.nombre}</div></div><button className="mcl" onClick={()=>setFpModal(null)}>✕</button></div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 140px",gap:10,marginBottom:12}}>
+            <div className="fg"><div className="fl">Guía</div><select className="fs" value={m.guiaId} onChange={e=>set({guiaId:e.target.value,clienteId:"",lineas:[]})}><option value="">— Escoge la guía —</option>{guias.map(x=><option key={x.id} value={x.id}>{x.id} · {x.tipoEnvio||""} · {fmtDate(x.fecha)}</option>)}</select></div>
+            <div className="fg"><div className="fl">Cliente</div><select className="fs" value={m.clienteId} disabled={!g} onChange={e=>set({clienteId:e.target.value,lineas:fpCargarLineas(m.guiaId,e.target.value)})}><option value="">— Escoge el cliente —</option>{cliG.map(c=><option key={c.id} value={c.id}>{fullName(c)}{c.casillero?` · #${c.casillero}`:""}</option>)}</select></div>
+            <div className="fg"><div className="fl">Moneda</div><select className="fs" value={m.moneda} onChange={e=>set({moneda:e.target.value})}>{["USD","EUR","VES","COP"].map(x=><option key={x}>{x}</option>)}</select></div>
+          </div>
+          {m.clienteId&&<>
+            {m.lineas.filter(l=>l.tipo==="flete").length===0&&<div style={{padding:14,textAlign:"center",color:"var(--t3)"}}>Los WR de este cliente en la guía ya están facturados.</div>}
+            <table className="ct" style={{marginBottom:8}}>
+              <thead><tr><th>Concepto</th><th style={{width:140}}>Cantidad</th><th style={{width:140}}>Precio</th><th style={{width:130,textAlign:"right"}}>Importe</th><th style={{width:40}}></th></tr></thead>
+              <tbody>{m.lineas.map((l,i)=>(
+                <tr key={i}>
+                  <td>{l.tipo==="flete"?<><Num t="wr" id={l.wrId}/> <span style={{color:"var(--t3)",fontSize:13}}>flete</span></>:<input className="fi" value={l.descripcion} placeholder="Concepto del cobro" onChange={e=>setL(i,{descripcion:e.target.value.toUpperCase()})}/>}</td>
+                  <td><div style={{display:"flex",alignItems:"center",gap:4}}><input className="fi" type="number" value={l.cantidad} onChange={e=>setL(i,{cantidad:e.target.value})}/>{l.unidad&&<span style={{fontSize:13,color:"var(--t3)"}}>{UL[l.unidad]}</span>}</div></td>
+                  <td><input className="fi" type="number" value={l.precio} placeholder="0.00" onChange={e=>setL(i,{precio:e.target.value})}/></td>
+                  <td style={{textAlign:"right",fontFamily:"'DM Mono',monospace",fontWeight:700}}>{fmtMoney((parseFloat(l.cantidad)||0)*(parseFloat(l.precio)||0),m.moneda)}</td>
+                  <td>{l.tipo!=="flete"&&<span className="ic-b" style={{color:"var(--red)"}} onClick={()=>set({lineas:m.lineas.filter((_,j)=>j!==i)})}><Ico e="🗑" solo/></span>}</td>
+                </tr>))}</tbody>
+            </table>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+              <button className="btn-s" onClick={()=>set({lineas:[...m.lineas,{tipo:"adicional",descripcion:"",cantidad:"1",precio:""}]})}><Ico e="➕" sp/>Cobro adicional</button>
+              <span style={{marginLeft:"auto",fontSize:17,fontWeight:800,color:"var(--navy)"}}>Total: {fmtMoney(tot,m.moneda)}</span>
+            </div>
+            <div className="fg"><div className="fl">Notas</div><input className="fi" value={m.notas} onChange={e=>set({notas:e.target.value})}/></div>
+          </>}
+          <div className="mft"><button className="btn-s" onClick={()=>setFpModal(null)}>Cancelar</button><button className="btn-p" disabled={!m.clienteId} onClick={fpGuardar}><Ico e="📤" sp/>Emitir factura</button></div>
+        </div></div>);})()}
+
+      {fpCobro&&(()=>{const m=fpCobro;const f=fpList.find(x=>x.id===m.id);const set=x=>setFpCobro(p=>({...p,...x}));if(!f)return null;return(
+        <div className="ov"><div className="modal msm" onClick={e=>e.stopPropagation()}>
+          <div className="mhd"><div className="mt"><Ico e="💵" sp/>Registrar cobro<div className="mst">Factura {f.id} · Saldo {fmtMoney(f.saldo,f.moneda)}</div></div><button className="mcl" onClick={()=>setFpCobro(null)}>✕</button></div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+            <div className="fg"><div className="fl">Monto ({f.moneda})</div><input className="fi" type="number" value={m.monto} onChange={e=>set({monto:e.target.value})}/></div>
+            <div className="fg"><div className="fl">Fecha</div><input className="fi" type="date" value={m.fecha} onChange={e=>set({fecha:e.target.value})}/></div>
+            <div className="fg"><div className="fl">Forma de pago</div><select className="fs" value={m.metodo} onChange={e=>set({metodo:e.target.value})}>{PAY_METHODS.filter(x=>!x.interno).map(x=><option key={x.k} value={x.k}>{x.l}</option>)}</select></div>
+            <div className="fg"><div className="fl">Referencia</div><input className="fi" value={m.ref} onChange={e=>set({ref:e.target.value})}/></div>
+          </div>
+          <div className="mft"><button className="btn-s" onClick={()=>setFpCobro(null)}>Cancelar</button><button className="btn-p" onClick={fpCobrar}><Ico e="💵" sp/>Registrar</button></div>
+        </div></div>);})()}
+
+      {fpDatosEd&&(()=>{const m=fpDatosEd;const set=x=>setFpDatosEd(p=>({...p,...x}));
+        const guardar=async()=>{const ok=await dbSetConfig(`fp_datos:${fpKey(em)}`,m);if(ok===false){window.alert("No se pudo guardar.");return;}setFpDatos(p=>({...p,[fpKey(em)]:m}));setFpDatosEd(null);logAction("Editó datos de factura propia",m.razon||"");};
+        const F=(k,l,full)=><div className="fg" style={full?{gridColumn:"1/-1"}:{}}><div className="fl">{l}</div><input className="fi" value={m[k]||""} onChange={e=>set({[k]:k==="email"?e.target.value.toLowerCase():e.target.value.toUpperCase()})}/></div>;
+        return(
+        <div className="ov"><div className="modal mmd" onClick={e=>e.stopPropagation()}>
+          <div className="mhd"><div className="mt"><Ico e="🏢" sp/>Datos de mis facturas</div><button className="mcl" onClick={()=>setFpDatosEd(null)}>✕</button></div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+            {F("razon","Nombre o razón social")}{F("idFiscal","ID fiscal")}{F("dir","Dirección",true)}{F("ciudad","Ciudad")}{F("estado","Estado / provincia")}{F("pais","País")}{F("cp","Código postal")}{F("tel","Teléfono")}{F("email","Correo")}
+          </div>
+          <div className="mft"><button className="btn-s" onClick={()=>setFpDatosEd(null)}>Cancelar</button><button className="btn-p" onClick={guardar}><Ico e="💾" sp/>Guardar</button></div>
+        </div></div>);})()}
     </div>);
   };
 
@@ -12703,6 +12899,7 @@ export default function SistemaCarga(){
       {id:"cargorelease",ic:<Ico e="🚀"/>,l:"Cargo Release"},
     ]},
     {label:"Administración",items:[
+      {id:"misfacturas",ic:<Ico e="🧾"/>,l:fpMiEmisor?"Mis facturas":"Facturas de agentes"},
       {id:"facturacion",ic:<Ico e="🧾"/>,l:"Facturación",onClick:()=>{setTab("contabilidad");setContabTab("porguia");setFacGuiaSel(null);},activeWhen:()=>tab==="contabilidad"&&["porguia","facturas"].includes(contabTab)},
       {id:"entregasydespachos",ic:<Ico e="📝"/>,l:"Entregas y Despachos"},
       {id:"contabilidad",ic:<Ico e="💰"/>,l:"Contabilidad",onClick:()=>{setTab("contabilidad");setContabTab("cuentas");setCuadreSel(null);},activeWhen:()=>tab==="contabilidad"&&!["porguia","facturas"].includes(contabTab)},
@@ -12732,7 +12929,7 @@ export default function SistemaCarga(){
     dashboard:["ver_wr"],estadocuenta:["ver_estado_cuenta","ver_estado_cliente","ver_estado_agente","ver_estado_oficina"],
     scan:["ver_rp"],loadingmaster:["ver_guia","ver_recepcion_dest"],alerts:["ver_alertas"],
     reempaque:["ver_reempaque"],cargorelease:["ver_egreso"],
-    entregasydespachos:["ver_entrega"],facturacion:["ver_factura"],contabilidad:["ver_cuentas_cobrar","ver_factura"],
+    entregasydespachos:["ver_entrega"],facturacion:["ver_factura"],misfacturas:["ver_fac_propia"],contabilidad:["ver_cuentas_cobrar","ver_factura"],
     clients:["ver_bd_clientes","ver_usuarios"],agentes:["ver_agente"],oficinas:["ver_oficina"],
     etiquetas:ALL_PERMS.filter(p=>p.startsWith("imp_")),tracking:["ver_tracking"],pickup:["ver_pickup"],
     calculadora:["calculadora"],chat:["ver_chat"],docs:["ver_documentos"],reports:["ver_reportes"],
@@ -12740,7 +12937,7 @@ export default function SistemaCarga(){
   };
   const navVisible=n=>!NAV_PERMS[n.id]||NAV_PERMS[n.id].some(p=>hasPerm(p));
 
-  const PAGE_TITLES={dashboard:"Dashboard General",loadingmaster:"Loading Master",scan:"Recepción en Puerta",etiquetas:"Imprimir Etiquetas",clients:"Clientes & Usuarios",estadocuenta:"Estado de Cuenta",roles:"Roles & Permisos",consolidation:"Consolidación",tracking:"Tracking",pickup:"Pick-up",contabilidad:"Contabilidad",calculadora:"Calculadora de Envío",chat:"Chat Interno",docs:"Documentos",reports:"Reportes",alerts:"Alertas",settings:"Configuración",reempaque:"Reempaque",recepciondest:"Recepción en Almacén",cargorelease:"Cargo Release (Egreso)",entregas:"Notas de Entrega",entregasydespachos:"Entregas y Despachos",facturacion:"Facturación"};
+  const PAGE_TITLES={misfacturas:fpMiEmisor?"Mis facturas":"Facturas de agentes, autónomos y oficinas",dashboard:"Dashboard General",loadingmaster:"Loading Master",scan:"Recepción en Puerta",etiquetas:"Imprimir Etiquetas",clients:"Clientes & Usuarios",estadocuenta:"Estado de Cuenta",roles:"Roles & Permisos",consolidation:"Consolidación",tracking:"Tracking",pickup:"Pick-up",contabilidad:"Contabilidad",calculadora:"Calculadora de Envío",chat:"Chat Interno",docs:"Documentos",reports:"Reportes",alerts:"Alertas",settings:"Configuración",reempaque:"Reempaque",recepciondest:"Recepción en Almacén",cargorelease:"Cargo Release (Egreso)",entregas:"Notas de Entrega",entregasydespachos:"Entregas y Despachos",facturacion:"Facturación"};
 
   const renderPage=()=>{
     if(!navVisible({id:tab}))return (
@@ -12759,6 +12956,7 @@ export default function SistemaCarga(){
       case "tracking":     return renderTracking();
       case "pickup":       return renderPickup();
       case "contabilidad": return renderContabilidad();
+      case "misfacturas":  return renderFacturasPropias();
       case "calculadora":  return renderCalculadora();
       case "chat":         return <div className="cnt" style={{display:"flex",flexDirection:"column",overflow:"hidden",flex:1}}>{renderChat()}</div>;
       case "roles":        return renderRoles();

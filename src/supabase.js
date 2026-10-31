@@ -794,3 +794,27 @@ export const chatUrlAdjunto = async (path) => {
   if (error) { console.error('chatUrlAdjunto:', error); return null }
   return data?.signedUrl || null
 }
+
+// ── FACTURAS PROPIAS (agentes, autónomos y oficinas) ─────────────────────────
+export const fpFromDB = (r) => r ? ({
+  id: r.id, emisorTipo: r.emisor_tipo, emisorId: r.emisor_id, numero: r.numero, emisor: r.emisor || {},
+  clienteId: r.cliente_id || '', cliente: r.cliente || {}, guiaId: r.guia_id || '', wrIds: r.wr_ids || [],
+  lineas: r.lineas || [], moneda: r.moneda || 'USD', total: Number(r.total) || 0, pagado: Number(r.pagado) || 0,
+  saldo: Number(r.saldo) || 0, status: r.status || 'emitida', pagos: r.pagos || [], notas: r.notas || '',
+  fecha: new Date(r.fecha), usuario: r.usuario || '', motivoAnulacion: r.motivo_anulacion || '',
+}) : null
+export const dbGetFacturasPropias = async () => {
+  const { data, error } = await supabase.from('facturas_propias').select('*').order('fecha', { ascending: false })
+  if (error) { console.error('getFacturasPropias:', error); return [] }
+  return (data || []).map(fpFromDB)
+}
+export const dbUpsertFacturaPropia = async (f) => {
+  const { error } = await supabase.from('facturas_propias').upsert({
+    id: f.id, emisor_tipo: f.emisorTipo, emisor_id: f.emisorId, numero: f.numero, emisor: f.emisor, cliente_id: f.clienteId || null,
+    cliente: f.cliente, guia_id: f.guiaId || null, wr_ids: f.wrIds, lineas: f.lineas, moneda: f.moneda, total: f.total, pagado: f.pagado,
+    saldo: f.saldo, status: f.status, pagos: f.pagos, notas: f.notas || null, fecha: new Date(f.fecha).toISOString(), usuario: f.usuario || null,
+    motivo_anulacion: f.motivoAnulacion || null,
+  })
+  if (error) { console.error('upsertFacturaPropia:', error); return false }
+  return true
+}
