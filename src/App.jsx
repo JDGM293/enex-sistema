@@ -9588,8 +9588,14 @@ export default function SistemaCarga(){
                           </td>
                           <td style={{fontSize:11}}>
                             {dnsRel.length===0
-                              ?<span style={{color:"var(--t4)"}}>—</span>
-                              :dnsRel.map(n=>(<Num t="entrega" id={n.id} key={n.id}/>))}
+                              ?(()=>{const sin=(f.wrIds||[]).map(id=>wrList.find(w=>w.id===id)).filter(w=>w&&["18","18.1","18.2","18.3","19"].includes(w.status?.code||""));
+                                return sin.length?<span style={{fontSize:12,fontWeight:700,color:"var(--red)"}}>{[...new Set(sin.map(w=>w.status?.label))].join(" / ")}</span>:<span style={{color:"var(--t4)"}}>Sin entregar</span>;})()
+                              :<div style={{display:"flex",flexDirection:"column",gap:4,alignItems:"flex-start"}}>{[...dnsRel].sort((a,b)=>new Date(a.fecha)-new Date(b.fecha)).map(n=>(
+                                <div key={n.id} style={{display:"flex",alignItems:"center",gap:6,whiteSpace:"nowrap"}}>
+                                  <span style={{fontSize:11,fontWeight:700,padding:"1px 6px",borderRadius:4,background:(n.tipo||"entrega")==="despacho"?"#EDE7F6":"#E8F5E9",color:(n.tipo||"entrega")==="despacho"?"#5E35B1":"#2E7D32"}}>{(n.tipo||"entrega")==="despacho"?"Despacho":"Entrega"}</span>
+                                  <Num t="entrega" id={n.id}/>
+                                  {n.wrIds.length>(f.wrIds||[]).filter(id=>n.wrIds.includes(id)).length&&<span title="Esta nota también entregó WR de otra factura" style={{fontSize:11,color:"var(--t3)"}}>compartida</span>}
+                                </div>))}</div>}
                           </td>
                           <td style={{textAlign:"center",fontWeight:700,fontSize:13}}>{f.moneda}</td>
                           <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:negativa?"var(--purple)":"var(--navy)"}}>{fmtMoney(f.total,f.moneda)}</td>
