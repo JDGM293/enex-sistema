@@ -9567,7 +9567,7 @@ export default function SistemaCarga(){
                 <><table className="ct">
                   <thead><tr>
                     <th>N° Factura</th><th>Tipo</th><th>Fecha</th><th>Receptor</th>
-                    <th>WR / Guía</th><th>Nota Entrega</th>
+                    <th>WR / Guía</th><th>Despacho</th><th>Entrega</th>
                     <th>Mon</th><th>Total</th><th>Pagado</th><th>Saldo</th><th>Estado</th><th style={{minWidth:160}}>Acciones</th>
                   </tr></thead>
                   <tbody>
@@ -9586,17 +9586,18 @@ export default function SistemaCarga(){
                             {(f.guiaIds||[]).length>0&&<div style={{color:"var(--purple)"}}>Guía: {(f.guiaIds||[]).join(", ")}</div>}
                             {(f.wrIds||[]).length===0&&(f.guiaIds||[]).length===0&&<span style={{color:"var(--t4)"}}>—</span>}
                           </td>
-                          <td style={{fontSize:11}}>
-                            {dnsRel.length===0
-                              ?(()=>{const sin=(f.wrIds||[]).map(id=>wrList.find(w=>w.id===id)).filter(w=>w&&["18","18.1","18.2","18.3","19"].includes(w.status?.code||""));
-                                return sin.length?<span style={{fontSize:12,fontWeight:700,color:"var(--red)"}}>{[...new Set(sin.map(w=>w.status?.label))].join(" / ")}</span>:<span style={{color:"var(--t4)"}}>Sin entregar</span>;})()
-                              :<div style={{display:"flex",flexDirection:"column",gap:4,alignItems:"flex-start"}}>{[...dnsRel].sort((a,b)=>new Date(a.fecha)-new Date(b.fecha)).map(n=>(
-                                <div key={n.id} style={{display:"flex",alignItems:"center",gap:6,whiteSpace:"nowrap"}}>
-                                  <span style={{fontSize:11,fontWeight:700,padding:"1px 6px",borderRadius:4,background:(n.tipo||"entrega")==="despacho"?"#EDE7F6":"#E8F5E9",color:(n.tipo||"entrega")==="despacho"?"#5E35B1":"#2E7D32"}}>{(n.tipo||"entrega")==="despacho"?"Despacho":"Entrega"}</span>
-                                  <Num t="entrega" id={n.id}/>
-                                  {n.wrIds.length>(f.wrIds||[]).filter(id=>n.wrIds.includes(id)).length&&<span title="Esta nota también entregó WR de otra factura" style={{fontSize:11,color:"var(--t3)"}}>compartida</span>}
-                                </div>))}</div>}
-                          </td>
+                          {(()=>{
+                            const celda=lista=>lista.length===0?<span style={{color:"var(--t4)"}}>—</span>
+                              :<div style={{display:"flex",flexDirection:"column",gap:4,alignItems:"flex-start"}}>{lista.map(n=>{
+                                const comp=n.wrIds.some(id=>!(f.wrIds||[]).includes(id));
+                                return <span key={n.id} style={{whiteSpace:"nowrap"}} title={comp?"Esta nota también incluye WR de otra factura":undefined}><Num t="entrega" id={n.id}/>{comp&&<sup style={{color:"var(--t3)",marginLeft:2}}>*</sup>}</span>;})}</div>;
+                            const ord=[...dnsRel].sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
+                            const desp=ord.filter(n=>n.tipo==="despacho"),ent=ord.filter(n=>(n.tipo||"entrega")!=="despacho");
+                            const sin=(f.wrIds||[]).map(id=>wrList.find(w=>w.id===id)).filter(w=>w&&["18","18.1","18.2","18.3","19"].includes(w.status?.code||""));
+                            return <>
+                              <td>{celda(desp)}</td>
+                              <td>{ent.length===0&&sin.length?<span style={{fontSize:12,fontWeight:700,color:"var(--red)"}}>{[...new Set(sin.map(w=>w.status?.label))].join(" / ")}</span>:celda(ent)}</td>
+                            </>;})()}
                           <td style={{textAlign:"center",fontWeight:700,fontSize:13}}>{f.moneda}</td>
                           <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:negativa?"var(--purple)":"var(--navy)"}}>{fmtMoney(f.total,f.moneda)}</td>
                           <td style={{fontFamily:"'DM Mono',monospace",fontWeight:600,color:"var(--green)"}}>{fmtMoney(f.pagado,f.moneda)}</td>
