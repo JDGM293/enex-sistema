@@ -5377,7 +5377,7 @@ export default function SistemaCarga(){
                         ?<tr><td colSpan={7} style={{textAlign:"center",padding:30,color:"var(--t3)"}}>Este cliente no tiene WR elegibles para egresar.</td></tr>
                         :cliWRs.map(w=>(
                           <tr key={w.id} className={ids.includes(w.id)?"sel":""} onClick={()=>tog(w.id)} style={{cursor:"pointer"}}>
-                            <td style={{textAlign:"center"}}><input type="checkbox" checked={ids.includes(w.id)} onChange={()=>tog(w.id)}/></td>
+                            <td style={{textAlign:"center"}}><input type="checkbox" checked={ids.includes(w.id)} onChange={()=>tog(w.id)} onClick={e=>e.stopPropagation()} style={{width:18,height:18,cursor:"pointer",verticalAlign:"middle"}}/></td>
                             <td><span className="c-wr">{w.id}</span></td>
                             <td><span className="c-dt">{fmtDate(w.fecha)}</span></td>
                             <td><span className="c-trk">{w.tracking||"—"}</span></td>
@@ -5429,7 +5429,7 @@ export default function SistemaCarga(){
                         ?<tr><td colSpan={7} style={{textAlign:"center",padding:30,color:"var(--t3)"}}>Este cliente no tiene WR elegibles para reempacar.</td></tr>
                         :cliWRs.map(w=>(
                           <tr key={w.id} className={ids.includes(w.id)?"sel":""} onClick={()=>tog(w.id)} style={{cursor:"pointer"}}>
-                            <td style={{textAlign:"center"}}><input type="checkbox" checked={ids.includes(w.id)} onChange={()=>tog(w.id)}/></td>
+                            <td style={{textAlign:"center"}}><input type="checkbox" checked={ids.includes(w.id)} onChange={()=>tog(w.id)} onClick={e=>e.stopPropagation()} style={{width:18,height:18,cursor:"pointer",verticalAlign:"middle"}}/></td>
                             <td><span className="c-wr">{w.id}</span></td>
                             <td><span className="c-dt">{fmtDate(w.fecha)}</span></td>
                             <td><span className="c-trk">{w.tracking||"—"}</span></td>
@@ -10936,7 +10936,7 @@ export default function SistemaCarga(){
                   ?<tr><td colSpan={9} style={{textAlign:"center",padding:40,color:"var(--t3)"}}>No hay WR disponibles para reempacar.</td></tr>
                   :candidatos.map(w=>(
                     <tr key={w.id} className={rpqSel.includes(w.id)?"sel":""} onClick={()=>toggleSel(w.id)} style={{cursor:"pointer"}}>
-                      <td style={{textAlign:"center"}}><input type="checkbox" checked={rpqSel.includes(w.id)} onChange={()=>toggleSel(w.id)}/></td>
+                      <td style={{textAlign:"center"}}><input type="checkbox" checked={rpqSel.includes(w.id)} onChange={()=>toggleSel(w.id)} onClick={e=>e.stopPropagation()} style={{width:18,height:18,cursor:"pointer",verticalAlign:"middle"}}/></td>
                       <td><Num t="wr" id={w.id}/></td>
                       <td><span className="c-dt">{fmtDate(w.fecha)}</span></td>
                       <td><span className="c-name">{w.consignee||"—"}</span></td>
@@ -12772,7 +12772,7 @@ export default function SistemaCarga(){
                   ?<tr><td colSpan={9} style={{textAlign:"center",padding:40,color:"var(--t3)"}}>No hay WR elegibles para egreso.</td></tr>
                   :candidatos.map(w=>(
                     <tr key={w.id} className={crSel.includes(w.id)?"sel":""} onClick={()=>toggleSel(w.id)} style={{cursor:"pointer"}}>
-                      <td style={{textAlign:"center"}}><input type="checkbox" checked={crSel.includes(w.id)} onChange={()=>toggleSel(w.id)}/></td>
+                      <td style={{textAlign:"center"}}><input type="checkbox" checked={crSel.includes(w.id)} onChange={()=>toggleSel(w.id)} onClick={e=>e.stopPropagation()} style={{width:18,height:18,cursor:"pointer",verticalAlign:"middle"}}/></td>
                       <td><Num t="wr" id={w.id}/></td>
                       <td><span className="c-dt">{fmtDate(w.fecha)}</span></td>
                       <td><span className="c-name">{w.consignee||"—"}</span></td>
