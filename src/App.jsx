@@ -3279,6 +3279,7 @@ export default function SistemaCarga(){
     logAction("Registró remitente como cliente",`${rem} → ${cas}`);
   };
   const submitWR=async ()=>{
+    if(!(editWR?hasPerm("editar_wr"):(wrf.reempaqueDe?.length?hasPerm("crear_reempaque"):hasPerm("crear_wr")))){window.alert("Tu rol no tiene permiso para esta acción.");return;}
     if(editWR&&!wrEditable(editWR)){window.alert(`El WR ${editWR.id} ya no se puede modificar con tu rol (${editWR.status?.label||""}).`);return;}
     if(!wrf.tipoPago){window.alert("Selecciona el tipo de pago.");return;}
     // Expand dims: each registro × cantidad generates individual dim entries
@@ -3848,7 +3849,8 @@ export default function SistemaCarga(){
           <div className="tab" onClick={()=>setClFilter("")} title="Volver al selector"
             style={{marginLeft:"auto",color:"var(--t3)",cursor:"pointer"}}><Ico e="↩" sp/>Cambiar</div>
         </div>
-        {tiposCrear.length>0&&<button className="btn-p" onClick={()=>setShowNewCl(true)}>+ Agregar</button>}
+        {(()=>{const t=clFilter==="usuarios"?tiposCrear.filter(x=>x==="usuario"):clFilter==="clientes"?tiposCrear.filter(x=>x==="cliente"):tiposCrear;
+          return t.length>0&&<button className="btn-p" onClick={()=>setShowNewCl(t)}>+ Agregar</button>;})()}
       </div>
       <div className="card" style={{padding:0}}>
         <div className="ct-wrap">
@@ -5517,6 +5519,7 @@ export default function SistemaCarga(){
     return min;
   };
   const updateGuideStatus=(consolId,stCode)=>{
+    if(!(hasPerm("editar_guia"))){window.alert("Tu rol no tiene permiso para esta acción.");return;}
     const st=getStatus(stCode);
     if(!st)return;
     if(!statusInChannel(stCode,"consolidacion")){
@@ -5670,6 +5673,7 @@ export default function SistemaCarga(){
     setEditConsolId(c.id);setShowNewConsol(true);
   };
   const guiaBorrar=(c)=>{
+    if(!hasPerm("borrar_guia")){window.alert("Tu rol no tiene permiso para esta acción.");return false;}
     // Solo revertir WRs que sigan en Consolidado (4). Los que
     // ya avanzaron (5+ tránsito, 17 almacén, 20+ entrega) NO
     // se tocan — esos eventos son posteriores y válidos, no
@@ -6800,7 +6804,7 @@ export default function SistemaCarga(){
     cuerpo=cuerpo.replace(/<tr class="t">/g,'<tr class="tot">').replace(/<tr class="g">/g,'<tr class="grp">');
     prnVer(rep.nombre,prnHTML({titulo:rep.nombre,meta:[["Fecha",`${fmtDate(new Date())} ${fmtTime(new Date())}`],filt&&["Filtros",filt],["Registros",String(R.filas.length)]],horizontal:R.cols.length>7,
       cuerpo:`<table class="t"><thead><tr>${head}</tr></thead><tbody>${cuerpo}</tbody></table>`}));};
-  const repGuardarLista=async n=>{const ok=await dbSetConfig('reportes_guardados',n);if(ok===false){window.alert("No se pudo guardar.");return false;}setRepGuardados(n);return true;};
+  const repGuardarLista=async n=>{if(!(hasPerm("crear_reporte")||hasPerm("editar_reporte")||hasPerm("borrar_reporte"))){window.alert("Tu rol no tiene permiso para esta acción.");return false;}const ok=await dbSetConfig('reportes_guardados',n);if(ok===false){window.alert("No se pudo guardar.");return false;}setRepGuardados(n);return true;};
   const repPuedeEditar=r=>(hasPerm("editar_reporte")||hasPerm("crear_reporte")||currentUser.rol==="A")&&(!r.owner||r.owner===currentUser.id||currentUser.rol==="A");
   const repAbrir=r=>{setRepSel(r.id);setRepPar({desde:"",hasta:"",q:"",f:{}});setRepModo("ver");if(r.fuente==="actividad"&&repAct==null)dbGetActividadReporte().then(setRepAct);};
   const repNuevo=()=>{setRepDis({id:"",nombre:"",fuente:"",cols:[],filtros:[],agrupar:"",soloTot:false,orden:null,compartido:true});setRepModo("diseño");setRepPick(null);};
@@ -7157,6 +7161,7 @@ export default function SistemaCarga(){
       .map(w=>{const pf=wrPesoFacturable(w,porPeso);return {tipo:"flete",wrId:w.id,descripcion:`Flete WR ${w.id}`,cantidad:String(pf.valor),unidad:pf.unidad,precio:""};});
   };
   const fpGuardar=async()=>{
+    if(!(hasPerm("crear_fac_propia"))){window.alert("Tu rol no tiene permiso para esta acción.");return;}
     const m=fpModal;const em=fpMiEmisor;if(!m||!em)return;
     const lineas=m.lineas.filter(l=>String(l.descripcion||"").trim());
     if(!m.clienteId||!lineas.some(l=>l.tipo==="flete")){window.alert("Escoge la guía y el cliente.");return;}
@@ -7171,6 +7176,7 @@ export default function SistemaCarga(){
     prnVer(`Factura ${f.id}`,fpHTML(f));
   };
   const fpCobrar=async()=>{
+    if(!(hasPerm("cobrar_fac_propia"))){window.alert("Tu rol no tiene permiso para esta acción.");return;}
     const m=fpCobro;const f=fpList.find(x=>x.id===m?.id);if(!f)return;const monto=parseFloat(m.monto)||0;
     if(monto<=0){window.alert("Escribe el monto cobrado.");return;}
     if(monto>f.saldo+0.004){window.alert(`El monto pasa del saldo (${fmtMoney(f.saldo,f.moneda)}).`);return;}
@@ -7179,6 +7185,7 @@ export default function SistemaCarga(){
     setFpList(p=>p.map(x=>x.id===n.id?n:x));setFpCobro(null);logAction("Registró cobro de factura propia",`${n.id} · ${fmtMoney(monto,n.moneda)}`);
   };
   const fpAnular=async f=>{
+    if(!(hasPerm("anular_fac_propia"))){window.alert("Tu rol no tiene permiso para esta acción.");return;}
     const motivo=window.prompt(`Motivo para anular la factura ${f.id}:`);if(!motivo||!motivo.trim())return;
     const n={...f,status:"anulada",motivoAnulacion:motivo.trim()};
     const ok=await dbUpsertFacturaPropia(n);if(!ok){window.alert("No se pudo anular.");return;}
@@ -8136,6 +8143,7 @@ export default function SistemaCarga(){
   };
 
   const applyStatus=(wr,newSt,nota="")=>{
+    if(!(hasPerm("status_origen")||hasPerm("status_destino")||hasPerm("override_estado"))){window.alert("Tu rol no tiene permiso para esta acción.");return;}
     setWrList(p=>p.map(w=>{
       if(w.id===wr.id){
         const updated={...w,status:newSt,historial:[...(w.historial||[]),{status:newSt,fecha:new Date(),user:currentUser.id||"rdiaz",nota}]};
@@ -8336,12 +8344,14 @@ export default function SistemaCarga(){
   const chatPuedeEditar=m=>m.autorId===chatYo&&!m.borrado&&hasPerm("editar_mensaje")&&Date.now()-m.creado<15*60000;
   const chatPuedeBorrar=m=>!m.borrado&&((m.autorId===chatYo&&hasPerm("borrar_mensaje")&&Date.now()-m.creado<15*60000)||(hasPerm("chat_moderar")&&hasPerm("borrar_mensaje")));
   const chatGuardarEdit=async()=>{
+    if(!hasPerm("editar_mensaje"))return;
     const t=(chatEdit?.texto||"").trim();if(!t)return;
     const ok=await dbChatEditar(chatEdit.id,{texto:t,editado:new Date().toISOString()});
     if(!ok){window.alert("No se pudo editar (pasaron más de 15 minutos o no tienes permiso).");return;}
     setChatMsgs(p=>({...p,[chatConv]:(p[chatConv]||[]).map(x=>x.id===chatEdit.id?{...x,texto:t,editado:new Date()}:x)}));setChatEdit(null);
   };
   const chatBorrar=async m=>{
+    if(!chatPuedeBorrar(m))return;
     if(!window.confirm("¿Borrar este mensaje?"))return;
     const ok=await dbChatEditar(m.id,{borrado:true,texto:"",adjuntos:[]});
     if(!ok){window.alert("No se pudo borrar.");return;}
@@ -8585,6 +8595,7 @@ export default function SistemaCarga(){
   const puGuardar=async(p)=>{setPickupList(l=>l.some(x=>x.id===p.id)?l.map(x=>x.id===p.id?p:x):[p,...l]);const ok=await dbUpsertPickup(p);if(!ok)window.alert("No se pudo guardar el pick-up. Inténtalo de nuevo.");return ok;};
   const submitPickup=async()=>{
     const f=puf;
+    if(!hasPerm(f.id?"editar_pickup":"solicitar_pickup")){window.alert("Tu rol no tiene permiso para esta acción.");return;}
     if(!f.clienteNombre.trim()){window.alert("Indica para quién es el pick-up.");return;}
     if(!f.direccion.trim()){window.alert("Escribe la dirección de recogida.");return;}
     if(!f.telefono.trim()){window.alert("Escribe un teléfono de contacto.");return;}
@@ -9217,6 +9228,7 @@ export default function SistemaCarga(){
   };
   const facSaveBorrador=()=>{
     const f=facModal; if(!f)return;
+    if(!(hasPerm("crear_factura")||hasPerm("facturar")||hasPerm("editar_factura")||(hasPerm("fac_prepaid")&&(f.wrIds||[]).length>0&&(f.wrIds||[]).every(id=>esPrepaidWR(wrList.find(w=>w.id===id)))))){window.alert("Tu rol no tiene permiso para esta acción.");return;}
     const isNew=!f._editing;
     let fact=recalcFactura(f);
     if(isNew){
@@ -9235,6 +9247,7 @@ export default function SistemaCarga(){
   };
   const facEmitir=()=>{
     const f=facModal; if(!f)return;
+    if(!(hasPerm("crear_factura")||hasPerm("facturar")||(hasPerm("fac_prepaid")&&(f.wrIds||[]).length>0&&(f.wrIds||[]).every(id=>esPrepaidWR(wrList.find(w=>w.id===id)))))){window.alert("Tu rol no tiene permiso para esta acción.");return;}
     if(!f.receptorNombre.trim()){window.alert("Debes seleccionar o capturar un receptor.");return;}
     if(!f.lineas||f.lineas.length===0||f.lineas.every(l=>!l.descripcion.trim())){window.alert("Agrega al menos 1 línea con descripción.");return;}
     const isNew=!f._editing;
@@ -9307,6 +9320,7 @@ export default function SistemaCarga(){
   };
   const pagoSubmit=()=>{
     const p=pagoModal; if(!p)return;
+    if(!(puedeCobrarGeneral())){window.alert("Tu rol no tiene permiso para esta acción.");return;}
     const monto=parseFloat(p.monto); if(!monto||monto<=0){window.alert("Monto inválido.");return;}
     const fact=facturas.find(f=>f.id===p.facturaId); if(!fact)return;
     if(monto>fact.saldo+0.01){window.alert(`El monto excede el saldo pendiente (${fmtMoney(fact.saldo,fact.moneda)}).`);return;}
@@ -9419,6 +9433,7 @@ export default function SistemaCarga(){
   };
   const cobroSubmit=()=>{
     const m=cobroModal; if(!m)return;
+    if(!(puedeCobrarGeneral()||(hasPerm("cobrar_prepaid")&&m.soloIds))){window.alert("Tu rol no tiene permiso para esta acción.");return;}
     if(!m.pagador){window.alert("Elige quién paga.");return;}
     const c=cobroCalc(m);
     if(c.recibido<=0&&c.favorUsado<=0){window.alert("Escribe el monto recibido.");return;}
@@ -9660,6 +9675,7 @@ export default function SistemaCarga(){
   };
   const ncSubmit=()=>{
     const m=ncModal; if(!m)return;
+    if(!(hasPerm("nota_credito"))){window.alert("Tu rol no tiene permiso para esta acción.");return;}
     const orig=facturas.find(f=>f.id===m.facturaOrigenId); if(!orig)return;
     const monto=r2(m.monto); if(!monto||monto<=0){window.alert("Monto inválido.");return;}
     const disp=ncDisponible(orig);
@@ -9705,6 +9721,7 @@ export default function SistemaCarga(){
   };
   // Anular una NC: revierte lo rebajado en la factura origen y el saldo a favor que generó
   const ncAnular=(nc,motivo)=>{
+    if(!(hasPerm("nota_credito")||hasPerm("anular_factura"))){window.alert("Tu rol no tiene permiso para esta acción.");return;}
     const ln=(nc.lineas||[])[0]||{};
     const aplicado=r2(ln.aplicado??Math.abs(nc.total||0));
     const pagoNC=pagos.find(p=>!p.anulado&&p.tipoPago==="nota_credito"&&p.referencia===nc.id);
@@ -11302,6 +11319,7 @@ export default function SistemaCarga(){
   };
   const crSubmit=()=>{
     const f=crModal; if(!f)return;
+    if(!(hasPerm("hacer_egreso"))){window.alert("Tu rol no tiene permiso para esta acción.");return;}
     if(!f.agenteCarga.trim()){window.alert("El agente de carga es obligatorio.");return;}
     if(!f.wrIds||f.wrIds.length===0){window.alert("Agrega al menos 1 WR al egreso.");return;}
     const editing=!!f.editId;
@@ -11391,6 +11409,7 @@ export default function SistemaCarga(){
   };
   const crSubmitIndiv=()=>{
     const f=crIndivModal; if(!f)return;
+    if(!(hasPerm("hacer_egreso"))){window.alert("Tu rol no tiene permiso para esta acción.");return;}
     if(!f.nombre.trim()){window.alert("El nombre del receptor es obligatorio.");return;}
     if(!f.id.trim()){window.alert("El ID de identificación del receptor es obligatorio.");return;}
     const now=new Date();
@@ -11660,6 +11679,7 @@ export default function SistemaCarga(){
   };
   const dnQuickSubmit=()=>{
     const f=dnQuick; if(!f)return;
+    if(!(hasPerm("entregar"))){window.alert("Tu rol no tiene permiso para esta acción.");return;}
     if(f.wrIds.length===0){window.alert("Marca al menos 1 WR.");return;}
     if(f.tipo==="despacho"){
       if(!String(f.despacha||"").trim()){window.alert("Falta quién despacha.");return;}
@@ -11726,6 +11746,7 @@ export default function SistemaCarga(){
   };
   const dnSubmit=()=>{
     const f=dnModal; if(!f)return;
+    if(!(hasPerm("entregar"))){window.alert("Tu rol no tiene permiso para esta acción.");return;}
     if(!f.guiaId){window.alert("Selecciona la guía.");return;}
     if(!f.receptorEntidad){window.alert(f.tipo==="despacho"?"Selecciona el agente, oficina o autónomo.":"Selecciona el cliente.");return;}
     if(!f.wrIds||f.wrIds.length===0){window.alert("Marca al menos 1 WR.");return;}
@@ -13911,7 +13932,7 @@ export default function SistemaCarga(){
         );
       })()}
 
-      {showNewCl&&<ClientModal acceso={hasPerm("dar_acceso")} tiposOk={tiposCrear} rolesOk={rolesAsignables} agentes={agentes} oficinas={oficinas} autonomos={clients.filter(c=>c.tipo==="usuario"&&c.rol==="F")} allClients={clients} title="Nuevo Registro" initial={{tipo:tiposCrear[0]||"cliente",clienteTipo:"matriz",primerNombre:"",segundoNombre:"",primerApellido:"",segundoApellido:"",cedula:"",dir:"",municipio:"",estado:"",pais:"",cp:"",tel1:"",tel2:"",email:"",casillero:"",rol:"I",password:"",...presetDominio()}} onClose={()=>setShowNewCl(false)} onSave={f=>{const esUser=f.tipo==="usuario";const newId=sigIdRegistro(esUser);const casillero=(!esUser&&!f.casillero)?nextCasillero():f.casillero;const newRec={...f,id:newId,casillero,clienteTipo:f.clienteTipo||"matriz",password:""};setClients(p=>[...p,newRec]);setShowNewCl(false);logAction("Creó registro",`${newId} — ${f.primerNombre} ${f.primerApellido}`);(async()=>{await dbUpsertCliente(newRec);await sincronizarCuenta(newRec,f.password);})();}}/>}
+      {showNewCl&&<ClientModal acceso={hasPerm("dar_acceso")} tiposOk={Array.isArray(showNewCl)?showNewCl:tiposCrear} rolesOk={rolesAsignables} agentes={agentes} oficinas={oficinas} autonomos={clients.filter(c=>c.tipo==="usuario"&&c.rol==="F")} allClients={clients} title="Nuevo Registro" initial={{tipo:(Array.isArray(showNewCl)?showNewCl:tiposCrear)[0]||"cliente",clienteTipo:"matriz",primerNombre:"",segundoNombre:"",primerApellido:"",segundoApellido:"",cedula:"",dir:"",municipio:"",estado:"",pais:"",cp:"",tel1:"",tel2:"",email:"",casillero:"",rol:"I",password:"",...presetDominio()}} onClose={()=>setShowNewCl(false)} onSave={f=>{const esUser=f.tipo==="usuario";const newId=sigIdRegistro(esUser);const casillero=(!esUser&&!f.casillero)?nextCasillero():f.casillero;const newRec={...f,id:newId,casillero,clienteTipo:f.clienteTipo||"matriz",password:""};setClients(p=>[...p,newRec]);setShowNewCl(false);logAction("Creó registro",`${newId} — ${f.primerNombre} ${f.primerApellido}`);(async()=>{await dbUpsertCliente(newRec);await sincronizarCuenta(newRec,f.password);})();}}/>}
       {showEditCl&&<ClientModal acceso={hasPerm("dar_acceso")} tiposOk={[showEditCl.tipo]} rolesOk={rolesAsignables} agentes={agentes} oficinas={oficinas} autonomos={clients.filter(c=>c.tipo==="usuario"&&c.rol==="F")} allClients={clients} title={`Editar — ${fullName(showEditCl)}`} initial={showEditCl} onClose={()=>setShowEditCl(null)} onSave={f=>{const ant=showEditCl;const rec={...f,clienteTipo:f.clienteTipo||"matriz",password:""};setClients(p=>p.map(c=>c.id===f.id?rec:c));logAction("Editó registro",`${f.id} — ${f.primerNombre} ${f.primerApellido}`);setShowEditCl(null);(async()=>{await dbUpsertCliente(rec);await sincronizarCuenta(rec,f.password,ant);})();}}/>}
 
       {/* ── Cargo Release — MODAL FORMULARIO ───────────────────────────────── */}
