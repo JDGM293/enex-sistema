@@ -13181,7 +13181,6 @@ export default function SistemaCarga(){
           <div className="u-row">
             <div className="u-av">{initials(currentUser)}</div>
             <div style={{flex:1,minWidth:0}}><div className="u-nm">{currentUser.primerNombre} {currentUser.primerApellido}</div><div className="u-rl">{currentUser.email}</div></div>
-            <RoleBadge code={currentUser.rol}/>
           </div>
           <button className="btn-s" style={{width:"100%",marginTop:8,fontSize:13,padding:"6px 10px"}} onClick={()=>setPwModal({a:"",b:"",err:"",ok:false})}><Ico e="🔑" sp/>Cambiar contraseña</button>
           <button className="btn-d" style={{width:"100%",marginTop:6,fontSize:13,padding:"6px 10px"}} onClick={doLogout}><Ico e="🚪" sp/>Cerrar sesión</button>
