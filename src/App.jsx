@@ -583,11 +583,13 @@ const ALL_PERMS=[
   "crear_reporte","editar_reporte","borrar_reporte",
   // Permiso especial: salta los bloqueos del proceso por estado
   "saltar_bloqueos",
+  // Configuración: cada pestaña con su ver / editar
+  "cfg_empresa_ver","cfg_empresa_editar", "cfg_documentos_ver","cfg_documentos_editar", "cfg_numeracion_ver","cfg_numeracion_editar", "cfg_tipoenvio_ver","cfg_tipoenvio_editar", "cfg_servicios_ver","cfg_servicios_editar", "cfg_cargos_ver","cfg_cargos_editar", "cfg_pagos_ver","cfg_pagos_editar", "cfg_contenedores_ver","cfg_contenedores_editar", "cfg_paises_ver","cfg_paises_editar", "cfg_chat_ver","cfg_chat_editar",
 ];
 // Solo el Administrador puede borrar y ver el registro de actividad; no se asignan a otros roles
 const PERMS_SOLO_ADMIN=new Set([...ALL_PERMS.filter(p=>p.startsWith("borrar_")),"registro_actividad"]);
 
-const PERM_LBL={
+const PERM_LBL={cfg_empresa_ver:"Config · Empresa (ver)",cfg_empresa_editar:"Config · Empresa (editar)",cfg_documentos_ver:"Config · Documentos por país (ver)",cfg_documentos_editar:"Config · Documentos por país (editar)",cfg_numeracion_ver:"Config · Numeración (ver)",cfg_numeracion_editar:"Config · Numeración (editar)",cfg_tipoenvio_ver:"Config · Tipo de Envío (ver)",cfg_tipoenvio_editar:"Config · Tipo de Envío (editar)",cfg_servicios_ver:"Config · Servicios Adicionales (ver)",cfg_servicios_editar:"Config · Servicios Adicionales (editar)",cfg_cargos_ver:"Config · Gastos Adicionales (ver)",cfg_cargos_editar:"Config · Gastos Adicionales (editar)",cfg_pagos_ver:"Config · Tipos de Pago (ver)",cfg_pagos_editar:"Config · Tipos de Pago (editar)",cfg_contenedores_ver:"Config · Tipos de Contenedor (ver)",cfg_contenedores_editar:"Config · Tipos de Contenedor (editar)",cfg_paises_ver:"Config · Países y Ciudades (ver)",cfg_paises_editar:"Config · Países y Ciudades (editar)",cfg_chat_ver:"Config · Canales de chat (ver)",cfg_chat_editar:"Config · Canales de chat (editar)",
   ver_usuarios:"Ver Usuarios",crear_usuario:"Crear Usuario",editar_usuario:"Editar Usuario",borrar_usuario:"Borrar Usuario",
   crear_cliente:"Crear Cliente",editar_cliente:"Editar Cliente",borrar_cliente:"Borrar Cliente",
   ver_agente:"Ver Agente",crear_agente:"Crear Agente",editar_agente:"Editar Agente",borrar_agente:"Borrar Agente",
@@ -657,9 +659,19 @@ const PERM_MODULES=[
   {m:"Reportes",ic:"📈",ver:"ver_reportes",crear:"crear_reporte",editar:"editar_reporte",borrar:"borrar_reporte"},
   {m:"Chat",ic:"💬",ver:"ver_chat",crear:"enviar_chat",editar:"editar_mensaje",borrar:"borrar_mensaje"},
   {m:"Facturas propias",ic:"🧾",ver:"ver_fac_propia",crear:"crear_fac_propia",editar:"cobrar_fac_propia",borrar:"anular_fac_propia"},
+  {m:"Configuración · Empresa",ic:"⚙️",ver:"cfg_empresa_ver",editar:"cfg_empresa_editar"},
+  {m:"Configuración · Documentos por país",ic:"⚙️",ver:"cfg_documentos_ver",editar:"cfg_documentos_editar"},
+  {m:"Configuración · Numeración",ic:"⚙️",ver:"cfg_numeracion_ver",editar:"cfg_numeracion_editar"},
+  {m:"Configuración · Tipo de Envío",ic:"⚙️",ver:"cfg_tipoenvio_ver",editar:"cfg_tipoenvio_editar"},
+  {m:"Configuración · Servicios Adicionales",ic:"⚙️",ver:"cfg_servicios_ver",editar:"cfg_servicios_editar"},
+  {m:"Configuración · Gastos Adicionales",ic:"⚙️",ver:"cfg_cargos_ver",editar:"cfg_cargos_editar"},
+  {m:"Configuración · Tipos de Pago",ic:"⚙️",ver:"cfg_pagos_ver",editar:"cfg_pagos_editar"},
+  {m:"Configuración · Tipos de Contenedor",ic:"⚙️",ver:"cfg_contenedores_ver",editar:"cfg_contenedores_editar"},
+  {m:"Configuración · Países y Ciudades",ic:"⚙️",ver:"cfg_paises_ver",editar:"cfg_paises_editar"},
+  {m:"Configuración · Canales de chat",ic:"⚙️",ver:"cfg_chat_ver",editar:"cfg_chat_editar"},
 ];
 const PERM_ACTIONS=[{k:"ver",l:"Ver"},{k:"crear",l:"Crear"},{k:"editar",l:"Editar"},{k:"borrar",l:"Borrar"}];
-const PERMS_EN_TABLA=new Set(PERM_MODULES.flatMap(m=>PERM_ACTIONS.map(a=>m[a.k])));
+const PERMS_EN_TABLA=new Set(PERM_MODULES.flatMap(m=>PERM_ACTIONS.map(a=>m[a.k])).filter(Boolean));
 
 // Permisos por grupo para mostrar en UI
 const PERM_GROUPS=[
@@ -896,8 +908,8 @@ const ROLE_DEFS={
     perms:ALL_PERMS.filter(p=>!["borrar_usuario","borrar_cliente","borrar_agente","borrar_autonomo","borrar_oficina","borrar_wr","borrar_rp","borrar_booking","borrar_reempaque","borrar_guia","borrar_egreso","borrar_recepcion_dest","borrar_entrega","borrar_alerta","borrar_pickup","borrar_prealerta","borrar_documento","borrar_reporte","registro_actividad"].includes(p))},
 
   C:{code:"C",name:"Auxiliar",color:"rC",icon:<Ico e="🗂️"/>,
-    desc:"Apoyo operativo. Crear y editar WR, reportes, confirmaciones.",
-    perms:["ver_chat","enviar_chat","editar_mensaje","borrar_mensaje","chat_directo","chat_adjuntar","ver_usuarios","crear_cliente","editar_cliente","crear_wr","editar_wr","ver_wr","ver_rp","hacer_rp","editar_rp","ver_reempaque","ver_booking","ver_guia","editar_guia","ver_confirmacion","confirmar","desconfirmar","ver_egreso","hacer_egreso","editar_egreso","ver_reportes","rep_confirmados","rep_guia_op","rep_postal","rep_packing","imp_wr","imp_guia","imp_etiq_caja","imp_etiq_guia","imp_rp","imp_lista_conf","imp_guia_op","imp_postal","imp_packing","imp_recibo_entrega","imp_factura","ver_estado_cuenta","ver_estado_cliente","ver_tracking","rastrear","ver_prealerta","pre_tracking","pre_factura","status_origen","status_destino","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_tarifas","ver_factura","ver_bd_clientes","paquetes_sin_reclamo","ver_fotos","subir_foto"]},
+    desc:"Apoyo operativo y administrativo: WR hasta su entrega, facturación y cobro, clientes, usuarios, agentes y oficinas.",
+    perms:["ver_chat","enviar_chat","editar_mensaje","chat_directo","chat_adjuntar","ver_usuarios","crear_usuario","editar_usuario","crear_cliente","editar_cliente","ver_bd_clientes","ver_bd_usuarios","ver_agente","crear_agente","editar_agente","ver_autonomo","crear_autonomo","editar_autonomo","ver_oficina","crear_oficina","editar_oficina","ver_rp","ver_wr","editar_wr","status_origen","status_destino","ver_confirmacion","confirmar","desconfirmar","editar_confirmacion","ver_fotos","subir_foto","editar_foto","ver_booking","ver_reempaque","ver_guia","ver_recepcion_dest","ver_egreso","ver_entrega","entregar","editar_entrega","ver_alertas","crear_alerta","editar_alerta","ver_factura","facturar","crear_factura","editar_factura","registrar_cobro","registrar_pago","cobrar","editar_pago","ver_cuentas_cobrar","ver_reportes","rep_confirmados","rep_guia_op","rep_postal","rep_packing","rep_maestro","crear_reporte","editar_reporte","imp_wr","imp_guia","imp_etiq_caja","imp_etiq_guia","imp_rp","imp_booking","imp_reempaque","imp_lista_conf","imp_guia_op","imp_postal","imp_packing","imp_recibo_entrega","imp_factura","ver_estado_cuenta","ver_estado_cliente","ver_estado_agente","ver_estado_oficina","ver_prealerta","pre_tracking","pre_factura","editar_prealerta","ver_pickup","solicitar_pickup","editar_pickup","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","paquetes_sin_reclamo","configuracion","cfg_empresa_ver","cfg_empresa_editar"]},
 
   D:{code:"D",name:"Jefe de Operaciones",color:"rD",icon:<Ico e="⚙️"/>,
     desc:"Supervisa y ejecuta operaciones completas — origen + destino.",
@@ -1855,7 +1867,7 @@ const PwInput=({style,...props})=>{
 };
 
 // ─── STANDALONE COMPONENTS (outside main component to avoid hook issues) ─────
-const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomos=[],allClients=[]})=>{
+const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomos=[],allClients=[],tiposOk=["cliente","usuario"],rolesOk=null})=>{
   const _ROL_TO_TIPO_INIT={"E":"agente","E1":"vendedor_agente","F":"autonomo","G":"oficina"};
   // Los clientes ya no pertenecen a oficinas (son sucursales): los antiguos pasan a Casa Matriz
   const _ct0=initial?.clienteTipo||(initial?.tipo==="usuario"&&initial?.rol?_ROL_TO_TIPO_INIT[initial.rol]||"matriz":"matriz");
@@ -1879,7 +1891,7 @@ const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomo
         <div className="mhd"><div className="mt">{title}</div><button className="mcl" onClick={onClose}>✕</button></div>
         <div className="sdiv">TIPO DE REGISTRO</div>
         <div style={{display:"flex",gap:8,marginBottom:14}}>
-          {[["cliente","Cliente"],["usuario","Usuario"]].map(([v,l])=>
+          {[["cliente","Cliente"],["usuario","Usuario"]].filter(([v])=>tiposOk.includes(v)||initial?.tipo===v).map(([v,l])=>
             <button key={v} className={`btn-${f.tipo===v?"p":"s"}`} onClick={()=>ff("tipo",v)}>{l}</button>)}
         </div>
         {/* Pertenece a — solo clientes (los usuarios lo toman de su rol) */}
@@ -1960,7 +1972,7 @@ const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomo
           <div className="fg"><div className="fl">ID Identificación *</div><input className="fi" value={f.cedula} onChange={e=>ff("cedula",e.target.value)} placeholder="V-00000000"/></div>
           {f.tipo==="cliente"
             ?<div className="fg"><div className="fl">Casillero (auto)</div><input className="fi" value={f.casillero} onChange={e=>ff("casillero",e.target.value)} placeholder="Se genera automático" style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)"}}/></div>
-            :<div className="fg"><div className="fl">Rol del Sistema</div><select className="fs" value={f.rol==="I"?"":(f.rol||"")} onChange={e=>ff("rol",e.target.value)}><option value="">— Selecciona el rol —</option>{ALL_ROLES.filter(r=>r.code!=="I").map(r=><option key={r.code} value={r.code}>{r.code} — {r.name}</option>)}</select></div>}
+            :<div className="fg"><div className="fl">Rol del Sistema</div><select className="fs" value={f.rol==="I"?"":(f.rol||"")} onChange={e=>ff("rol",e.target.value)}><option value="">— Selecciona el rol —</option>{ALL_ROLES.filter(r=>r.code!=="I"&&(!rolesOk||rolesOk.includes(r.code)||r.code===initial?.rol)).map(r=><option key={r.code} value={r.code} disabled={!!rolesOk&&!rolesOk.includes(r.code)}>{r.code} — {r.name}</option>)}</select></div>}
             {f.tipo==="usuario"&&f.rol==="F"&&<div className="fg"><div className="fl">Dirección en los WR de sus clientes</div><select className="fs" value={f.wrDir||"matriz"} onChange={e=>ff("wrDir",e.target.value)}><option value="matriz">Dirección de la casa matriz</option><option value="origen">Dirección de la oficina de origen del WR</option></select></div>}
           {f.tipo==="usuario"&&<div className="fg"><div className="fl">Login (usuario)</div><input className="fi" value={f.login||f.email} onChange={e=>ff("login",e.target.value)} placeholder="usuario@email.com o nick"/></div>}
         </div>
@@ -2932,6 +2944,11 @@ export default function SistemaCarga(){
   };
 
   // El Administrador (A) siempre tiene todo, para que nadie quede fuera del sistema.
+  // Jerarquía: cada quien gestiona usuarios de roles por debajo del suyo (el Administrador, todos)
+  const RANGO_ROL=c=>c==="A"?0:c==="B"?1:c==="C"?2:3;
+  const rolesAsignables=currentUser.rol==="A"?null:ALL_ROLES.map(r=>r.code).filter(c=>RANGO_ROL(c)>RANGO_ROL(currentUser.rol));
+  const puedeEditarReg=c=>c.tipo==="usuario"?hasPerm("editar_usuario")&&(currentUser.rol==="A"||RANGO_ROL(c.rol)>RANGO_ROL(currentUser.rol)):hasPerm("editar_cliente");
+  const tiposCrear=[hasPerm("crear_cliente")&&"cliente",hasPerm("crear_usuario")&&"usuario"].filter(Boolean);
   const hasPerm=p=>currentUser.rol==="A"||(!PERMS_SOLO_ADMIN.has(p)&&(rolePerms[currentUser.rol]||[]).includes(p));
   const canEdit=hasPerm("crear_wr")||hasPerm("editar_wr");
   // Al crear clientes, quedan bajo el dominio de quien los crea (agente, vendedor o autónomo)
@@ -3509,7 +3526,7 @@ export default function SistemaCarga(){
       {/* Nuevo WR — IZQUIERDA */}
       {hasPerm("crear_wr")&&<button className="btn-p" onClick={()=>{setWrf(emptyWRF(PAY_TYPES[0]));setShowNewWR(true);}}>+ Nuevo WR</button>}
       {/* ATAJOS — abren el módulo en una ventana encima, sin salir de esta pantalla */}
-      {[{id:"reempaque",ic:<Ico e="🔁"/>,l:"Reempaque",c:"#5B3FB5"},{id:"cargorelease",ic:<Ico e="🚀"/>,l:"Cargo Release",c:"#0080CC"}].map(a=>(
+      {[{id:"reempaque",ic:<Ico e="🔁"/>,l:"Reempaque",c:"#5B3FB5",p:"crear_reempaque"},{id:"cargorelease",ic:<Ico e="🚀"/>,l:"Cargo Release",c:"#0080CC",p:"hacer_egreso"}].filter(a=>hasPerm(a.p)).map(a=>(
         <button key={a.id} type="button" className="btn-s" title={`Abrir ${a.l} en una ventana, sin salir de esta pantalla`}
           onClick={()=>setQuickTab(a.id)}
           style={{color:a.c,borderColor:`${a.c}55`,background:`${a.c}12`,fontWeight:700}}>
@@ -3820,7 +3837,7 @@ export default function SistemaCarga(){
           <div className="tab" onClick={()=>setClFilter("")} title="Volver al selector"
             style={{marginLeft:"auto",color:"var(--t3)",cursor:"pointer"}}><Ico e="↩" sp/>Cambiar</div>
         </div>
-        {hasPerm("crear_cliente")&&<button className="btn-p" onClick={()=>setShowNewCl(true)}>+ Agregar</button>}
+        {tiposCrear.length>0&&<button className="btn-p" onClick={()=>setShowNewCl(true)}>+ Agregar</button>}
       </div>
       <div className="card" style={{padding:0}}>
         <div className="ct-wrap">
@@ -3864,8 +3881,8 @@ export default function SistemaCarga(){
                   <td><RoleBadge code={c.rol}/></td>
                   <td>{ct?<span style={{fontSize:11,padding:"2px 7px",borderRadius:4,fontWeight:700,background:CT_COLOR[ct]||"var(--bg4)",color:CT_TEXT[ct]||"var(--t2)",border:"1px solid currentColor",whiteSpace:"nowrap"}}>{ctLabel}</span>:<span style={{color:"var(--t4)",fontSize:12}}>—</span>}</td>
                   <td style={{fontSize:12,color:parentName&&parentName.startsWith("Sin ")?"var(--red)":ct==="matriz"?"var(--t3)":"var(--t1)",fontWeight:ct==="matriz"?400:600,whiteSpace:"nowrap"}}>{parentName}</td>
-                  {(hasPerm("editar_cliente")||hasPerm("borrar_cliente"))&&<td><div style={{display:"flex",gap:3}}>
-                    {hasPerm("editar_cliente")&&<span className="ic-b" onClick={()=>setShowEditCl(c)}><Ico e="✏️" solo/></span>}
+                  {(hasPerm("editar_cliente")||hasPerm("editar_usuario")||hasPerm("borrar_cliente"))&&<td><div style={{display:"flex",gap:3}}>
+                    {puedeEditarReg(c)&&<span className="ic-b" onClick={()=>setShowEditCl(c)}><Ico e="✏️" solo/></span>}
                     {hasPerm("borrar_cliente")&&<span className="ic-b" style={{color:"var(--red)"}} onClick={()=>{if(window.confirm(`¿Borrar "${fullName(c)}"? Esta acción no se puede deshacer.`)){setClients(p=>p.filter(x=>x.id!==c.id));(async()=>{if(c.authId)await cuentaEliminar(c.id);await dbDeleteCliente(c.id);})();logAction("Borró registro",`${c.id} — ${fullName(c)}`);}}}><Ico e="🗑" solo/></span>}
                   </div></td>}
                 </tr>
@@ -3975,7 +3992,7 @@ export default function SistemaCarga(){
                     <tr>
                       <th style={{...th,textAlign:"left"}}>Módulo</th>
                       {PERM_ACTIONS.map(a=>{
-                        const col=PERM_MODULES.map(m=>m[a.k]);
+                        const col=PERM_MODULES.map(m=>m[a.k]).filter(Boolean);
                         const todos=col.every(p=>activos.has(p));
                         return <th key={a.k} style={th}>
                           <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
@@ -3989,13 +4006,13 @@ export default function SistemaCarga(){
                   </thead>
                   <tbody>
                     {PERM_MODULES.map((m,i)=>{
-                      const fila=PERM_ACTIONS.map(a=>m[a.k]);
+                      const fila=PERM_ACTIONS.map(a=>m[a.k]).filter(Boolean);
                       return (
                         <tr key={m.m} style={{background:i%2?"var(--bg3)":"var(--bg2)",borderTop:"1px solid var(--b2)"}}>
                           <td style={{padding:"7px 10px",fontWeight:600,color:"var(--t1)",whiteSpace:"nowrap"}}><span style={{marginRight:6}}><Ico e={m.ic}/></span>{m.m}</td>
                           {PERM_ACTIONS.map(a=>(
                             <td key={a.k} style={{textAlign:"center",padding:"6px"}}>
-                              {chk(activos.has(m[a.k]),on=>toggle([m[a.k]],on),PERM_LBL[m[a.k]]||m[a.k],[m[a.k]])}
+                              {m[a.k]?chk(activos.has(m[a.k]),on=>toggle([m[a.k]],on),PERM_LBL[m[a.k]]||m[a.k],[m[a.k]]):<span style={{color:"var(--t4)"}}>—</span>}
                             </td>
                           ))}
                           <td style={{textAlign:"center",padding:"6px",borderLeft:"1px solid var(--b2)"}}>
@@ -7279,11 +7296,17 @@ export default function SistemaCarga(){
       ...(hasPerm("registro_actividad")?[{k:"actividad",l:"Registro de Actividad",ic:<Ico e="📋"/>}]:[]),
     ];
 
+    const cfgVer=k=>({agentes:"ver_agente",oficinas:"ver_oficina",tarifas:"ver_tarifas",actividad:"registro_actividad"})[k]||`cfg_${k}_ver`;
+    const cfgEdita=k=>["agentes","oficinas","tarifas","actividad"].includes(k)||hasPerm(`cfg_${k}_editar`);
+    const TABS_OK=CFG_TABS.filter(t=>hasPerm(cfgVer(t.k)));
+    if(!TABS_OK.length)return <div className="page-scroll"><div className="card" style={{textAlign:"center",padding:60,color:"var(--t3)"}}>Sin acceso.</div></div>;
+    const tabAct=TABS_OK.some(t=>t.k===cfgTab)?cfgTab:TABS_OK[0].k;
+    if(tabAct!==cfgTab)setTimeout(()=>setCfgTab(tabAct),0);
     return (
       <div className="page-scroll">
         {/* TAB BAR */}
         <div style={{display:"flex",gap:4,marginBottom:16,flexWrap:"wrap"}}>
-          {CFG_TABS.map(t=>(
+          {TABS_OK.map(t=>(
             <button key={t.k} onClick={()=>{setCfgTab(t.k);if(t.k!=="actividad")setActFilter("");}}
               style={{padding:"7px 14px",borderRadius:8,border:"1px solid var(--b1)",cursor:"pointer",fontSize:14,fontWeight:600,
                 background:cfgTab===t.k?"var(--navy)":"var(--bg2)",
@@ -7293,6 +7316,7 @@ export default function SistemaCarga(){
           ))}
         </div>
 
+        <fieldset key={tabAct} disabled={!cfgEdita(tabAct)} style={{border:0,padding:0,margin:0,minWidth:0}}>
         {/* ── NUMERACIÓN ── */}
         {cfgTab==="documentos"&&renderDocs()}
         {cfgTab==="chat"&&<div style={{maxWidth:820}}>{chatCanalesEditor()}</div>}
@@ -8050,6 +8074,7 @@ export default function SistemaCarga(){
             </div>
           </div>
         )}
+        </fieldset>
       </div>
     );
   };
@@ -13096,7 +13121,7 @@ export default function SistemaCarga(){
       {id:"reports",ic:<Ico e="📈"/>,l:"Reportes"},
     ]},
     {label:"Sistema",items:[
-      ...(hasPerm("configuracion")?[{id:"settings",ic:<Ico e="⚙️"/>,l:"Configuración"}]:[]),
+      ...(hasPerm("configuracion")&&(currentUser.rol==="A"||ALL_PERMS.some(p=>/^cfg_.*_ver$/.test(p)&&hasPerm(p))||["ver_agente","ver_oficina","ver_tarifas"].some(hasPerm))?[{id:"settings",ic:<Ico e="⚙️"/>,l:"Configuración"}]:[]),
       {id:"roles",ic:<Ico e="🔐"/>,l:"Roles & Permisos"},
       {id:"actividad",ic:<Ico e="📋"/>,l:"Actividad",onClick:()=>goSettingsTab("actividad"),activeWhen:()=>tab==="settings"&&cfgTab==="actividad"},
     ]},
@@ -13833,8 +13858,8 @@ export default function SistemaCarga(){
         );
       })()}
 
-      {showNewCl&&<ClientModal agentes={agentes} oficinas={oficinas} autonomos={clients.filter(c=>c.tipo==="usuario"&&c.rol==="F")} allClients={clients} title="Nuevo Registro" initial={{tipo:"cliente",clienteTipo:"matriz",primerNombre:"",segundoNombre:"",primerApellido:"",segundoApellido:"",cedula:"",dir:"",municipio:"",estado:"",pais:"",cp:"",tel1:"",tel2:"",email:"",casillero:"",rol:"I",password:"",...presetDominio()}} onClose={()=>setShowNewCl(false)} onSave={f=>{const esUser=f.tipo==="usuario";const newId=sigIdRegistro(esUser);const casillero=(!esUser&&!f.casillero)?nextCasillero():f.casillero;const newRec={...f,id:newId,casillero,clienteTipo:f.clienteTipo||"matriz",password:""};setClients(p=>[...p,newRec]);setShowNewCl(false);logAction("Creó registro",`${newId} — ${f.primerNombre} ${f.primerApellido}`);(async()=>{await dbUpsertCliente(newRec);await sincronizarCuenta(newRec,f.password);})();}}/>}
-      {showEditCl&&<ClientModal agentes={agentes} oficinas={oficinas} autonomos={clients.filter(c=>c.tipo==="usuario"&&c.rol==="F")} allClients={clients} title={`Editar — ${fullName(showEditCl)}`} initial={showEditCl} onClose={()=>setShowEditCl(null)} onSave={f=>{const ant=showEditCl;const rec={...f,clienteTipo:f.clienteTipo||"matriz",password:""};setClients(p=>p.map(c=>c.id===f.id?rec:c));logAction("Editó registro",`${f.id} — ${f.primerNombre} ${f.primerApellido}`);setShowEditCl(null);(async()=>{await dbUpsertCliente(rec);await sincronizarCuenta(rec,f.password,ant);})();}}/>}
+      {showNewCl&&<ClientModal tiposOk={tiposCrear} rolesOk={rolesAsignables} agentes={agentes} oficinas={oficinas} autonomos={clients.filter(c=>c.tipo==="usuario"&&c.rol==="F")} allClients={clients} title="Nuevo Registro" initial={{tipo:"cliente",clienteTipo:"matriz",primerNombre:"",segundoNombre:"",primerApellido:"",segundoApellido:"",cedula:"",dir:"",municipio:"",estado:"",pais:"",cp:"",tel1:"",tel2:"",email:"",casillero:"",rol:"I",password:"",...presetDominio()}} onClose={()=>setShowNewCl(false)} onSave={f=>{const esUser=f.tipo==="usuario";const newId=sigIdRegistro(esUser);const casillero=(!esUser&&!f.casillero)?nextCasillero():f.casillero;const newRec={...f,id:newId,casillero,clienteTipo:f.clienteTipo||"matriz",password:""};setClients(p=>[...p,newRec]);setShowNewCl(false);logAction("Creó registro",`${newId} — ${f.primerNombre} ${f.primerApellido}`);(async()=>{await dbUpsertCliente(newRec);await sincronizarCuenta(newRec,f.password);})();}}/>}
+      {showEditCl&&<ClientModal tiposOk={[showEditCl.tipo]} rolesOk={rolesAsignables} agentes={agentes} oficinas={oficinas} autonomos={clients.filter(c=>c.tipo==="usuario"&&c.rol==="F")} allClients={clients} title={`Editar — ${fullName(showEditCl)}`} initial={showEditCl} onClose={()=>setShowEditCl(null)} onSave={f=>{const ant=showEditCl;const rec={...f,clienteTipo:f.clienteTipo||"matriz",password:""};setClients(p=>p.map(c=>c.id===f.id?rec:c));logAction("Editó registro",`${f.id} — ${f.primerNombre} ${f.primerApellido}`);setShowEditCl(null);(async()=>{await dbUpsertCliente(rec);await sincronizarCuenta(rec,f.password,ant);})();}}/>}
 
       {/* ── Cargo Release — MODAL FORMULARIO ───────────────────────────────── */}
       {crModal&&(()=>{
