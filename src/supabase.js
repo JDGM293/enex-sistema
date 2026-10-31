@@ -818,3 +818,39 @@ export const dbUpsertFacturaPropia = async (f) => {
   if (error) { console.error('upsertFacturaPropia:', error); return false }
   return true
 }
+
+// ── PRE-ALERTAS ──────────────────────────────────────────────────────────────
+export const paFromDB = (r) => r ? ({
+  id: r.id, tracking: r.tracking, carrier: r.carrier || '', clienteId: r.cliente_id || '', cliente: r.cliente || {},
+  tienda: r.tienda || '', descripcion: r.descripcion || '', valor: r.valor == null ? '' : Number(r.valor), moneda: r.moneda || 'USD',
+  archivos: r.archivos || [], notas: r.notas || '', status: r.status || 'pendiente', wrId: r.wr_id || '',
+  recibida: r.recibida ? new Date(r.recibida) : null, creado: new Date(r.creado), creadoPor: r.creado_por || '', creadoPorNombre: r.creado_por_nombre || '',
+}) : null
+export const dbGetPrealertas = async () => {
+  const { data, error } = await supabase.from('prealertas').select('*').order('creado', { ascending: false }).limit(5000)
+  if (error) { console.error('getPrealertas:', error); return [] }
+  return (data || []).map(paFromDB)
+}
+export const dbUpsertPrealerta = async (p) => {
+  const { error } = await supabase.from('prealertas').upsert({
+    id: p.id, tracking: p.tracking, carrier: p.carrier || null, cliente_id: p.clienteId || null, cliente: p.cliente || {},
+    tienda: p.tienda || null, descripcion: p.descripcion || null, valor: p.valor === '' || p.valor == null ? null : Number(p.valor), moneda: p.moneda || 'USD',
+    archivos: p.archivos || [], notas: p.notas || null, status: p.status, wr_id: p.wrId || null,
+    recibida: p.recibida ? new Date(p.recibida).toISOString() : null, creado: new Date(p.creado).toISOString(),
+    creado_por: p.creadoPor || null, creado_por_nombre: p.creadoPorNombre || null,
+  })
+  if (error) { console.error('upsertPrealerta:', error); return false }
+  return true
+}
+export const paSubirArchivo = async (file, paId) => {
+  const limpio = String(file.name || 'factura').replace(/[^\w.\-]+/g, '_').slice(-80)
+  const path = `${paId}/${Date.now()}_${limpio}`
+  const { error } = await supabase.storage.from('prealertas').upload(path, file, { contentType: file.type || 'application/octet-stream', upsert: false })
+  if (error) { console.error('paSubirArchivo:', error); return null }
+  return { path, nombre: file.name || limpio, tipo: file.type || '', tam: file.size || 0 }
+}
+export const paUrlArchivo = async (path) => {
+  const { data, error } = await supabase.storage.from('prealertas').createSignedUrl(path, 3600)
+  if (error) { console.error('paUrlArchivo:', error); return null }
+  return data?.signedUrl || null
+}

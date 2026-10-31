@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { dbGetPickups, dbUpsertPickup } from './supabase'
 import { descargarXlsx } from './xlsx'
 import { dbGetActividadReporte } from './supabase'
-import { dbGetFacturasPropias, dbUpsertFacturaPropia } from './supabase'
+import { dbGetFacturasPropias, dbUpsertFacturaPropia, dbGetPrealertas, dbUpsertPrealerta, paSubirArchivo, paUrlArchivo } from './supabase'
 import { chatFromDB, dbChatMensajes, dbChatEnviar, dbChatEditar, dbChatNoLeidos, dbChatMarcarLeido, chatSubirAdjunto, chatUrlAdjunto } from './supabase'
 import { supabase, resolverLogin, cuentaGuardar, cuentaEliminar, dbGetClientes, dbUpsertCliente, dbDeleteCliente, dbGetWR, dbUpsertWR, dbDeleteWR, dbGetAgentes, dbUpsertAgente, dbDeleteAgente, dbGetOficinas, dbUpsertOficina, dbDeleteOficina, dbGetTarifas, dbUpsertTarifa, dbDeleteTarifa, dbGetConsolidaciones, dbUpsertConsolidacion, dbDeleteConsolidacion, dbGetCargoReleases, dbUpsertCargoRelease, dbDeleteCargoRelease, dbGetDeliveryNotes, dbUpsertDeliveryNote, dbDeleteDeliveryNote, dbGetFacturas, dbUpsertFactura, dbDeleteFactura, dbGetPagos, dbUpsertPago, dbDeletePago, storageUploadComprobante, dbLogActividad, dbGetActividad, dbGetConfig, dbSetConfig, dbGetScanLog, dbInsertScan, dbSetScanRegistered, dbDeleteScanIds, storageUploadFoto, storageDeleteFoto, dbGetFotosByWR, dbInsertFoto, dbDeleteFoto, storageUploadFotoConsol, storageDeleteFotoConsol, dbGetFotosByConsol, dbInsertFotoConsol, dbDeleteFotoConsol } from "./supabase";
 
@@ -875,6 +875,12 @@ const PrnModal=({titulo,html,onClose})=>{
       <button className="mcl" onClick={onClose}>✕</button></div>
     <iframe ref={ref} title={titulo} srcDoc={html} style={{width:"100%",height:"76vh",border:"1px solid var(--b1)",borderRadius:6,background:"#fff",display:"block"}}/>
   </div></div>);
+};
+
+// Archivo de una pre-alerta (bucket privado; se abre con un enlace temporal)
+const PaArchivo=({a,chico})=>{
+  const abrir=async()=>{const u=await paUrlArchivo(a.path);if(u)window.open(u,"_blank","noopener");};
+  return <button type="button" className="chat-file" style={chico?{padding:"3px 8px",fontSize:12}:{}} onClick={abrir} title={a.nombre}><Ico e="📎" sp/>{String(a.nombre||"Factura").slice(0,28)}</button>;
 };
 
 // ─── ROLE DEFINITIONS ────────────────────────────────────────────────────────
@@ -2635,6 +2641,10 @@ export default function SistemaCarga(){
   },[tab,chatCanales,dashWide]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(()=>{[chatScroll.current,chatMiniScroll.current].forEach(el=>{if(el)el.scrollTop=el.scrollHeight;});},[chatConv,(chatMsgs[chatConv]||[]).length,tab]);
   const [pickupList,setPickupList]=useState([]);
+  const [paList,setPaList]=useState([]);            // pre-alertas
+  const [paModal,setPaModal]=useState(null);
+  const [paFil,setPaFil]=useState({q:"",status:"pendiente"});
+  const [scanAviso,setScanAviso]=useState(null);
   const [fpList,setFpList]=useState([]);            // facturas propias
   const [fpModal,setFpModal]=useState(null);
   const [fpCobro,setFpCobro]=useState(null);
@@ -2735,6 +2745,7 @@ export default function SistemaCarga(){
       if(cls.length>0)setClients(cls);
       dbGetPickups().then(setPickupList);
       dbGetFacturasPropias().then(setFpList);
+      dbGetPrealertas().then(setPaList);
       supabase.from('configuracion').select('clave,valor').like('clave','fp_datos:%').then(({data})=>{if(data)setFpDatos(Object.fromEntries(data.map(r=>[r.clave.slice(9),r.valor])));});
       // Usuario de la sesión: el registro enlazado a la cuenta
       {const u=cls.find(c=>c.authId===authUid&&c.activo!==false);
@@ -3002,12 +3013,15 @@ export default function SistemaCarga(){
     const trk=normTrk(scanV);
     if(!trk)return;
     const already=scanLog.find(s=>normTrk(s.tracking)===trk);
+    const pa=paDeTracking(trk);
     if(!already){
       const esPU=pickupList.some(x=>normTrk(x.id)===trk);
-      const entry={id:crypto.randomUUID(),tracking:trk,carrier:esPU?"PICK-UP":(scanCarrier||"—"),ts:new Date(),registered:false};
+      const entry={id:crypto.randomUUID(),tracking:trk,carrier:esPU?"PICK-UP":(scanCarrier||pa?.carrier||"—"),ts:new Date(),registered:false};
       setScanLog(p=>[entry,...p]);
       dbInsertScan(entry);
     }
+    if(pa&&pa.status==="pendiente")paCambiar(pa,{status:"recibida",recibida:new Date()},"Recibió pre-alerta en puerta");
+    setScanAviso(pa?{trk,pa}:null);
     setScanV("");
   };
   // When creating WR, check if tracking matches scan log
@@ -3371,8 +3385,13 @@ export default function SistemaCarga(){
           historial:[...(w.historial||[]),{code:"2.3",label:"Reempacado",fecha:now,user:currentUser.id,nota:`Reempacado → ${n.id}`}],
         }));
       }
+      // Pre-alerta: si alguno de los trackings estaba pre-alertado, queda ligada al WR
+      const _trksPA=new Set(wrf.cajas.flatMap(c=>[c.tracking,c.tracking2,c.tracking3]).map(normTrk).filter(Boolean));
+      const _pas=paList.filter(p=>paActiva(p)&&!p.wrId&&(p.id===wrf.prealertaId||_trksPA.has(normTrk(p.tracking))));
+      if(_pas.length)n.prealerta=true;
       // Subir fotos al bucket (después del upsert para que el FK wr_id exista)
       dbUpsertWR(n);
+      _pas.forEach(p=>paCambiar(p,{status:"registrada",wrId:n.id,recibida:p.recibida||new Date()},`Pre-alerta → WR ${n.id}`));
       const uploadedCount=await uploadFotosForWR(n.id, wrf.cajas, currentUser?.id||'');
       if(uploadedCount>0){ n.foto=true; dbUpsertWR(n); }
       setWrList(p=>[n,...p.map(w=>padresUpd.find(pa=>pa.id===w.id)||w)]);
@@ -3649,7 +3668,37 @@ export default function SistemaCarga(){
             <button className="scan-btn" onClick={doScan}><Ico e="📡" sp/>Registrar</button>
           </div>
         </div>
+        {scanAviso&&<div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",padding:"10px 14px",borderRadius:7,background:"#E8F5E9",border:"1px solid #A5D6A7",color:"#1B5E20"}}>
+          <b style={{letterSpacing:.5}}>PRE-ALERTADO</b>
+          <span style={{fontFamily:"'DM Mono',monospace",fontWeight:700}}>{scanAviso.trk}</span>
+          <span>· {scanAviso.pa.cliente.nombre}{scanAviso.pa.cliente.casillero?` · #${scanAviso.pa.cliente.casillero}`:""}</span>
+          {scanAviso.pa.tienda&&<span>· {scanAviso.pa.tienda}</span>}
+          {scanAviso.pa.descripcion&&<span>· {scanAviso.pa.descripcion}</span>}
+          <span style={{display:"flex",gap:6,marginLeft:"auto",alignItems:"center"}}>{paArchivos(scanAviso.pa,true)}
+            {hasPerm("crear_wr")&&<button className="btn-p" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>paCrearWR(scanAviso.pa,scanCarrier)}>WR →</button>}
+            <span style={{cursor:"pointer",marginLeft:4}} onClick={()=>setScanAviso(null)}>✕</span></span>
+        </div>}
       </div>
+
+      {(()=>{const por=paList.filter(p=>p.status==="pendiente");if(!por.length)return null;
+        const Q=sinAcentos(paFil.qPuerta||"");const l=por.filter(p=>!Q||sinAcentos(`${p.tracking} ${p.cliente.nombre} ${p.cliente.casillero} ${p.tienda} ${p.carrier}`).includes(Q));
+        return(<div className="card" style={{marginBottom:14}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,flexWrap:"wrap"}}>
+            <span style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:15,fontWeight:700,color:"var(--navy)"}}><Ico e="📨" sp/>Pre-alertas por llegar</span>
+            <span style={{fontSize:12,background:"#EEF3FF",padding:"2px 8px",borderRadius:4,border:"1px solid #B8C8F0",color:"var(--navy)",fontWeight:700}}>{por.length}</span>
+            <input className="fi" style={{marginLeft:"auto",maxWidth:300}} value={paFil.qPuerta||""} onChange={e=>setPaFil(p=>({...p,qPuerta:e.target.value}))} placeholder="Buscar tracking o cliente…"/>
+          </div>
+          <table className="ct"><thead><tr><th>N°</th><th>Fecha</th><th>Cliente</th><th>Carrier</th><th>Tracking</th><th>Tienda / contenido</th><th>Factura</th></tr></thead>
+            <tbody>{pagSlice("pa_puerta",l).map(p=>(<tr key={p.id}>
+              <td><span className="c-wr">{p.id}</span></td>
+              <td style={{fontFamily:"'DM Mono',monospace",fontSize:13}}>{fmtDate(p.creado)}</td>
+              <td style={{fontWeight:600}}>{p.cliente.nombre}<div style={{fontSize:12,color:"var(--gold2)",fontFamily:"'DM Mono',monospace"}}>{p.cliente.casillero}</div></td>
+              <td style={{fontWeight:700}}>{p.carrier||"—"}</td>
+              <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--cyan)"}}>{p.tracking}</td>
+              <td>{p.tienda||"—"}<div style={{fontSize:12,color:"var(--t3)"}}>{p.descripcion}</div></td>
+              <td><div style={{display:"flex",flexDirection:"column",gap:3,alignItems:"flex-start"}}>{p.archivos.length?paArchivos(p,true):<span style={{color:"var(--t4)"}}>—</span>}</div></td>
+            </tr>))}</tbody></table>{pagPie("pa_puerta",l.length)}
+        </div>);})()}
 
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
         {/* IZQUIERDA — PENDIENTES */}
@@ -3666,10 +3715,11 @@ export default function SistemaCarga(){
                 <tr key={i}>
                   <td style={{color:"var(--t3)",fontSize:12}}>{i+1}</td>
                   <td style={{color:"var(--t1)",fontWeight:700,fontSize:13}}>{s.carrier||"—"}</td>
-                  <td style={{fontFamily:"'DM Mono',monospace",color:"var(--cyan)",fontSize:13,fontWeight:600}}>{s.tracking}</td>
+                  <td style={{fontFamily:"'DM Mono',monospace",color:"var(--cyan)",fontSize:13,fontWeight:600}}>{s.tracking}{(()=>{const pa=paDeTracking(s.tracking);return pa?<div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:11,color:"#1B5E20",fontWeight:700}}>PRE-ALERTA · {pa.cliente.nombre}{pa.cliente.casillero?` #${pa.cliente.casillero}`:""}</div>:null;})()}</td>
                   <td style={{fontFamily:"'DM Mono',monospace",fontSize:12}}>{fmtTime(s.ts)}</td>
                   <td>{hasPerm("crear_wr")?<button className="btn-p" style={{fontSize:12,padding:"3px 8px"}} onClick={()=>{const pu=pickupList.find(x=>normTrk(x.id)===normTrk(s.tracking));
                     if(pu){puCrearWR(pu);return;}
+                    const pa=paDeTracking(s.tracking);if(pa){paCrearWR(pa,s.carrier);return;}
                     setWrf(p=>({...p,cajas:[{...p.cajas[0],carrier:s.carrier||"",tracking:s.tracking},...p.cajas.slice(1)]}));setShowNewWR(true);}}>WR →</button>:<span style={{fontSize:12,color:"var(--t4)"}}>—</span>}</td>
                 </tr>
               ))}</tbody>
@@ -4584,7 +4634,8 @@ export default function SistemaCarga(){
               {renderWRTimeline(selWR)}
             </div>
           </div>
-          <div className="wr-legal" style={{whiteSpace:"pre-line"}}>{notaLegalWR(selWR)}</div>
+          {(()=>{const pas=paList.filter(p=>p.wrId===selWR.id&&p.archivos.length);return pas.length?<div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",margin:"10px 0"}}><b style={{fontSize:13,color:"var(--navy)"}}>Pre-alerta</b>{pas.map(p=><span key={p.id} style={{display:"inline-flex",gap:6,alignItems:"center"}}><span className="c-wr">{p.id}</span>{paArchivos(p,true)}</span>)}</div>:null;})()}
+<div className="wr-legal" style={{whiteSpace:"pre-line"}}>{notaLegalWR(selWR)}</div>
           {/* Bloque de entrega/firma eliminado — la entrega ahora se gestiona vía Notas de Entrega (Delivery Notes) */}
         </div>
         <div className="mft">
@@ -6893,6 +6944,126 @@ export default function SistemaCarga(){
             <tbody>{d.soloTot&&prev.grupos?prev.grupos.slice(0,15).map(g=><tr key={g.k}><td>{g.k}</td><td>{g.rows.length}</td>{prev.cols.filter(repNum).map(c=><td key={c.k}>{repFmt(c,g.tot[c.k])}</td>)}</tr>)
               :(prev.grupos?prev.grupos.flatMap(g=>g.rows):prev.filas).slice(0,15).map((r,i)=><tr key={i}>{prev.cols.map(c=><td key={c.k}>{repFmt(c,c.v(r),r)}</td>)}</tr>)}</tbody></table></div>)}
       </div>
+    </div>);
+  };
+
+  // ── PRE-ALERTAS ──────────────────────────────────────────────────────────────
+  // El cliente, su agente, autónomo, oficina o vendedor avisa un tracking con su factura.
+  // Recepción en Puerta lo reconoce al escanear y el WR se arma con esos datos.
+  const PA_ST={pendiente:{l:"Por llegar",cls:"s4"},recibida:{l:"Recibida en puerta",cls:"s2"},registrada:{l:"Con WR",cls:"s3"},cancelada:{l:"Cancelada",cls:"s6"}};
+  const paActiva=p=>p.status==="pendiente"||p.status==="recibida";
+  const paDeTracking=trk=>{const t=normTrk(trk);return t?paList.find(p=>paActiva(p)&&normTrk(p.tracking)===t):null;};
+  const paVisibles=()=>esEmpleadoPU?paList:paList.filter(p=>p.creadoPor===currentUser.id||alcanceUsr?.clienteOk(clients.find(c=>c.id===p.clienteId)));
+  const paPuedeEditar=p=>paActiva(p)&&p.status==="pendiente"&&(hasPerm("editar_prealerta")||p.creadoPor===currentUser.id);
+  const paNueva=()=>{
+    if(!hasPerm("pre_tracking")){window.alert("Tu rol no tiene permiso para crear pre-alertas.");return;}
+    const yo=currentUser.rol==="I"?clients.find(c=>c.id===currentUser.id):null;
+    setPaModal({id:"",clienteId:yo?.id||"",cliQ:"",tracking:"",carrier:"",tienda:"",descripcion:"",valor:"",moneda:"USD",notas:"",archivos:[],nuevos:[]});
+  };
+  const paGuardar=async()=>{
+    const m=paModal;if(!m)return;
+    const trk=normTrk(m.tracking);
+    if(!m.clienteId){window.alert("Escoge el cliente.");return;}
+    if(!trk){window.alert("Escribe el número de tracking.");return;}
+    const dup=paList.find(p=>p.id!==m.id&&paActiva(p)&&normTrk(p.tracking)===trk);
+    if(dup){window.alert(`Ese tracking ya está pre-alertado (${dup.id}).`);return;}
+    const enWR=wrList.find(w=>normTrk(w.tracking)===trk||(w.dims||[]).some(d=>[d.tracking,d.tracking2,d.tracking3].some(t=>t&&normTrk(t)===trk)));
+    if(enWR&&!m.id){window.alert(`Ese tracking ya llegó y está en el WR ${enWR.id}.`);return;}
+    if(hasPerm("pre_factura")===false&&m.nuevos.length){window.alert("Tu rol no puede adjuntar facturas.");return;}
+    const n=m.id?null:Math.max(0,...paList.map(p=>parseInt(String(p.id).replace(/\D/g,""),10)||0))+1;
+    const id=m.id||`PA-${String(n).padStart(6,"0")}`;
+    const archivos=[...m.archivos];
+    for(const f of m.nuevos){if(f.size>15*1024*1024){window.alert(`"${f.name}" pasa de 15 MB.`);continue;}const a=await paSubirArchivo(f,id);if(a)archivos.push(a);}
+    const c=clients.find(x=>x.id===m.clienteId)||{};const prev=paList.find(p=>p.id===id);
+    const pa={...(prev||{}),id,tracking:trk,carrier:(m.carrier||"").toUpperCase(),clienteId:c.id,cliente:{nombre:fullName(c),casillero:c.casillero||""},
+      tienda:(m.tienda||"").toUpperCase(),descripcion:(m.descripcion||"").toUpperCase(),valor:m.valor,moneda:m.moneda,archivos,notas:m.notas,
+      status:prev?.status||"pendiente",wrId:prev?.wrId||"",recibida:prev?.recibida||null,creado:prev?.creado||new Date(),
+      creadoPor:prev?.creadoPor||currentUser.id,creadoPorNombre:prev?.creadoPorNombre||fullName(currentUser)};
+    const ok=await dbUpsertPrealerta(pa);if(!ok){window.alert("No se pudo guardar la pre-alerta.");return;}
+    setPaList(p=>prev?p.map(x=>x.id===id?pa:x):[pa,...p]);setPaModal(null);
+    logAction(prev?"Editó pre-alerta":"Creó pre-alerta",`${id} · ${trk} · ${pa.cliente.nombre}`);
+  };
+  const paCambiar=async(pa,cambios,accion)=>{const n={...pa,...cambios};if(!(await dbUpsertPrealerta(n)))return null;setPaList(p=>p.map(x=>x.id===n.id?n:x));if(accion)logAction(accion,`${n.id} · ${n.tracking}`);return n;};
+  const paCancelar=pa=>{if(!window.confirm(`¿Cancelar la pre-alerta ${pa.id}?`))return;paCambiar(pa,{status:"cancelada"},"Canceló pre-alerta");};
+  const paCrearWR=(pa,carrier)=>{
+    if(!hasPerm("crear_wr")){window.alert("Tu rol no tiene permiso para crear WR.");return;}
+    const c=clients.find(x=>x.id===pa.clienteId);
+    setWrf({...emptyWRF(PAY_TYPES[0]),consignee:c?fullName(c):pa.cliente.nombre,casillero:c?.casillero||pa.cliente.casillero||"",casilleroSearch:c?.casillero||pa.cliente.casillero||"",
+      clienteId:c?.id||"",sucursalEntrega:c?.oficinaId||"",notas:`PRE-ALERTA ${pa.id}`,prealertaId:pa.id,
+      cajas:[{...emptyCaja(),carrier:carrier&&carrier!=="—"?carrier:pa.carrier,tracking:pa.tracking,descripcion:pa.descripcion,proveedor:pa.tienda,montoFactura:pa.valor===""?"":String(pa.valor)}]});
+    setClientSearch(c?fullName(c):pa.cliente.nombre);setEditWR(null);setShowNewWR(true);
+  };
+  const paArchivos=(pa,chico)=>(pa?.archivos||[]).map(a=><PaArchivo key={a.path} a={a} chico={chico}/>);
+
+  const renderPrealertas=()=>{
+    const Q=sinAcentos(paFil.q.trim());
+    const base=paVisibles();
+    const cuenta={};base.forEach(p=>{cuenta[p.status]=(cuenta[p.status]||0)+1;});
+    const lista=base.filter(p=>!paFil.status||p.status===paFil.status)
+      .filter(p=>!Q||sinAcentos(`${p.id} ${p.tracking} ${p.cliente.nombre} ${p.cliente.casillero} ${p.tienda} ${p.descripcion} ${p.carrier} ${p.wrId}`).includes(Q));
+    return(
+    <div className="page-scroll">
+      <div className="card" style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap",marginBottom:12}}>
+        <div style={{display:"flex",gap:3,background:"var(--bg4)",borderRadius:7,padding:3,border:"1px solid var(--b1)",flexWrap:"wrap"}}>
+          {[["","Todas",base.length],...Object.entries(PA_ST).map(([k,v])=>[k,v.l,cuenta[k]||0])].map(([k,l,n])=>(
+            <button key={k} onClick={()=>setPaFil(p=>({...p,status:k}))} style={{padding:"6px 12px",borderRadius:5,border:"none",cursor:"pointer",fontSize:13,fontWeight:600,background:paFil.status===k?"var(--navy)":"transparent",color:paFil.status===k?"#fff":"var(--t2)"}}>{l} <span style={{opacity:.7}}>{n}</span></button>))}
+        </div>
+        <input className="fi" style={{flex:1,minWidth:220}} value={paFil.q} onChange={e=>setPaFil(p=>({...p,q:e.target.value}))} placeholder="Buscar tracking, cliente, casillero, tienda o WR…"/>
+        {hasPerm("pre_tracking")&&<button className="btn-p" onClick={paNueva}><Ico e="➕" sp/>Nueva pre-alerta</button>}
+      </div>
+      <div className="card" style={{padding:0}}>
+        <><table className="ct">
+          <thead><tr><th>N°</th><th>Fecha</th><th>Cliente</th><th>Tracking</th><th>Tienda / contenido</th><th>Valor</th><th>Factura</th><th>Estado</th><th>WR</th><th></th></tr></thead>
+          <tbody>{pagSlice("prealertas",lista).map(p=>(
+            <tr key={p.id}>
+              <td><span className="c-wr">{p.id}</span></td>
+              <td style={{fontFamily:"'DM Mono',monospace",fontSize:13}}>{fmtDate(p.creado)}<div style={{fontSize:11,color:"var(--t3)"}}>{p.creadoPorNombre}</div></td>
+              <td style={{fontWeight:600}}>{p.cliente.nombre}<div style={{fontSize:12,color:"var(--gold2)",fontFamily:"'DM Mono',monospace"}}>{p.cliente.casillero}</div></td>
+              <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--cyan)"}}>{p.tracking}<div style={{fontSize:11,color:"var(--t3)",fontFamily:"inherit"}}>{p.carrier}</div></td>
+              <td>{p.tienda||"—"}<div style={{fontSize:12,color:"var(--t3)"}}>{p.descripcion}</div></td>
+              <td style={{fontFamily:"'DM Mono',monospace"}}>{p.valor===""?"—":fmtMoney(p.valor,p.moneda)}</td>
+              <td><div style={{display:"flex",flexDirection:"column",gap:3,alignItems:"flex-start"}}>{p.archivos.length?paArchivos(p,true):<span style={{color:"var(--t4)"}}>—</span>}</div></td>
+              <td><span className={`st ${PA_ST[p.status]?.cls||"s5"}`}><span className="st-dot"/>{PA_ST[p.status]?.l||p.status}</span>{p.recibida&&<div style={{fontSize:11,color:"var(--t3)"}}>{fmtDate(p.recibida)} {fmtTime(p.recibida)}</div>}</td>
+              <td>{p.wrId?<Num t="wr" id={p.wrId}/>:<span style={{color:"var(--t4)"}}>—</span>}</td>
+              <td style={{whiteSpace:"nowrap"}}>
+                {paPuedeEditar(p)&&<button className="btn-s" style={{fontSize:12,padding:"3px 6px",marginRight:4}} title="Editar" onClick={()=>setPaModal({...p,cliQ:"",valor:p.valor===""?"":String(p.valor),nuevos:[]})}><Ico e="✏️" solo/></button>}
+                {paActiva(p)&&(hasPerm("borrar_prealerta")||p.creadoPor===currentUser.id)&&<button className="btn-s" style={{fontSize:12,padding:"3px 6px",color:"var(--red)",borderColor:"var(--red)"}} title="Cancelar" onClick={()=>paCancelar(p)}>✕</button>}
+              </td>
+            </tr>))}
+            {lista.length===0&&<tr><td colSpan={10} style={{textAlign:"center",padding:30,color:"var(--t3)"}}>No hay pre-alertas.</td></tr>}
+          </tbody></table>{pagPie("prealertas",lista.length)}</>
+      </div>
+
+      {paModal&&(()=>{const m=paModal;const set=x=>setPaModal(p=>({...p,...x}));
+        const c=clients.find(x=>x.id===m.clienteId);const fijo=currentUser.rol==="I";
+        const q=sinAcentos(m.cliQ.trim());const res=q.length>=2||/^\d+$/.test(q)?puClientesPosibles().filter(x=>sinAcentos(`${fullName(x)} ${x.casillero||""}`).includes(q)).slice(0,20):[];
+        return(
+        <div className="ov"><div className="modal mmd" onClick={e=>e.stopPropagation()}>
+          <div className="mhd"><div className="mt"><Ico e="📨" sp/>{m.id?`Pre-alerta ${m.id}`:"Nueva pre-alerta"}</div><button className="mcl" onClick={()=>setPaModal(null)}>✕</button></div>
+          <div className="fg" style={{marginBottom:10}}><div className="fl">Cliente *</div>
+            {c?<div style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:14,fontWeight:700,padding:"6px 12px",borderRadius:14,background:"#EEF3FF",color:"var(--navy)",border:"1px solid #B8C8F0"}}>{fullName(c)}{c.casillero?` · #${c.casillero}`:""}</span>
+                {!fijo&&<span style={{cursor:"pointer",color:"var(--red)"}} onClick={()=>set({clienteId:""})}>✕</span>}</div>
+              :<div className="fi-search" style={{position:"relative"}}><input className="fi" autoFocus value={m.cliQ} onChange={e=>set({cliQ:e.target.value})} placeholder="Nombre o casillero del cliente…"/>
+                {res.length>0&&<div className="fi-search-res">{res.map(x=><div key={x.id} className="fi-search-item" onMouseDown={e=>{e.preventDefault();set({clienteId:x.id,cliQ:""});}}>{fullName(x)}{x.casillero&&<span className="fi-search-cas">#{x.casillero}</span>}</div>)}</div>}</div>}
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+            <div className="fg" style={{gridColumn:"1/-1"}}><div className="fl">Tracking *</div><input className="fi" style={{fontFamily:"'DM Mono',monospace",fontSize:16,letterSpacing:1}} value={m.tracking} onChange={e=>set({tracking:e.target.value.toUpperCase()})}/></div>
+            <div className="fg"><div className="fl">Carrier</div><input className="fi" value={m.carrier} placeholder="UPS, FEDEX, USPS, AMAZON…" onChange={e=>set({carrier:e.target.value.toUpperCase()})}/></div>
+            <div className="fg"><div className="fl">Tienda</div><input className="fi" value={m.tienda} onChange={e=>set({tienda:e.target.value.toUpperCase()})}/></div>
+            <div className="fg" style={{gridColumn:"1/-1"}}><div className="fl">Contenido</div><input className="fi" value={m.descripcion} onChange={e=>set({descripcion:e.target.value.toUpperCase()})}/></div>
+            <div className="fg"><div className="fl">Valor de la compra</div><div style={{display:"flex",gap:6}}><input className="fi" type="number" value={m.valor} onChange={e=>set({valor:e.target.value})}/>
+              <select className="fs" style={{width:90}} value={m.moneda} onChange={e=>set({moneda:e.target.value})}>{["USD","EUR"].map(x=><option key={x}>{x}</option>)}</select></div></div>
+            <div className="fg"><div className="fl">Factura (PDF o foto)</div>
+              {hasPerm("pre_factura")?<label className="btn-s" style={{cursor:"pointer",display:"inline-block"}}><Ico e="📎" sp/>Adjuntar
+                <input type="file" multiple accept="application/pdf,image/*" style={{display:"none"}} onChange={e=>{const fs=[...e.target.files];e.target.value="";set({nuevos:[...m.nuevos,...fs]});}}/></label>:<span style={{color:"var(--t3)"}}>—</span>}
+              <div style={{display:"flex",flexDirection:"column",gap:3,marginTop:6}}>
+                {m.archivos.map(a=><span key={a.path} style={{fontSize:13}}><PaArchivo a={a} chico/> <span style={{cursor:"pointer",color:"var(--red)"}} onClick={()=>set({archivos:m.archivos.filter(x=>x.path!==a.path)})}>✕</span></span>)}
+                {m.nuevos.map((f,i)=><span key={i} style={{fontSize:13}}><Ico e="📎" sp/>{f.name} <span style={{cursor:"pointer",color:"var(--red)"}} onClick={()=>set({nuevos:m.nuevos.filter((_,j)=>j!==i)})}>✕</span></span>)}
+              </div></div>
+            <div className="fg" style={{gridColumn:"1/-1"}}><div className="fl">Notas</div><input className="fi" value={m.notas} onChange={e=>set({notas:e.target.value})}/></div>
+          </div>
+          <div className="mft"><button className="btn-s" onClick={()=>setPaModal(null)}>Cancelar</button><button className="btn-p" onClick={paGuardar}><Ico e="💾" sp/>Guardar</button></div>
+        </div></div>);})()}
     </div>);
   };
 
@@ -12911,6 +13082,7 @@ export default function SistemaCarga(){
       {id:"oficinas",ic:<Ico e="🏢"/>,l:"Oficinas",onClick:()=>goSettingsTab("oficinas"),activeWhen:()=>tab==="settings"&&cfgTab==="oficinas"},
       {id:"etiquetas",ic:<Ico e="🖨️"/>,l:"Impresión"},
       {id:"tracking",ic:<Ico e="🔍"/>,l:"Tracking"},
+      {id:"prealertas",ic:<Ico e="📨"/>,l:"Pre-alertas",badge:paList.filter(p=>p.status==="pendiente").length&&esEmpleadoPU?String(paList.filter(p=>p.status==="pendiente").length):null},
       {id:"pickup",ic:<Ico e="🚐"/>,l:"Pick-up"},
     ]},
     {label:"Herramientas",items:[
@@ -12930,7 +13102,7 @@ export default function SistemaCarga(){
     dashboard:["ver_wr"],estadocuenta:["ver_estado_cuenta","ver_estado_cliente","ver_estado_agente","ver_estado_oficina"],
     scan:["ver_rp"],loadingmaster:["ver_guia","ver_recepcion_dest"],alerts:["ver_alertas"],
     reempaque:["ver_reempaque"],cargorelease:["ver_egreso"],
-    entregasydespachos:["ver_entrega"],facturacion:["ver_factura"],misfacturas:["ver_fac_propia"],contabilidad:["ver_cuentas_cobrar","ver_factura"],
+    entregasydespachos:["ver_entrega"],facturacion:["ver_factura"],misfacturas:["ver_fac_propia"],prealertas:["ver_prealerta"],contabilidad:["ver_cuentas_cobrar","ver_factura"],
     clients:["ver_bd_clientes","ver_usuarios"],agentes:["ver_agente"],oficinas:["ver_oficina"],
     etiquetas:ALL_PERMS.filter(p=>p.startsWith("imp_")),tracking:["ver_tracking"],pickup:["ver_pickup"],
     calculadora:["calculadora"],chat:["ver_chat"],docs:["ver_documentos"],reports:["ver_reportes"],
@@ -12938,7 +13110,7 @@ export default function SistemaCarga(){
   };
   const navVisible=n=>!NAV_PERMS[n.id]||NAV_PERMS[n.id].some(p=>hasPerm(p));
 
-  const PAGE_TITLES={misfacturas:fpMiEmisor?"Mis facturas":"Facturas de agentes, autónomos y oficinas",dashboard:"Dashboard General",loadingmaster:"Loading Master",scan:"Recepción en Puerta",etiquetas:"Imprimir Etiquetas",clients:"Clientes & Usuarios",estadocuenta:"Estado de Cuenta",roles:"Roles & Permisos",consolidation:"Consolidación",tracking:"Tracking",pickup:"Pick-up",contabilidad:"Contabilidad",calculadora:"Calculadora de Envío",chat:"Chat Interno",docs:"Documentos",reports:"Reportes",alerts:"Alertas",settings:"Configuración",reempaque:"Reempaque",recepciondest:"Recepción en Almacén",cargorelease:"Cargo Release (Egreso)",entregas:"Notas de Entrega",entregasydespachos:"Entregas y Despachos",facturacion:"Facturación"};
+  const PAGE_TITLES={prealertas:"Pre-alertas",misfacturas:fpMiEmisor?"Mis facturas":"Facturas de agentes, autónomos y oficinas",dashboard:"Dashboard General",loadingmaster:"Loading Master",scan:"Recepción en Puerta",etiquetas:"Imprimir Etiquetas",clients:"Clientes & Usuarios",estadocuenta:"Estado de Cuenta",roles:"Roles & Permisos",consolidation:"Consolidación",tracking:"Tracking",pickup:"Pick-up",contabilidad:"Contabilidad",calculadora:"Calculadora de Envío",chat:"Chat Interno",docs:"Documentos",reports:"Reportes",alerts:"Alertas",settings:"Configuración",reempaque:"Reempaque",recepciondest:"Recepción en Almacén",cargorelease:"Cargo Release (Egreso)",entregas:"Notas de Entrega",entregasydespachos:"Entregas y Despachos",facturacion:"Facturación"};
 
   const renderPage=()=>{
     if(!navVisible({id:tab}))return (
@@ -12958,6 +13130,7 @@ export default function SistemaCarga(){
       case "pickup":       return renderPickup();
       case "contabilidad": return renderContabilidad();
       case "misfacturas":  return renderFacturasPropias();
+      case "prealertas":   return renderPrealertas();
       case "calculadora":  return renderCalculadora();
       case "chat":         return <div className="cnt" style={{display:"flex",flexDirection:"column",overflow:"hidden",flex:1}}>{renderChat()}</div>;
       case "roles":        return renderRoles();
