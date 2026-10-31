@@ -916,7 +916,7 @@ const ROLE_DEFS={
   D:{code:"D",name:"Jefe de Operaciones",color:"rD",icon:<Ico e="⚙️"/>,
     desc:"Supervisa y ejecuta operaciones completas — origen + destino.",
     subs:["D1","D2"],
-    perms:["ver_alertas","crear_alerta","editar_alerta","ver_chat","enviar_chat","editar_mensaje","chat_directo","chat_adjuntar","ver_wr","crear_wr","editar_wr","ver_rp","hacer_rp","editar_rp","ver_booking","crear_booking","editar_booking","solicitar_reempaque","ver_reempaque","crear_reempaque","editar_reempaque","ver_guia","crear_guia","editar_guia","ver_confirmacion","confirmar","desconfirmar","ver_egreso","hacer_egreso","editar_egreso","ver_recepcion_dest","hacer_recepcion_dest","editar_recepcion_dest","ver_entrega","entregar","revertir_entrega","editar_entrega","status_origen","status_destino","ver_reportes","rep_confirmados","rep_guia_op","rep_postal","rep_packing","imp_wr","imp_guia","imp_etiq_caja","imp_etiq_guia","imp_rp","imp_booking","imp_reempaque","imp_lista_conf","imp_guia_op","imp_postal","imp_packing","imp_recibo_entrega","ver_estado_cuenta","ver_estado_cliente","ver_tracking","rastrear","ver_prealerta","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_tarifas","ver_bd_clientes","ver_fotos","subir_foto","todas_sucursales","crear_cliente","ver_oficina","crear_oficina","ver_pickup","solicitar_pickup","editar_pickup","configuracion","cfg_contenedores_ver","cfg_contenedores_editar","cfg_documentos_ver","cfg_documentos_editar","imp_factura","pre_tracking","pre_factura","editar_prealerta","fac_prepaid","cobrar_prepaid"]},
+    perms:["ver_alertas","crear_alerta","editar_alerta","ver_chat","enviar_chat","editar_mensaje","chat_directo","chat_adjuntar","ver_wr","crear_wr","editar_wr","ver_rp","hacer_rp","editar_rp","ver_booking","crear_booking","editar_booking","solicitar_reempaque","ver_reempaque","crear_reempaque","editar_reempaque","ver_guia","crear_guia","editar_guia","ver_confirmacion","confirmar","desconfirmar","ver_egreso","hacer_egreso","editar_egreso","ver_recepcion_dest","hacer_recepcion_dest","editar_recepcion_dest","ver_entrega","entregar","revertir_entrega","editar_entrega","status_origen","status_destino","ver_reportes","rep_confirmados","rep_guia_op","rep_postal","rep_packing","imp_wr","imp_guia","imp_etiq_caja","imp_etiq_guia","imp_rp","imp_booking","imp_reempaque","imp_lista_conf","imp_guia_op","imp_postal","imp_packing","ver_estado_cuenta","ver_estado_cliente","ver_tracking","rastrear","ver_prealerta","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_bd_clientes","ver_fotos","subir_foto","todas_sucursales","crear_cliente","ver_oficina","crear_oficina","ver_pickup","solicitar_pickup","editar_pickup","configuracion","cfg_contenedores_ver","cfg_contenedores_editar","cfg_documentos_ver","cfg_documentos_editar","pre_tracking","pre_factura","editar_prealerta","fac_prepaid","cobrar_prepaid","ver_usuarios","ver_agente","crear_agente"]},
 
   D1:{code:"D1",name:"Operaciones Origen",color:"rD1",icon:<Ico e="📤"/>,
     desc:"Ejecuta operaciones de origen: RP, WR, guías, consolidación, egreso. Estados 1→7.",
@@ -1500,7 +1500,7 @@ const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[
   const descDist=distintos("descripcion");
 
   const fmtDim=(d)=>isIn?`${fmtDec(toIn(d))}`:`${fmtDec(d)}`;
-  const fmtW=(pk)=>isLb?`${fmtDec(toLb(pk))}lb`:`${fmtDec(pk)}kg`;
+  const fmtW=(pk,pkLb)=>isLb?`${fmtDec(pkLb!=null&&pkLb!==""?parseFloat(pkLb):toLb(pk))}lb`:`${fmtDec(pk)}kg`;
   const fmtVol=(l,a,h)=>{
     const v=calcVol(l,a,h,"cm",(calcEnvioG[w.tipoEnvio]||{}).div||5000,(calcEnvioG[w.tipoEnvio]||{}).divFt3||1728);
     return isLb?`${fmtDec(v.volLb,2)}lb`:`${fmtDec(v.volKg,2)}kg`;
@@ -1530,7 +1530,7 @@ const WRRow=({w,sel,onClick,unitL,unitW,dimOpen,onDimToggle,clients=[],agentes=[
               <span className="dv">{fmtDim(d.l)}</span>
               <span className="dv">{fmtDim(d.a)}</span>
               <span className="dv">{fmtDim(d.h)}</span>
-              <span className="dv" style={{color:"var(--t1)",fontWeight:600}}>{fmtW(d.pk)}</span>
+              <span className="dv" style={{color:"var(--t1)",fontWeight:600}}>{fmtW(d.pk,d.pkLb)}</span>
               <span className="dv" style={{color:"var(--orange)",fontWeight:600}}>{fmtVol(d.l,d.a,d.h)}</span>
             </div>
           ))}
@@ -3005,7 +3005,8 @@ export default function SistemaCarga(){
   });
 
   // Si clFilter es "" se muestra el selector y la tabla no se renderiza, así que devolvemos vacío
-  const filteredCl=!clFilter?[]:clients.filter(c=>clFilter==="todos"?true:c.tipo===(clFilter==="clientes"?"cliente":"usuario"));
+  const verCliTipo=c=>c.tipo==="usuario"?(hasPerm("ver_usuarios")||hasPerm("ver_bd_usuarios")):hasPerm("ver_bd_clientes");
+  const filteredCl=!clFilter?[]:clientesVisibles.filter(verCliTipo).filter(c=>clFilter==="todos"?true:c.tipo===(clFilter==="clientes"?"cliente":"usuario"));
 
   // Stats — usar SOLO códigos del modelo actual (WR_STATUSES). Los antiguos
   // "7.1", "6.1", "12C", "12P" fueron retirados del modelo y la tabla de
@@ -3431,7 +3432,7 @@ export default function SistemaCarga(){
       // PREPAID: abrir su factura al guardar (si se marcó la opción)
       if(String(n.tipoPago||"").toLowerCase().includes("prepa")&&wrf.facturarPrepaid!==false&&puedeFacturarWR(n)){
         if(!n.tipoEnvio)window.alert(`WR ${n.id} guardado.\nPara facturarlo como PREPAID asigna el tipo de envío; luego usa «Facturar PREPAID» en el WR.`);
-        else facOpenNew(facConstruirWR(n));
+        else facOpenNew(facConstruirWR(n),[n]);
       }
     }
   };
@@ -3794,7 +3795,9 @@ export default function SistemaCarga(){
 
   // ── CLIENTS ────────────────────────────────────────────────────────────────
   const renderClients=()=>{
-    const clients=clientesVisibles;
+    const clients=clientesVisibles.filter(verCliTipo);
+    const vCli=hasPerm("ver_bd_clientes"),vUsr=hasPerm("ver_usuarios")||hasPerm("ver_bd_usuarios");
+    const filtrosOk=[vCli&&"clientes",vUsr&&"usuarios",vCli&&vUsr&&"todos"].filter(Boolean);
     // Cuando no hay filtro seleccionado, mostramos sólo el selector (módulo en blanco)
     if(!clFilter){
       const totalCli=clients.filter(c=>c.tipo==="cliente").length;
@@ -3803,7 +3806,7 @@ export default function SistemaCarga(){
         {v:"clientes",ic:<Ico e="🏠"/>,l:"Clientes",d:"Personas y empresas que envían/reciben paquetes.",n:totalCli,c1:"#E8F8EE",c2:"var(--green)"},
         {v:"usuarios",ic:<Ico e="👤"/>,l:"Usuarios del Sistema",d:"Empleados, agentes, oficinas y roles internos.",n:totalUsr,c1:"#F0EAFE",c2:"var(--purple)"},
         {v:"todos",   ic:<Ico e="👥"/>,l:"Todos",                d:"Lista combinada de Clientes y Usuarios.",       n:clients.length,c1:"#EEF3FF",c2:"var(--navy)"},
-      ];
+      ].filter(c=>filtrosOk.includes(c.v));
       return(
         <div className="page-scroll">
           <div className="card" style={{textAlign:"center",padding:"40px 24px",marginBottom:14}}>
@@ -3834,7 +3837,7 @@ export default function SistemaCarga(){
     <div className="page-scroll">
       <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
         <div className="tabs" style={{flex:1}}>
-          {[["todos","Todos"],["clientes","Clientes"],["usuarios","Usuarios"]].map(([v,l])=>(
+          {[["todos","Todos"],["clientes","Clientes"],["usuarios","Usuarios"]].filter(([v])=>filtrosOk.includes(v)).map(([v,l])=>(
             <div key={v} className={`tab ${clFilter===v?"on":""}`} onClick={()=>setClFilter(v)}>{l}
               <span className="t-cnt">{v==="todos"?clients.length:clients.filter(c=>c.tipo===(v==="clientes"?"cliente":"usuario")).length}</span>
             </div>
@@ -3852,7 +3855,7 @@ export default function SistemaCarga(){
               <th>Casillero</th><th>Dirección</th><th>Municipio</th><th>Estado</th>
               <th>País</th><th>CP</th><th>Teléfono 1</th><th>Teléfono 2</th><th>Email</th><th>Rol</th>
               <th>Designación</th><th>Pertenece a</th>
-              {(hasPerm("editar_cliente")||hasPerm("borrar_cliente"))&&<th>Acc.</th>}
+              {(hasPerm("editar_cliente")||hasPerm("editar_usuario")||hasPerm("borrar_cliente"))&&<th>Acc.</th>}
             </tr></thead>
             <tbody>
               {pagSlice("clientes",filteredCl).map(c=>{
@@ -4426,7 +4429,7 @@ export default function SistemaCarga(){
                     largo:d.l?parseFloat((d.l/2.54).toFixed(2)):"",
                     ancho:d.a?parseFloat((d.a/2.54).toFixed(2)):"",
                     alto:d.h?parseFloat((d.h/2.54).toFixed(2)):"",
-                    pesoLb:d.pk?parseFloat((d.pk*LB_KG).toFixed(2)):"",
+                    pesoLb:d.pkLb?parseFloat(d.pkLb):d.pk?parseFloat((d.pk*LB_KG).toFixed(2)):"",
                     cantidad:1,
                     carrier:d.carrier||"",tracking:d.tracking||"",
                     numFactura:d.factura||"",descripcion:cleanReempaqueDesc(d.descripcion||""),
@@ -4628,7 +4631,7 @@ export default function SistemaCarga(){
                       <div style={{display:"grid",gridTemplateColumns:"30px 1.4fr 1fr 1fr 1fr 1fr 1fr 1fr 2fr 1fr",gap:6,padding:"4px 0",alignItems:"center"}}>
                         <div style={{fontWeight:700,color:"var(--navy)",fontSize:16}}>{i+1}</div>
                         <div style={{fontFamily:"'DM Mono',monospace",fontSize:16}}>{toIn(d.l)}×{toIn(d.a)}×{toIn(d.h)}"</div>
-                        <div style={{fontFamily:"'DM Mono',monospace",fontSize:16,fontWeight:600}}>{toLb(d.pk)}</div>
+                        <div style={{fontFamily:"'DM Mono',monospace",fontSize:16,fontWeight:600}}>{fmtDec(d.pkLb?parseFloat(d.pkLb):toLb(d.pk))}</div>
                         <div style={{fontFamily:"'DM Mono',monospace",fontSize:16,color:"var(--orange)",fontWeight:700}}>{fmtDec(dv.volLb,2)}</div>
                         <div style={{fontFamily:"'DM Mono',monospace",fontSize:16,color:"var(--sky)"}}>{fmtDec(dv.ft3,2)}</div>
                         <div style={{fontFamily:"'DM Mono',monospace",fontSize:16,color:"var(--teal)"}}>{fmtDec(dv.m3,3)}</div>
@@ -6212,7 +6215,7 @@ export default function SistemaCarga(){
     const filas=dims.map((d,i)=>{const hay=d.l||d.a||d.h;const v=hay?calcVol(d.l||0,d.a||0,d.h||0,"cm",calcDe(w.tipoEnvio).div,calcDe(w.tipoEnvio).divFt3):{volLb:0,ft3:0,m3:0};
       return `<tr><td>${i+1}</td><td>${hay?`${toIn(d.l)}×${toIn(d.a)}×${toIn(d.h)}`:"—"}${d.carrier?`<div class="sub">${prnE(d.carrier)}</div>`:""}</td>
         <td><span class="mono">${prnE(d.tracking||"")}</span>${d.descripcion?`<div>${prnE(d.descripcion)}</div>`:""}${d.factura?`<div class="sub">Fact.: ${prnE(d.factura)}</div>`:""}</td>
-        <td class="r"><b>${d.pk?toLb(d.pk):"—"}</b></td><td class="r">${hay?v.volLb:"—"}</td><td class="r">${hay?v.ft3:"—"}</td><td class="r">${hay?v.m3:"—"}</td></tr>`;}).join("");
+        <td class="r"><b>${d.pkLb?nm(parseFloat(d.pkLb)):d.pk?toLb(d.pk):"—"}</b></td><td class="r">${hay?v.volLb:"—"}</td><td class="r">${hay?v.ft3:"—"}</td><td class="r">${hay?v.m3:"—"}</td></tr>`;}).join("");
     const tot=`<tr class="tot"><td colspan="3">${w.cajas||dims.length||0} pieza${(w.cajas||dims.length)===1?"":"s"}</td><td class="r">${fmtDec(w.pesoLb,2)}</td><td class="r">${fmtDec(w.volLb,2,"—")}</td><td class="r">${fmtDec(w.ft3,2,"—")}</td><td class="r">${fmtDec(w.m3,3,"—")}</td></tr>`;
     const cuerpo=
       pGrid(2,[pBox("Remitente",`<b>${prnE(w.shipper||"—")}</b>`,prnE([w.remitenteDir,[w.remitenteTel,w.remitenteEmail].filter(Boolean).join(" · ")].filter(Boolean).join(" · "))),
@@ -9172,8 +9175,9 @@ export default function SistemaCarga(){
   const esPrepaidWR=w=>String(w?.tipoPago||"").toLowerCase().includes("prepa");
   const puedeFacturarWR=w=>hasPerm("crear_factura")||hasPerm("facturar")||(hasPerm("fac_prepaid")&&esPrepaidWR(w));
   const puedeCobrarGeneral=()=>hasPerm("registrar_pago")||hasPerm("cobrar");
-  const facOpenNew=(prefill={})=>{
-    const _soloPre=Array.isArray(prefill.wrIds)&&prefill.wrIds.length>0&&prefill.wrIds.every(id=>esPrepaidWR(wrList.find(w=>w.id===id)));
+  const facOpenNew=(prefill={},wrsNuevos=[])=>{
+    const _wr=id=>wrList.find(w=>w.id===id)||wrsNuevos.find(w=>w.id===id);
+    const _soloPre=Array.isArray(prefill.wrIds)&&prefill.wrIds.length>0&&prefill.wrIds.every(id=>esPrepaidWR(_wr(id)));
     if(!hasPerm("crear_factura")&&!hasPerm("facturar")&&!(hasPerm("fac_prepaid")&&_soloPre)){window.alert("Tu rol no tiene permiso para crear facturas.");return;}
     // Si vienen wrIds, validar que ninguno esté Reempacado o Egresado
     if(Array.isArray(prefill.wrIds)&&prefill.wrIds.length>0){
