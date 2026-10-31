@@ -1128,8 +1128,14 @@ const COUNTRIES_INIT=[
 // Moneda por dial de país (usada por Calculadora y otras vistas)
 const PAIS_CURR={"01":"USD","58":"USD","57":"COP","34":"EUR","52":"MXN","51":"PEN","56":"CLP","54":"ARS","55":"BRL","507":"USD"};
 // Clasificación de tipo de envío (global)
-const tipoEsAereoG=(te)=>{const t=(te||"").toLowerCase().replace(/á/g,"a").replace(/é/g,"e");return t.includes("aereo")||t.includes("express")||t.includes("economico");};
-const tipoEsMaritimoG=(te)=>{const t=(te||"").toLowerCase().replace(/í/g,"i");return t.includes("maritimo")||t.includes("fcl")||t.includes("lcl");};
+let calcEnvioG={}; // copia de la configuración para funciones fuera del componente principal
+// Cómo se cobra cada tipo de envío: por peso (real o volumétrico) o por volumen (ft³ / m³).
+// Se define en Configuración › Tipo de envío; si no está definido se deduce del nombre.
+const tipoNombreMaritimo=te=>{const t=sinAcentos(te||"").toLowerCase();return t.includes("maritimo")||t.includes("fcl")||t.includes("lcl")||t.includes("terrestre");};
+const tipoPorPeso=te=>{const c=calcEnvioG[te];if(c&&c.base)return c.base==="peso";return !tipoNombreMaritimo(te);};
+const tipoEsAereoG=te=>tipoPorPeso(te);
+const tipoEsMaritimoG=te=>!tipoPorPeso(te);
+const precioTarifa=(tf,porPeso)=>parseFloat(porPeso?tf?.porLb:tf?.porFt3)||parseFloat(porPeso?tf?.porFt3:tf?.porLb)||0;
 
 // ─── INITIAL DATA — VACÍO (solo usuario Administrador) ────────────────────────
 const CLIENTS_INIT=[
@@ -1149,10 +1155,10 @@ const calcVol = (l,a,h,unit="cm",div=5000) => {
   return {volKg:parseFloat(volKg.toFixed(2)),volLb:parseFloat((volKg*LB_KG).toFixed(2)),m3:parseFloat((cm3/1e6).toFixed(4)),ft3:parseFloat((cm3/28316.846592).toFixed(3))};
 };
 // Cálculo por tipo de envío (Configuración › Tipo de envío)
-const CALC_DEF={div:5000,modo:"wr",red:"0.01"};
+const CALC_DEF={div:5000,modo:"wr",red:"0.01",wm:false,kgm3:1000};
 const CALC_DIVS=[{v:6000,l:"6000 cm³/kg · 166 in³/lb (IATA, carga aérea internacional)"},{v:5000,l:"5000 cm³/kg · 139 in³/lb (courier EE. UU.)"}];
 const CALC_REDS=[{v:"0.01",l:"Exacto (2 decimales)"},{v:"0.1",l:"Hacia arriba, a la décima"},{v:"0.5",l:"Hacia arriba, a la media unidad"},{v:"1",l:"Hacia arriba, a la unidad"}];
-let calcEnvioG={}; // copia para componentes fuera del principal
+const nm2=v=>(Math.round(v*100)/100).toFixed(2);
 const redondearArriba=(v,paso)=>{const p=parseFloat(paso)||0.01;if(p<0.01)return Math.round(v/p)*p;if(p===0.01)return Math.round(v*100)/100;return Math.round(Math.ceil(v/p-1e-9)*p*100)/100;};
 
 // ─── WR INICIAL VACÍO ─────────────────────────────────────────────────────────
@@ -6589,7 +6595,7 @@ export default function SistemaCarga(){
         W("Tarifa","id","N°","txt",r=>r.id),W("Tarifa","aplica","Aplica a","txt",r=>r.aplicaTipo?nombreAplica(r):"Predeterminada"),
         W("Tarifa","origen","Origen","txt",r=>[r.paisOrig,r.ciudadOrig].filter(Boolean).join(" ")||"Cualquiera"),W("Tarifa","destino","Destino","txt",r=>[r.paisDest,r.ciudadDest].filter(Boolean).join(" ")||"Cualquiera"),
         W("Tarifa","tipoEnvio","Tipo de envío","txt",r=>r.tipoEnvio||""),W("Tarifa","unidad","Unidad","txt",r=>r.unidad||""),
-        W("Tarifa","precio","Precio","money",r=>parseFloat(tipoEsMaritimoG(r.tipoEnvio)?r.porFt3:r.porLb)||0,{cur:r=>r.moneda}),W("Tarifa","minimo","Mínimo","money",r=>parseFloat(r.min)||0,{cur:r=>r.moneda}),
+        W("Tarifa","precio","Precio","money",r=>precioTarifa(r,tipoPorPeso(r.tipoEnvio)),{cur:r=>r.moneda}),W("Tarifa","minimo","Mínimo","money",r=>parseFloat(r.min)||0,{cur:r=>r.moneda}),
         W("Tarifa","activa","Activa","txt",r=>siNo(r.activo!==false))],filas:()=>tarifas},
       ...(hasPerm("registro_actividad")?{actividad:{l:"Actividad de usuarios",ic:<Ico e="📋"/>,fecha:"fecha",campos:[
         W("Actividad","fecha","Fecha","fecha",r=>r.ts),W("Actividad","hora","Hora","txt",r=>fmtTime(r.ts)),W("Actividad","usuario","Usuario","txt",r=>nomUsr(r.user)),
@@ -7060,7 +7066,7 @@ export default function SistemaCarga(){
         )}
         {cfgTab==="tipoenvio"&&(()=>{
           const D=calcDraft||calcEnvio;const set=(t,x)=>setCalcDraft({...D,[t]:{...CALC_DEF,...(D[t]||{}),...x}});
-          const guardar=async()=>{if(Object.entries(D).some(([,c])=>!(parseFloat(c.div)>0))){window.alert("Escribe un divisor mayor que cero.");return;}const ok=await dbSetConfig("calc_envio",D);if(!ok){window.alert("No se pudo guardar.");return;}
+          const guardar=async()=>{if(Object.entries(D).some(([,c])=>!(parseFloat(c.div??5000)>0)||(c.wm&&!(parseFloat(c.kgm3)>0)))){window.alert("Escribe un factor mayor que cero.");return;}const ok=await dbSetConfig("calc_envio",D);if(!ok){window.alert("No se pudo guardar.");return;}
             // Los WR que aún no se han facturado toman el nuevo cálculo
             const facturados=new Set(facturas.filter(f=>f.status!=="anulada"&&f.status!=="borrador").flatMap(f=>f.wrIds||[]));
             const cambiados=[];
@@ -7078,23 +7084,33 @@ export default function SistemaCarga(){
           <div className="card" style={{marginTop:14}}>
             <div className="card-tt"><Ico e="🧮" sp/>Cálculo por tipo de envío</div>
             <table className="ct">
-              <thead><tr><th>Tipo de envío</th><th>Factor volumétrico</th><th>Peso a cobrar</th><th>Redondeo</th></tr></thead>
-              <tbody>{SEND_TYPES.map(t=>{const C={...CALC_DEF,...(D[t]||{})};const aereo=tipoEsAereoG(t)||!tipoEsMaritimoG(t);const otro=!!C.divOtro||!CALC_DIVS.some(o=>o.v===C.div);
+              <thead><tr><th>Tipo de envío</th><th>Se cobra por</th><th>Factor</th><th>Cobro</th><th>Redondeo</th></tr></thead>
+              <tbody>{SEND_TYPES.map(t=>{const C={...CALC_DEF,...(D[t]||{})};const base=C.base||(tipoNombreMaritimo(t)?"volumen":"peso");
+                const otro=!!C.divOtro||!CALC_DIVS.some(o=>o.v===C.div);
+                const red=<td><select className="fs" value={C.red} onChange={e=>set(t,{red:e.target.value})}>{CALC_REDS.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}</select></td>;
                 return(<tr key={t}>
                   <td style={{fontWeight:700}}>{t}</td>
-                  {aereo?<>
-                    <td><div style={{display:"flex",gap:6,alignItems:"center"}}>
+                  <td><select className="fs" value={base} onChange={e=>set(t,{base:e.target.value})}>
+                    <option value="peso">Peso (lb / kg)</option><option value="volumen">Volumen (ft³ / m³)</option></select></td>
+                  {base==="peso"?<>
+                    <td><div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
                       <select className="fs" value={otro?"otro":C.div} onChange={e=>set(t,e.target.value==="otro"?{divOtro:true}:{div:parseFloat(e.target.value),divOtro:false})}>
                         {CALC_DIVS.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}<option value="otro">Otro divisor (cm³/kg)</option></select>
-                      {otro&&<input className="fi" type="number" min="1" style={{width:100}} value={C.div||""} onChange={e=>set(t,{div:parseFloat(e.target.value)||0})}/>}</div></td>
+                      {otro&&<><input className="fi" type="number" min="1" style={{width:100}} value={C.div||""} onChange={e=>set(t,{div:parseFloat(e.target.value)||0})}/>
+                        <span style={{fontSize:13,color:"var(--t2)",whiteSpace:"nowrap"}}>≈ {C.div>0?Math.round(C.div/36.127):"—"} in³/lb</span></>}</div></td>
                     <td><select className="fs" value={C.modo} onChange={e=>set(t,{modo:e.target.value})}>
                       <option value="wr">Total del WR: el mayor entre peso real y volumétrico</option>
                       <option value="caja">Caja por caja: el mayor de cada caja, sumado</option></select></td>
-                    <td><select className="fs" value={C.red} onChange={e=>set(t,{red:e.target.value})}>{CALC_REDS.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}</select></td>
                   </>:<>
-                    <td colSpan={2} style={{color:"var(--t2)"}}>Pies cúbicos: largo × ancho × alto (in) ÷ 1728 · suma de todas las cajas del WR</td>
-                    <td><select className="fs" value={C.red} onChange={e=>set(t,{red:e.target.value})}>{CALC_REDS.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}</select></td>
+                    <td><div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
+                      {C.wm?<><input className="fi" type="number" min="1" style={{width:100}} value={C.kgm3||""} onChange={e=>set(t,{kgm3:parseFloat(e.target.value)||0})}/>
+                        <span style={{fontSize:13,color:"var(--t2)",whiteSpace:"nowrap"}}>kg por m³ ≈ {C.kgm3>0?nm2(C.kgm3*LB_KG/35.3146667):"—"} lb por ft³</span></>
+                      :<span style={{fontSize:13,color:"var(--t2)"}}>Ft³ = L × A × H (in) ÷ 1728</span>}</div></td>
+                    <td><select className="fs" value={C.wm?"wm":"vol"} onChange={e=>set(t,{wm:e.target.value==="wm",kgm3:C.kgm3||1000})}>
+                      <option value="vol">Solo volumen de todas las cajas</option>
+                      <option value="wm">El mayor entre volumen y peso (W/M)</option></select></td>
                   </>}
+                  {red}
                 </tr>);})}</tbody>
             </table>
             {calcDraft&&<div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:10}}>
@@ -7439,14 +7455,13 @@ export default function SistemaCarga(){
 
         {/* ── TARIFAS ── */}
         {cfgTab==="tarifas"&&(()=>{
-          const tipoEsAereo=(te)=>{const t=(te||"").toLowerCase().replace(/á/g,"a").replace(/é/g,"e");return t.includes("aereo")||t.includes("express")||t.includes("economico");};
-          const tipoEsMaritimo=(te)=>{const t=(te||"").toLowerCase().replace(/í/g,"i");return t.includes("maritimo")||t.includes("fcl")||t.includes("lcl");};
+          const tipoEsAereo=tipoEsAereoG, tipoEsMaritimo=tipoEsMaritimoG;
           const filaNueva=te=>({tipoEnvio:te||"",unidad:"",precio:"",min:"",moneda:"USD"});
           const tafNuevo=()=>({aplicaTipo:"",aplicaId:"",orig:[],dest:[],filas:[filaNueva(SEND_TYPES.find(tipoEsAereo)),filaNueva(SEND_TYPES.find(tipoEsMaritimo))].filter(f=>f.tipoEnvio)});
           const tafDeTarifa=t=>({aplicaTipo:t.aplicaTipo||"",aplicaId:t.aplicaId||"",
             orig:(t.paisOrig||t.ciudadOrig)?[{pais:t.paisOrig||"",ciudad:t.ciudadOrig||""}]:[],
             dest:(t.paisDest||t.ciudadDest)?[{pais:t.paisDest||"",ciudad:t.ciudadDest||""}]:[],
-            filas:[{tipoEnvio:t.tipoEnvio||"",unidad:t.unidad||"",precio:String((tipoEsMaritimo(t.tipoEnvio)?t.porFt3:t.porLb)??""),min:String(t.min??""),moneda:t.moneda||"USD"}]});
+            filas:[{tipoEnvio:t.tipoEnvio||"",unidad:t.unidad||"",precio:String(precioTarifa(t,!tipoEsMaritimo(t.tipoEnvio))||""),min:String(t.min??""),moneda:t.moneda||"USD"}]});
           const MONEDAS=["USD","EUR","VES","COP","MXN","ARS","CLP","PEN","BRL","DOP","PAB"];
           return(
           <div>
@@ -8340,8 +8355,9 @@ export default function SistemaCarga(){
     if(!tf)return {...r,sinTarifa:true};
     const aereo=tipoEsAereoG(f.tipoEnvio), maritimo=tipoEsMaritimoG(f.tipoEnvio);
     const uni=unidadTarifa(tf,aereo||!maritimo);
-    const cant=uni==="kg"?factKg:uni==="lb"?factLb:uni==="m3"?redondearArriba(m3,C.red==="0.01"?"0.0001":C.red):redondearArriba(m3*35.3146667,C.red);
-    const precio=parseFloat(maritimo?tf.porFt3:tf.porLb)||0;
+    const m3c=C.wm?Math.max(m3,kg/(parseFloat(C.kgm3)||1000)):m3;
+    const cant=uni==="kg"?factKg:uni==="lb"?factLb:uni==="m3"?redondearArriba(m3c,C.red==="0.01"?"0.0001":C.red):redondearArriba(m3c*35.3146667,C.red);
+    const precio=precioTarifa(tf,!maritimo);
     const flete=r2(cant*precio), min=parseFloat(tf.min)||0;
     return {...r,tf,uni,cant,precio,flete,min,total:r2(Math.max(flete,min)),usoMinimo:min>flete,moneda:tf.moneda||"USD"};
   };
@@ -8630,7 +8646,7 @@ export default function SistemaCarga(){
     const L=(f.lineas||[]).map(l=>({...l,tipo:l.tipo||"extra"}));
     const fl=L.filter(l=>l.tipo==="flete"),ad=L.filter(l=>l.tipo==="adicional"),mn=L.filter(l=>l.tipo==="minimo"),ex=L.filter(l=>l.tipo==="extra");
     const S=(a,k)=>a.reduce((t,l)=>t+(parseFloat(l[k])||0),0);
-    const aereo=/^a[eé]r/i.test(f.tipoEnvio||"")||fl.some(l=>["lb","kg"].includes(l.unidad));
+    const aereo=(f.tipoEnvio?tipoPorPeso(f.tipoEnvio):false)||fl.some(l=>["lb","kg"].includes(l.unidad));
     const uniC=fl[0]?.unidad||f.tarifa?.unidad||(aereo?"lb":"ft3");const uni=UNI_LBL[uniC]||uniC;
     const cm=aereo?(uniC==="kg"?[["pesoKg","Kg"],["volKg","Kg vol."]]:[["pesoLb","Lb"],["volLb","Lb vol."]]):[["ft3","Ft³"],["m3","M³"]];
     const conCli=fl.some(l=>l.cliente);
@@ -9029,14 +9045,14 @@ export default function SistemaCarga(){
         if(!dom)return;
         if(f.receptorTipo===dom.tipo&&f.receptorId===dom.id)return;
         const te=f.tipoEnvio||w.tipoEnvio||"";
-        const isAereo=/^a[eé]r/i.test(sinAcentos(te).toLowerCase())||/^a[eé]r/i.test(te);
+        const isAereo=tipoPorPeso(te);
         const L=f.lineas||[];
         const lin=L.filter(l=>l.tipo==="flete"&&l.wrId===w.id).reduce((t,l)=>t+(parseFloat(l.total)||0),0)
           +(ws.length===1?L.filter(l=>l.tipo==="minimo").reduce((t,l)=>t+(parseFloat(l.total)||0),0):0);
         const cobrado=r2(f.subtotal>0?lin*f.total/f.subtotal:lin);
         const tf=tarifaParaWR(w,te,{tipo:dom.tipo,id:dom.id});
         const pf=wrPesoFacturable(w,isAereo,unidadTarifa(tf,isAereo));
-        const costo=tf?Math.max(r2(pf.valor*(parseFloat(isAereo?tf.porLb:tf.porFt3)||0)),parseFloat(tf.min)||0):0;
+        const costo=tf?Math.max(r2(pf.valor*precioTarifa(tf,isAereo)),parseFloat(tf.min)||0):0;
         const monedaOk=!!tf&&(tf.moneda||"USD")===(f.moneda||"USD");
         const ref=`${f.id}/${w.id}`;
         out.push({ref,f,w,dom,cobrado,costo:r2(costo),comision:monedaOk?Math.max(0,r2(cobrado-costo)):0,tf,monedaOk,moneda:f.moneda||"USD",acreditada:acreditadas.has(ref),
@@ -9294,7 +9310,7 @@ export default function SistemaCarga(){
   const facConstruir=(guia,r,wrs,seq=0)=>{
     const isAereo=dnGuiaEsAerea(guia);
     const tf=tarifaParaWR(wrs[0],guia.tipoEnvio,{tipo:r.tipo,id:r.id});
-    const precioUnidad=parseFloat(isAereo?tf?.porLb:tf?.porFt3)||0;
+    const precioUnidad=tf?precioTarifa(tf,isAereo):0;
     const unidad=unidadTarifa(tf,isAereo);
     return recalcFactura({
       ...emptyFactura(),
@@ -9926,7 +9942,7 @@ export default function SistemaCarga(){
                             <div style={{fontSize:12,color:"var(--t3)"}}>{r.tipo==="cliente"?(r.snapshot?.casillero?`#${r.snapshot.casillero}`:"Cliente"):r.tipo==="agente"?"Agente":"Autónomo"}</div></td>
                           <td style={{textAlign:"right",fontWeight:700}}>{gr.wrs.length}</td>
                           <td style={{textAlign:"right",fontFamily:"'DM Mono',monospace"}}>{r2(cobrar)} {uniG}</td>
-                          <td>{tf?<span style={{fontSize:13}}>{tf._especial&&<b style={{color:"#E65100"}}><Ico e="⭐" solo/></b>}{fmtMoney(isAereoG?tf.porLb:tf.porFt3,tf.moneda)}/{uniG}<div style={{fontSize:11,color:"var(--t3)"}}>{tf._especial?"Especial":"Predeterminada"} · mín. {fmtMoney(tf.min,tf.moneda)}</div></span>
+                          <td>{tf?<span style={{fontSize:13}}>{tf._especial&&<b style={{color:"#E65100"}}><Ico e="⭐" solo/></b>}{fmtMoney(precioTarifa(tf,isAereoG),tf.moneda)}/{uniG}<div style={{fontSize:11,color:"var(--t3)"}}>{tf._especial?"Especial":"Predeterminada"} · mín. {fmtMoney(tf.min,tf.moneda)}</div></span>
                             :<span style={{fontSize:13,color:"var(--red)",fontWeight:700}}>Sin tarifa</span>}</td>
                           <td style={{textAlign:"right",fontFamily:"'DM Mono',monospace",fontWeight:800}}>
                             {gr.facturas.map(f=><div key={f.id}>{fmtMoney(f.total,f.moneda)}</div>)}
@@ -10963,10 +10979,7 @@ export default function SistemaCarga(){
   // ── Helpers de Entregas y Despachos ────────────────────────────────────────
   // Una guía es "aérea" si su tipoEnvio empieza con "Aer" (Aéreo, Aereo, AER).
   // El resto se considera marítima (incluye Marítimo, Maritimo, etc.).
-  const dnGuiaEsAerea=(g)=>{
-    const t=String(g?.tipoEnvio||"").toLowerCase();
-    return t.startsWith("aer")||t.startsWith("aér");
-  };
+  const dnGuiaEsAerea=g=>tipoPorPeso(g?.tipoEnvio);
   // Peso/volumen facturable de un WR según el modo de transporte de la guía.
   // Aéreo: max(pesoLb, volLb) — estándar de la industria; lo voluminoso paga
   //        más que su peso bruto.
@@ -11002,7 +11015,9 @@ export default function SistemaCarga(){
       return {valor:Math.max(real,vol), unidad:kg?"kg":"lb", real, vol};
     }
     const Cm=calcDe(w?.tipoEnvio);const Vm=(w?.dims||[]).some(d=>parseFloat(d.l))?volDeWR(w):null;
-    const ft3=Vm?Vm.ft3:parseFloat(w.ft3)||0, m3=Vm?Vm.m3:parseFloat(w.m3)||0;
+    let ft3=Vm?Vm.ft3:parseFloat(w.ft3)||0, m3=Vm?Vm.m3:parseFloat(w.m3)||0;
+    if(Cm.wm){const kg=Vm?Vm.pesoKg:(parseFloat(w.pesoKg)||(parseFloat(w.pesoLb)||0)/LB_KG);const m3p=kg/(parseFloat(Cm.kgm3)||1000);
+      if(m3p>m3){m3=m3p;ft3=m3p*35.3146667;}}
     if(unidad==="m3")return {valor:redondearArriba(m3,Cm.red==="0.01"?"0.0001":Cm.red), unidad:"m3", ft3:r2(ft3), m3};
     return {valor:redondearArriba(ft3,Cm.red), unidad:"ft3", ft3:r2(ft3), m3};
   };
