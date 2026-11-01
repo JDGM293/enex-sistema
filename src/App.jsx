@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, Fragment } from "react";
+import { useState, useEffect, useRef, useMemo, Fragment } from "react";
 import { createPortal } from "react-dom";
 import { renderToStaticMarkup } from "react-dom/server";
 import { dbGetPickups, dbUpsertPickup, dbSecuencias, urlComprobante } from './supabase'
@@ -584,14 +584,14 @@ const ALL_PERMS=[
   // Permiso especial: salta los bloqueos del proceso por estado
   "saltar_bloqueos",
   // Límites de edición, facturación PREPAID en origen
-  "editar_wr_destino","editar_guia_destino","fac_prepaid","cobrar_prepaid","ver_estado_contable","exportar_excel","ver_cierre_caja","ver_comisiones","alerta_aparecio","alerta_sobrante","registrar_remitente","imp_estado_cuenta","imp_listado_clientes","editar_wr_lib3","editar_guia_lib3","dar_acceso","imp_release","imp_pickup","imp_recibo_cobro","cfg_agentes_ver","cfg_oficinas_ver","cfg_tarifas_ver",
+  "editar_wr_destino","editar_guia_destino","fac_prepaid","cobrar_prepaid","ver_estado_contable","ver_datos_completos","exportar_excel","ver_cierre_caja","ver_comisiones","alerta_aparecio","alerta_sobrante","registrar_remitente","imp_estado_cuenta","imp_listado_clientes","editar_wr_lib3","editar_guia_lib3","dar_acceso","imp_release","imp_pickup","imp_recibo_cobro","cfg_agentes_ver","cfg_oficinas_ver","cfg_tarifas_ver",
   // Configuración: cada pestaña con su ver / editar
   "cfg_empresa_ver","cfg_empresa_editar", "cfg_documentos_ver","cfg_documentos_editar", "cfg_numeracion_ver","cfg_numeracion_editar", "cfg_tipoenvio_ver","cfg_tipoenvio_editar", "cfg_servicios_ver","cfg_servicios_editar", "cfg_cargos_ver","cfg_cargos_editar", "cfg_pagos_ver","cfg_pagos_editar", "cfg_contenedores_ver","cfg_contenedores_editar", "cfg_paises_ver","cfg_paises_editar", "cfg_chat_ver","cfg_chat_editar",
 ];
 // Solo el Administrador puede borrar y ver el registro de actividad; no se asignan a otros roles
 const PERMS_SOLO_ADMIN=new Set([...ALL_PERMS.filter(p=>p.startsWith("borrar_")),"registro_actividad"]);
 
-const PERM_LBL={exportar_excel:"Exportar reportes a Excel",ver_cierre_caja:"Contabilidad: ver Caja y cierre de caja",ver_comisiones:"Ver comisiones de agentes y autónomos",imp_estado_cuenta:"Impr. Estado de cuenta",imp_listado_clientes:"Imprimir / exportar listados de clientes, usuarios, agentes, autónomos y oficinas",alerta_sobrante:"Alertas: resolver sobrantes (entregar, devolver a origen, otra guía)",registrar_remitente:"Registrar al remitente (shipper) como cliente desde el WR",editar_wr_lib3:"Editar WR de Tránsito 2 hasta Liberado 3",editar_guia_lib3:"Editar guías de Tránsito 2 hasta Liberado 3",alerta_aparecio:"Alertas: marcar «Apareció»",ver_estado_contable:"Estado de cuenta: ver parte contable (facturas, pagos, saldo)",dar_acceso:"Dar acceso al sistema (contraseña)",imp_release:"Impr. Cargo Release",imp_pickup:"Impr. Pick-up",imp_recibo_cobro:"Impr. Recibo de cobro",cfg_agentes_ver:"Config · Agentes (ver)",cfg_oficinas_ver:"Config · Oficinas (ver)",cfg_tarifas_ver:"Config · Tarifas (ver)",editar_wr_destino:"Editar WR desde Liberado 3 hasta entregado",editar_guia_destino:"Editar guías desde Liberado 3",fac_prepaid:"Facturar PREPAID en origen (desde el WR)",cobrar_prepaid:"Cobrar facturas PREPAID",cfg_empresa_ver:"Config · Empresa (ver)",cfg_empresa_editar:"Config · Empresa (editar)",cfg_documentos_ver:"Config · Documentos por país (ver)",cfg_documentos_editar:"Config · Documentos por país (editar)",cfg_numeracion_ver:"Config · Numeración (ver)",cfg_numeracion_editar:"Config · Numeración (editar)",cfg_tipoenvio_ver:"Config · Tipo de Envío (ver)",cfg_tipoenvio_editar:"Config · Tipo de Envío (editar)",cfg_servicios_ver:"Config · Servicios Adicionales (ver)",cfg_servicios_editar:"Config · Servicios Adicionales (editar)",cfg_cargos_ver:"Config · Gastos Adicionales (ver)",cfg_cargos_editar:"Config · Gastos Adicionales (editar)",cfg_pagos_ver:"Config · Tipos de Pago (ver)",cfg_pagos_editar:"Config · Tipos de Pago (editar)",cfg_contenedores_ver:"Config · Tipos de Contenedor (ver)",cfg_contenedores_editar:"Config · Tipos de Contenedor (editar)",cfg_paises_ver:"Config · Países y Ciudades (ver)",cfg_paises_editar:"Config · Países y Ciudades (editar)",cfg_chat_ver:"Config · Canales de chat (ver)",cfg_chat_editar:"Config · Canales de chat (editar)",
+const PERM_LBL={ver_datos_completos:"Ver datos personales completos (ID, teléfono, email)",exportar_excel:"Exportar reportes a Excel",ver_cierre_caja:"Contabilidad: ver Caja y cierre de caja",ver_comisiones:"Ver comisiones de agentes y autónomos",imp_estado_cuenta:"Impr. Estado de cuenta",imp_listado_clientes:"Imprimir / exportar listados de clientes, usuarios, agentes, autónomos y oficinas",alerta_sobrante:"Alertas: resolver sobrantes (entregar, devolver a origen, otra guía)",registrar_remitente:"Registrar al remitente (shipper) como cliente desde el WR",editar_wr_lib3:"Editar WR de Tránsito 2 hasta Liberado 3",editar_guia_lib3:"Editar guías de Tránsito 2 hasta Liberado 3",alerta_aparecio:"Alertas: marcar «Apareció»",ver_estado_contable:"Estado de cuenta: ver parte contable (facturas, pagos, saldo)",dar_acceso:"Dar acceso al sistema (contraseña)",imp_release:"Impr. Cargo Release",imp_pickup:"Impr. Pick-up",imp_recibo_cobro:"Impr. Recibo de cobro",cfg_agentes_ver:"Config · Agentes (ver)",cfg_oficinas_ver:"Config · Oficinas (ver)",cfg_tarifas_ver:"Config · Tarifas (ver)",editar_wr_destino:"Editar WR desde Liberado 3 hasta entregado",editar_guia_destino:"Editar guías desde Liberado 3",fac_prepaid:"Facturar PREPAID en origen (desde el WR)",cobrar_prepaid:"Cobrar facturas PREPAID",cfg_empresa_ver:"Config · Empresa (ver)",cfg_empresa_editar:"Config · Empresa (editar)",cfg_documentos_ver:"Config · Documentos por país (ver)",cfg_documentos_editar:"Config · Documentos por país (editar)",cfg_numeracion_ver:"Config · Numeración (ver)",cfg_numeracion_editar:"Config · Numeración (editar)",cfg_tipoenvio_ver:"Config · Tipo de Envío (ver)",cfg_tipoenvio_editar:"Config · Tipo de Envío (editar)",cfg_servicios_ver:"Config · Servicios Adicionales (ver)",cfg_servicios_editar:"Config · Servicios Adicionales (editar)",cfg_cargos_ver:"Config · Gastos Adicionales (ver)",cfg_cargos_editar:"Config · Gastos Adicionales (editar)",cfg_pagos_ver:"Config · Tipos de Pago (ver)",cfg_pagos_editar:"Config · Tipos de Pago (editar)",cfg_contenedores_ver:"Config · Tipos de Contenedor (ver)",cfg_contenedores_editar:"Config · Tipos de Contenedor (editar)",cfg_paises_ver:"Config · Países y Ciudades (ver)",cfg_paises_editar:"Config · Países y Ciudades (editar)",cfg_chat_ver:"Config · Canales de chat (ver)",cfg_chat_editar:"Config · Canales de chat (editar)",
   ver_usuarios:"Ver Usuarios",crear_usuario:"Crear Usuario",editar_usuario:"Editar Usuario",borrar_usuario:"Borrar Usuario",
   crear_cliente:"Crear Cliente",editar_cliente:"Editar Cliente",borrar_cliente:"Borrar Cliente",
   ver_agente:"Ver Agente",crear_agente:"Crear Agente",editar_agente:"Editar Agente",borrar_agente:"Borrar Agente",
@@ -902,6 +902,16 @@ const PaArchivo=({a,chico})=>{
   return <button type="button" className="chat-file" style={chico?{padding:"3px 8px",fontSize:12}:{}} onClick={abrir} title={a.nombre}><Ico e="📎" sp/>{String(a.nombre||"Factura").slice(0,28)}</button>;
 };
 
+// Datos personales ocultos: ****1234 / jo***@dominio.com
+const ocultarDato=(v,tipo)=>{const t=String(v||"").trim();if(!t)return "";
+  if(tipo==="mail"){const [u,d]=t.split("@");return `${(u||"").slice(0,2)}***${d?`@${d}`:""}`;}
+  const a=t.replace(/[^0-9A-Za-z]/g,"");return a.length<=4?"****":`****${a.slice(-4)}`;};
+const DatoOculto=({valor,tipo,onCambiar})=>(
+  <div className="fi" style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:6,background:"var(--bg4)"}}>
+    <span style={{fontFamily:"'DM Mono',monospace"}}>{ocultarDato(valor,tipo)}</span>
+    {onCambiar&&<span style={{cursor:"pointer"}} title="Cambiar" onClick={onCambiar}><Ico e="✏️" solo/></span>}
+  </div>);
+
 // ─── ROLE DEFINITIONS ────────────────────────────────────────────────────────
 const ROLE_DEFS={
   A:{code:"A",name:"Administrador",color:"rA",icon:<Ico e="👑"/>,
@@ -932,23 +942,23 @@ const ROLE_DEFS={
   E:{code:"E",name:"Agente",color:"rE",icon:<Ico e="🤝"/>,
     desc:"Agente externo. Gestiona sus clientes y WR propios.",
     subs:["E1"],
-    perms:["ver_fac_propia","crear_fac_propia","cobrar_fac_propia","anular_fac_propia","ver_chat","enviar_chat","editar_mensaje","borrar_mensaje","chat_directo","chat_adjuntar","crear_cliente","editar_cliente","crear_wr","editar_wr","ver_wr","ver_booking","ver_confirmacion","imp_wr","imp_factura","ver_estado_cuenta","ver_estado_agente","ver_tracking","rastrear","ver_prealerta","pre_tracking","pre_factura","ver_pickup","solicitar_pickup","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_factura","ver_fotos","subir_foto","dar_acceso","imp_recibo_cobro","imp_pickup","ver_estado_contable","editar_wr_lib3","imp_etiq_caja","imp_estado_cuenta","imp_listado_clientes"]},
+    perms:["ver_datos_completos","ver_fac_propia","crear_fac_propia","cobrar_fac_propia","anular_fac_propia","ver_chat","enviar_chat","editar_mensaje","borrar_mensaje","chat_directo","chat_adjuntar","crear_cliente","editar_cliente","crear_wr","editar_wr","ver_wr","ver_booking","ver_confirmacion","imp_wr","imp_factura","ver_estado_cuenta","ver_estado_agente","ver_tracking","rastrear","ver_prealerta","pre_tracking","pre_factura","ver_pickup","solicitar_pickup","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_factura","ver_fotos","subir_foto","dar_acceso","imp_recibo_cobro","imp_pickup","ver_estado_contable","editar_wr_lib3","imp_etiq_caja","imp_estado_cuenta","imp_listado_clientes"]},
 
   E1:{code:"E1",name:"Vendedor / Agente",color:"rE1",icon:<Ico e="💼"/>,
     desc:"Vendedor bajo un agente. Solo sus clientes.",
-    perms:["ver_fac_propia","crear_fac_propia","cobrar_fac_propia","anular_fac_propia","ver_chat","enviar_chat","editar_mensaje","borrar_mensaje","chat_directo","chat_adjuntar","crear_cliente","editar_cliente","crear_wr","ver_wr","ver_booking","imp_wr","imp_factura","ver_estado_cuenta","ver_estado_agente","ver_tracking","rastrear","ver_prealerta","pre_tracking","pre_factura","ver_pickup","solicitar_pickup","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_factura","ver_fotos","subir_foto","dar_acceso","imp_recibo_cobro","imp_pickup","ver_estado_contable","imp_etiq_caja","imp_estado_cuenta","imp_listado_clientes"]},
+    perms:["ver_datos_completos","ver_fac_propia","crear_fac_propia","cobrar_fac_propia","anular_fac_propia","ver_chat","enviar_chat","editar_mensaje","borrar_mensaje","chat_directo","chat_adjuntar","crear_cliente","editar_cliente","crear_wr","ver_wr","ver_booking","imp_wr","imp_factura","ver_estado_cuenta","ver_estado_agente","ver_tracking","rastrear","ver_prealerta","pre_tracking","pre_factura","ver_pickup","solicitar_pickup","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_factura","ver_fotos","subir_foto","dar_acceso","imp_recibo_cobro","imp_pickup","ver_estado_contable","imp_etiq_caja","imp_estado_cuenta","imp_listado_clientes"]},
 
   F:{code:"F",name:"Autónomo",color:"rF",icon:<Ico e="🧑‍💻"/>,
     desc:"Operador independiente. Gestiona sus propios clientes.",
-    perms:["ver_fac_propia","crear_fac_propia","cobrar_fac_propia","anular_fac_propia","ver_chat","enviar_chat","editar_mensaje","borrar_mensaje","chat_directo","chat_adjuntar","crear_cliente","editar_cliente","crear_wr","editar_wr","ver_wr","ver_confirmacion","imp_wr","imp_factura","ver_estado_cuenta","ver_estado_cliente","ver_tracking","rastrear","ver_prealerta","pre_tracking","pre_factura","ver_pickup","solicitar_pickup","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_factura","ver_fotos","subir_foto","dar_acceso","imp_recibo_cobro","imp_pickup","ver_estado_contable","editar_wr_lib3","imp_etiq_caja","imp_estado_cuenta","imp_listado_clientes"]},
+    perms:["ver_datos_completos","ver_fac_propia","crear_fac_propia","cobrar_fac_propia","anular_fac_propia","ver_chat","enviar_chat","editar_mensaje","borrar_mensaje","chat_directo","chat_adjuntar","crear_cliente","editar_cliente","crear_wr","editar_wr","ver_wr","ver_confirmacion","imp_wr","imp_factura","ver_estado_cuenta","ver_estado_cliente","ver_tracking","rastrear","ver_prealerta","pre_tracking","pre_factura","ver_pickup","solicitar_pickup","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_factura","ver_fotos","subir_foto","dar_acceso","imp_recibo_cobro","imp_pickup","ver_estado_contable","editar_wr_lib3","imp_etiq_caja","imp_estado_cuenta","imp_listado_clientes"]},
 
   G:{code:"G",name:"Oficina",color:"rG",icon:<Ico e="🏢"/>,
     desc:"Sucursal de la empresa. Ve la carga que recibe o que se envió por ella.",
-    perms:["ver_fac_propia","crear_fac_propia","cobrar_fac_propia","anular_fac_propia","ver_chat","enviar_chat","editar_mensaje","borrar_mensaje","chat_directo","chat_adjuntar","crear_cliente","editar_cliente","crear_wr","editar_wr","ver_wr","ver_rp","hacer_rp","editar_rp","ver_booking","crear_booking","editar_booking","ver_reempaque","ver_guia","crear_guia","ver_confirmacion","ver_entrega","entregar","ver_reportes","rep_confirmados","imp_wr","imp_guia","imp_etiq_caja","imp_etiq_guia","imp_rp","imp_lista_conf","imp_recibo_entrega","imp_factura","ver_estado_cuenta","ver_estado_oficina","ver_tracking","rastrear","ver_prealerta","pre_tracking","pre_factura","ver_pickup","solicitar_pickup","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_tarifas","ver_factura","registrar_cobro","ver_cuentas_cobrar","ver_bd_clientes","paquetes_sin_reclamo","ver_fotos","subir_foto","dar_acceso","imp_recibo_cobro","imp_pickup","ver_estado_contable","editar_wr_lib3","registrar_remitente","imp_estado_cuenta","imp_listado_clientes"]},
+    perms:["ver_datos_completos","ver_fac_propia","crear_fac_propia","cobrar_fac_propia","anular_fac_propia","ver_chat","enviar_chat","editar_mensaje","borrar_mensaje","chat_directo","chat_adjuntar","crear_cliente","editar_cliente","crear_wr","editar_wr","ver_wr","ver_rp","hacer_rp","editar_rp","ver_booking","crear_booking","editar_booking","ver_reempaque","ver_guia","crear_guia","ver_confirmacion","ver_entrega","entregar","ver_reportes","rep_confirmados","imp_wr","imp_guia","imp_etiq_caja","imp_etiq_guia","imp_rp","imp_lista_conf","imp_recibo_entrega","imp_factura","ver_estado_cuenta","ver_estado_oficina","ver_tracking","rastrear","ver_prealerta","pre_tracking","pre_factura","ver_pickup","solicitar_pickup","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_tarifas","ver_factura","registrar_cobro","ver_cuentas_cobrar","ver_bd_clientes","paquetes_sin_reclamo","ver_fotos","subir_foto","dar_acceso","imp_recibo_cobro","imp_pickup","ver_estado_contable","editar_wr_lib3","registrar_remitente","imp_estado_cuenta","imp_listado_clientes"]},
 
   I:{code:"I",name:"Cliente",color:"rH2",icon:<Ico e="📦"/>,
     desc:"Cliente externo. Solo ve sus propios envíos, estado de cuenta, tracking y factura.",
-    perms:["ver_wr","ver_tracking","rastrear","ver_prealerta","pre_tracking","pre_factura","ver_estado_cuenta","ver_estado_cliente","ver_factura","imp_factura","ver_pickup","solicitar_pickup","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_fotos","subir_foto","imp_recibo_cobro","imp_pickup","ver_estado_contable"]},
+    perms:["ver_datos_completos","ver_wr","ver_tracking","rastrear","ver_prealerta","pre_tracking","pre_factura","ver_estado_cuenta","ver_estado_cliente","ver_factura","imp_factura","ver_pickup","solicitar_pickup","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_fotos","subir_foto","imp_recibo_cobro","imp_pickup","ver_estado_contable"]},
 };
 // Los menús nuevos (Alertas, Documentos) se mantienen visibles para quien ya los usaba
 ["C","D","D1","D2"].forEach(r=>ROLE_DEFS[r].perms.push("ver_alertas","ver_documentos"));
@@ -1866,7 +1876,7 @@ const PwInput=({style,...props})=>{
 };
 
 // ─── STANDALONE COMPONENTS (outside main component to avoid hook issues) ─────
-const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomos=[],allClients=[],tiposOk=["cliente","usuario"],rolesOk=null,acceso=true})=>{
+const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomos=[],allClients=[],tiposOk=["cliente","usuario"],rolesOk=null,acceso=true,ocultar=false})=>{
   const _ROL_TO_TIPO_INIT={"E":"agente","E1":"vendedor_agente","F":"autonomo","G":"oficina"};
   // Los clientes ya no pertenecen a oficinas (son sucursales): los antiguos pasan a Casa Matriz
   const _ct0=initial?.clienteTipo||(initial?.tipo==="usuario"&&initial?.rol?_ROL_TO_TIPO_INIT[initial.rol]||"matriz":"matriz");
@@ -1968,7 +1978,7 @@ const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomo
           <div className="fg"><div className="fl">Segundo Apellido</div><input className="fi" value={f.segundoApellido} onChange={e=>ff("segundoApellido",e.target.value)} placeholder="Segundo apellido"/></div>
         </div>
         <div className="fgrid g3" style={{marginBottom:10}}>
-          <div className="fg"><div className="fl">ID Identificación *</div><input className="fi" value={f.cedula} onChange={e=>ff("cedula",e.target.value)} placeholder="V-00000000"/></div>
+          <div className="fg"><div className="fl">ID Identificación *</div>{ocultar&&initial?.cedula&&f.cedula===initial.cedula?<DatoOculto valor={f.cedula} onCambiar={()=>ff("cedula","")}/>:<input className="fi" value={f.cedula} onChange={e=>ff("cedula",e.target.value)} placeholder="V-00000000"/>}</div>
           {f.tipo==="cliente"
             ?<div className="fg"><div className="fl">Casillero (auto)</div><input className="fi" value={f.casillero} onChange={e=>ff("casillero",e.target.value)} placeholder="Se genera automático" style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)"}}/></div>
             :<div className="fg"><div className="fl">Rol del Sistema</div><select className="fs" value={f.rol==="I"?"":(f.rol||"")} onChange={e=>ff("rol",e.target.value)}><option value="">— Selecciona el rol —</option>{ALL_ROLES.filter(r=>r.code!=="I"&&(!rolesOk||rolesOk.includes(r.code)||r.code===initial?.rol)).map(r=><option key={r.code} value={r.code} disabled={!!rolesOk&&!rolesOk.includes(r.code)}>{r.code} — {r.name}</option>)}</select></div>}
@@ -1992,9 +2002,9 @@ const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomo
         </div>
         <div className="sdiv">CONTACTO</div>
         <div className="fgrid g3" style={{marginBottom:10}}>
-          <div className="fg"><div className="fl">Teléfono 1 *</div><input className="fi" value={f.tel1} onChange={e=>ff("tel1",e.target.value)} placeholder="+58 412 000 0000"/></div>
-          <div className="fg"><div className="fl">Teléfono 2</div><input className="fi" value={f.tel2} onChange={e=>ff("tel2",e.target.value)}/></div>
-          <div className="fg"><div className="fl">Email *</div><input className="fi" type="email" value={f.email} onChange={e=>ff("email",e.target.value)} placeholder="correo@email.com"/></div>
+          <div className="fg"><div className="fl">Teléfono 1 *</div>{ocultar&&initial?.tel1&&f.tel1===initial.tel1?<DatoOculto valor={f.tel1} onCambiar={()=>ff("tel1","")}/>:<input className="fi" value={f.tel1} onChange={e=>ff("tel1",e.target.value)} placeholder="+58 412 000 0000"/>}</div>
+          <div className="fg"><div className="fl">Teléfono 2</div>{ocultar&&initial?.tel2&&f.tel2===initial.tel2?<DatoOculto valor={f.tel2} onCambiar={()=>ff("tel2","")}/>:<input className="fi" value={f.tel2} onChange={e=>ff("tel2",e.target.value)}/>}</div>
+          <div className="fg"><div className="fl">Email *</div>{ocultar&&initial?.email&&f.email===initial.email?<DatoOculto valor={f.email} tipo="mail" onCambiar={()=>ff("email","")}/>:<input className="fi" type="email" value={f.email} onChange={e=>ff("email",e.target.value)} placeholder="correo@email.com"/>}</div>
         </div>
         {emailErr&&<div style={{background:"#FEE2E2",border:"1px solid #FCA5A5",borderRadius:6,padding:"8px 12px",marginBottom:8,color:"#DC2626",fontSize:14,fontWeight:600}}><Ico e="⚠️" sp/>{emailErr}</div>}
         <div className="mft"><button className="btn-s" onClick={onClose}>Cancelar</button><button className="btn-p" onClick={()=>{
@@ -2708,6 +2718,12 @@ export default function SistemaCarga(){
   const [facGuiaBuscar,setFacGuiaBuscar]=useState("");
   const [facGuiaVista,setFacGuiaVista]=useState("pendientes"); // "pendientes" | "historial"
   const [facturas,setFacturas]=useState([]);
+  // Datos personales ya guardados en el sistema (para ocultarlos a quien no tiene el permiso)
+  const datosGuardados=useMemo(()=>{const S=new Set();const add=v=>{const t=String(v||"").trim().toLowerCase();if(t)S.add(t);};
+    clients.forEach(c=>{add(c.cedula);add(c.tel1);add(c.tel2);add(c.email);});
+    wrList.forEach(w=>{add(w.remitenteDoc);add(w.remitenteTel);add(w.remitenteEmail);});
+    facturas.forEach(f=>{add(f.receptorDoc);add(f.receptorTel);add(f.receptorEmail);});
+    deliveryNotes.forEach(n=>{add(n.receptorDocumento);add(n.receptorTelefono);});return S;},[clients,wrList,facturas,deliveryNotes]);
   const facturasAll=facturas;
   const [pagos,setPagos]=useState([]);
   const [cobroModal,setCobroModal]=useState(null);
@@ -2961,6 +2977,10 @@ export default function SistemaCarga(){
   // El Administrador (A) siempre tiene todo, para que nadie quede fuera del sistema.
   const hasPerm=p=>currentUser.rol==="A"||(!PERMS_SOLO_ADMIN.has(p)&&(rolePerms[currentUser.rol]||[]).includes(p));
   // Jerarquía: cada quien gestiona usuarios de roles por debajo del suyo (el Administrador, todos)
+  const verDatos=hasPerm("ver_datos_completos");
+  const oc=(v,tipo)=>verDatos?(v||""):ocultarDato(v,tipo);
+  // Campo de un dato personal: oculto si ya estaba guardado y el rol no puede verlo completo
+  const ocCampo=(v,tipo,input,limpiar)=>(!verDatos&&String(v||"").trim()&&datosGuardados.has(String(v).trim().toLowerCase()))?<DatoOculto valor={v} tipo={tipo} onCambiar={limpiar}/>:input;
   const RANGO_ROL=c=>c==="A"?0:c==="B"?1:c==="C"?2:3;
   const rolesAsignables=currentUser.rol==="A"?null:ALL_ROLES.map(r=>r.code).filter(c=>RANGO_ROL(c)>RANGO_ROL(currentUser.rol));
   const puedeEditarReg=c=>c.tipo==="usuario"?hasPerm("editar_usuario")&&(currentUser.rol==="A"||RANGO_ROL(c.rol)>RANGO_ROL(currentUser.rol)):hasPerm("editar_cliente");
@@ -3894,16 +3914,16 @@ export default function SistemaCarga(){
                   <td><span className="cid">{c.id}</span></td>
                   <td><span style={{fontSize:11,padding:"2px 6px",borderRadius:4,fontWeight:700,background:c.tipo==="usuario"?"#F0EAFE":"#E8F8EE",color:c.tipo==="usuario"?"var(--purple)":"var(--green)",border:"1px solid",borderColor:c.tipo==="usuario"?"#C0A0F0":"#80D0A0"}}>{c.tipo==="usuario"?"Sistema":"Cliente"}</span></td>
                   <td><span className="cn">{fullName(c)}</span></td>
-                  <td style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--gold2)",fontWeight:600}}>{c.cedula}</td>
+                  <td style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--gold2)",fontWeight:600}}>{oc(c.cedula)}</td>
                   <td style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--gold2)",fontWeight:700}}>{c.casillero||"—"}</td>
                   <td style={{fontSize:12,maxWidth:180,overflow:"hidden",textOverflow:"ellipsis"}}>{c.dir}</td>
                   <td style={{fontSize:12}}>{c.municipio}</td>
                   <td style={{fontSize:12}}>{c.estado}</td>
                   <td style={{fontSize:12}}>{c.pais}</td>
                   <td style={{fontFamily:"'DM Mono',monospace",fontSize:12}}>{c.cp||"—"}</td>
-                  <td style={{fontSize:12,whiteSpace:"nowrap"}}>{c.tel1}</td>
-                  <td style={{fontSize:12,color:"var(--t3)",whiteSpace:"nowrap"}}>{c.tel2||"—"}</td>
-                  <td style={{fontSize:12,color:"var(--cyan)"}}>{c.email}</td>
+                  <td style={{fontSize:12,whiteSpace:"nowrap"}}>{oc(c.tel1)}</td>
+                  <td style={{fontSize:12,color:"var(--t3)",whiteSpace:"nowrap"}}>{oc(c.tel2)||"—"}</td>
+                  <td style={{fontSize:12,color:"var(--cyan)"}}>{oc(c.email,"mail")}</td>
                   <td><RoleBadge code={c.rol}/></td>
                   <td>{ct?<span style={{fontSize:11,padding:"2px 7px",borderRadius:4,fontWeight:700,background:CT_COLOR[ct]||"var(--bg4)",color:CT_TEXT[ct]||"var(--t2)",border:"1px solid currentColor",whiteSpace:"nowrap"}}>{ctLabel}</span>:<span style={{color:"var(--t4)",fontSize:12}}>—</span>}</td>
                   <td style={{fontSize:12,color:parentName&&parentName.startsWith("Sin ")?"var(--red)":ct==="matriz"?"var(--t3)":"var(--t1)",fontWeight:ct==="matriz"?400:600,whiteSpace:"nowrap"}}>{parentName}</td>
@@ -4146,13 +4166,13 @@ export default function SistemaCarga(){
                   return res.length>0&&<div className="fi-search-res">{res.map(c=>(
                     <div key={c.id} className="fi-search-item" onMouseDown={e=>{e.preventDefault();elegir(c);}}>
                       {fullName(c)}<span className="fi-search-cas">#{c.casillero}</span>
-                      <span style={{fontSize:12,color:"var(--t3)",marginLeft:8}}>{[c.cedula&&`ID ${c.cedula}`,c.tel1,c.email].filter(Boolean).join(" · ")}</span>
+                      <span style={{fontSize:12,color:"var(--t3)",marginLeft:8}}>{[c.cedula&&`ID ${oc(c.cedula)}`,oc(c.tel1),oc(c.email,"mail")].filter(Boolean).join(" · ")}</span>
                     </div>))}</div>;
                 };
                 const campo=(k,lbl,extra={})=>(
                   <div className="fg fi-search"><div className="fl">{lbl}</div>
-                    <input className="fi" value={wrf[k]} onFocus={()=>setRemCampo(k)} onBlur={()=>setTimeout(()=>setRemCampo(x=>x===k?"":x),150)}
-                      onChange={e=>{sw(k,e.target.value);setRemCampo(k);if(wrf.remitenteId&&k==="remitente")setWrf(p=>({...p,remitenteId:""}));}} {...extra}/>
+                    {["remitenteDoc","remitenteTel","remitenteEmail"].includes(k)&&ocCampo(wrf[k],k==="remitenteEmail"?"mail":"",null,()=>sw(k,""))||<input className="fi" value={wrf[k]} onFocus={()=>setRemCampo(k)} onBlur={()=>setTimeout(()=>setRemCampo(x=>x===k?"":x),150)}
+                      onChange={e=>{sw(k,e.target.value);setRemCampo(k);if(wrf.remitenteId&&k==="remitente")setWrf(p=>({...p,remitenteId:""}));}} {...extra}/>}
                     {sugerir(k)}
                   </div>);
                 const enl=wrf.remitenteId&&clients.find(x=>x.id===wrf.remitenteId);
@@ -4179,7 +4199,7 @@ export default function SistemaCarga(){
                     {clientResults.map(c=>(
                       <div key={c.id} className="fi-search-item" onClick={()=>selectClient(c)}>
                         {fullName(c)} <span className="fi-search-cas">{c.casillero}</span>
-                        <span style={{fontSize:11,color:"var(--t3)",marginLeft:6}}>{c.cedula}</span>
+                        <span style={{fontSize:11,color:"var(--t3)",marginLeft:6}}>{oc(c.cedula)}</span>
                       </div>
                     ))}
                     <div className="fi-search-new" onClick={()=>setClientResults([])}>+ Registrar como nuevo cliente después</div>
@@ -4597,8 +4617,8 @@ export default function SistemaCarga(){
               <div className="wf"><div className="wfl">Nombre / Empresa</div><div className="wfv" style={{fontWeight:800,fontSize:20}}>{selWR.shipper||"—"}</div></div>
               <div className="wf"><div className="wfl">Recibido en</div><div className="wfv" style={{fontWeight:600}}>{_oc?.nombre||selWR.branch||"Casa Matriz"}{_oc?.ciudad?` — ${_oc.ciudad}`:""}</div></div>
               <div className="wf"><div className="wfl">Procedencia</div><div className="wfv">{selWR.remitenteDir||""}</div></div>
-              {selWR.remitenteDoc&&<div className="wf"><div className="wfl">ID Identificación</div><div className="wfv">{selWR.remitenteDoc}</div></div>}
-              {(selWR.remitenteTel||selWR.remitenteEmail)&&<div className="wf"><div className="wfl">Contacto</div><div className="wfv">{[selWR.remitenteTel,selWR.remitenteEmail].filter(Boolean).join(" · ")}</div></div>}
+              {selWR.remitenteDoc&&<div className="wf"><div className="wfl">ID Identificación</div><div className="wfv">{oc(selWR.remitenteDoc)}</div></div>}
+              {(selWR.remitenteTel||selWR.remitenteEmail)&&<div className="wf"><div className="wfl">Contacto</div><div className="wfv">{[oc(selWR.remitenteTel),oc(selWR.remitenteEmail,"mail")].filter(Boolean).join(" · ")}</div></div>}
             </div>
             <div className="wb">
               <div className="wb-t"><Ico e="📥" sp/>Consignatario / Consignee</div>
@@ -4607,7 +4627,7 @@ export default function SistemaCarga(){
               {_destAddr&&<div className="wf"><div className="wfl">Dirección</div><div className="wfv">{_destAddr}</div></div>}
               <div className="wf"><div className="wfl">Sucursal de entrega</div><div className="wfv" style={{fontWeight:600}}>{(()=>{const id=sucursalDeWR(selWR,cliDeWRCon(selWR,clients));const o=oficinas.find(x=>x.id===id);return o?`${o.nombre}${o.ciudad?` — ${o.ciudad}`:""}`:"Principal";})()}</div></div>
               <div className="wf"><div className="wfl">Ciudad Destino</div><div className="wfv" style={{fontWeight:600,color:"var(--navy)"}}>{selWR.destCity||"—"} · {selWR.destCountry||"—"}</div></div>
-              {_cl?.tel1&&<div className="wf"><div className="wfl">Teléfono</div><div className="wfv">{_cl.tel1}</div></div>}
+              {_cl?.tel1&&<div className="wf"><div className="wfl">Teléfono</div><div className="wfv">{oc(_cl.tel1)}</div></div>}
               {_cl?.email&&<div className="wf"><div className="wfl">Email</div><div className="wfv">{_cl.email}</div></div>}
             </div>
           </div>
@@ -5041,7 +5061,7 @@ export default function SistemaCarga(){
                     <div style={{width:32,height:32,borderRadius:8,background:"var(--navy)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:14,flexShrink:0}}>{initials(c)}</div>
                     <div>
                       <div style={{fontWeight:600,color:"var(--t1)",fontSize:15}}>{fullName(c)}</div>
-                      <div style={{fontSize:13,color:"var(--t3)"}}>{c.casillero} · {c.email} · {c.tel1}</div>
+                      <div style={{fontSize:13,color:"var(--t3)"}}>{c.casillero} · {oc(c.email,"mail")} · {oc(c.tel1)}</div>
                     </div>
                   </div>
                 ))}
@@ -5107,8 +5127,8 @@ export default function SistemaCarga(){
                 </div>
                 <div style={{display:"flex",gap:16,marginTop:4,fontSize:13,color:"var(--t2)",flexWrap:"wrap"}}>
                   <span><Ico e="📦" sp/>Casillero: <strong style={{color:"var(--gold2)",fontFamily:"'DM Mono',monospace"}}>{ecCliente.casillero}</strong></span>
-                  <span><Ico e="📧" sp/>{ecCliente.email}</span>
-                  <span><Ico e="📞" sp/>{ecCliente.tel1}</span>
+                  <span><Ico e="📧" sp/>{oc(ecCliente.email,"mail")}</span>
+                  <span><Ico e="📞" sp/>{oc(ecCliente.tel1)}</span>
                   <span><Ico e="📍" sp/>{ecCliente.municipio}, {ecCliente.estado}</span>
                 </div>
               </div>
@@ -6282,7 +6302,7 @@ export default function SistemaCarga(){
     const cab=grupo?pGrid(2,[pBox(grupo.tipo==="agente"?"Agente":grupo.tipo==="oficina"?"Oficina":"Autónomo",`<b>${prnE(grupo.nombre)}</b>`,prnE(grupo.sub||"")),
         pBox("Contacto",prnE([grupo.email,grupo.tel].filter(Boolean).join(" · ")||"—"),`${grupo.nClientes} cliente${grupo.nClientes===1?"":"s"}`)])
       :pGrid(2,[pBox("Cliente",`<b>${prnE(fullName(cli))}</b>${cli.casillero?` · #${prnE(cli.casillero)}`:""}`,prnE([cli.municipio,cli.estado,cli.pais].filter(Boolean).join(", "))),
-        pBox("Contacto",prnE([cli.email,cli.tel1].filter(Boolean).join(" · ")||"—"),b?prnE(`${b.nombre} (${b.tipo})`):"")]);
+        pBox("Contacto",prnE([oc(cli.email,"mail"),oc(cli.tel1)].filter(Boolean).join(" · ")||"—"),b?prnE(`${b.nombre} (${b.tipo})`):"")]);
     const filas=wrs.map(w=>{const c=grupo?grupo.cliDe(w):null;return `<tr><td>${prnE(w.status?.label||"—")}</td><td class="mono"><b>${prnE(w.id)}</b></td><td class="mono">${prnE(getNumGuia(w)||"—")}</td>${grupo?`<td>${prnE(c?fullName(c):(w.consignee||"—"))}<div class="sub">${prnE(c?.casillero||w.casillero||"")}</div></td>`:""}<td class="c">${w.cajas||0}</td><td class="r">${fmtDec(w.pesoLb,2)}</td><td class="r">${fmtDec(w.volLb,2,"—")}</td><td class="r">${fmtDec(w.ft3,2,"—")}</td><td>${prnE(w.tipoEnvio||"—")}</td><td>${prnE((cleanReempaqueDesc(w.descripcion)||"—").slice(0,60))}</td><td class="r">${fmtMoney(w.valor||0,"USD")}</td></tr>`;}).join("");
     const totF=wrs.length?`<tr class="tot"><td colspan="${grupo?4:3}">Totales · ${wrs.length} WR</td><td class="c">${wrs.reduce((s,w)=>s+(w.cajas||0),0)}</td><td class="r">${fmtDec(totales.pesoLb,2)}</td><td class="r">${fmtDec(totales.volLb,2)}</td><td class="r">${fmtDec(totales.ft3,2)}</td><td colspan="2"></td><td class="r">${fmtMoney(totales.valor,"USD")}</td></tr>`:"";
     const cuerpo=cab+pSec(`Envíos · ${prnE(tabLabel)}`)+pTabla([{l:"Estado"},{l:"N° WR"},{l:"Guía"},...(grupo?[{l:"Cliente"}]:[]),{l:"Cajas",c:1},{l:"Peso lb",r:1},{l:"Vol. lb",r:1},{l:"Ft³",r:1},{l:"Envío"},{l:"Descripción"},{l:"Valor",r:1}],filas,totF);
@@ -10153,7 +10173,7 @@ export default function SistemaCarga(){
                           <td><Num t="factura" id={f.id}/>{f.ncFacturaOrigen&&<div style={{fontSize:11,color:"var(--purple)",fontFamily:"'DM Mono',monospace"}}>← {f.ncFacturaOrigen}</div>}</td>
                           <td><span style={{fontSize:12,padding:"2px 6px",borderRadius:4,background:f.tipo==="nota_credito"?"var(--purple)":(f.tipo==="proforma"?"var(--gold2)":"var(--cyan)"),color:"#fff",fontWeight:700}}>{f.tipo==="nota_credito"?"NC":f.tipo==="proforma"?"PRF":"FAC"}</span></td>
                           <td style={{fontFamily:"'DM Mono',monospace",fontSize:13}}>{fmtDate(f.fecha)}</td>
-                          <td style={{fontWeight:600}}>{f.receptorNombre||"—"}<div style={{fontSize:12,color:"var(--gold2)",fontFamily:"'DM Mono',monospace"}}>{f.receptorCasillero||f.receptorDoc||""}</div></td>
+                          <td style={{fontWeight:600}}>{f.receptorNombre||"—"}<div style={{fontSize:12,color:"var(--gold2)",fontFamily:"'DM Mono',monospace"}}>{f.receptorCasillero||oc(f.receptorDoc)||""}</div></td>
                           <td style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:"var(--t2)"}}>
                             {(f.wrIds||[]).length>0&&<div><b style={{color:"var(--navy)"}}>{(f.wrIds||[]).length} WR</b>{(f.wrIds||[]).length<=3&&<>: {(f.wrIds||[]).join(", ")}</>}</div>}
                             {(f.guiaIds||[]).length>0&&<div style={{color:"var(--purple)"}}>Guía: {(f.guiaIds||[]).join(", ")}</div>}
@@ -13143,7 +13163,7 @@ export default function SistemaCarga(){
                     <td style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--purple)",fontWeight:600}}>{n.guiaId||"—"}</td>
                     <td style={{fontWeight:600,color:"var(--t1)"}}>
                       {n.receptorEntidad?.nombre||n.consignatario||"—"}
-                      {n.receptorNombre&&<div style={{fontSize:11,color:"var(--t3)",fontWeight:500}}>{n.receptorNombre}{n.receptorDocumento?` · ${n.receptorDocumento}`:""}</div>}
+                      {n.receptorNombre&&<div style={{fontSize:11,color:"var(--t3)",fontWeight:500}}>{n.receptorNombre}{n.receptorDocumento?` · ${oc(n.receptorDocumento)}`:""}</div>}
                     </td>
                     <td style={{fontSize:12,color:"var(--t2)"}}>{metodoLabel[n.metodoEntrega]||"—"}</td>
                     <td style={{textAlign:"center",fontWeight:700,color:"var(--navy)"}}>{(n.wrIds||[]).length}</td>
@@ -13954,7 +13974,7 @@ export default function SistemaCarga(){
       })()}
 
       {showNewCl&&<ClientModal acceso={hasPerm("dar_acceso")} tiposOk={Array.isArray(showNewCl)?showNewCl:tiposCrear} rolesOk={rolesAsignables} agentes={agentes} oficinas={oficinas} autonomos={clients.filter(c=>c.tipo==="usuario"&&c.rol==="F")} allClients={clients} title="Nuevo Registro" initial={{tipo:(Array.isArray(showNewCl)?showNewCl:tiposCrear)[0]||"cliente",clienteTipo:"matriz",primerNombre:"",segundoNombre:"",primerApellido:"",segundoApellido:"",cedula:"",dir:"",municipio:"",estado:"",pais:"",cp:"",tel1:"",tel2:"",email:"",casillero:"",rol:"I",password:"",...presetDominio()}} onClose={()=>setShowNewCl(false)} onSave={async f=>{const _sec=await refrescarSec();const esUser=f.tipo==="usuario";const newId=sigIdRegistro(esUser,clients,_sec);const casillero=(!esUser&&!f.casillero)?nextCasillero(clients,_sec):f.casillero;const newRec={...f,id:newId,casillero,clienteTipo:f.clienteTipo||"matriz",password:""};setClients(p=>[...p,newRec]);setShowNewCl(false);logAction("Creó registro",`${newId} — ${f.primerNombre} ${f.primerApellido}`);(async()=>{await dbUpsertCliente(newRec);await sincronizarCuenta(newRec,f.password);})();}}/>}
-      {showEditCl&&<ClientModal acceso={hasPerm("dar_acceso")} tiposOk={[showEditCl.tipo]} rolesOk={rolesAsignables} agentes={agentes} oficinas={oficinas} autonomos={clients.filter(c=>c.tipo==="usuario"&&c.rol==="F")} allClients={clients} title={`Editar — ${fullName(showEditCl)}`} initial={showEditCl} onClose={()=>setShowEditCl(null)} onSave={f=>{const ant=showEditCl;const rec={...f,clienteTipo:f.clienteTipo||"matriz",password:""};setClients(p=>p.map(c=>c.id===f.id?rec:c));logAction("Editó registro",`${f.id} — ${f.primerNombre} ${f.primerApellido}`);setShowEditCl(null);(async()=>{await dbUpsertCliente(rec);await sincronizarCuenta(rec,f.password,ant);})();}}/>}
+      {showEditCl&&<ClientModal ocultar={!verDatos} acceso={hasPerm("dar_acceso")} tiposOk={[showEditCl.tipo]} rolesOk={rolesAsignables} agentes={agentes} oficinas={oficinas} autonomos={clients.filter(c=>c.tipo==="usuario"&&c.rol==="F")} allClients={clients} title={`Editar — ${fullName(showEditCl)}`} initial={showEditCl} onClose={()=>setShowEditCl(null)} onSave={f=>{const ant=showEditCl;const rec={...f,clienteTipo:f.clienteTipo||"matriz",password:""};setClients(p=>p.map(c=>c.id===f.id?rec:c));logAction("Editó registro",`${f.id} — ${f.primerNombre} ${f.primerApellido}`);setShowEditCl(null);(async()=>{await dbUpsertCliente(rec);await sincronizarCuenta(rec,f.password,ant);})();}}/>}
 
       {/* ── Cargo Release — MODAL FORMULARIO ───────────────────────────────── */}
       {crModal&&(()=>{
@@ -14091,7 +14111,7 @@ export default function SistemaCarga(){
         const aSucursal=esDesp&&f.entidad.tipo==="oficina";
         const lbl={fontSize:12,fontWeight:700,color:"var(--t2)",marginBottom:3,textTransform:"uppercase",letterSpacing:.4};
         const campo=(t,k,ph,extra={})=>(
-          <div><div style={lbl}>{t}</div><input className="fi" value={f[k]} onChange={e=>set(k,e.target.value)} placeholder={ph} style={{fontSize:15,width:"100%",...extra}}/></div>
+          <div><div style={lbl}>{t}</div>{(["receptorDocumento","receptorTelefono"].includes(k)&&ocCampo(f[k],"",null,()=>set(k,"")))||<input className="fi" value={f[k]} onChange={e=>set(k,e.target.value)} placeholder={ph} style={{fontSize:15,width:"100%",...extra}}/>}</div>
         );
         return (
           <div className="ov">
@@ -14415,10 +14435,10 @@ export default function SistemaCarga(){
                         <input className="fi" value={f.receptorNombre} onChange={e=>setDnModal(p=>({...p,receptorNombre:e.target.value}))} placeholder="Nombre y apellido"/>
                       </div>
                       <div><div style={{fontSize:11,fontWeight:600,color:"var(--t2)",marginBottom:2}}>ID Identificación</div>
-                        <input className="fi" value={f.receptorDocumento} onChange={e=>setDnModal(p=>({...p,receptorDocumento:e.target.value}))} placeholder="Nº de identificación"/>
+                        {ocCampo(f.receptorDocumento,"",null,()=>setDnModal(p=>({...p,receptorDocumento:""})))||<input className="fi" value={f.receptorDocumento} onChange={e=>setDnModal(p=>({...p,receptorDocumento:e.target.value}))} placeholder="Nº de identificación"/>}
                       </div>
                       <div><div style={{fontSize:11,fontWeight:600,color:"var(--t2)",marginBottom:2}}>Teléfono</div>
-                        <input className="fi" value={f.receptorTelefono} onChange={e=>setDnModal(p=>({...p,receptorTelefono:e.target.value}))} placeholder="0414-1234567"/>
+                        {ocCampo(f.receptorTelefono,"",null,()=>setDnModal(p=>({...p,receptorTelefono:""})))||<input className="fi" value={f.receptorTelefono} onChange={e=>setDnModal(p=>({...p,receptorTelefono:e.target.value}))} placeholder="0414-1234567"/>}
                       </div>
                       <div><div style={{fontSize:11,fontWeight:600,color:"var(--t2)",marginBottom:2}}>Método de entrega</div>
                         <select className="fs" value={f.metodoEntrega} onChange={e=>setDnModal(p=>({...p,metodoEntrega:e.target.value}))} style={{width:"100%"}}>
@@ -14521,7 +14541,7 @@ export default function SistemaCarga(){
                     <div style={{flex:1,minWidth:260}}>
                       <div style={{fontSize:17,fontWeight:800,color:"var(--navy)"}}>{f.receptorNombre||"—"}</div>
                       <div style={{fontSize:13,color:"var(--t2)",marginTop:2}}>
-                        {[f.receptorTipo==="agente"?"Agente":f.receptorTipo==="autonomo"?"Autónomo":"Cliente",f.receptorCasillero&&`#${f.receptorCasillero}`,f.receptorDoc&&`ID ${f.receptorDoc}`,f.receptorTel,f.receptorEmail].filter(Boolean).join(" · ")}
+                        {[f.receptorTipo==="agente"?"Agente":f.receptorTipo==="autonomo"?"Autónomo":"Cliente",f.receptorCasillero&&`#${f.receptorCasillero}`,f.receptorDoc&&`ID ${oc(f.receptorDoc)}`,oc(f.receptorTel),oc(f.receptorEmail,"mail")].filter(Boolean).join(" · ")}
                       </div>
                       {f.receptorDir&&<div style={{fontSize:13,color:"var(--t3)"}}>{f.receptorDir}</div>}
                     </div>
@@ -14571,7 +14591,7 @@ export default function SistemaCarga(){
                   </div>
                   <div>
                     <label className="fl">ID Identificación</label>
-                    <input className="fi" value={f.receptorDoc} onChange={e=>setFacModal(p=>({...p,receptorDoc:e.target.value}))}/>
+                    {ocCampo(f.receptorDoc,"",null,()=>setFacModal(p=>({...p,receptorDoc:""})))||<input className="fi" value={f.receptorDoc} onChange={e=>setFacModal(p=>({...p,receptorDoc:e.target.value}))}/>}
                   </div>
                   <div>
                     <label className="fl">Casillero</label>
@@ -14585,11 +14605,11 @@ export default function SistemaCarga(){
                   </div>
                   <div>
                     <label className="fl">Teléfono</label>
-                    <input className="fi" value={f.receptorTel} onChange={e=>setFacModal(p=>({...p,receptorTel:e.target.value}))}/>
+                    {ocCampo(f.receptorTel,"",null,()=>setFacModal(p=>({...p,receptorTel:""})))||<input className="fi" value={f.receptorTel} onChange={e=>setFacModal(p=>({...p,receptorTel:e.target.value}))}/>}
                   </div>
                   <div>
                     <label className="fl">Email</label>
-                    <input className="fi" value={f.receptorEmail} onChange={e=>setFacModal(p=>({...p,receptorEmail:e.target.value}))}/>
+                    {ocCampo(f.receptorEmail,"mail",null,()=>setFacModal(p=>({...p,receptorEmail:""})))||<input className="fi" value={f.receptorEmail} onChange={e=>setFacModal(p=>({...p,receptorEmail:e.target.value}))}/>}
                   </div>
                 </div>
 
