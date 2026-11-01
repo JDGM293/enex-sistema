@@ -23,7 +23,6 @@ create policy p_crear on public.solicitudes_reempaque for insert to authenticate
 create policy p_editar on public.solicitudes_reempaque for update to authenticated using (
   public.rls_interno() or (solicitado_por = (public.rls_yo()).id and status = 'pendiente'));
 create policy p_borrar on public.solicitudes_reempaque for delete to authenticated using (public.rls_admin());
-alter publication supabase_realtime add table public.solicitudes_reempaque;
 
 create or replace function public.secuencias() returns jsonb language sql stable security definer set search_path to 'public' as $$
   select case when (public.rls_yo()).id is null then '{}'::jsonb else jsonb_build_object(
