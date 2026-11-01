@@ -965,12 +965,6 @@ const TYPE_CLS={"Aéreo Express":"t-ae","Aéreo Económico":"t-ae2","Marítimo F
 const CAR_CLS={"UPS":"car-ups","FedEx":"car-fedex","DHL":"car-dhl","USPS":"car-usps"};
 const SEARCH_PARAMS=["N° WR","Consignatario","Casillero","Tracking","Factura","Carrier","Descripción","Estado"];
 
-// Oficina actual del usuario (en producción vendría del login)
-const OFFICE_CONFIG = {
-  origCountry:"01", origCity:"MI",  // Miami, USA — oficina origen
-  destCountry:"58", destCity:"VL",  // Valencia, Venezuela — oficina destino por defecto
-  branch:"Casa Matriz",
-};
 
 // ─── NUMBERING BUILDERS ───────────────────────────────────────────────────────
 // offCode: convierte un registro de oficina a código → "01MIA", "01VLN", etc.
@@ -2593,6 +2587,14 @@ export default function SistemaCarga(){
   const [cfgEditContIdx,setCfgEditContIdx]=useState(null);
   const [agentes,setAgentes]=useState([]);
   const [oficinas,setOficinas]=useState([]);
+  // Origen: oficina del usuario o la casa matriz de Configuración → Empresa. Destino: la predeterminada de Empresa.
+  const ofiCodigos=o=>{const C=sinAcentos(o?.ciudad||"");
+    for(const co of COUNTRIES)for(const ci of (co.cities||[]))if(C&&(sinAcentos(ci.name)===C||sinAcentos(ci.code)===C))return {dial:co.dial||"",pais:co.name||"",code:ci.code||""};
+    return {dial:"",pais:o?.pais||"",code:(o?.ciudad||"").slice(0,3).toUpperCase()};};
+  const ofiOrigen=oficinas.find(o=>o.id===currentUser?.oficinaId)||oficinas.find(o=>o.id===marca.ofiOrigen)||oficinas[0]||null;
+  const ofiDestinoDef=oficinas.find(o=>o.id===marca.ofiDestino)||oficinas.find(o=>o.id!==ofiOrigen?.id)||ofiOrigen;
+  const OFFICE_CONFIG=(()=>{const a=ofiCodigos(ofiOrigen),b=ofiCodigos(ofiDestinoDef);
+    return {origCountry:a.dial,origCountryName:a.pais,origCity:a.code,destCountry:b.dial,destCountryName:b.pais,destCity:b.code,branch:ofiOrigen?.nombre||"Casa Matriz"};})();
   const [showNewAgente,setShowNewAgente]=useState(false);
   const [showNewOficina,setShowNewOficina]=useState(false);
   const [editAgente,setEditAgente]=useState(null);
@@ -3204,8 +3206,8 @@ export default function SistemaCarga(){
   const dimCalc={volKg:totalVolKg,volLb:totalVolLb,ft3:totalFt3,m3:totalM3};
 
   // Derivar códigos de oficina para numeración
-  const _origOff=oficinas.find(o=>(o.ciudad||"").toUpperCase().startsWith(OFFICE_CONFIG.origCity.toUpperCase()))||oficinas[0];
-  const _destOff=oficinas.find(o=>(o.ciudad||"").toUpperCase().startsWith(OFFICE_CONFIG.destCity.toUpperCase()))||oficinas[oficinas.length-1]||_origOff;
+  const _origOff=ofiOrigen;
+  const _destOff=oficinas.find(o=>o.id===wrf.sucursalEntrega)||ofiDestinoDef;
   // Tipo 3 usa país+ciudad de Países y Ciudades (OFFICE_CONFIG); Tipo 2 usa código de oficina
   const _wrOrigCode=wrNumTipo===3?`${String(OFFICE_CONFIG.origCountry).padStart(2,"0")}${OFFICE_CONFIG.origCity.slice(0,2).toUpperCase()}`:(offCode(_origOff));
   const _wrDestCode=wrNumTipo===3?`${String(OFFICE_CONFIG.destCountry).padStart(2,"0")}${OFFICE_CONFIG.destCity.slice(0,2).toUpperCase()}`:(offCode(_destOff));
@@ -3384,10 +3386,10 @@ export default function SistemaCarga(){
       const esReempaque=reempaqueIds.length>0;
       const n={
         id:buildWRNum(_wrOrigCode,_wrDestCode,wrSigSeq(_sec),wrNumTipo,wrSecInicio,empresaSlug),
-        origCountry:COUNTRIES.find(c=>c.dial===OFFICE_CONFIG.origCountry)?.name||"USA 🇺🇸",
+        origCountry:OFFICE_CONFIG.origCountryName,
         origCity:OFFICE_CONFIG.origCity,
-        destCountry:COUNTRIES.find(c=>c.dial===OFFICE_CONFIG.destCountry)?.name||"Venezuela 🇻🇪",
-        destCity:OFFICE_CONFIG.destCity,
+        destCountry:ofiCodigos(_destOff).pais,
+        destCity:ofiCodigos(_destOff).code,
         cajas:totalCajasCount,
         branch:OFFICE_CONFIG.branch,
         fecha:now,
@@ -5577,7 +5579,7 @@ export default function SistemaCarga(){
     const existing=editConsolId?consolList.find(c=>c.id===editConsolId):null;
     const n={
       ...(existing||{}),
-      id:existing?existing.id:buildConsolNum(offCode(oficinas.find(o=>(o.ciudad||"").toUpperCase().startsWith(OFFICE_CONFIG.origCity.toUpperCase()))||oficinas[0]),offCode(oficinas.find(o=>(o.ciudad||"").toUpperCase().startsWith(OFFICE_CONFIG.destCity.toUpperCase()))||oficinas[oficinas.length-1]||oficinas[0]),(()=>{if(consolList.length===0)return 1;const nums=consolList.map(c=>{const m=String(c.id||"").match(/(\d+)(?=[^0-9]*$)/);return m?parseInt(m[1]):0;});return Math.max(...nums)+1;})(),consolNumTipo,consolSecInicio,cf.tipoEnvio||"Marítimo"),
+      id:existing?existing.id:buildConsolNum(offCode(ofiOrigen),offCode(oficinas.find(o=>ofiCodigos(o).code===cf.destino)||ofiDestinoDef),(()=>{if(consolList.length===0)return 1;const nums=consolList.map(c=>{const m=String(c.id||"").match(/(\d+)(?=[^0-9]*$)/);return m?parseInt(m[1]):0;});return Math.max(...nums)+1;})(),consolNumTipo,consolSecInicio,cf.tipoEnvio||"Marítimo"),
       fecha:existing?existing.fecha:now,destino:cf.destino,tipoEnvio:cf.tipoEnvio,
       fechaSalida:cf.fechaSalida,fechaLlegada:existing?.fechaLlegada||"",numVuelo:cf.numVuelo,awb:cf.awb,bl:cf.bl,
       notas:cf.notas,containers:cf.containers,
@@ -5660,7 +5662,7 @@ export default function SistemaCarga(){
   // ── Acciones de guía (antes inline en la tabla de Consolidación; ahora las usa
   // la ventana de detalle que se abre al hacer clic en el N° de guía del Master).
   const guiaEtiquetas=(c)=>setShowLabels({
-                        wr:{id:c.id,origCity:OFFICE_CONFIG.origCity,origCountry:"USA 🇺🇸",destCity:c.destino,destCountry:"Venezuela 🇻🇪",
+                        wr:{id:c.id,origCity:OFFICE_CONFIG.origCity,origCountry:OFFICE_CONFIG.origCountryName,destCity:c.destino,destCountry:OFFICE_CONFIG.destCountryName,
                           consignee:"CONSOLIDADO",casillero:"—",fecha:c.fecha,branch:OFFICE_CONFIG.branch,tipoEnvio:c.tipoEnvio,
                           shipper:empresaNombre,cajas:c.totalCajas,pesoLb:c.totalLb,volLb:c.totalVolLb,ft3:c.totalFt3,m3:c.totalM3},
                         dims:c.containers.map((ct,i)=>({l:0,a:0,h:0,pk:0,pkLb:parseFloat(ct.pesoLb)||0,volLb:0,ft3:0,m3:0,tracking:`Cont. ${i+1} · ${ct.tipo} · Sello: ${ct.sello||"—"}`})),
@@ -7388,7 +7390,7 @@ export default function SistemaCarga(){
             const k=Math.min(1,240/Math.max(img.width,img.height));const c=document.createElement("canvas");c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);
             c.getContext("2d").drawImage(img,0,0,c.width,c.height);set({logo:c.toDataURL("image/png")});};img.src=rd.result;};rd.readAsDataURL(f);};
           const guardar=async()=>{const n={nombre:(m.nombre||"").trim(),subtitulo:(m.subtitulo||"").trim(),iniciales:(m.iniciales||"").trim().toUpperCase(),logo:m.logo||"",
-              razon:(m.razon||"").trim(),idFiscal:(m.idFiscal||"").trim(),dir:(m.dir||"").trim(),ciudad:(m.ciudad||"").trim(),estado:(m.estado||"").trim(),pais:(m.pais||"").trim(),cp:(m.cp||"").trim(),tel:(m.tel||"").trim(),email:(m.email||"").trim(),web:(m.web||"").trim()};
+              razon:(m.razon||"").trim(),idFiscal:(m.idFiscal||"").trim(),dir:(m.dir||"").trim(),ciudad:(m.ciudad||"").trim(),estado:(m.estado||"").trim(),pais:(m.pais||"").trim(),cp:(m.cp||"").trim(),tel:(m.tel||"").trim(),email:(m.email||"").trim(),web:(m.web||"").trim(),ofiOrigen:m.ofiOrigen||"",ofiDestino:m.ofiDestino||""};
             if(!n.nombre){window.alert("Escribe el nombre de la empresa.");return;}
             const ok=await dbSetConfig('marca',n);if(ok===false){window.alert("No se pudo guardar.");return;}
             setMarca(n);setMarcaDraft(null);try{localStorage.setItem("marca",JSON.stringify(n));}catch{/* sin almacenamiento */}logAction("Editó datos de la empresa",n.nombre);};
@@ -7419,6 +7421,8 @@ export default function SistemaCarga(){
                 <div className="fg"><div className="fl">Código postal</div><input className="fi" value={m.cp||""} onChange={e=>set({cp:e.target.value.toUpperCase()})}/></div>
                 <div className="fg"><div className="fl">Teléfono</div><input className="fi" value={m.tel||""} onChange={e=>set({tel:e.target.value})}/></div>
                 <div className="fg"><div className="fl">Correo</div><input className="fi" style={{textTransform:"none"}} value={m.email||""} onChange={e=>set({email:e.target.value.toLowerCase()})}/></div>
+                <div className="fg"><div className="fl">Oficina de origen (casa matriz)</div><select className="fs" value={m.ofiOrigen||""} onChange={e=>set({ofiOrigen:e.target.value})}><option value="">—</option>{oficinas.map(o=><option key={o.id} value={o.id}>{o.nombre}{o.ciudad?` — ${o.ciudad}`:""}</option>)}</select></div>
+                <div className="fg"><div className="fl">Oficina de destino predeterminada</div><select className="fs" value={m.ofiDestino||""} onChange={e=>set({ofiDestino:e.target.value})}><option value="">—</option>{oficinas.map(o=><option key={o.id} value={o.id}>{o.nombre}{o.ciudad?` — ${o.ciudad}`:""}</option>)}</select></div>
                 <div className="fg"><div className="fl">Sitio web</div><input className="fi" style={{textTransform:"none"}} value={m.web||""} onChange={e=>set({web:e.target.value.toLowerCase()})}/></div>
               </div>
               <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:10}}>
@@ -7481,7 +7485,7 @@ export default function SistemaCarga(){
                 <input className="fi" type="number" min="1" style={{maxWidth:150,fontFamily:"'DM Mono',monospace",fontWeight:700}} value={consolSecInicio} onChange={e=>setConsolSecInicio(parseInt(e.target.value)||1)}/>
               </div>
               <div style={{marginTop:10,padding:"8px 12px",background:"var(--bg4)",borderRadius:6,fontFamily:"'DM Mono',monospace",fontSize:14,color:"var(--navy)",fontWeight:700}}>
-                Próxima Guía: {buildConsolNum(offCode(oficinas.find(o=>(o.ciudad||"").toUpperCase().startsWith(OFFICE_CONFIG.origCity.toUpperCase()))||oficinas[0]),offCode(oficinas.find(o=>(o.ciudad||"").toUpperCase().startsWith(OFFICE_CONFIG.destCity.toUpperCase()))||oficinas[oficinas.length-1]||oficinas[0]),(()=>{if(consolList.length===0)return 1;const nums=consolList.map(c=>{const m=String(c.id||"").match(/(\d+)(?=[^0-9]*$)/);return m?parseInt(m[1]):0;});return Math.max(...nums)+1;})(),consolNumTipo,consolSecInicio,"Marítimo")}
+                Próxima Guía: {buildConsolNum(offCode(ofiOrigen),offCode(ofiDestinoDef),(()=>{if(consolList.length===0)return 1;const nums=consolList.map(c=>{const m=String(c.id||"").match(/(\d+)(?=[^0-9]*$)/);return m?parseInt(m[1]):0;});return Math.max(...nums)+1;})(),consolNumTipo,consolSecInicio,"Marítimo")}
               </div>
             </div>
 
