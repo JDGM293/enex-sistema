@@ -6165,7 +6165,8 @@ export default function SistemaCarga(){
         acc:verImp(()=>setCrPrint(c),()=>prnImprimir(htmlRelease(c)))}));
     if(tipo==="factura")filas=facsVis.filter(f=>f.status!=="borrador"&&hay(`${f.id} ${f.receptorNombre||""} ${f.receptorCasillero||""} ${f.receptorDoc||""} ${(f.wrIds||[]).join(" ")}`))
       .sort((a,b)=>(b.numero||0)-(a.numero||0)).map(f=>({k:f.id,
-        izq:<><Num t="factura" id={f.id} pre={f.tipo==="nota_credito"?"NC ":""}/><div style={{fontSize:13,color:"var(--t3)"}}>{fmtDate(f.fechaEmision||f.fecha)} · {f.receptorNombre||"—"} · {fmtMoney(f.total,f.moneda)}</div></>,
+        izq:<><Num t="factura" id={f.id} pre={f.tipo==="nota_credito"?"NC ":""}/><div style={{fontSize:13,color:"var(--t3)"}}>{fmtDate(f.fechaEmision||f.fecha)} · {f.receptorNombre||"—"} · {fmtMoney(f.total,f.moneda)}</div>
+          {(f.wrIds||[]).length>0&&<div style={{display:"flex",flexWrap:"wrap",gap:3,alignItems:"center",marginTop:3}}><span style={{fontSize:12,color:"var(--t3)",fontWeight:700}}>WR</span>{f.wrIds.map(id=><Num key={id} t="wr" id={id}/>)}</div>}</>,
         estado:<span className={`st ${FAC_STATUS_CLS[f.status]||"s5"}`}><span className="st-dot"/>{(FAC_STATUS_LABEL[f.status]||f.status).replace(/^\S+\s/,"")}</span>,
         acc:verImp(()=>setFacPrint(f),()=>printFactura(f))}));
     if(tipo==="recibo"){const m=new Map();pagosVis.forEach(p=>{if(!p.reciboId)return;if(!m.has(p.reciboId))m.set(p.reciboId,{id:p.reciboId,fecha:p.fecha,quien:p.pagadorNombre||(pagadorDePago(p)||{}).nombre||"—",monto:0,moneda:p.moneda||"USD",anulado:true,facs:new Set()});
