@@ -3281,7 +3281,6 @@ export default function SistemaCarga(){
   const submitWR=async ()=>{
     if(!(editWR?hasPerm("editar_wr"):(wrf.reempaqueDe?.length?hasPerm("crear_reempaque"):hasPerm("crear_wr")))){window.alert("Tu rol no tiene permiso para esta acción.");return;}
     if(editWR&&!wrEditable(editWR)){window.alert(`El WR ${editWR.id} ya no se puede modificar con tu rol (${editWR.status?.label||""}).`);return;}
-    if(!wrf.tipoPago){window.alert("Selecciona el tipo de pago.");return;}
     // Expand dims: each registro × cantidad generates individual dim entries
     const dims=[];
     cajaCalcs.forEach((c,i)=>{
