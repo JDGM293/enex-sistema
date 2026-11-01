@@ -932,15 +932,15 @@ const ROLE_DEFS={
   E:{code:"E",name:"Agente",color:"rE",icon:<Ico e="🤝"/>,
     desc:"Agente externo. Gestiona sus clientes y WR propios.",
     subs:["E1"],
-    perms:["ver_fac_propia","crear_fac_propia","cobrar_fac_propia","anular_fac_propia","ver_chat","enviar_chat","editar_mensaje","borrar_mensaje","chat_directo","chat_adjuntar","crear_cliente","editar_cliente","crear_wr","editar_wr","ver_wr","ver_booking","ver_confirmacion","imp_wr","imp_factura","ver_estado_cuenta","ver_estado_agente","ver_tracking","rastrear","ver_prealerta","pre_tracking","pre_factura","ver_pickup","solicitar_pickup","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_factura","ver_fotos","subir_foto","dar_acceso","imp_recibo_cobro","imp_pickup","ver_estado_contable","editar_wr_lib3"]},
+    perms:["ver_fac_propia","crear_fac_propia","cobrar_fac_propia","anular_fac_propia","ver_chat","enviar_chat","editar_mensaje","borrar_mensaje","chat_directo","chat_adjuntar","crear_cliente","editar_cliente","crear_wr","editar_wr","ver_wr","ver_booking","ver_confirmacion","imp_wr","imp_factura","ver_estado_cuenta","ver_estado_agente","ver_tracking","rastrear","ver_prealerta","pre_tracking","pre_factura","ver_pickup","solicitar_pickup","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_factura","ver_fotos","subir_foto","dar_acceso","imp_recibo_cobro","imp_pickup","ver_estado_contable","editar_wr_lib3","imp_etiq_caja"]},
 
   E1:{code:"E1",name:"Vendedor / Agente",color:"rE1",icon:<Ico e="💼"/>,
     desc:"Vendedor bajo un agente. Solo sus clientes.",
-    perms:["ver_fac_propia","crear_fac_propia","cobrar_fac_propia","anular_fac_propia","ver_chat","enviar_chat","editar_mensaje","borrar_mensaje","chat_directo","chat_adjuntar","crear_cliente","editar_cliente","crear_wr","ver_wr","ver_booking","imp_wr","imp_factura","ver_estado_cuenta","ver_estado_agente","ver_tracking","rastrear","ver_prealerta","pre_tracking","pre_factura","ver_pickup","solicitar_pickup","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_factura","ver_fotos","subir_foto","dar_acceso","imp_recibo_cobro","imp_pickup","ver_estado_contable"]},
+    perms:["ver_fac_propia","crear_fac_propia","cobrar_fac_propia","anular_fac_propia","ver_chat","enviar_chat","editar_mensaje","borrar_mensaje","chat_directo","chat_adjuntar","crear_cliente","editar_cliente","crear_wr","ver_wr","ver_booking","imp_wr","imp_factura","ver_estado_cuenta","ver_estado_agente","ver_tracking","rastrear","ver_prealerta","pre_tracking","pre_factura","ver_pickup","solicitar_pickup","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_factura","ver_fotos","subir_foto","dar_acceso","imp_recibo_cobro","imp_pickup","ver_estado_contable","imp_etiq_caja"]},
 
   F:{code:"F",name:"Autónomo",color:"rF",icon:<Ico e="🧑‍💻"/>,
     desc:"Operador independiente. Gestiona sus propios clientes.",
-    perms:["ver_fac_propia","crear_fac_propia","cobrar_fac_propia","anular_fac_propia","ver_chat","enviar_chat","editar_mensaje","borrar_mensaje","chat_directo","chat_adjuntar","crear_cliente","editar_cliente","crear_wr","editar_wr","ver_wr","ver_confirmacion","imp_wr","imp_factura","ver_estado_cuenta","ver_estado_cliente","ver_tracking","rastrear","ver_prealerta","pre_tracking","pre_factura","ver_pickup","solicitar_pickup","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_factura","ver_fotos","subir_foto","dar_acceso","imp_recibo_cobro","imp_pickup","ver_estado_contable","editar_wr_lib3"]},
+    perms:["ver_fac_propia","crear_fac_propia","cobrar_fac_propia","anular_fac_propia","ver_chat","enviar_chat","editar_mensaje","borrar_mensaje","chat_directo","chat_adjuntar","crear_cliente","editar_cliente","crear_wr","editar_wr","ver_wr","ver_confirmacion","imp_wr","imp_factura","ver_estado_cuenta","ver_estado_cliente","ver_tracking","rastrear","ver_prealerta","pre_tracking","pre_factura","ver_pickup","solicitar_pickup","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_factura","ver_fotos","subir_foto","dar_acceso","imp_recibo_cobro","imp_pickup","ver_estado_contable","editar_wr_lib3","imp_etiq_caja"]},
 
   G:{code:"G",name:"Oficina",color:"rG",icon:<Ico e="🏢"/>,
     desc:"Sucursal de la empresa. Ve la carga que recibe o que se envió por ella.",
@@ -4455,6 +4455,7 @@ export default function SistemaCarga(){
               });
               setShowNewWR(true);setSelWR(null);
             }}><Ico e="✏️" sp/>Editar</button>}
+            {hasPerm("imp_etiq_caja")&&<button className="btn-s" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>setShowLabels({wr:selWR,dims:selWR.dims||[],remitente:selWR.shipper||"",tipoEnvio:selWR.tipoEnvio||""})}><Ico e="🏷️" sp/>Etiquetas</button>}
             {(hasPerm("ver_documentos")||hasPerm("imp_wr"))&&<button className="btn-s" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>docAbrir(selWR)}><Ico e="📑" sp/>Documentos</button>}
             {hasPerm("borrar_wr")&&<button className="btn-s" style={{fontSize:12,padding:"4px 10px",color:"var(--red)",borderColor:"var(--red)"}} onClick={()=>{if(window.confirm(`¿Borrar WR ${selWR.id}? Esta acción no se puede deshacer.`)){setWrList(p=>p.filter(x=>x.id!==selWR.id));dbDeleteWR(selWR.id);logAction("Borró WR",selWR.id);setSelWR(null);}}}><Ico e="🗑" sp/>Borrar</button>}
             {crElegible(selWR)&&hasPerm("hacer_egreso")&&<button className="btn-s" style={{fontSize:12,padding:"4px 10px",background:"#E8F5E9",borderColor:"#81C784",color:"#2E7D32",fontWeight:700}} onClick={()=>{crOpenNew([selWR.id]);setSelWR(null);}} title="Registrar egreso individual de este WR"><Ico e="🚀" sp/>Egresar</button>}
@@ -6108,12 +6109,12 @@ export default function SistemaCarga(){
       .sort((a,b)=>porFecha(a,b)||String(b.id).localeCompare(String(a.id))).map(w=>({k:w.id,
         izq:<><Num t="wr" id={w.id}/><div style={{fontSize:13,color:"var(--t3)"}}>{w.consignee||"—"}{w.casillero?` · #${w.casillero}`:""} · {w.cajas||1} caja{(w.cajas||1)===1?"":"s"}</div></>,
         estado:<StBadge st={w.status}/>,
-        acc:<>{btn("Ver",()=>prnVer(`WR ${w.id}`,htmlWR(w)))}{btn("Imprimir",()=>prnImprimir(htmlWR(w)))}{btn("Etiquetas",()=>setShowLabels({wr:w,dims:w.dims||[],remitente:w.shipper||"",tipoEnvio:w.tipoEnvio||""}))}{btn("Documentos",()=>docAbrir(w))}</>}));
+        acc:<>{btn("Ver",()=>prnVer(`WR ${w.id}`,htmlWR(w)))}{btn("Imprimir",()=>prnImprimir(htmlWR(w)))}{hasPerm("imp_etiq_caja")&&btn("Etiquetas",()=>setShowLabels({wr:w,dims:w.dims||[],remitente:w.shipper||"",tipoEnvio:w.tipoEnvio||""}))}{btn("Documentos",()=>docAbrir(w))}</>}));
     if(tipo==="guia")filas=guiasVis.filter(g=>hay(`${g.id} ${g.destino||""} ${g.tipoEnvio||""} ${g.awb||""} ${g.bl||""}`))
       .sort((a,b)=>String(b.id).localeCompare(String(a.id))).map(g=>({k:g.id,
         izq:<><Num t="guia" id={g.id}/><div style={{fontSize:13,color:"var(--t3)"}}>{g.destino||"—"} · {g.tipoEnvio||"—"} · {(g.containers||[]).length} cont. · {g.totalWR||0} WR</div></>,
         estado:<span style={{fontSize:12,color:"var(--t2)",fontWeight:600}}>{g.status||"—"}</span>,
-        acc:<>{btn("Ver",()=>prnVer(`Guía ${g.id}`,htmlGuia(g)))}{btn("Imprimir",()=>prnImprimir(htmlGuia(g)))}{btn("Etiquetas",()=>setShowConsolLabels({guia:g,containers:g.containers||[],remitente:empresaNombre}))}</>}));
+        acc:<>{btn("Ver",()=>prnVer(`Guía ${g.id}`,htmlGuia(g)))}{btn("Imprimir",()=>prnImprimir(htmlGuia(g)))}{hasPerm("imp_etiq_guia")&&btn("Etiquetas",()=>setShowConsolLabels({guia:g,containers:g.containers||[],remitente:empresaNombre}))}</>}));
     if(tipo==="entrega")filas=deliveryNotes.filter(n=>tocaVis(n.wrIds)&&hay(`${n.id} ${n.receptorNombre||""} ${n.consignatario||""} ${n.guiaId||""} ${(n.wrIds||[]).join(" ")}`))
       .sort(porFecha).map(n=>({k:n.id,
         izq:<><Num t="entrega" id={n.id}/><div style={{fontSize:13,color:"var(--t3)"}}>{fmtDate(n.fecha)} · {n.receptorEntidad?.nombre||n.receptorNombre||n.consignatario||"—"} · {(n.wrIds||[]).length} WR{n.guiaId?` · guía ${n.guiaId}`:""}</div></>,
@@ -12052,7 +12053,7 @@ export default function SistemaCarga(){
                       onClick={()=>{if(guiaBorrar(c))setRdArchView(null);}}><Ico e="🗑" sp/>Borrar</button>
                   )}
                   <button className="btn-s" onClick={()=>setRdArchView(null)}>Cerrar</button>
-                  <button className="btn-c" onClick={()=>guiaEtiquetas(c)}><Ico e="🏷️" sp/>Etiquetas</button>
+                  {hasPerm("imp_etiq_guia")&&<button className="btn-c" onClick={()=>guiaEtiquetas(c)}><Ico e="🏷️" sp/>Etiquetas</button>}
                   {c.archivada&&hasPerm("imp_guia")&&(
                     <button className="btn-s" onClick={()=>printGuiaArchivada(c)}><Ico e="🖨" sp/>Imprimir guía</button>
                   )}
