@@ -3301,6 +3301,13 @@ export default function SistemaCarga(){
     // ── AUTO-REGISTRO DE CLIENTE si el consignatario no está registrado ─────
     let _clienteId=wrf.clienteId;
     let _casillero=wrf.casillero;
+    // Consignatario escrito en el buscador sin escogerlo de la lista, o casillero escrito a mano
+    if(!editWR&&!_clienteId){
+      const casMatch=String(wrf.casillero||"").trim()&&clients.find(c=>String(c.casillero||"").toUpperCase()===String(wrf.casillero).trim().toUpperCase());
+      if(casMatch){_clienteId=casMatch.id;_casillero=casMatch.casillero;wrf.consignee=fullName(casMatch);}
+      else if(!wrf.consignee.trim()&&clientSearch.trim())wrf.consignee=clientSearch.trim().toUpperCase();
+    }
+    if(!editWR&&!_clienteId&&!wrf.consignee.trim()){window.alert("Escribe el consignatario.");return;}
     if(!editWR&&!_clienteId&&wrf.consignee.trim()){
       const parts=parseNombreCompleto(wrf.consignee);
       const cas=nextCasillero();
@@ -13762,7 +13769,6 @@ export default function SistemaCarga(){
             </div>
             <div style={{marginBottom:12}}>
               <div style={{fontSize:13,fontWeight:700,color:"var(--navy)",marginBottom:4}}><Ico e="📦" sp/>Etiquetas de Caja ({_ldims.length||_lwr?.cajas||0}) · Tipo actual: <span style={{fontFamily:"'DM Mono',monospace"}}>{_tipoDesc}</span></div>
-              <div style={{fontSize:12,color:"var(--t3)",marginBottom:8}}>Cambia el tipo de etiqueta en <b>Configuración → Etiquetas</b>.</div>
               <div style={{display:"flex",flexWrap:"wrap",gap:12,justifyContent:"center"}}>
                 {_ldims.length>0?_ldims.map((d,i)=><LabelCaja key={i} d={d} idx={i+1} total={_ldims.length}/>)
                   :Array.from({length:_lwr?.cajas||1},(_,i)=><LabelCaja key={i} d={{}} idx={i+1} total={_lwr?.cajas||1}/>)}
