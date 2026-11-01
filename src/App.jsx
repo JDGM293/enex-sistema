@@ -584,14 +584,14 @@ const ALL_PERMS=[
   // Permiso especial: salta los bloqueos del proceso por estado
   "saltar_bloqueos",
   // Límites de edición, facturación PREPAID en origen
-  "editar_wr_destino","editar_guia_destino","fac_prepaid","cobrar_prepaid","ver_estado_contable","ver_datos_completos","exportar_excel","ver_cierre_caja","ver_comisiones","alerta_aparecio","alerta_sobrante","registrar_remitente","imp_estado_cuenta","imp_listado_clientes","editar_wr_lib3","editar_guia_lib3","dar_acceso","imp_release","imp_pickup","imp_recibo_cobro","cfg_agentes_ver","cfg_oficinas_ver","cfg_tarifas_ver",
+  "editar_wr_destino","editar_guia_destino","fac_prepaid","cobrar_prepaid","ver_estado_contable","ver_datos_completos","alerta_investigar","exportar_excel","ver_cierre_caja","ver_comisiones","alerta_aparecio","alerta_sobrante","registrar_remitente","imp_estado_cuenta","imp_listado_clientes","editar_wr_lib3","editar_guia_lib3","dar_acceso","imp_release","imp_pickup","imp_recibo_cobro","cfg_agentes_ver","cfg_oficinas_ver","cfg_tarifas_ver",
   // Configuración: cada pestaña con su ver / editar
   "cfg_empresa_ver","cfg_empresa_editar", "cfg_documentos_ver","cfg_documentos_editar", "cfg_numeracion_ver","cfg_numeracion_editar", "cfg_tipoenvio_ver","cfg_tipoenvio_editar", "cfg_servicios_ver","cfg_servicios_editar", "cfg_cargos_ver","cfg_cargos_editar", "cfg_pagos_ver","cfg_pagos_editar", "cfg_contenedores_ver","cfg_contenedores_editar", "cfg_paises_ver","cfg_paises_editar", "cfg_chat_ver","cfg_chat_editar",
 ];
 // Solo el Administrador puede borrar y ver el registro de actividad; no se asignan a otros roles
 const PERMS_SOLO_ADMIN=new Set([...ALL_PERMS.filter(p=>p.startsWith("borrar_")),"registro_actividad"]);
 
-const PERM_LBL={ver_datos_completos:"Ver datos personales completos (ID, teléfono, email)",exportar_excel:"Exportar reportes a Excel",ver_cierre_caja:"Contabilidad: ver Caja y cierre de caja",ver_comisiones:"Ver comisiones de agentes y autónomos",imp_estado_cuenta:"Impr. Estado de cuenta",imp_listado_clientes:"Imprimir / exportar listados de clientes, usuarios, agentes, autónomos y oficinas",alerta_sobrante:"Alertas: resolver sobrantes (entregar, devolver a origen, otra guía)",registrar_remitente:"Registrar al remitente (shipper) como cliente desde el WR",editar_wr_lib3:"Editar WR de Tránsito 2 hasta Liberado 3",editar_guia_lib3:"Editar guías de Tránsito 2 hasta Liberado 3",alerta_aparecio:"Alertas: marcar «Apareció»",ver_estado_contable:"Estado de cuenta: ver parte contable (facturas, pagos, saldo)",dar_acceso:"Dar acceso al sistema (contraseña)",imp_release:"Impr. Cargo Release",imp_pickup:"Impr. Pick-up",imp_recibo_cobro:"Impr. Recibo de cobro",cfg_agentes_ver:"Config · Agentes (ver)",cfg_oficinas_ver:"Config · Oficinas (ver)",cfg_tarifas_ver:"Config · Tarifas (ver)",editar_wr_destino:"Editar WR desde Liberado 3 hasta entregado",editar_guia_destino:"Editar guías desde Liberado 3",fac_prepaid:"Facturar PREPAID en origen (desde el WR)",cobrar_prepaid:"Cobrar facturas PREPAID",cfg_empresa_ver:"Config · Empresa (ver)",cfg_empresa_editar:"Config · Empresa (editar)",cfg_documentos_ver:"Config · Documentos por país (ver)",cfg_documentos_editar:"Config · Documentos por país (editar)",cfg_numeracion_ver:"Config · Numeración (ver)",cfg_numeracion_editar:"Config · Numeración (editar)",cfg_tipoenvio_ver:"Config · Tipo de Envío (ver)",cfg_tipoenvio_editar:"Config · Tipo de Envío (editar)",cfg_servicios_ver:"Config · Servicios Adicionales (ver)",cfg_servicios_editar:"Config · Servicios Adicionales (editar)",cfg_cargos_ver:"Config · Gastos Adicionales (ver)",cfg_cargos_editar:"Config · Gastos Adicionales (editar)",cfg_pagos_ver:"Config · Tipos de Pago (ver)",cfg_pagos_editar:"Config · Tipos de Pago (editar)",cfg_contenedores_ver:"Config · Tipos de Contenedor (ver)",cfg_contenedores_editar:"Config · Tipos de Contenedor (editar)",cfg_paises_ver:"Config · Países y Ciudades (ver)",cfg_paises_editar:"Config · Países y Ciudades (editar)",cfg_chat_ver:"Config · Canales de chat (ver)",cfg_chat_editar:"Config · Canales de chat (editar)",
+const PERM_LBL={alerta_investigar:"Alertas: abrir investigación de faltantes",ver_datos_completos:"Ver datos personales completos (ID, teléfono, email)",exportar_excel:"Exportar reportes a Excel",ver_cierre_caja:"Contabilidad: ver Caja y cierre de caja",ver_comisiones:"Ver comisiones de agentes y autónomos",imp_estado_cuenta:"Impr. Estado de cuenta",imp_listado_clientes:"Imprimir / exportar listados de clientes, usuarios, agentes, autónomos y oficinas",alerta_sobrante:"Alertas: resolver sobrantes (entregar, devolver a origen, otra guía)",registrar_remitente:"Registrar al remitente (shipper) como cliente desde el WR",editar_wr_lib3:"Editar WR de Tránsito 2 hasta Liberado 3",editar_guia_lib3:"Editar guías de Tránsito 2 hasta Liberado 3",alerta_aparecio:"Alertas: marcar «Apareció»",ver_estado_contable:"Estado de cuenta: ver parte contable (facturas, pagos, saldo)",dar_acceso:"Dar acceso al sistema (contraseña)",imp_release:"Impr. Cargo Release",imp_pickup:"Impr. Pick-up",imp_recibo_cobro:"Impr. Recibo de cobro",cfg_agentes_ver:"Config · Agentes (ver)",cfg_oficinas_ver:"Config · Oficinas (ver)",cfg_tarifas_ver:"Config · Tarifas (ver)",editar_wr_destino:"Editar WR desde Liberado 3 hasta entregado",editar_guia_destino:"Editar guías desde Liberado 3",fac_prepaid:"Facturar PREPAID en origen (desde el WR)",cobrar_prepaid:"Cobrar facturas PREPAID",cfg_empresa_ver:"Config · Empresa (ver)",cfg_empresa_editar:"Config · Empresa (editar)",cfg_documentos_ver:"Config · Documentos por país (ver)",cfg_documentos_editar:"Config · Documentos por país (editar)",cfg_numeracion_ver:"Config · Numeración (ver)",cfg_numeracion_editar:"Config · Numeración (editar)",cfg_tipoenvio_ver:"Config · Tipo de Envío (ver)",cfg_tipoenvio_editar:"Config · Tipo de Envío (editar)",cfg_servicios_ver:"Config · Servicios Adicionales (ver)",cfg_servicios_editar:"Config · Servicios Adicionales (editar)",cfg_cargos_ver:"Config · Gastos Adicionales (ver)",cfg_cargos_editar:"Config · Gastos Adicionales (editar)",cfg_pagos_ver:"Config · Tipos de Pago (ver)",cfg_pagos_editar:"Config · Tipos de Pago (editar)",cfg_contenedores_ver:"Config · Tipos de Contenedor (ver)",cfg_contenedores_editar:"Config · Tipos de Contenedor (editar)",cfg_paises_ver:"Config · Países y Ciudades (ver)",cfg_paises_editar:"Config · Países y Ciudades (editar)",cfg_chat_ver:"Config · Canales de chat (ver)",cfg_chat_editar:"Config · Canales de chat (editar)",
   ver_usuarios:"Ver Usuarios",crear_usuario:"Crear Usuario",editar_usuario:"Editar Usuario",borrar_usuario:"Borrar Usuario",
   crear_cliente:"Crear Cliente",editar_cliente:"Editar Cliente",borrar_cliente:"Borrar Cliente",
   ver_agente:"Ver Agente",crear_agente:"Crear Agente",editar_agente:"Editar Agente",borrar_agente:"Borrar Agente",
@@ -937,7 +937,7 @@ const ROLE_DEFS={
 
   D2:{code:"D2",name:"Operaciones Destino",color:"rD2",icon:<Ico e="📥"/>,
     desc:"Ejecuta operaciones de destino: recepción, entrega. Estados 8→12P.",
-    perms:["ver_alertas","crear_alerta","editar_alerta","ver_chat","enviar_chat","editar_mensaje","borrar_mensaje","chat_directo","chat_adjuntar","ver_wr","ver_rp","ver_guia","ver_recepcion_dest","hacer_recepcion_dest","editar_recepcion_dest","ver_entrega","entregar","revertir_entrega","editar_entrega","status_destino","ver_reportes","rep_confirmados","rep_guia_op","imp_wr","imp_guia","imp_etiq_caja","imp_lista_conf","imp_guia_op","imp_recibo_entrega","ver_tracking","rastrear","ver_estado_cliente","ver_bd_clientes","ver_fotos","subir_foto"]},
+    perms:["ver_chat","enviar_chat","editar_mensaje","chat_directo","chat_adjuntar","ver_wr","status_destino","ver_fotos","subir_foto","ver_estado_cuenta","ver_estado_cliente","ver_guia","ver_recepcion_dest","hacer_recepcion_dest","editar_recepcion_dest","ver_alertas","crear_alerta","alerta_aparecio","alerta_investigar","alerta_sobrante","ver_entrega","entregar","revertir_entrega","editar_entrega","ver_bd_clientes","ver_usuarios","ver_agente","ver_autonomo","ver_oficina","imp_wr","imp_guia","imp_etiq_caja","imp_etiq_guia","imp_rp","imp_booking","imp_reempaque","imp_lista_conf","imp_guia_op","imp_postal","imp_packing","imp_release","imp_pickup","ver_prealerta","pre_tracking","pre_factura","editar_prealerta","ver_pickup","solicitar_pickup","editar_pickup","calculadora","ver_reportes","rep_confirmados","rep_guia_op","rep_postal","rep_packing","ver_tracking","rastrear","configuracion","cfg_documentos_ver","cfg_documentos_editar","cfg_contenedores_ver","cfg_contenedores_editar"]},
 
   E:{code:"E",name:"Agente",color:"rE",icon:<Ico e="🤝"/>,
     desc:"Agente externo. Gestiona sus clientes y WR propios.",
@@ -5856,9 +5856,9 @@ export default function SistemaCarga(){
                 <div className="fl">Ciudad Destino *</div>
                 <select className="fs" value={cf.destino} onChange={e=>sc2("destino",e.target.value)}>
                   <option value="">— Selecciona ciudad destino —</option>
-                  {COUNTRIES.find(c=>c.dial===OFFICE_CONFIG.destCountry)?.cities.map(c=>(
-                    <option key={c.code} value={c.code}>{c.name} ({c.code})</option>
-                  ))}
+                  {COUNTRIES.map(co=>(co.cities||[]).length>0&&<optgroup key={co.name} label={co.name}>
+                    {co.cities.map(c=><option key={c.code} value={c.code}>{c.name} ({c.code})</option>)}
+                  </optgroup>)}
                 </select>
               </div>
               <div className="fg">
@@ -11182,7 +11182,7 @@ export default function SistemaCarga(){
   };
   const alertaResolver=(w,accion,datos={})=>{
     if(!w)return false;
-    if(["entregar","devolver","otraguia"].includes(accion)?!hasPerm("alerta_sobrante"):(!hasPerm("editar_alerta")&&!(accion==="aparecio"&&hasPerm("alerta_aparecio")))){window.alert("Tu rol no tiene permiso para resolver faltantes y sobrantes.");return false;}
+    if(["entregar","devolver","otraguia"].includes(accion)?!hasPerm("alerta_sobrante"):(!hasPerm("editar_alerta")&&!(accion==="aparecio"&&hasPerm("alerta_aparecio"))&&!(accion==="investigar"&&hasPerm("alerta_investigar")))){window.alert("Tu rol no tiene permiso para resolver faltantes y sobrantes.");return false;}
     const a=ALERTA_ACC[accion];if(!a)return false;
     const st=a.code?getStatus(a.code):w.status;
     const mC=parseFloat(datos.montoCliente)||0, mT=parseFloat(datos.montoTransportista)||0;
@@ -12629,11 +12629,13 @@ export default function SistemaCarga(){
     const delAnio=cerrados.filter(k=>{const f=k.cierre?.fecha&&new Date(k.cierre.fecha);return f&&f.getFullYear()===hoy.getFullYear();});
     const pagadoAnio=delAnio.reduce((t,k)=>t+k.mC,0), recupAnio=delAnio.reduce((t,k)=>t+k.mT,0);
     const puede=hasPerm("editar_alerta");
-    const soloAparecio=!puede&&hasPerm("alerta_aparecio");
     const abrir=(w,accion)=>{setAlForm({montoCliente:"",montoTransportista:"",referencia:"",nota:""});setAlModal({w,accion});};
     const btn=(label,onClick,col)=><button className="btn-s" style={{fontSize:11,padding:"3px 7px",...(col?{color:col,borderColor:col}:{})}} onClick={onClick}>{label}</button>;
     const acciones=(k)=>{
-      if(soloAparecio&&alTab!=="historial"&&k.tipo==="faltante")return btn("Apareció",()=>abrir(k.w,"aparecio"),"#2E7D32");
+      if(!puede&&alTab!=="historial"&&k.tipo==="faltante"&&(hasPerm("alerta_aparecio")||hasPerm("alerta_investigar")))return(<div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+        {k.w.status?.code==="18"&&hasPerm("alerta_investigar")&&btn("Investigar",()=>abrir(k.w,"investigar"),"#E65100")}
+        {hasPerm("alerta_aparecio")&&btn("Apareció",()=>abrir(k.w,"aparecio"),"#2E7D32")}
+      </div>);
       if(!puede&&!(k.tipo==="sobrante"&&alTab!=="historial"&&hasPerm("alerta_sobrante")))return <span style={{fontSize:12,color:"var(--t4)"}}>—</span>;
       const c=k.w.status?.code;
       if(alTab==="historial")return (["18.2","18.3"].includes(c))?btn("Registrar recobro",()=>abrir(k.w,"recobro")):<span style={{fontSize:12,color:"var(--t4)"}}>—</span>;
