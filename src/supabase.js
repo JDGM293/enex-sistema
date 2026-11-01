@@ -880,3 +880,25 @@ export const paUrlArchivo = async (path) => {
   if (error) { console.error('paUrlArchivo:', error); return null }
   return data?.signedUrl || null
 }
+
+// ── SOLICITUDES DE REEMPAQUE ─────────────────────────────────
+export const srFromDB = (r) => r ? ({
+  id: r.id, fecha: r.fecha ? new Date(r.fecha) : new Date(), clienteId: r.cliente_id || '', cliente: r.cliente || {},
+  wrIds: Array.isArray(r.wr_ids) ? r.wr_ids : [], notas: r.notas || '', status: r.status || 'pendiente',
+  solicitadoPor: r.solicitado_por || '', solicitadoPorNombre: r.solicitado_por_nombre || '',
+  wrResultado: r.wr_resultado || '', atendidoPor: r.atendido_por || '', atendido: r.atendido ? new Date(r.atendido) : null, motivo: r.motivo || '',
+}) : null
+export const dbGetSolicitudesRpq = async () => {
+  const { data, error } = await supabase.from('solicitudes_reempaque').select('*').order('fecha', { ascending: false }).limit(2000)
+  if (error) { console.error('getSolicitudesRpq:', error); return [] }
+  return (data || []).map(srFromDB)
+}
+// nuevo=true: inserta sin pisar otra con el mismo número (devuelve 'dup' si ya existe)
+export const dbUpsertSolicitudRpq = async (p, nuevo = false) => {
+  const row = { id: p.id, fecha: new Date(p.fecha).toISOString(), cliente_id: p.clienteId || null, cliente: p.cliente || {}, wr_ids: p.wrIds || [],
+    notas: p.notas || null, status: p.status || 'pendiente', solicitado_por: p.solicitadoPor || null, solicitado_por_nombre: p.solicitadoPorNombre || null,
+    wr_resultado: p.wrResultado || null, atendido_por: p.atendidoPor || null, atendido: p.atendido ? new Date(p.atendido).toISOString() : null, motivo: p.motivo || null }
+  const { error } = await supabase.from('solicitudes_reempaque')[nuevo ? 'insert' : 'upsert'](row)
+  if (error) { if (nuevo && error.code === '23505') return 'dup'; console.error('upsertSolicitudRpq:', error); return false }
+  return true
+}

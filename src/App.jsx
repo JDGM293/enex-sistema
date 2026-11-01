@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo, Fragment } from "react";
 import { createPortal } from "react-dom";
 import { renderToStaticMarkup } from "react-dom/server";
-import { dbGetPickups, dbUpsertPickup, dbSecuencias, urlComprobante } from './supabase'
+import { dbGetPickups, dbUpsertPickup, dbSecuencias, urlComprobante, dbGetSolicitudesRpq, dbUpsertSolicitudRpq } from './supabase'
 import { descargarXlsx } from './xlsx'
 import { dbGetActividadReporte } from './supabase'
 import { dbGetFacturasPropias, dbUpsertFacturaPropia, dbGetPrealertas, dbUpsertPrealerta, paSubirArchivo, paUrlArchivo } from './supabase'
@@ -942,7 +942,7 @@ const ROLE_DEFS={
   E:{code:"E",name:"Agente",color:"rE",icon:<Ico e="🤝"/>,
     desc:"Agente externo. Gestiona sus clientes y WR propios.",
     subs:["E1"],
-    perms:["ver_datos_completos","ver_fac_propia","crear_fac_propia","cobrar_fac_propia","anular_fac_propia","ver_chat","enviar_chat","editar_mensaje","borrar_mensaje","chat_directo","chat_adjuntar","crear_cliente","editar_cliente","crear_wr","editar_wr","ver_wr","ver_booking","ver_confirmacion","imp_wr","imp_factura","ver_estado_cuenta","ver_estado_agente","ver_tracking","rastrear","ver_prealerta","pre_tracking","pre_factura","ver_pickup","solicitar_pickup","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_factura","ver_fotos","subir_foto","dar_acceso","imp_recibo_cobro","imp_pickup","ver_estado_contable","editar_wr_lib3","imp_etiq_caja","imp_estado_cuenta","imp_listado_clientes"]},
+    perms:["ver_datos_completos","ver_fac_propia","crear_fac_propia","cobrar_fac_propia","anular_fac_propia","ver_chat","enviar_chat","editar_mensaje","chat_directo","chat_adjuntar","ver_bd_clientes","crear_cliente","editar_cliente","dar_acceso","ver_wr","ver_fotos","ver_alertas","solicitar_reempaque","ver_estado_cuenta","ver_estado_agente","ver_estado_cliente","ver_estado_contable","imp_wr","imp_factura","imp_recibo_cobro","imp_pickup","imp_estado_cuenta","imp_listado_clientes","ver_prealerta","pre_tracking","pre_factura","ver_pickup","solicitar_pickup","calculadora","ver_servicios","ver_adicionales","ver_reportes","ver_tracking","rastrear"]},
 
   E1:{code:"E1",name:"Vendedor / Agente",color:"rE1",icon:<Ico e="💼"/>,
     desc:"Vendedor bajo un agente. Solo sus clientes.",
@@ -2680,6 +2680,8 @@ export default function SistemaCarga(){
   },[tab,chatCanales,dashWide]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(()=>{[chatScroll.current,chatMiniScroll.current].forEach(el=>{if(el)el.scrollTop=el.scrollHeight;});},[chatConv,(chatMsgs[chatConv]||[]).length,tab]);
   const [pickupList,setPickupList]=useState([]);
+  const [srList,setSrList]=useState([]);            // solicitudes de reempaque
+  const [srNota,setSrNota]=useState("");
   const [paList,setPaList]=useState([]);            // pre-alertas
   const [paModal,setPaModal]=useState(null);
   const [paFil,setPaFil]=useState({q:"",status:"pendiente"});
@@ -2791,6 +2793,7 @@ export default function SistemaCarga(){
       dbGetPickups().then(setPickupList);
       dbGetFacturasPropias().then(setFpList);
       dbGetPrealertas().then(setPaList);
+      dbGetSolicitudesRpq().then(setSrList);
       supabase.from('configuracion').select('clave,valor').like('clave','fp_datos:%').then(({data})=>{if(data)setFpDatos(Object.fromEntries(data.map(r=>[r.clave.slice(9),r.valor])));});
       // Usuario de la sesión: el registro enlazado a la cuenta
       {const u=cls.find(c=>c.authId===authUid&&c.activo!==false);
@@ -3468,7 +3471,8 @@ export default function SistemaCarga(){
        const pu=pickupList.find(x=>x.status!=="cancelado"&&!x.wrId&&(x.id===wrf.pickupId||trks.has(normTrk(x.id))));
        if(pu){n._pickupId=pu.id;puCambiar(pu,"recibido",{wrId:n.id},`WR ${n.id}`);}}
       setWrf(emptyWRF(""));setClientSearch("");
-      if(esReempaque){logAction("Creó Reempaque",`${n.id} ← [${reempaqueIds.join(", ")}]`);setRpqSel([]);}
+      if(esReempaque){logAction("Creó Reempaque",`${n.id} ← [${reempaqueIds.join(", ")}]`);setRpqSel([]);
+        const sol=srList.find(r=>r.id===wrf.solicitudId);if(sol)srCambiar(sol,{status:"hecha",wrResultado:n.id,atendidoPor:fullName(currentUser),atendido:new Date()});}
       logAction("Creó WR",wrNumPrev);
       if(uploadedCount>0) logAction("Subió fotos WR",`${n.id} (${uploadedCount})`);
       setShowLabels({wr:n,dims,remitente:wrf.remitente,tipoEnvio:wrf.tipoEnvio});
@@ -10914,7 +10918,7 @@ export default function SistemaCarga(){
       </div>
     );
   };
-  const openWRModalAsReempaque=(parentIds,clientePrefill)=>{
+  const openWRModalAsReempaque=(parentIds,clientePrefill,solicitudId="")=>{
     if(!hasPerm("crear_reempaque")){window.alert("Tu rol no tiene permiso para crear reempaques.");return;}
     if(!parentIds||parentIds.length===0){window.alert("Selecciona al menos un WR para reempacar.");return;}
     // Validación final: si algún WR ya pasó de Confirmado, abortar
@@ -10929,7 +10933,7 @@ export default function SistemaCarga(){
       casilleroSearch:c?c.casillero:"",
       casillero:c?c.casillero:"",
       clienteId:c?c.id:"",
-      reempaqueDe:[...parentIds],
+      reempaqueDe:[...parentIds],solicitudId,
       tipoPago:(()=>{const t=[...new Set(wrList.filter(w=>parentIds.includes(w.id)).map(w=>w.tipoPago||""))];return t.length===1?t[0]:"";})(),
       notas:`Reempaque de: ${parentIds.join(", ")}`,
     });
@@ -10951,7 +10955,66 @@ export default function SistemaCarga(){
     setEditWR(null);
     setShowNewWR(true);
   };
+  // ── SOLICITUDES DE REEMPAQUE ──
+  const SR_ST={pendiente:{l:"Pendiente",cls:"s4"},hecha:{l:"Reempacado",cls:"s3"},rechazada:{l:"Rechazada",cls:"s6"},cancelada:{l:"Cancelada",cls:"s5"}};
+  const srCambiar=async(r,cambios)=>{const n={...r,...cambios};if(!(await dbUpsertSolicitudRpq(n))){window.alert("No se pudo guardar.");return;}setSrList(p=>p.map(x=>x.id===n.id?n:x));};
+  const srSolicitar=async()=>{
+    if(!hasPerm("solicitar_reempaque")){window.alert("Tu rol no tiene permiso para esta acción.");return;}
+    const ws=wrList.filter(w=>rpqSel.includes(w.id));
+    if(ws.length<2){window.alert("Marca al menos 2 WR para reempacar.");return;}
+    const cIds=[...new Set(ws.map(w=>cliDeWRCon(w,clients)?.id||w.casillero||w.consignee))];
+    if(cIds.length>1){window.alert("Todos los WR deben ser del mismo cliente.");return;}
+    if(srList.some(r=>r.status==="pendiente"&&r.wrIds.some(id=>rpqSel.includes(id)))){window.alert("Alguno de esos WR ya tiene una solicitud pendiente.");return;}
+    const c=cliDeWRCon(ws[0],clients);
+    const _sec=await refrescarSec();let lista=srList,res="dup",sol=null;
+    for(let i=0;i<5&&res==="dup";i++){
+      const n=Math.max(0,i===0?(parseInt(_sec?.sr)||0):0,...lista.map(r=>parseInt(String(r.id).replace(/\D/g,""),10)||0))+1;
+      sol={id:`SR-${String(n).padStart(6,"0")}`,fecha:new Date(),clienteId:c?.id||"",cliente:{nombre:c?fullName(c):ws[0].consignee,casillero:c?.casillero||ws[0].casillero||""},
+        wrIds:[...rpqSel],notas:srNota.trim(),status:"pendiente",solicitadoPor:currentUser.id,solicitadoPorNombre:fullName(currentUser)};
+      res=await dbUpsertSolicitudRpq(sol,true);
+      if(res==="dup")lista=await dbGetSolicitudesRpq();
+    }
+    if(res!==true){window.alert("No se pudo enviar la solicitud.");return;}
+    setSrList(p=>[sol,...p.filter(x=>x.id!==sol.id)]);setRpqSel([]);setSrNota("");
+    logAction("Solicitó reempaque",`${sol.id} · ${sol.wrIds.join(", ")}`);
+  };
+  const srAtender=r=>{const c=clients.find(x=>x.id===r.clienteId)||null;setTab("reempaque");openWRModalAsReempaque(r.wrIds,c,r.id);};
+  const srRechazar=r=>{if(!hasPerm("crear_reempaque")){window.alert("Tu rol no tiene permiso para esta acción.");return;}
+    const m=window.prompt(`Motivo para rechazar la solicitud ${r.id}:`);if(!m||!m.trim())return;
+    srCambiar(r,{status:"rechazada",motivo:m.trim(),atendidoPor:fullName(currentUser),atendido:new Date()});logAction("Rechazó solicitud de reempaque",r.id);};
+  const srCancelar=r=>{if(!window.confirm(`¿Cancelar la solicitud ${r.id}?`))return;srCambiar(r,{status:"cancelada"});logAction("Canceló solicitud de reempaque",r.id);};
+  const renderSolicitudesRpq=(propias)=>{
+    const lista=srList.filter(r=>propias?true:r.status==="pendiente"||(r.atendido&&Date.now()-new Date(r.atendido)<7*864e5));
+    return(
+    <div className="card" style={{marginBottom:14,padding:0}}>
+      <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",display:"flex",alignItems:"center",gap:8}}>
+        <span style={{fontSize:15,fontWeight:700,color:"var(--navy)"}}><Ico e="📨" sp/>{propias?"Mis solicitudes de reempaque":"Solicitudes de reempaque"}</span>
+        {!propias&&<span style={{fontSize:12,background:"#FDE8EA",padding:"2px 8px",borderRadius:4,border:"1px solid #F0A0A8",color:"var(--red)",fontWeight:700}}>{srList.filter(r=>r.status==="pendiente").length}</span>}
+      </div>
+      <><table className="ct">
+        <thead><tr><th>N°</th><th>Fecha</th>{!propias&&<th>Solicitó</th>}<th>Cliente</th><th>WR</th><th>Notas</th><th>Estado</th><th></th></tr></thead>
+        <tbody>{pagSlice(propias?"sr_mias":"sr_todas",lista).map(r=>(
+          <tr key={r.id}>
+            <td><span className="c-wr">{r.id}</span></td>
+            <td style={{fontFamily:"'DM Mono',monospace",fontSize:13}}>{fmtDate(r.fecha)}</td>
+            {!propias&&<td>{r.solicitadoPorNombre||"—"}</td>}
+            <td style={{fontWeight:600}}>{r.cliente.nombre||"—"}<div style={{fontSize:12,color:"var(--gold2)",fontFamily:"'DM Mono',monospace"}}>{r.cliente.casillero}</div></td>
+            <td><div style={{display:"flex",flexWrap:"wrap",gap:3}}>{r.wrIds.map(id=><Num key={id} t="wr" id={id}/>)}</div></td>
+            <td style={{fontSize:13}}>{r.notas||"—"}{r.motivo&&<div style={{fontSize:12,color:"var(--red)"}}>{r.motivo}</div>}</td>
+            <td><span className={`st ${SR_ST[r.status]?.cls||"s5"}`}><span className="st-dot"/>{SR_ST[r.status]?.l||r.status}</span>{r.wrResultado&&<div style={{marginTop:3}}><Num t="wr" id={r.wrResultado}/></div>}</td>
+            <td style={{whiteSpace:"nowrap"}}>
+              {!propias&&r.status==="pendiente"&&hasPerm("crear_reempaque")&&<><button className="btn-p" style={{fontSize:12,padding:"3px 8px",marginRight:4}} onClick={()=>srAtender(r)}>Reempacar</button>
+                <button className="btn-s" style={{fontSize:12,padding:"3px 8px",color:"var(--red)",borderColor:"var(--red)"}} onClick={()=>srRechazar(r)}>Rechazar</button></>}
+              {propias&&r.status==="pendiente"&&r.solicitadoPor===currentUser.id&&<button className="btn-s" style={{fontSize:12,padding:"3px 8px",color:"var(--red)",borderColor:"var(--red)"}} onClick={()=>srCancelar(r)}>Cancelar</button>}
+            </td>
+          </tr>))}
+          {lista.length===0&&<tr><td colSpan={8} style={{textAlign:"center",padding:24,color:"var(--t3)"}}>Sin solicitudes.</td></tr>}
+        </tbody></table>{pagPie(propias?"sr_mias":"sr_todas",lista.length)}</>
+    </div>);
+  };
+
   const renderReempaque=()=>{
+    const soloSolicita=!hasPerm("crear_reempaque")&&!hasPerm("ver_reempaque")&&hasPerm("solicitar_reempaque");
     // Candidatos: WR con status ≤ Confirmado (1, 2 o 3). Estados superiores se bloquean.
     const q=(rpqSearch||"").toLowerCase().trim();
     const candidatos=wrList.filter(w=>{
@@ -10980,13 +11043,16 @@ export default function SistemaCarga(){
     const toggleSel=(id)=>setRpqSel(p=>p.includes(id)?p.filter(x=>x!==id):[...p,id]);
     return (
       <div className="page-scroll">
+        {hasPerm("ver_reempaque")&&!soloSolicita&&renderSolicitudesRpq(false)}
         <div className="card" style={{marginBottom:14}}>
           <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",marginBottom:10}}>
-            <div style={{fontSize:17,fontWeight:700,color:"var(--navy)"}}><Ico e="🔁" sp/>Reempaque de WR</div>
+            <div style={{fontSize:17,fontWeight:700,color:"var(--navy)"}}><Ico e="🔁" sp/>{soloSolicita?"Solicitar reempaque":"Reempaque de WR"}</div>
             <div style={{marginLeft:"auto",display:"flex",gap:8,alignItems:"center"}}>
               <input className="fi" placeholder="Buscar WR, consignatario, tracking…" value={rpqSearch} onChange={e=>setRpqSearch(e.target.value)} style={{fontSize:14,padding:"6px 10px",width:260}}/>
               <span style={{fontSize:13,color:"var(--t2)",fontWeight:600}}>Seleccionados: {rpqSel.length}</span>
               {hasPerm("crear_reempaque")&&<button className="btn-p" disabled={rpqSel.length===0} style={{opacity:rpqSel.length===0?.5:1}} onClick={createReempaque}>+ Crear Reempaque ({wrNumPrev})</button>}
+              {soloSolicita&&<><input className="fi" placeholder="Notas para el almacén" value={srNota} onChange={e=>setSrNota(e.target.value)} style={{fontSize:14,padding:"6px 10px",width:220}}/>
+                <button className="btn-p" disabled={rpqSel.length<2} style={{opacity:rpqSel.length<2?.5:1}} onClick={srSolicitar}><Ico e="📨" sp/>Solicitar reempaque</button></>}
             </div>
           </div>
           <div style={{maxHeight:"50vh",overflow:"auto",border:"1px solid var(--b1)",borderRadius:8}}>
@@ -11016,6 +11082,7 @@ export default function SistemaCarga(){
             </table>
           </div>
         </div>
+        {soloSolicita&&renderSolicitudesRpq(true)}
         {/* Histórico de Reempaques — oculto por defecto, filtros por cliente y fecha */}
         <div className="card">
           <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:rpqHistOpen?10:0}}>
@@ -13220,7 +13287,7 @@ export default function SistemaCarga(){
       {id:"scan",ic:<Ico e="📡"/>,l:"Recepción en Puerta",badge:scanLog.filter(s=>!s.registered).length>0?String(scanLog.filter(s=>!s.registered).length):null,red:true},
       {id:"loadingmaster",ic:<Ico e="🚢"/>,l:"Loading Master"},
       {id:"alerts",ic:<Ico e="🔔"/>,l:"Alertas",badge:(()=>{const n=wrList.filter(w=>["18","18.1","19"].includes(w.status?.code||"")).length;return n>0?String(n):null;})(),red:true},
-      {id:"reempaque",ic:<Ico e="🔁"/>,l:"Reempaque"},
+      {id:"reempaque",ic:<Ico e="🔁"/>,l:"Reempaque",badge:hasPerm("ver_reempaque")&&srList.some(r=>r.status==="pendiente")?String(srList.filter(r=>r.status==="pendiente").length):null},
       {id:"cargorelease",ic:<Ico e="🚀"/>,l:"Cargo Release"},
     ]},
     {label:"Administración",items:[
@@ -13254,7 +13321,7 @@ export default function SistemaCarga(){
   const NAV_PERMS={
     dashboard:["ver_wr"],estadocuenta:["ver_estado_cuenta","ver_estado_cliente","ver_estado_agente","ver_estado_oficina"],
     scan:["ver_rp"],loadingmaster:["ver_guia","ver_recepcion_dest"],alerts:["ver_alertas"],
-    reempaque:["ver_reempaque"],cargorelease:["ver_egreso"],
+    reempaque:["ver_reempaque","solicitar_reempaque"],cargorelease:["ver_egreso"],
     entregasydespachos:["ver_entrega"],facturacion:["ver_factura"],misfacturas:["ver_fac_propia"],prealertas:["ver_prealerta"],contabilidad:["ver_cuentas_cobrar","ver_factura"],
     clients:["ver_bd_clientes","ver_usuarios"],agentes:["ver_agente"],oficinas:["ver_oficina"],
     etiquetas:ALL_PERMS.filter(p=>p.startsWith("imp_")),tracking:["ver_tracking"],pickup:["ver_pickup"],
