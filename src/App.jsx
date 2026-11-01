@@ -13335,7 +13335,7 @@ export default function SistemaCarga(){
     dashboard:["ver_wr"],estadocuenta:["ver_estado_cuenta","ver_estado_cliente","ver_estado_agente","ver_estado_oficina"],
     scan:["ver_rp"],loadingmaster:["ver_guia","ver_recepcion_dest"],alerts:["ver_alertas"],
     reempaque:["ver_reempaque","solicitar_reempaque"],cargorelease:["ver_egreso"],
-    entregasydespachos:["ver_entrega"],facturacion:["ver_factura"],misfacturas:["ver_fac_propia"],prealertas:["ver_prealerta"],contabilidad:["ver_cuentas_cobrar","ver_factura"],
+    entregasydespachos:["ver_entrega"],facturacion:["ver_factura"],misfacturas:["ver_fac_propia"],prealertas:["ver_prealerta"],contabilidad:["ver_cuentas_cobrar","ver_cierre_caja"],
     clients:["ver_bd_clientes","ver_usuarios"],agentes:["ver_agente"],oficinas:["ver_oficina"],
     etiquetas:ALL_PERMS.filter(p=>p.startsWith("imp_")),tracking:["ver_tracking"],pickup:["ver_pickup"],
     calculadora:["calculadora"],chat:["ver_chat"],docs:["ver_documentos"],reports:["ver_reportes"],
@@ -13346,7 +13346,7 @@ export default function SistemaCarga(){
   const PAGE_TITLES={prealertas:"Pre-alertas",misfacturas:fpMiEmisor?"Mis facturas":"Facturas de agentes, autónomos y oficinas",dashboard:"Dashboard General",loadingmaster:"Loading Master",scan:"Recepción en Puerta",etiquetas:"Imprimir Etiquetas",clients:"Clientes & Usuarios",estadocuenta:"Estado de Cuenta",roles:"Roles & Permisos",consolidation:"Consolidación",tracking:"Tracking",pickup:"Pick-up",contabilidad:"Contabilidad",calculadora:"Calculadora de Envío",chat:"Chat Interno",docs:"Documentos",reports:"Reportes",alerts:"Alertas",settings:"Configuración",reempaque:"Reempaque",recepciondest:"Recepción en Almacén",cargorelease:"Cargo Release (Egreso)",entregas:"Notas de Entrega",entregasydespachos:"Entregas y Despachos",facturacion:"Facturación"};
 
   const renderPage=()=>{
-    if(!navVisible({id:tab}))return (
+    if(!navVisible({id:tab==="contabilidad"&&["porguia","facturas"].includes(contabTab)?"facturacion":tab}))return (
       <div style={{padding:60,textAlign:"center",color:"var(--t3)"}}>
         <div style={{fontSize:42}}><Ico e="🔒" solo/></div>
         <div style={{fontSize:16,fontWeight:600,marginTop:8}}>Tu rol no tiene permiso para ver esta sección.</div>
