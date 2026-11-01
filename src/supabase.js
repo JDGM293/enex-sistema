@@ -114,7 +114,14 @@ export const dbGetClientes = async () => {
 
 export const dbUpsertCliente = async (cliente) => {
   const { error } = await supabase.from('clientes').upsert(clienteToDB(cliente))
-  if (error) console.error('upsertCliente:', error)
+  if (error) { console.error('upsertCliente:', error); return false }
+  return true
+}
+// Máximos de numeración de todo el sistema (aunque la cuenta solo vea lo suyo)
+export const dbSecuencias = async () => {
+  const { data, error } = await supabase.rpc('secuencias')
+  if (error) { console.error('secuencias:', error); return null }
+  return data || null
 }
 
 export const dbDeleteCliente = async (id) => {

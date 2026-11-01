@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, Fragment } from "react";
 import { createPortal } from "react-dom";
 import { renderToStaticMarkup } from "react-dom/server";
-import { dbGetPickups, dbUpsertPickup } from './supabase'
+import { dbGetPickups, dbUpsertPickup, dbSecuencias } from './supabase'
 import { descargarXlsx } from './xlsx'
 import { dbGetActividadReporte } from './supabase'
 import { dbGetFacturasPropias, dbUpsertFacturaPropia, dbGetPrealertas, dbUpsertPrealerta, paSubirArchivo, paUrlArchivo } from './supabase'
@@ -2472,8 +2472,16 @@ export default function SistemaCarga(){
   const [rolePerms,setRolePerms]=useState(DEFAULT_ROLE_PERMS);
   const [roleDraft,setRoleDraft]=useState({}); // cambios sin guardar {rol:[perms]}
   const [roleSaving,setRoleSaving]=useState(false);
+  const [secSrv,setSecSrv]=useState({}); // máximos de numeración del servidor
+  // El Administrador publica los permisos predeterminados para que la base de datos los conozca
+  useEffect(()=>{
+    if(currentUser?.rol!=="A")return;
+    dbGetConfig('role_perms_def').then(v=>{if(JSON.stringify(v)!==JSON.stringify(DEFAULT_ROLE_PERMS))dbSetConfig('role_perms_def',DEFAULT_ROLE_PERMS);}).catch(()=>{});
+  },[currentUser?.rol]);
+  const refrescarSec=async()=>{const v=await dbSecuencias();if(v){setSecSrv(v);return v;}return secSrv;};
   useEffect(()=>{
     if(!authUid)return;
+    dbSecuencias().then(v=>{if(v)setSecSrv(v);});
     dbGetConfig('role_perms').then(v=>{
       if(v&&typeof v==="object"&&!Array.isArray(v)){
         setRolePerms({...DEFAULT_ROLE_PERMS,...Object.fromEntries(Object.entries(v).filter(([k,arr])=>DEFAULT_ROLE_PERMS[k]&&Array.isArray(arr)))});
@@ -3202,25 +3210,21 @@ export default function SistemaCarga(){
   const _wrOrigCode=wrNumTipo===3?`${String(OFFICE_CONFIG.origCountry).padStart(2,"0")}${OFFICE_CONFIG.origCity.slice(0,2).toUpperCase()}`:(offCode(_origOff));
   const _wrDestCode=wrNumTipo===3?`${String(OFFICE_CONFIG.destCountry).padStart(2,"0")}${OFFICE_CONFIG.destCity.slice(0,2).toUpperCase()}`:(offCode(_destOff));
   // Usar el máximo secuencial existente +1 para evitar duplicados al borrar WRs
-  const _wrNextSeq=(()=>{
-    if(wrList.length===0)return 1;
-    const nums=wrList.map(w=>{
-      const id=String(w.id||"");
-      const m=id.match(/(\d+)$/);
-      return m?parseInt(m[1]):0;
-    });
-    return Math.max(...nums)+1;
-  })();
+  const wrSigSeq=(sec=secSrv)=>{
+    const nums=wrList.map(w=>{const m=String(w.id||"").match(/(\d+)$/);return m?parseInt(m[1]):0;});
+    return Math.max(0,parseInt(sec?.wr)||0,...nums)+1;
+  };
+  const _wrNextSeq=wrSigSeq();
   const wrNumPrev=buildWRNum(_wrOrigCode,_wrDestCode,_wrNextSeq,wrNumTipo,wrSecInicio,empresaSlug);
   const seqPrev=String(_wrNextSeq+(wrSecInicio-1)).padStart(7,"0");
 
   // Genera el próximo número de casillero basado en los existentes
-  const sigIdRegistro=(esUser,lista=clients)=>{const pre=esUser?"U":"C";const n=Math.max(0,...lista.map(c=>{const m=String(c.id||"").match(new RegExp(`^${pre}-(\\d+)$`));return m?+m[1]:0;}));return `${pre}-${String(n+1).padStart(3,"0")}`;};
-  const nextCasillero=(lista=clients)=>{
+  const sigIdRegistro=(esUser,lista=clients,sec=secSrv)=>{const pre=esUser?"U":"C";const n=Math.max(0,parseInt(esUser?sec?.usr:sec?.cli)||0,...lista.map(c=>{const m=String(c.id||"").match(new RegExp(`^${pre}-(\\d+)$`));return m?+m[1]:0;}));return `${pre}-${String(n+1).padStart(3,"0")}`;};
+  const nextCasillero=(lista=clients,sec=secSrv)=>{
     const nums=lista
       .filter(c=>c.casillero&&/\d/.test(c.casillero))
       .map(c=>parseInt(String(c.casillero).replace(/\D/g,""),10)||0);
-    const max=nums.length>0?Math.max(...nums):0;
+    const max=Math.max(0,parseInt(sec?.cas)||0,...nums);
     return`${CASILLERO_PREFIX}${String(max+1).padStart(CASILLERO_DIGITS,"0")}`;
   };
 
@@ -3252,7 +3256,7 @@ export default function SistemaCarga(){
   };
 
   // Registra al remitente del WR como cliente (con su casillero) y lo enlaza
-  const registrarRemitenteCliente=()=>{
+  const registrarRemitenteCliente=async()=>{
     const rem=String(wrf.remitente||"").trim();
     if(!rem){window.alert("Escribe el nombre del remitente.");return;}
     if(!hasPerm("registrar_remitente")){window.alert("Tu rol no tiene permiso para registrar clientes.");return;}
@@ -3261,10 +3265,11 @@ export default function SistemaCarga(){
       ||clients.find(c=>em&&String(c.email||"").toLowerCase()===em)
       ||clients.find(c=>sinAcentos(fullName(c))===sinAcentos(rem));
     if(ya){setWrf(p=>({...p,remitenteId:ya.id}));return;}
+    const _sec=await refrescarSec();
     const parts=parseNombreCompleto(rem);
-    const cas=nextCasillero();
+    const cas=nextCasillero(clients,_sec);
     const nc={
-      id:sigIdRegistro(false),tipo:"cliente",
+      id:sigIdRegistro(false,clients,_sec),tipo:"cliente",
       primerNombre:parts.primerNombre,segundoNombre:parts.segundoNombre,
       primerApellido:parts.primerApellido,segundoApellido:parts.segundoApellido,
       cedula:doc,dir:String(wrf.remitenteDir||"").trim(),municipio:"",estado:"",pais:"",cp:"",
@@ -3273,8 +3278,8 @@ export default function SistemaCarga(){
       clienteTipo:"matriz",agenteId:"",oficinaId:"",autonomoId:"",vendedorId:"",activo:true,
       ...presetDominio(),
     };
+    if(!(await dbUpsertCliente(nc))){window.alert("No se pudo registrar el cliente.");return;}
     setClients(p=>[...p,nc]);
-    dbUpsertCliente(nc);
     setWrf(p=>({...p,remitenteId:nc.id}));
     logAction("Registró remitente como cliente",`${rem} → ${cas}`);
   };
@@ -3299,6 +3304,7 @@ export default function SistemaCarga(){
     const now=new Date();
 
     // ── AUTO-REGISTRO DE CLIENTE si el consignatario no está registrado ─────
+    const _sec=editWR?secSrv:await refrescarSec();
     let _clienteId=wrf.clienteId;
     let _casillero=wrf.casillero;
     // Consignatario escrito en el buscador sin escogerlo de la lista, o casillero escrito a mano
@@ -3310,8 +3316,8 @@ export default function SistemaCarga(){
     if(!editWR&&!_clienteId&&!wrf.consignee.trim()){window.alert("Escribe el consignatario.");return;}
     if(!editWR&&!_clienteId&&wrf.consignee.trim()){
       const parts=parseNombreCompleto(wrf.consignee);
-      const cas=nextCasillero();
-      const newId=sigIdRegistro(false);
+      const cas=nextCasillero(clients,_sec);
+      const newId=sigIdRegistro(false,clients,_sec);
       const newCliente={
         id:newId,tipo:"cliente",
         primerNombre:parts.primerNombre,segundoNombre:parts.segundoNombre,
@@ -3323,7 +3329,7 @@ export default function SistemaCarga(){
         ...presetDominio(),
       };
       setClients(p=>[...p,newCliente]);
-      dbUpsertCliente(newCliente);
+      if(!(await dbUpsertCliente(newCliente))){window.alert("No se pudo registrar el consignatario.");return;}
       _clienteId=newId;
       _casillero=cas;
       logAction("Auto-registró cliente",`${parts.primerNombre} ${parts.primerApellido} → ${cas}`);
@@ -3377,7 +3383,7 @@ export default function SistemaCarga(){
       const reempaqueIds=Array.isArray(wrf.reempaqueDe)?wrf.reempaqueDe:[];
       const esReempaque=reempaqueIds.length>0;
       const n={
-        id:wrNumPrev,
+        id:buildWRNum(_wrOrigCode,_wrDestCode,wrSigSeq(_sec),wrNumTipo,wrSecInicio,empresaSlug),
         origCountry:COUNTRIES.find(c=>c.dial===OFFICE_CONFIG.origCountry)?.name||"USA 🇺🇸",
         origCity:OFFICE_CONFIG.origCity,
         destCountry:COUNTRIES.find(c=>c.dial===OFFICE_CONFIG.destCountry)?.name||"Venezuela 🇻🇪",
@@ -7040,9 +7046,9 @@ export default function SistemaCarga(){
     if(prev){pa=armar(prev.id,prev,await subir(prev.id));if(!(await dbUpsertPrealerta(pa))){window.alert("No se pudo guardar la pre-alerta.");return;}}
     else{
       // Número siguiente; si otro usuario lo tomó al mismo tiempo, se vuelve a leer y se usa el próximo
-      let lista=paList,res="dup";
+      let lista=paList,res="dup";const _sec=await refrescarSec();
       for(let i=0;i<5&&res==="dup";i++){
-        const n=Math.max(0,...lista.map(p=>parseInt(String(p.id).replace(/\D/g,""),10)||0))+1;
+        const n=Math.max(0,i===0?(parseInt(_sec?.pa)||0):0,...lista.map(p=>parseInt(String(p.id).replace(/\D/g,""),10)||0))+1;
         pa=armar(`PA-${String(n).padStart(6,"0")}`,null,[...m.archivos]);
         res=await dbUpsertPrealerta(pa,true);
         if(res==="dup")lista=await dbGetPrealertas();
@@ -8609,7 +8615,8 @@ export default function SistemaCarga(){
     if(!f.telefono.trim()){window.alert("Escribe un teléfono de contacto.");return;}
     if(puBultos(f)<1){window.alert("Indica cuántos bultos son.");return;}
     if(f.id){const ant=pickupList.find(x=>x.id===f.id);await puGuardar({...ant,...f});logAction("Editó pick-up",f.id);setShowNewPickup(false);return;}
-    const n=Math.max(0,...pickupList.map(x=>parseInt(String(x.id).replace(/\D/g,""))||0))+1;
+    const _sec=await refrescarSec();
+    const n=Math.max(0,parseInt(_sec?.pu)||0,...pickupList.map(x=>parseInt(String(x.id).replace(/\D/g,""))||0))+1;
     const tipoSol=alcanceUsr?({E:"agente",E1:"vendedor",F:"autonomo",G:"oficina",I:"cliente"}[currentUser.rol]||"cliente"):"empleado";
     const nuevo=puLog({...f,id:`PU-${String(n).padStart(4,"0")}`,fecha:new Date(),solicitanteTipo:tipoSol,solicitanteId:currentUser.id,solicitanteNombre:fullName(currentUser)||currentUser.email||"",historial:[],monto:0,moneda:"USD"},"solicitado","Solicitado");
     if(await puGuardar(nuevo)){logAction("Solicitó pick-up",`${nuevo.id} · ${nuevo.clienteNombre}`);setShowNewPickup(false);setPuf(emptyPickup());setPuPrint(nuevo);}
@@ -13941,7 +13948,7 @@ export default function SistemaCarga(){
         );
       })()}
 
-      {showNewCl&&<ClientModal acceso={hasPerm("dar_acceso")} tiposOk={Array.isArray(showNewCl)?showNewCl:tiposCrear} rolesOk={rolesAsignables} agentes={agentes} oficinas={oficinas} autonomos={clients.filter(c=>c.tipo==="usuario"&&c.rol==="F")} allClients={clients} title="Nuevo Registro" initial={{tipo:(Array.isArray(showNewCl)?showNewCl:tiposCrear)[0]||"cliente",clienteTipo:"matriz",primerNombre:"",segundoNombre:"",primerApellido:"",segundoApellido:"",cedula:"",dir:"",municipio:"",estado:"",pais:"",cp:"",tel1:"",tel2:"",email:"",casillero:"",rol:"I",password:"",...presetDominio()}} onClose={()=>setShowNewCl(false)} onSave={f=>{const esUser=f.tipo==="usuario";const newId=sigIdRegistro(esUser);const casillero=(!esUser&&!f.casillero)?nextCasillero():f.casillero;const newRec={...f,id:newId,casillero,clienteTipo:f.clienteTipo||"matriz",password:""};setClients(p=>[...p,newRec]);setShowNewCl(false);logAction("Creó registro",`${newId} — ${f.primerNombre} ${f.primerApellido}`);(async()=>{await dbUpsertCliente(newRec);await sincronizarCuenta(newRec,f.password);})();}}/>}
+      {showNewCl&&<ClientModal acceso={hasPerm("dar_acceso")} tiposOk={Array.isArray(showNewCl)?showNewCl:tiposCrear} rolesOk={rolesAsignables} agentes={agentes} oficinas={oficinas} autonomos={clients.filter(c=>c.tipo==="usuario"&&c.rol==="F")} allClients={clients} title="Nuevo Registro" initial={{tipo:(Array.isArray(showNewCl)?showNewCl:tiposCrear)[0]||"cliente",clienteTipo:"matriz",primerNombre:"",segundoNombre:"",primerApellido:"",segundoApellido:"",cedula:"",dir:"",municipio:"",estado:"",pais:"",cp:"",tel1:"",tel2:"",email:"",casillero:"",rol:"I",password:"",...presetDominio()}} onClose={()=>setShowNewCl(false)} onSave={async f=>{const _sec=await refrescarSec();const esUser=f.tipo==="usuario";const newId=sigIdRegistro(esUser,clients,_sec);const casillero=(!esUser&&!f.casillero)?nextCasillero(clients,_sec):f.casillero;const newRec={...f,id:newId,casillero,clienteTipo:f.clienteTipo||"matriz",password:""};setClients(p=>[...p,newRec]);setShowNewCl(false);logAction("Creó registro",`${newId} — ${f.primerNombre} ${f.primerApellido}`);(async()=>{await dbUpsertCliente(newRec);await sincronizarCuenta(newRec,f.password);})();}}/>}
       {showEditCl&&<ClientModal acceso={hasPerm("dar_acceso")} tiposOk={[showEditCl.tipo]} rolesOk={rolesAsignables} agentes={agentes} oficinas={oficinas} autonomos={clients.filter(c=>c.tipo==="usuario"&&c.rol==="F")} allClients={clients} title={`Editar — ${fullName(showEditCl)}`} initial={showEditCl} onClose={()=>setShowEditCl(null)} onSave={f=>{const ant=showEditCl;const rec={...f,clienteTipo:f.clienteTipo||"matriz",password:""};setClients(p=>p.map(c=>c.id===f.id?rec:c));logAction("Editó registro",`${f.id} — ${f.primerNombre} ${f.primerApellido}`);setShowEditCl(null);(async()=>{await dbUpsertCliente(rec);await sincronizarCuenta(rec,f.password,ant);})();}}/>}
 
       {/* ── Cargo Release — MODAL FORMULARIO ───────────────────────────────── */}
