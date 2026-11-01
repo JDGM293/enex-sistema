@@ -950,7 +950,7 @@ const ROLE_DEFS={
 
   F:{code:"F",name:"Autónomo",color:"rF",icon:<Ico e="🧑‍💻"/>,
     desc:"Operador independiente. Gestiona sus propios clientes.",
-    perms:["ver_datos_completos","ver_fac_propia","crear_fac_propia","cobrar_fac_propia","anular_fac_propia","ver_chat","enviar_chat","editar_mensaje","borrar_mensaje","chat_directo","chat_adjuntar","crear_cliente","editar_cliente","crear_wr","editar_wr","ver_wr","ver_confirmacion","imp_wr","imp_factura","ver_estado_cuenta","ver_estado_cliente","ver_prealerta","pre_tracking","pre_factura","ver_pickup","solicitar_pickup","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_factura","ver_fotos","subir_foto","dar_acceso","imp_recibo_cobro","imp_pickup","ver_estado_contable","editar_wr_lib3","imp_etiq_caja","imp_estado_cuenta","imp_listado_clientes"]},
+    perms:["ver_datos_completos","ver_chat","enviar_chat","editar_mensaje","chat_directo","chat_adjuntar","ver_bd_clientes","crear_cliente","editar_cliente","dar_acceso","ver_wr","ver_fotos","ver_alertas","solicitar_reempaque","ver_estado_cuenta","ver_estado_autonomo","ver_estado_cliente","ver_estado_contable","ver_factura","imp_wr","imp_factura","imp_recibo_cobro","imp_pickup","imp_estado_cuenta","imp_listado_clientes","ver_prealerta","pre_tracking","pre_factura","ver_pickup","solicitar_pickup","calculadora","ver_servicios","ver_adicionales","ver_reportes"]},
 
   G:{code:"G",name:"Oficina",color:"rG",icon:<Ico e="🏢"/>,
     desc:"Sucursal de la empresa. Ve la carga que recibe o que se envió por ella.",
