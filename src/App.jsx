@@ -3326,17 +3326,22 @@ export default function SistemaCarga(){
     const now=new Date();
 
     // ── AUTO-REGISTRO DE CLIENTE si el consignatario no está registrado ─────
-    const _sec=editWR?secSrv:await refrescarSec();
+    const _sec=(editWR&&wrf.clienteId)?secSrv:await refrescarSec();
     let _clienteId=wrf.clienteId;
     let _casillero=wrf.casillero;
     // Consignatario escrito en el buscador sin escogerlo de la lista, o casillero escrito a mano
-    if(!editWR&&!_clienteId){
+    if(!_clienteId){
       const casMatch=String(wrf.casillero||"").trim()&&clients.find(c=>String(c.casillero||"").toUpperCase()===String(wrf.casillero).trim().toUpperCase());
       if(casMatch){_clienteId=casMatch.id;_casillero=casMatch.casillero;wrf.consignee=fullName(casMatch);}
       else if(!wrf.consignee.trim()&&clientSearch.trim())wrf.consignee=clientSearch.trim().toUpperCase();
     }
     if(!editWR&&!_clienteId&&!wrf.consignee.trim()){window.alert("Escribe el consignatario.");return;}
-    if(!editWR&&!_clienteId&&wrf.consignee.trim()){
+    // Sin cliente enlazado (al crear o al editar): si el nombre coincide exacto con un cliente se enlaza; si no, se registra
+    if(!_clienteId&&wrf.consignee.trim()){
+      const igual=clients.filter(c=>c.tipo==="cliente"&&sinAcentos(fullName(c))===sinAcentos(wrf.consignee));
+      if(igual.length===1){_clienteId=igual[0].id;_casillero=igual[0].casillero||"";}
+    }
+    if(!_clienteId&&wrf.consignee.trim()){
       const parts=parseNombreCompleto(wrf.consignee);
       const cas=nextCasillero(clients,_sec);
       const newId=sigIdRegistro(false,clients,_sec);
@@ -3376,7 +3381,7 @@ export default function SistemaCarga(){
       const updated={
         ...editWR,
         cajas:totalCajasCount,
-        consignee:wrf.consignee,casillero:wrf.casillero,clienteId:wrf.clienteId,
+        consignee:wrf.consignee,casillero:_casillero,clienteId:_clienteId,
         carrier:wrf.cajas[0]?.carrier||"",tracking:normTrk(wrf.cajas[0]?.tracking),
         descripcion:cleanReempaqueDesc(wrf.cajas[0]?.descripcion||""),factura:wrf.cajas[0]?.numFactura||"",
         valor:wrf.cajas.reduce((s,c)=>s+parseFloat(c.montoFactura||0),0),
