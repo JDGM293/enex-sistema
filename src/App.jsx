@@ -584,14 +584,14 @@ const ALL_PERMS=[
   // Permiso especial: salta los bloqueos del proceso por estado
   "saltar_bloqueos",
   // Límites de edición, facturación PREPAID en origen
-  "editar_wr_destino","editar_guia_destino","fac_prepaid","cobrar_prepaid","ver_estado_contable","alerta_aparecio","alerta_sobrante","registrar_remitente","imp_estado_cuenta","imp_listado_clientes","editar_wr_lib3","editar_guia_lib3","dar_acceso","imp_release","imp_pickup","imp_recibo_cobro","cfg_agentes_ver","cfg_oficinas_ver","cfg_tarifas_ver",
+  "editar_wr_destino","editar_guia_destino","fac_prepaid","cobrar_prepaid","ver_estado_contable","exportar_excel","ver_cierre_caja","ver_comisiones","alerta_aparecio","alerta_sobrante","registrar_remitente","imp_estado_cuenta","imp_listado_clientes","editar_wr_lib3","editar_guia_lib3","dar_acceso","imp_release","imp_pickup","imp_recibo_cobro","cfg_agentes_ver","cfg_oficinas_ver","cfg_tarifas_ver",
   // Configuración: cada pestaña con su ver / editar
   "cfg_empresa_ver","cfg_empresa_editar", "cfg_documentos_ver","cfg_documentos_editar", "cfg_numeracion_ver","cfg_numeracion_editar", "cfg_tipoenvio_ver","cfg_tipoenvio_editar", "cfg_servicios_ver","cfg_servicios_editar", "cfg_cargos_ver","cfg_cargos_editar", "cfg_pagos_ver","cfg_pagos_editar", "cfg_contenedores_ver","cfg_contenedores_editar", "cfg_paises_ver","cfg_paises_editar", "cfg_chat_ver","cfg_chat_editar",
 ];
 // Solo el Administrador puede borrar y ver el registro de actividad; no se asignan a otros roles
 const PERMS_SOLO_ADMIN=new Set([...ALL_PERMS.filter(p=>p.startsWith("borrar_")),"registro_actividad"]);
 
-const PERM_LBL={imp_estado_cuenta:"Impr. Estado de cuenta",imp_listado_clientes:"Imprimir / exportar listados de clientes, usuarios, agentes, autónomos y oficinas",alerta_sobrante:"Alertas: resolver sobrantes (entregar, devolver a origen, otra guía)",registrar_remitente:"Registrar al remitente (shipper) como cliente desde el WR",editar_wr_lib3:"Editar WR de Tránsito 2 hasta Liberado 3",editar_guia_lib3:"Editar guías de Tránsito 2 hasta Liberado 3",alerta_aparecio:"Alertas: marcar «Apareció»",ver_estado_contable:"Estado de cuenta: ver parte contable (facturas, pagos, saldo)",dar_acceso:"Dar acceso al sistema (contraseña)",imp_release:"Impr. Cargo Release",imp_pickup:"Impr. Pick-up",imp_recibo_cobro:"Impr. Recibo de cobro",cfg_agentes_ver:"Config · Agentes (ver)",cfg_oficinas_ver:"Config · Oficinas (ver)",cfg_tarifas_ver:"Config · Tarifas (ver)",editar_wr_destino:"Editar WR desde Liberado 3 hasta entregado",editar_guia_destino:"Editar guías desde Liberado 3",fac_prepaid:"Facturar PREPAID en origen (desde el WR)",cobrar_prepaid:"Cobrar facturas PREPAID",cfg_empresa_ver:"Config · Empresa (ver)",cfg_empresa_editar:"Config · Empresa (editar)",cfg_documentos_ver:"Config · Documentos por país (ver)",cfg_documentos_editar:"Config · Documentos por país (editar)",cfg_numeracion_ver:"Config · Numeración (ver)",cfg_numeracion_editar:"Config · Numeración (editar)",cfg_tipoenvio_ver:"Config · Tipo de Envío (ver)",cfg_tipoenvio_editar:"Config · Tipo de Envío (editar)",cfg_servicios_ver:"Config · Servicios Adicionales (ver)",cfg_servicios_editar:"Config · Servicios Adicionales (editar)",cfg_cargos_ver:"Config · Gastos Adicionales (ver)",cfg_cargos_editar:"Config · Gastos Adicionales (editar)",cfg_pagos_ver:"Config · Tipos de Pago (ver)",cfg_pagos_editar:"Config · Tipos de Pago (editar)",cfg_contenedores_ver:"Config · Tipos de Contenedor (ver)",cfg_contenedores_editar:"Config · Tipos de Contenedor (editar)",cfg_paises_ver:"Config · Países y Ciudades (ver)",cfg_paises_editar:"Config · Países y Ciudades (editar)",cfg_chat_ver:"Config · Canales de chat (ver)",cfg_chat_editar:"Config · Canales de chat (editar)",
+const PERM_LBL={exportar_excel:"Exportar reportes a Excel",ver_cierre_caja:"Contabilidad: ver Caja y cierre de caja",ver_comisiones:"Ver comisiones de agentes y autónomos",imp_estado_cuenta:"Impr. Estado de cuenta",imp_listado_clientes:"Imprimir / exportar listados de clientes, usuarios, agentes, autónomos y oficinas",alerta_sobrante:"Alertas: resolver sobrantes (entregar, devolver a origen, otra guía)",registrar_remitente:"Registrar al remitente (shipper) como cliente desde el WR",editar_wr_lib3:"Editar WR de Tránsito 2 hasta Liberado 3",editar_guia_lib3:"Editar guías de Tránsito 2 hasta Liberado 3",alerta_aparecio:"Alertas: marcar «Apareció»",ver_estado_contable:"Estado de cuenta: ver parte contable (facturas, pagos, saldo)",dar_acceso:"Dar acceso al sistema (contraseña)",imp_release:"Impr. Cargo Release",imp_pickup:"Impr. Pick-up",imp_recibo_cobro:"Impr. Recibo de cobro",cfg_agentes_ver:"Config · Agentes (ver)",cfg_oficinas_ver:"Config · Oficinas (ver)",cfg_tarifas_ver:"Config · Tarifas (ver)",editar_wr_destino:"Editar WR desde Liberado 3 hasta entregado",editar_guia_destino:"Editar guías desde Liberado 3",fac_prepaid:"Facturar PREPAID en origen (desde el WR)",cobrar_prepaid:"Cobrar facturas PREPAID",cfg_empresa_ver:"Config · Empresa (ver)",cfg_empresa_editar:"Config · Empresa (editar)",cfg_documentos_ver:"Config · Documentos por país (ver)",cfg_documentos_editar:"Config · Documentos por país (editar)",cfg_numeracion_ver:"Config · Numeración (ver)",cfg_numeracion_editar:"Config · Numeración (editar)",cfg_tipoenvio_ver:"Config · Tipo de Envío (ver)",cfg_tipoenvio_editar:"Config · Tipo de Envío (editar)",cfg_servicios_ver:"Config · Servicios Adicionales (ver)",cfg_servicios_editar:"Config · Servicios Adicionales (editar)",cfg_cargos_ver:"Config · Gastos Adicionales (ver)",cfg_cargos_editar:"Config · Gastos Adicionales (editar)",cfg_pagos_ver:"Config · Tipos de Pago (ver)",cfg_pagos_editar:"Config · Tipos de Pago (editar)",cfg_contenedores_ver:"Config · Tipos de Contenedor (ver)",cfg_contenedores_editar:"Config · Tipos de Contenedor (editar)",cfg_paises_ver:"Config · Países y Ciudades (ver)",cfg_paises_editar:"Config · Países y Ciudades (editar)",cfg_chat_ver:"Config · Canales de chat (ver)",cfg_chat_editar:"Config · Canales de chat (editar)",
   ver_usuarios:"Ver Usuarios",crear_usuario:"Crear Usuario",editar_usuario:"Editar Usuario",borrar_usuario:"Borrar Usuario",
   crear_cliente:"Crear Cliente",editar_cliente:"Editar Cliente",borrar_cliente:"Borrar Cliente",
   ver_agente:"Ver Agente",crear_agente:"Crear Agente",editar_agente:"Editar Agente",borrar_agente:"Borrar Agente",
@@ -914,7 +914,7 @@ const ROLE_DEFS={
 
   C:{code:"C",name:"Auxiliar",color:"rC",icon:<Ico e="🗂️"/>,
     desc:"Apoyo operativo y administrativo: WR hasta su entrega, facturación y cobro, clientes, usuarios, agentes y oficinas.",
-    perms:["alerta_sobrante","editar_wr_destino","ver_chat","enviar_chat","editar_mensaje","chat_directo","chat_adjuntar","ver_usuarios","crear_usuario","editar_usuario","crear_cliente","editar_cliente","ver_bd_clientes","ver_bd_usuarios","ver_agente","crear_agente","editar_agente","ver_autonomo","crear_autonomo","editar_autonomo","ver_oficina","crear_oficina","editar_oficina","ver_rp","ver_wr","editar_wr","status_origen","status_destino","ver_confirmacion","confirmar","desconfirmar","editar_confirmacion","ver_fotos","subir_foto","editar_foto","ver_booking","ver_reempaque","ver_guia","ver_recepcion_dest","ver_egreso","ver_entrega","entregar","editar_entrega","ver_alertas","crear_alerta","editar_alerta","ver_factura","facturar","crear_factura","editar_factura","registrar_cobro","registrar_pago","cobrar","editar_pago","ver_cuentas_cobrar","ver_reportes","rep_confirmados","rep_guia_op","rep_postal","rep_packing","rep_maestro","crear_reporte","editar_reporte","imp_wr","imp_guia","imp_etiq_caja","imp_etiq_guia","imp_rp","imp_booking","imp_reempaque","imp_lista_conf","imp_guia_op","imp_postal","imp_packing","imp_recibo_entrega","imp_factura","ver_estado_cuenta","ver_estado_cliente","ver_estado_agente","ver_estado_oficina","ver_prealerta","pre_tracking","pre_factura","editar_prealerta","ver_pickup","solicitar_pickup","editar_pickup","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","paquetes_sin_reclamo","configuracion","dar_acceso","imp_recibo_cobro","imp_release","imp_pickup","ver_estado_contable","editar_wr_lib3","registrar_remitente","imp_estado_cuenta","cfg_servicios_ver","cfg_servicios_editar","cfg_cargos_ver","cfg_cargos_editar","cfg_paises_ver","cfg_paises_editar","cfg_pagos_ver","cfg_pagos_editar","cfg_agentes_ver","cfg_oficinas_ver"]},
+    perms:["alerta_sobrante","editar_wr_destino","ver_chat","enviar_chat","editar_mensaje","chat_directo","chat_adjuntar","ver_usuarios","crear_usuario","editar_usuario","crear_cliente","editar_cliente","ver_bd_clientes","ver_bd_usuarios","ver_agente","crear_agente","editar_agente","ver_autonomo","crear_autonomo","editar_autonomo","ver_oficina","crear_oficina","editar_oficina","ver_rp","ver_wr","editar_wr","status_origen","status_destino","ver_confirmacion","confirmar","desconfirmar","editar_confirmacion","ver_fotos","subir_foto","editar_foto","ver_booking","ver_reempaque","ver_guia","ver_recepcion_dest","ver_egreso","ver_entrega","entregar","editar_entrega","ver_alertas","crear_alerta","editar_alerta","ver_factura","facturar","crear_factura","editar_factura","registrar_cobro","registrar_pago","cobrar","editar_pago","ver_cuentas_cobrar","ver_reportes","rep_confirmados","rep_guia_op","rep_postal","rep_packing","rep_maestro","crear_reporte","editar_reporte","imp_wr","imp_guia","imp_etiq_caja","imp_etiq_guia","imp_rp","imp_booking","imp_reempaque","imp_lista_conf","imp_guia_op","imp_postal","imp_packing","imp_recibo_entrega","imp_factura","ver_estado_cuenta","ver_estado_cliente","ver_estado_agente","ver_estado_oficina","ver_prealerta","pre_tracking","pre_factura","editar_prealerta","ver_pickup","solicitar_pickup","editar_pickup","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","paquetes_sin_reclamo","configuracion","dar_acceso","imp_recibo_cobro","imp_release","imp_pickup","ver_estado_contable","editar_wr_lib3","registrar_remitente","imp_estado_cuenta","cfg_servicios_ver","cfg_servicios_editar","cfg_cargos_ver","cfg_cargos_editar","cfg_paises_ver","cfg_paises_editar","cfg_pagos_ver","cfg_pagos_editar","cfg_agentes_ver","cfg_oficinas_ver","exportar_excel","ver_cierre_caja"]},
 
   D:{code:"D",name:"Jefe de Operaciones",color:"rD",icon:<Ico e="⚙️"/>,
     desc:"Supervisa y ejecuta operaciones completas — origen + destino.",
@@ -6736,6 +6736,7 @@ export default function SistemaCarga(){
     };
     void R2;
     if(!hasPerm("imp_listado_clientes")){delete F.cliente;delete F.usuario;delete F.agente;delete F.oficina;}
+    if(!hasPerm("ver_comisiones"))delete F.comision;
     return F;
   };
   // Reportes de ejemplo (el usuario los puede editar o borrar)
@@ -6796,7 +6797,7 @@ export default function SistemaCarga(){
   const repTextoFiltros=(rep,par,C)=>[(par.desde||par.hasta)?`Fechas: ${par.desde||"…"} a ${par.hasta||"…"}`:"",
     ...(rep.filtros||[]).map((f0,i)=>{const f=f0.preguntar?{...f0,...(par.f?.[i]||{})}:f0;const c=C[f.k];if(!c)return "";
       const t=f.conValor?"con valor":f.vals?.length?f.vals.join(", "):((f.min??"")!==""||(f.max??"")!=="")?`${f.min||"…"} a ${f.max||"…"}`:"";return t?`${c.l}: ${t}`:"";})].filter(Boolean).join(" · ");
-  const repExcel=(rep,par)=>{const R=repCalcular(rep,par);if(!R)return;
+  const repExcel=(rep,par)=>{if(!hasPerm("exportar_excel")){window.alert("Tu rol no tiene permiso para esta acción.");return;}const R=repCalcular(rep,par);if(!R)return;
     const val=(c,v)=>v==null?"":c.t==="fecha"?(v?new Date(v):""):c.t==="money"?(typeof v==="object"?(Object.keys(v).length===1?Object.values(v)[0]:Object.entries(v).map(([m,x])=>`${m} ${x}`).join(" / ")):v):v;
     const NC=R.cols.filter(repNum);let filas;
     if(R.grupos&&rep.soloTot)filas=[[R.gl,"Cantidad",...NC.map(c=>c.l)],...R.grupos.map(g=>[g.k,g.rows.length,...NC.map(c=>val(c,g.tot[c.k]))]),["TOTAL",R.filas.length,...NC.map(c=>val(c,R.tot[c.k]))]];
@@ -6883,7 +6884,7 @@ export default function SistemaCarga(){
           <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:10}}>
             <button className="btn-s" style={{fontSize:13}} onClick={()=>setRepModo("lista")}>← Reportes</button>
             <div style={{flex:1}}><div style={{fontSize:18,fontWeight:700,color:"var(--navy)"}}>{F.ic} {rep.nombre}</div><div style={{fontSize:12,color:"var(--t3)"}}>{F.l}</div></div>
-            <button className="btn-s" style={{fontSize:13}} onClick={()=>repExcel(rep,par)}><Ico n="download" sp/>Excel</button>
+            {hasPerm("exportar_excel")&&<button className="btn-s" style={{fontSize:13}} onClick={()=>repExcel(rep,par)}><Ico n="download" sp/>Excel</button>}
             <button className="btn-s" style={{fontSize:13}} onClick={()=>repImprimir(rep,par)}><Ico e="🖨️" sp/>Imprimir</button>
             {repPuedeEditar(rep)&&<button className="btn-s" style={{fontSize:13}} onClick={()=>repEditar(rep)}><Ico e="✏️" sp/>Editar</button>}
           </div>
@@ -9968,7 +9969,7 @@ export default function SistemaCarga(){
                 </table>{pagPie("ctaMovs",(vis).length)}</>)}
               </div>
 
-              {["agente","autonomo"].includes(pg.tipo)&&(
+              {["agente","autonomo"].includes(pg.tipo)&&hasPerm("ver_comisiones")&&(
               <div className="card" style={{padding:0}}>
                 <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",display:"flex",alignItems:"center",gap:10}}>
                   <span style={{fontSize:15,fontWeight:700,color:"var(--navy)"}}><Ico e="🤝" sp/>Comisiones PREPAID</span>
@@ -10012,7 +10013,7 @@ export default function SistemaCarga(){
     const enFacturacion=["porguia","facturas"].includes(contabTab);
     const CTABS=enFacturacion
       ?[{k:"porguia",l:"Por guía"},{k:"facturas",l:"Facturas"}]
-      :[{k:"cuentas",l:"Cuentas"},{k:"caja",l:"Caja"},{k:"reporte",l:"Reporte"}];
+      :[{k:"cuentas",l:"Cuentas"},...(hasPerm("ver_cierre_caja")?[{k:"caja",l:"Caja"}]:[]),{k:"reporte",l:"Reporte"}];
     // Filtrar facturas (no incluye anuladas en stats principales)
     const facsActivas=facturas.filter(f=>f.status!=="anulada");
     // Stats por moneda (no se mezclan)
@@ -10245,7 +10246,7 @@ export default function SistemaCarga(){
         })()}
 
         {/* ── CAJA ── */}
-        {contabTab==="caja"&&(()=>{
+        {contabTab==="caja"&&hasPerm("ver_cierre_caja")&&(()=>{
           const mono={fontFamily:"'DM Mono',monospace"};
           const d0=new Date((cajaDesde||hoyISO())+"T00:00:00"), d1=new Date((cajaHasta||cajaDesde||hoyISO())+"T23:59:59.999");
           const enRango=pagos.filter(p=>!p.anulado&&esDinero(p)&&new Date(p.fecha)>=d0&&new Date(p.fecha)<=d1);
