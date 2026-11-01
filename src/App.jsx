@@ -4716,6 +4716,9 @@ export default function SistemaCarga(){
             </div>
           </div>
           {(()=>{const pas=paList.filter(p=>p.wrId===selWR.id&&p.archivos.length);return pas.length?<div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",margin:"10px 0"}}><b style={{fontSize:13,color:"var(--navy)"}}>Pre-alerta</b>{pas.map(p=><span key={p.id} style={{display:"inline-flex",gap:6,alignItems:"center"}}><span className="c-wr">{p.id}</span>{paArchivos(p,true)}</span>)}</div>:null;})()}
+{(()=>{const fe=facEmpresaDeWRs([selWR.id]),fp=facPropiasDeWRs([selWR.id]);return (fe.length||fp.length)?<div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",margin:"10px 0"}}>
+  <b style={{fontSize:13,color:"var(--navy)"}}>Facturas</b>{fe.map(x=><Num key={x.id} t="factura" id={x.id}/>)}
+  {fp.length>0&&<><span style={{fontSize:12,color:"var(--t3)",fontWeight:700,marginLeft:6}}>del agente</span>{fp.map(x=><Num key={x.id} t="fpropia" id={x.id}/>)}</>}</div>:null;})()}
 <div className="wr-legal" style={{whiteSpace:"pre-line"}}>{notaLegalWR(selWR)}</div>
           {/* Bloque de entrega/firma eliminado — la entrega ahora se gestiona vía Notas de Entrega (Delivery Notes) */}
         </div>
@@ -6166,7 +6169,10 @@ export default function SistemaCarga(){
     if(tipo==="factura")filas=facsVis.filter(f=>f.status!=="borrador"&&hay(`${f.id} ${f.receptorNombre||""} ${f.receptorCasillero||""} ${f.receptorDoc||""} ${(f.wrIds||[]).join(" ")}`))
       .sort((a,b)=>(b.numero||0)-(a.numero||0)).map(f=>({k:f.id,
         izq:<><Num t="factura" id={f.id} pre={f.tipo==="nota_credito"?"NC ":""}/><div style={{fontSize:13,color:"var(--t3)"}}>{fmtDate(f.fechaEmision||f.fecha)} · {f.receptorNombre||"—"} · {fmtMoney(f.total,f.moneda)}</div></>,
-        medio:(f.wrIds||[]).length>0&&<div style={{display:"flex",flexWrap:"wrap",gap:4,alignItems:"center"}}><span style={{fontSize:12,color:"var(--t3)",fontWeight:700}}>WR</span>{f.wrIds.map(id=><Num key={id} t="wr" id={id}/>)}</div>,
+        medio:(f.wrIds||[]).length>0&&<div style={{display:"flex",flexDirection:"column",gap:4}}>
+          <div style={{display:"flex",flexWrap:"wrap",gap:4,alignItems:"center"}}><span style={{fontSize:12,color:"var(--t3)",fontWeight:700}}>WR</span>{f.wrIds.map(id=><Num key={id} t="wr" id={id}/>)}</div>
+          {(()=>{const fp=facPropiasDeWRs(f.wrIds);return fp.length>0&&<div style={{display:"flex",flexWrap:"wrap",gap:4,alignItems:"center"}}><span style={{fontSize:12,color:"var(--t3)",fontWeight:700}}>Factura del agente</span>{fp.map(x=><Num key={x.id} t="fpropia" id={x.id}/>)}</div>;})()}
+        </div>,
         estado:<span className={`st ${FAC_STATUS_CLS[f.status]||"s5"}`}><span className="st-dot"/>{(FAC_STATUS_LABEL[f.status]||f.status).replace(/^\S+\s/,"")}</span>,
         acc:verImp(()=>setFacPrint(f),()=>printFactura(f))}));
     if(tipo==="recibo"){const m=new Map();pagosVis.forEach(p=>{if(!p.reciboId)return;if(!m.has(p.reciboId))m.set(p.reciboId,{id:p.reciboId,fecha:p.fecha,quien:p.pagadorNombre||(pagadorDePago(p)||{}).nombre||"—",monto:0,moneda:p.moneda||"USD",anulado:true,facs:new Set()});
@@ -7279,7 +7285,7 @@ export default function SistemaCarga(){
       </div>
       <div className="card" style={{padding:0}}>
         <><table className="ct">
-          <thead><tr><th>N° Factura</th><th>Fecha</th>{!em&&<th>Emisor</th>}<th>Cliente</th><th>Guía</th><th>WR</th><th>Total</th><th>Cobrado</th><th>Saldo</th><th>Estado</th><th></th></tr></thead>
+          <thead><tr><th>N° Factura</th><th>Fecha</th>{!em&&<th>Emisor</th>}<th>Cliente</th><th>Guía</th><th>WR</th><th>Factura empresa</th><th>Total</th><th>Cobrado</th><th>Saldo</th><th>Estado</th><th></th></tr></thead>
           <tbody>{pagSlice("fpropias",lista).map(f=>(
             <tr key={f.id}>
               <td><Num t="fpropia" id={f.id}/></td>
@@ -7288,6 +7294,7 @@ export default function SistemaCarga(){
               <td style={{fontWeight:600}}>{f.cliente.nombre}<div style={{fontSize:12,color:"var(--gold2)",fontFamily:"'DM Mono',monospace"}}>{f.cliente.casillero}</div></td>
               <td><Num t="guia" id={f.guiaId}/></td>
               <td style={{fontSize:12}}><div style={{display:"flex",flexWrap:"wrap",gap:4}}>{f.wrIds.map(id=><Num key={id} t="wr" id={id} style={{fontSize:12,padding:"1px 6px"}}/>)}</div></td>
+              <td style={{fontSize:12}}>{(()=>{const fe=facEmpresaDeWRs(f.wrIds);return fe.length?<div style={{display:"flex",flexWrap:"wrap",gap:4}}>{fe.map(x=><Num key={x.id} t="factura" id={x.id} style={{fontSize:12,padding:"1px 6px"}}/>)}</div>:<span style={{color:"var(--t4)"}}>—</span>;})()}</td>
               <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700}}>{fmtMoney(f.total,f.moneda)}</td>
               <td style={{fontFamily:"'DM Mono',monospace",color:"var(--green)"}}>{fmtMoney(f.pagado,f.moneda)}</td>
               <td style={{fontFamily:"'DM Mono',monospace",fontWeight:800,color:f.saldo>0&&f.status!=="anulada"?"var(--orange)":"var(--t3)"}}>{fmtMoney(f.status==="anulada"?0:f.saldo,f.moneda)}</td>
@@ -7298,7 +7305,7 @@ export default function SistemaCarga(){
                 {em&&f.status!=="anulada"&&hasPerm("anular_fac_propia")&&<button className="btn-s" style={{fontSize:12,padding:"3px 6px",color:"var(--red)",borderColor:"var(--red)"}} title="Anular" onClick={()=>fpAnular(f)}>✕</button>}
               </td>
             </tr>))}
-            {lista.length===0&&<tr><td colSpan={em?10:11} style={{textAlign:"center",padding:30,color:"var(--t3)"}}>No hay facturas.</td></tr>}
+            {lista.length===0&&<tr><td colSpan={em?11:12} style={{textAlign:"center",padding:30,color:"var(--t3)"}}>No hay facturas.</td></tr>}
           </tbody></table>{pagPie("fpropias",lista.length)}</>
       </div>
 
@@ -9255,6 +9262,8 @@ export default function SistemaCarga(){
     return out;
   };
 
+  const facEmpresaDeWRs=ids=>(hasPerm("ver_factura")||hasPerm("imp_factura"))?facturas.filter(f=>f.status!=="anulada"&&f.status!=="borrador"&&f.tipo!=="nota_credito"&&(f.wrIds||[]).some(id=>ids.includes(id))):[];
+  const facPropiasDeWRs=ids=>hasPerm("ver_fac_propia")?fpList.filter(f=>f.status!=="anulada"&&(f.wrIds||[]).some(id=>ids.includes(id))):[];
   const esPrepaidWR=w=>String(w?.tipoPago||"").toLowerCase().includes("prepa");
   const puedeFacturarWR=w=>hasPerm("crear_factura")||hasPerm("facturar")||(hasPerm("fac_prepaid")&&esPrepaidWR(w));
   const puedeCobrarGeneral=()=>hasPerm("registrar_pago")||hasPerm("cobrar");
