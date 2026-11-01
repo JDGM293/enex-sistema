@@ -946,7 +946,7 @@ const ROLE_DEFS={
 
   E1:{code:"E1",name:"Vendedor / Agente",color:"rE1",icon:<Ico e="💼"/>,
     desc:"Vendedor bajo un agente. Solo sus clientes.",
-    perms:["ver_datos_completos","ver_fac_propia","crear_fac_propia","cobrar_fac_propia","anular_fac_propia","ver_chat","enviar_chat","editar_mensaje","borrar_mensaje","chat_directo","chat_adjuntar","crear_cliente","editar_cliente","crear_wr","ver_wr","ver_booking","imp_wr","imp_factura","ver_estado_cuenta","ver_estado_agente","ver_prealerta","pre_tracking","pre_factura","ver_pickup","solicitar_pickup","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","ver_factura","ver_fotos","subir_foto","dar_acceso","imp_recibo_cobro","imp_pickup","ver_estado_contable","imp_etiq_caja","imp_estado_cuenta","imp_listado_clientes"]},
+    perms:["ver_datos_completos","ver_fac_propia","crear_fac_propia","cobrar_fac_propia","anular_fac_propia","ver_chat","enviar_chat","editar_mensaje","chat_directo","chat_adjuntar","ver_bd_clientes","crear_cliente","editar_cliente","dar_acceso","ver_wr","ver_fotos","ver_alertas","solicitar_reempaque","ver_estado_cuenta","ver_estado_agente","ver_estado_cliente","ver_estado_contable","imp_wr","imp_factura","imp_recibo_cobro","imp_pickup","imp_estado_cuenta","imp_listado_clientes","ver_prealerta","pre_tracking","pre_factura","ver_pickup","solicitar_pickup","calculadora","ver_servicios","ver_adicionales","ver_reportes","ver_factura"]},
 
   F:{code:"F",name:"Autónomo",color:"rF",icon:<Ico e="🧑‍💻"/>,
     desc:"Operador independiente. Gestiona sus propios clientes.",
