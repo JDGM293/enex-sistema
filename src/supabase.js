@@ -628,7 +628,8 @@ export const storageUploadFoto = async (file, wrId, cajaIdx=0) => {
   })
   if (error) { console.error('storageUploadFoto:', error); return null }
   const { data: pub } = supabase.storage.from(FOTOS_BUCKET).getPublicUrl(path)
-  return { path, url: pub?.publicUrl || '' }
+  const { data: sg } = await supabase.storage.from(FOTOS_BUCKET).createSignedUrl(path, 3600)
+  return { path, url: pub?.publicUrl || '', verUrl: sg?.signedUrl || '' }
 }
 
 // Comprobante de un pago (foto o PDF del Zelle / transferencia)
@@ -659,6 +660,22 @@ export const fotoFromDB = (r) => r ? ({
   createdAt: r.created_at ? new Date(r.created_at) : new Date(),
 }) : null
 
+// Los buckets de fotos son privados: se muestran con enlaces temporales
+const firmar = async (bucket, lista) => {
+  const paths = lista.map(f => f.path).filter(Boolean)
+  if (!paths.length) return lista
+  const { data } = await supabase.storage.from(bucket).createSignedUrls(paths, 3600)
+  const m = new Map((data || []).filter(x => x.signedUrl).map(x => [x.path, x.signedUrl]))
+  return lista.map(f => (m.has(f.path) ? { ...f, url: m.get(f.path) } : f))
+}
+// Comprobante de pago guardado como enlace: devuelve un enlace temporal
+export const urlComprobante = async (url) => {
+  const m = String(url || '').match(/\/wr-fotos\/(.+)$/)
+  if (!m) return url
+  const { data } = await supabase.storage.from(FOTOS_BUCKET).createSignedUrl(decodeURIComponent(m[1]), 3600)
+  return data?.signedUrl || url
+}
+
 // Lee todas las fotos de un WR. Retorna array ordenado por cajaIdx asc y createdAt asc.
 export const dbGetFotosByWR = async (wrId) => {
   if (!wrId) return []
@@ -667,7 +684,7 @@ export const dbGetFotosByWR = async (wrId) => {
     .order('caja_idx', {ascending:true})
     .order('created_at', {ascending:true})
   if (error) { console.error('getFotosByWR:', error); return [] }
-  return (data||[]).map(fotoFromDB)
+  return firmar(FOTOS_BUCKET, (data||[]).map(fotoFromDB))
 }
 
 // Inserta una fila en wr_fotos. Retorna la foto creada (con id generado) o null.
@@ -734,7 +751,7 @@ export const dbGetFotosByConsol = async (consolId) => {
     .order('container_idx', {ascending:true})
     .order('created_at', {ascending:true})
   if (error) { console.error('getFotosByConsol:', error); return [] }
-  return (data||[]).map(fotoConsolFromDB)
+  return firmar(CONSOL_FOTOS_BUCKET, (data||[]).map(fotoConsolFromDB))
 }
 
 export const dbInsertFotoConsol = async ({ consolId, containerIdx=0, url, path, filename='', mime='image/jpeg', sizeBytes=0, source='upload', uploadedBy='' }) => {

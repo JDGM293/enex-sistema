@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, Fragment } from "react";
 import { createPortal } from "react-dom";
 import { renderToStaticMarkup } from "react-dom/server";
-import { dbGetPickups, dbUpsertPickup, dbSecuencias } from './supabase'
+import { dbGetPickups, dbUpsertPickup, dbSecuencias, urlComprobante } from './supabase'
 import { descargarXlsx } from './xlsx'
 import { dbGetActividadReporte } from './supabase'
 import { dbGetFacturasPropias, dbUpsertFacturaPropia, dbGetPrealertas, dbUpsertPrealerta, paSubirArchivo, paUrlArchivo } from './supabase'
@@ -9961,7 +9961,7 @@ export default function SistemaCarga(){
                           {x.factura&&["pagada","pagada_parcial"].includes(x.factura.status)&&(hasPerm("crear_factura")||hasPerm("facturar"))&&<button className="btn-s" style={{fontSize:12,padding:"2px 6px",marginLeft:4,color:"var(--cyan)",borderColor:"var(--cyan)"}} title="Cargo adicional" onClick={()=>facCargoAdicional(x.factura)}><Ico e="➕" solo/></button>}
                           {x.nc&&puedeNC&&<button className="btn-s" style={{fontSize:12,padding:"2px 6px",color:"var(--red)",borderColor:"var(--red)"}} title="Anular nota de crédito" onClick={()=>facAnular(x.nc)}>✕</button>}
                           {rid&&<button className="btn-s" style={{fontSize:12,padding:"2px 6px",marginRight:4}} title="Recibo" onClick={()=>setReciboVer(rid)}><Ico e="🧾" solo/></button>}
-                          {comp&&<a href={comp} target="_blank" rel="noreferrer" className="btn-s" style={{fontSize:12,padding:"2px 6px",marginRight:4,textDecoration:"none"}} title="Comprobante"><Ico e="📎" solo/></a>}
+                          {comp&&<a href={comp} onClick={async e=>{e.preventDefault();const u=await urlComprobante(comp);window.open(u,"_blank","noopener");}} target="_blank" rel="noreferrer" className="btn-s" style={{fontSize:12,padding:"2px 6px",marginRight:4,textDecoration:"none"}} title="Comprobante"><Ico e="📎" solo/></a>}
                           {x.pagos&&x.doc!=="Comisión"&&x.doc!=="Reembolso"&&(hasPerm("anular_pago")||hasPerm("cobrar"))&&<button className="btn-s" style={{fontSize:12,padding:"2px 6px",color:"var(--red)",borderColor:"var(--red)"}} title="Anular" onClick={()=>pagoAnularGrupo(x.pagos)}>✕</button>}
                         </td>
                       </tr>);})}
@@ -10326,7 +10326,7 @@ export default function SistemaCarga(){
                       <td style={{fontSize:12}}>{nombreUsr(g.usuario)}</td>
                       <td style={{whiteSpace:"nowrap"}}>
                         {g.pagos[0].reciboId&&<button className="btn-s" style={{fontSize:12,padding:"2px 6px",marginRight:4}} title="Recibo" onClick={()=>setReciboVer(g.pagos[0].reciboId)}><Ico e="🧾" solo/></button>}
-                        {g.comp&&<a href={g.comp} target="_blank" rel="noreferrer" className="btn-s" style={{fontSize:12,padding:"2px 6px",marginRight:4,textDecoration:"none"}}><Ico e="📎" solo/></a>}
+                        {g.comp&&<a href={g.comp} onClick={async e=>{e.preventDefault();const u=await urlComprobante(g.comp);window.open(u,"_blank","noopener");}} target="_blank" rel="noreferrer" className="btn-s" style={{fontSize:12,padding:"2px 6px",marginRight:4,textDecoration:"none"}}><Ico e="📎" solo/></a>}
                         {(hasPerm("anular_pago")||hasPerm("cobrar"))&&<button className="btn-s" style={{fontSize:12,padding:"2px 6px",color:"var(--red)",borderColor:"var(--red)"}} title="Anular" onClick={()=>pagoAnularGrupo(pagos.filter(p=>!p.anulado&&(g.pagos[0].reciboId?p.reciboId===g.pagos[0].reciboId:p.id===g.id)))}>✕</button>}
                       </td>
                     </tr>))}</tbody>
