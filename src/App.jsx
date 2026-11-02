@@ -1978,7 +1978,7 @@ const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomo
           <div className="fg"><div className="fl">Segundo Apellido</div><input className="fi" value={f.segundoApellido} onChange={e=>ff("segundoApellido",e.target.value)} placeholder="Segundo apellido"/></div>
         </div>
         <div className="fgrid g3" style={{marginBottom:10}}>
-          <div className="fg"><div className="fl">ID Identificación *</div>{ocultar&&initial?.cedula&&f.cedula===initial.cedula?<DatoOculto valor={f.cedula} onCambiar={()=>ff("cedula","")}/>:<input className="fi" value={f.cedula} onChange={e=>ff("cedula",e.target.value)} placeholder="V-00000000"/>}</div>
+          <div className="fg"><div className="fl">ID Identificación *</div>{ocultar&&initial?.cedula&&f.cedula===initial.cedula?<DatoOculto valor={f.cedula} onCambiar={()=>ff("cedula","")}/>:<input className="fi" value={f.cedula} onChange={e=>ff("cedula",e.target.value)}/>}</div>
           {f.tipo==="cliente"
             ?<div className="fg"><div className="fl">Casillero (auto)</div><input className="fi" value={f.casillero} onChange={e=>ff("casillero",e.target.value)} placeholder="Se genera automático" style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)"}}/></div>
             :<div className="fg"><div className="fl">Rol del Sistema</div><select className="fs" value={f.rol==="I"?"":(f.rol||"")} onChange={e=>ff("rol",e.target.value)}><option value="">— Selecciona el rol —</option>{ALL_ROLES.filter(r=>r.code!=="I"&&(!rolesOk||rolesOk.includes(r.code)||r.code===initial?.rol)).map(r=><option key={r.code} value={r.code} disabled={!!rolesOk&&!rolesOk.includes(r.code)}>{r.code} — {r.name}</option>)}</select></div>}
@@ -1994,7 +1994,7 @@ const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomo
         </div>}
         <div className="sdiv">DIRECCIÓN COMPLETA</div>
         <div className="fgrid g2" style={{marginBottom:10}}>
-          <div className="fg full"><div className="fl">Dirección *</div><input className="fi" value={f.dir} onChange={e=>ff("dir",e.target.value)} placeholder="Av. Principal, Edif. Centro, Piso 3, Apto 3A"/></div>
+          <div className="fg full"><div className="fl">Dirección *</div><input className="fi" value={f.dir} onChange={e=>ff("dir",e.target.value)}/></div>
           <div className="fg"><div className="fl">Municipio *</div><input className="fi" value={f.municipio} onChange={e=>ff("municipio",e.target.value)}/></div>
           <div className="fg"><div className="fl">Estado / Provincia *</div><input className="fi" value={f.estado} onChange={e=>ff("estado",e.target.value)}/></div>
           <div className="fg"><div className="fl">País *</div><input className="fi" value={f.pais} onChange={e=>ff("pais",e.target.value)}/></div>
@@ -2002,9 +2002,9 @@ const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomo
         </div>
         <div className="sdiv">CONTACTO</div>
         <div className="fgrid g3" style={{marginBottom:10}}>
-          <div className="fg"><div className="fl">Teléfono 1 *</div>{ocultar&&initial?.tel1&&f.tel1===initial.tel1?<DatoOculto valor={f.tel1} onCambiar={()=>ff("tel1","")}/>:<input className="fi" value={f.tel1} onChange={e=>ff("tel1",e.target.value)} placeholder="+58 412 000 0000"/>}</div>
+          <div className="fg"><div className="fl">Teléfono 1 *</div>{ocultar&&initial?.tel1&&f.tel1===initial.tel1?<DatoOculto valor={f.tel1} onCambiar={()=>ff("tel1","")}/>:<input className="fi" value={f.tel1} onChange={e=>ff("tel1",e.target.value)}/>}</div>
           <div className="fg"><div className="fl">Teléfono 2</div>{ocultar&&initial?.tel2&&f.tel2===initial.tel2?<DatoOculto valor={f.tel2} onCambiar={()=>ff("tel2","")}/>:<input className="fi" value={f.tel2} onChange={e=>ff("tel2",e.target.value)}/>}</div>
-          <div className="fg"><div className="fl">Email *</div>{ocultar&&initial?.email&&f.email===initial.email?<DatoOculto valor={f.email} tipo="mail" onCambiar={()=>ff("email","")}/>:<input className="fi" type="email" value={f.email} onChange={e=>ff("email",e.target.value)} placeholder="correo@email.com"/>}</div>
+          <div className="fg"><div className="fl">Email *</div>{ocultar&&initial?.email&&f.email===initial.email?<DatoOculto valor={f.email} tipo="mail" onCambiar={()=>ff("email","")}/>:<input className="fi" type="email" value={f.email} onChange={e=>ff("email",e.target.value)}/>}</div>
         </div>
         {emailErr&&<div style={{background:"#FEE2E2",border:"1px solid #FCA5A5",borderRadius:6,padding:"8px 12px",marginBottom:8,color:"#DC2626",fontSize:14,fontWeight:600}}><Ico e="⚠️" sp/>{emailErr}</div>}
         <div className="mft"><button className="btn-s" onClick={onClose}>Cancelar</button><button className="btn-p" onClick={()=>{
@@ -3736,7 +3736,7 @@ export default function SistemaCarga(){
         {hasPerm("hacer_rp")&&<div style={{display:"grid",gridTemplateColumns:"220px 1fr auto",gap:8,marginBottom:8}}>
           <div className="fg">
             <div className="fl">Carrier / Transportista</div>
-            <input className="fi" value={scanCarrier} onChange={e=>setScanCarrier(e.target.value.toUpperCase())} placeholder="UPS, FEDEX, DHL…" style={{textTransform:"uppercase",fontWeight:600}}/>
+            <input className="fi" value={scanCarrier} onChange={e=>setScanCarrier(e.target.value.toUpperCase())} style={{textTransform:"uppercase",fontWeight:600}}/>
           </div>
           <div className="fg">
             <div className="fl">Tracking — Escanear o escribir</div>
@@ -4227,7 +4227,7 @@ export default function SistemaCarga(){
                 )}
               </div>
               <div className="fg"><div className="fl">Nombre (si no está registrado)</div><input className="fi" value={wrf.consignee} onChange={e=>sw("consignee",e.target.value)} placeholder="Nombre completo"/></div>
-              <div className="fg"><div className="fl">N° Casillero</div><input className="fi" value={wrf.casillero} onChange={e=>sw("casillero",e.target.value)} placeholder="NX-0000" style={{fontFamily:"'DM Mono',monospace",fontWeight:800,fontSize:16,color:"var(--navy)",letterSpacing:1,background:"#EEF3FF",border:"2px solid #B8C8F0"}}/></div>
+              <div className="fg"><div className="fl">N° Casillero</div><input className="fi" value={wrf.casillero} onChange={e=>sw("casillero",e.target.value)} style={{fontFamily:"'DM Mono',monospace",fontWeight:800,fontSize:16,color:"var(--navy)",letterSpacing:1,background:"#EEF3FF",border:"2px solid #B8C8F0"}}/></div>
               <div className="fg"><div className="fl">Sucursal de entrega</div>
                 <select className="fs" value={wrf.sucursalEntrega||""} onChange={e=>sw("sucursalEntrega",e.target.value)}>
                   <option value="">Principal</option>
@@ -4274,7 +4274,7 @@ export default function SistemaCarga(){
         <div style={{background:"#FEF9E7",border:"1px solid #F0C040",borderRadius:8,padding:"10px 14px",marginBottom:14}}>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:8}}>
             <div className="fg"><div className="fl">Chofer</div><input className="fi" value={wrf.chofer} onChange={e=>sw("chofer",e.target.value)}/></div>
-            <div className="fg"><div className="fl">ID Chofer</div><input className="fi" value={wrf.idChofer} onChange={e=>sw("idChofer",e.target.value)} placeholder="V-00000000"/></div>
+            <div className="fg"><div className="fl">ID Chofer</div><input className="fi" value={wrf.idChofer} onChange={e=>sw("idChofer",e.target.value)}/></div>
             <div className="fg"><div className="fl">PRO Number</div><input className="fi" value={wrf.proNumber} onChange={e=>sw("proNumber",e.target.value)}/></div>
             <div className="fg"><div className="fl">OC Number</div><input className="fi" value={wrf.ocNumber||""} onChange={e=>sw("ocNumber",e.target.value)}/></div>
           </div>
@@ -4327,7 +4327,7 @@ export default function SistemaCarga(){
                           {/* Transportista */}
                           <div>
                             <div className="fl" style={{marginBottom:2,fontSize:10}}>Transp. {ti+1}{ti>0?" (opc.)":""}</div>
-                            <input className="fi" style={{padding:"4px 6px",fontSize:12,textTransform:"uppercase",fontWeight:600}} value={caja[cfield]||""} onChange={e=>swCaja(idx,cfield,e.target.value.toUpperCase())} placeholder={ti===0?"UPS, FEDEX…":"Opcional"}/>
+                            <input className="fi" style={{padding:"4px 6px",fontSize:12,textTransform:"uppercase",fontWeight:600}} value={caja[cfield]||""} onChange={e=>swCaja(idx,cfield,e.target.value.toUpperCase())} placeholder={ti===0?"":"Opcional"}/>
                           </div>
                           {/* Tracking */}
                           <div>
@@ -4345,7 +4345,7 @@ export default function SistemaCarga(){
                 {/* Proveedor + Factura + Monto */}
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:10}}>
                   <div className="fg"><div className="fl">Proveedor</div><input className="fi" value={caja.proveedor} onChange={e=>swCaja(idx,"proveedor",e.target.value.toUpperCase())} style={{textTransform:"uppercase",fontWeight:600}}/></div>
-                  <div className="fg"><div className="fl">N° Factura</div><input className="fi" value={caja.numFactura} onChange={e=>swCaja(idx,"numFactura",e.target.value.toUpperCase())} placeholder="INV-00000"/></div>
+                  <div className="fg"><div className="fl">N° Factura</div><input className="fi" value={caja.numFactura} onChange={e=>swCaja(idx,"numFactura",e.target.value.toUpperCase())}/></div>
                   <div className="fg"><div className="fl">Monto ($)</div><input className="fi" type="number" value={caja.montoFactura} onChange={e=>swCaja(idx,"montoFactura",e.target.value)}/></div>
                 </div>
 
@@ -4357,7 +4357,7 @@ export default function SistemaCarga(){
                   </div>
                   <div className="fg">
                     <div className="fl">Embalaje</div>
-                    <input className="fi" value={caja.tipoEmbalaje} onChange={e=>swCaja(idx,"tipoEmbalaje",e.target.value.toUpperCase())} placeholder="Ej: Caja, Paleta…" style={{fontSize:13}}/>
+                    <input className="fi" value={caja.tipoEmbalaje} onChange={e=>swCaja(idx,"tipoEmbalaje",e.target.value.toUpperCase())} style={{fontSize:13}}/>
                   </div>
                   <div className="fg"><div className="fl">Largo</div><input className="fi" type="number" value={caja.largo} onChange={e=>swCaja(idx,"largo",e.target.value)}/></div>
                   <div className="fg"><div className="fl">Ancho</div><input className="fi" type="number" value={caja.ancho} onChange={e=>swCaja(idx,"ancho",e.target.value)}/></div>
@@ -4371,7 +4371,7 @@ export default function SistemaCarga(){
                 {/* Descripción */}
                 <div className="fg">
                   <div className="fl">Descripción de la Mercancía</div>
-                  <textarea className="fi" value={caja.descripcion} onChange={e=>swCaja(idx,"descripcion",e.target.value.toUpperCase())} placeholder="Descripción detallada de la mercancía: tipo de producto, materiales, uso, etc." rows={3} style={{resize:"vertical",minHeight:64,fontFamily:"inherit",fontSize:14,lineHeight:1.5}}/>
+                  <textarea className="fi" value={caja.descripcion} onChange={e=>swCaja(idx,"descripcion",e.target.value.toUpperCase())} rows={3} style={{resize:"vertical",minHeight:64,fontFamily:"inherit",fontSize:14,lineHeight:1.5}}/>
                 </div>
 
                 {/* FOTOS DEL PAQUETE (por caja) */}
@@ -4441,7 +4441,7 @@ export default function SistemaCarga(){
         {/* NOTAS Y CARGOS */}
         <div className="sdiv">NOTAS, SERVICIOS Y GASTOS ADICIONALES</div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:4}}>
-          <div className="fg"><div className="fl">Notas y Observaciones</div><textarea className="ft" value={wrf.notas} onChange={e=>sw("notas",e.target.value)} placeholder="Frágil, NO VOLTEAR, manejo especial…"/></div>
+          <div className="fg"><div className="fl">Notas y Observaciones</div><textarea className="ft" value={wrf.notas} onChange={e=>sw("notas",e.target.value)}/></div>
           <div className="fg">
             {[{t:"Servicios adicionales",l:SERVICIOS_CAT},{t:"Gastos adicionales",l:GASTOS_CAT}].map(g=>(
               <div key={g.t} style={{marginBottom:8}}>
@@ -5914,15 +5914,15 @@ export default function SistemaCarga(){
               </div>
               <div className="fg">
                 <div className="fl">N° Vuelo / Barco</div>
-                <input className="fi" value={cf.numVuelo} onChange={e=>sc2("numVuelo",e.target.value)} placeholder="AA1234 / V-OCEANIA"/>
+                <input className="fi" value={cf.numVuelo} onChange={e=>sc2("numVuelo",e.target.value)}/>
               </div>
               <div className="fg">
                 <div className="fl">AWB (Guía Aérea)</div>
-                <input className="fi" style={{fontFamily:"'DM Mono',monospace"}} value={cf.awb} onChange={e=>sc2("awb",e.target.value)} placeholder="000-12345678"/>
+                <input className="fi" style={{fontFamily:"'DM Mono',monospace"}} value={cf.awb} onChange={e=>sc2("awb",e.target.value)}/>
               </div>
               <div className="fg">
                 <div className="fl">BL (Conocimiento Embarque)</div>
-                <input className="fi" style={{fontFamily:"'DM Mono',monospace"}} value={cf.bl} onChange={e=>sc2("bl",e.target.value)} placeholder="ABCD1234567"/>
+                <input className="fi" style={{fontFamily:"'DM Mono',monospace"}} value={cf.bl} onChange={e=>sc2("bl",e.target.value)}/>
               </div>
               <div className="fg" style={{gridColumn:"span 2"}}>
                 <div className="fl">Notas</div>
@@ -6028,7 +6028,7 @@ export default function SistemaCarga(){
                       <div className="fg"><div className="fl">Ft³ <Ico e="🔄"/></div><div className="fi ro" style={{color:"var(--sky)",fontWeight:600}}>
                         {cont.largo&&cont.ancho&&cont.alto?parseFloat(((parseFloat(cont.largo)*parseFloat(cont.ancho)*parseFloat(cont.alto))/1728).toFixed(2)):"—"}
                       </div></div>
-                      <div className="fg"><div className="fl">N° Sello / Precinto</div><input className="fi" style={{fontFamily:"'DM Mono',monospace",fontWeight:700}} value={cont.sello} onChange={e=>scCont(ci,"sello",e.target.value)} placeholder="SL-000000"/></div>
+                      <div className="fg"><div className="fl">N° Sello / Precinto</div><input className="fi" style={{fontFamily:"'DM Mono',monospace",fontWeight:700}} value={cont.sello} onChange={e=>scCont(ci,"sello",e.target.value)}/></div>
                     </div>
 
                     {/* Escáner de WR — autoFocus */}
@@ -7018,7 +7018,7 @@ export default function SistemaCarga(){
           <button className="btn-p" onClick={guardar}><Ico e="💾" sp/>Guardar</button>
         </div>
         {paso(1,"Nombre",<div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"center"}}>
-          <input className="fi" style={{flex:1,minWidth:260,fontSize:15}} placeholder="Ej: Manifiesto Venezuela aéreo" value={d.nombre||""} onChange={e=>setD({nombre:e.target.value})}/>
+          <input className="fi" style={{flex:1,minWidth:260,fontSize:15}} value={d.nombre||""} onChange={e=>setD({nombre:e.target.value})}/>
           {seg([[true,"Para todos"],[false,"Solo para mí"]],d.compartido!==false,v=>setD({compartido:v}))}</div>)}
         {["A","B"].includes(currentUser.rol)&&d.compartido!==false&&paso("·","Autorizado también para",<div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
           {ALL_ROLES.filter(r=>!["A","B","C"].includes(r.code)).map(r=>{const on=(d.roles||[]).includes(r.code);return(
@@ -7198,7 +7198,7 @@ export default function SistemaCarga(){
           </div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
             <div className="fg" style={{gridColumn:"1/-1"}}><div className="fl">Tracking *</div><input className="fi" style={{fontFamily:"'DM Mono',monospace",fontSize:16,letterSpacing:1}} value={m.tracking} onChange={e=>set({tracking:e.target.value.toUpperCase()})}/></div>
-            <div className="fg"><div className="fl">Carrier</div><input className="fi" value={m.carrier} placeholder="UPS, FEDEX, USPS, AMAZON…" onChange={e=>set({carrier:e.target.value.toUpperCase()})}/></div>
+            <div className="fg"><div className="fl">Carrier</div><input className="fi" value={m.carrier} onChange={e=>set({carrier:e.target.value.toUpperCase()})}/></div>
             <div className="fg"><div className="fl">Tienda</div><input className="fi" value={m.tienda} onChange={e=>set({tienda:e.target.value.toUpperCase()})}/></div>
             <div className="fg" style={{gridColumn:"1/-1"}}><div className="fl">Contenido</div><input className="fi" value={m.descripcion} onChange={e=>set({descripcion:e.target.value.toUpperCase()})}/></div>
             <div className="fg"><div className="fl">Valor de la compra</div><div style={{display:"flex",gap:6}}><input className="fi" type="number" value={m.valor} onChange={e=>set({valor:e.target.value})}/>
@@ -7366,7 +7366,7 @@ export default function SistemaCarga(){
                 <tr key={i}>
                   <td>{l.tipo==="flete"?<><Num t="wr" id={l.wrId}/> <span style={{color:"var(--t3)",fontSize:13}}>flete</span></>:<input className="fi" value={l.descripcion} placeholder="Concepto del cobro" onChange={e=>setL(i,{descripcion:e.target.value.toUpperCase()})}/>}</td>
                   <td><div style={{display:"flex",alignItems:"center",gap:4}}><input className="fi" type="number" value={l.cantidad} onChange={e=>setL(i,{cantidad:e.target.value})}/>{l.unidad&&<span style={{fontSize:13,color:"var(--t3)"}}>{UL[l.unidad]}</span>}</div></td>
-                  <td><input className="fi" type="number" value={l.precio} placeholder="0.00" onChange={e=>setL(i,{precio:e.target.value})}/></td>
+                  <td><input className="fi" type="number" value={l.precio} onChange={e=>setL(i,{precio:e.target.value})}/></td>
                   <td style={{textAlign:"right",fontFamily:"'DM Mono',monospace",fontWeight:700}}>{fmtMoney((parseFloat(l.cantidad)||0)*(parseFloat(l.precio)||0),m.moneda)}</td>
                   <td>{l.tipo!=="flete"&&<span className="ic-b" style={{color:"var(--red)"}} onClick={()=>set({lineas:m.lineas.filter((_,j)=>j!==i)})}><Ico e="🗑" solo/></span>}</td>
                 </tr>))}</tbody>
@@ -7477,7 +7477,7 @@ export default function SistemaCarga(){
                 </div>
                 <div style={{flex:1,minWidth:260}}>
                   <div className="fg" style={{marginBottom:10}}><div className="fl">Nombre de la empresa *</div><input className="fi" value={m.nombre} onChange={e=>set({nombre:e.target.value.toUpperCase()})}/></div>
-                  <div className="fg" style={{marginBottom:10}}><div className="fl">Subtítulo</div><input className="fi" style={{textTransform:"none"}} value={m.subtitulo} placeholder="International Courier" onChange={e=>set({subtitulo:e.target.value})}/></div>
+                  <div className="fg" style={{marginBottom:10}}><div className="fl">Subtítulo</div><input className="fi" style={{textTransform:"none"}} value={m.subtitulo} onChange={e=>set({subtitulo:e.target.value})}/></div>
                   <div className="fg" style={{marginBottom:10,maxWidth:160}}><div className="fl">Iniciales (sin logo)</div><input className="fi" maxLength={4} value={m.iniciales} onChange={e=>set({iniciales:e.target.value.toUpperCase()})}/></div>
                 </div>
               </div>
@@ -7603,7 +7603,7 @@ export default function SistemaCarga(){
           <ListEditor title="Tipos de Envío" items={SEND_TYPES}
             onAdd={v=>{const n=[...SEND_TYPES,v];setSendTypes(n);dbSetConfig('send_types',n);}}
             onDelete={currentUser.rol!=="A"?undefined:i=>{const n=SEND_TYPES.filter((_,j)=>j!==i);setSendTypes(n);dbSetConfig('send_types',n);}}
-            placeholder="Ej: Aéreo Premium, Courier…"/>
+           />
         )}
         {cfgTab==="tipoenvio"&&(()=>{
           const D=calcDraft||calcEnvio;const set=(t,x)=>setCalcDraft({...D,[t]:{...CALC_DEF,...(D[t]||{}),...x}});
@@ -7656,13 +7656,13 @@ export default function SistemaCarga(){
 
         {/* ── SERVICIOS ADICIONALES ── */}
         {cfgTab==="servicios"&&(
-          <PriceListEditor title="Servicios Adicionales" items={SERVICIOS_CAT} placeholder="Ej: Embalaje especial, Custodia…"
+          <PriceListEditor title="Servicios Adicionales" items={SERVICIOS_CAT}
             onSave={n=>{setServiciosCat(n);dbSetConfig('servicios_cat',n);}}/>
         )}
 
         {/* ── GASTOS ADICIONALES ── */}
         {cfgTab==="cargos"&&(
-          <PriceListEditor title="Gastos Adicionales" items={GASTOS_CAT} placeholder="Ej: Recargo combustible, Seguro…"
+          <PriceListEditor title="Gastos Adicionales" items={GASTOS_CAT}
             onSave={n=>{setGastosCat(n);dbSetConfig('gastos_cat',n);}}/>
         )}
 
@@ -7671,7 +7671,7 @@ export default function SistemaCarga(){
           <ListEditor title="Tipos de Pago" items={PAY_TYPES}
             onAdd={v=>{const n=[...PAY_TYPES,v];setPayTypes(n);dbSetConfig('pay_types',n);}}
             onDelete={currentUser.rol!=="A"?undefined:i=>{const n=PAY_TYPES.filter((_,j)=>j!==i);setPayTypes(n);dbSetConfig('pay_types',n);}}
-            placeholder="Ej: Zelle, Pago Móvil, Transferencia…"/>
+           />
         )}
 
         {/* ── TIPOS DE CONTENEDOR ── */}
@@ -7680,9 +7680,9 @@ export default function SistemaCarga(){
             <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:15,fontWeight:700,color:"var(--navy)",marginBottom:12}}><Ico e="📦" sp/>Tipos de Contenedor</div>
             {/* Agregar / Editar */}
             <div style={{display:"grid",gridTemplateColumns:"100px 1fr 1fr 120px auto",gap:8,marginBottom:12,alignItems:"flex-end"}}>
-              <div className="fg"><div className="fl">Código</div><input className="fi" style={{fontFamily:"'DM Mono',monospace",fontWeight:700}} value={cfgNewCont.code} onChange={e=>setCfgNewCont(p=>({...p,code:e.target.value.toUpperCase()}))} placeholder="EH"/></div>
-              <div className="fg"><div className="fl">Nombre</div><input className="fi" value={cfgNewCont.name} onChange={e=>setCfgNewCont(p=>({...p,name:e.target.value.toUpperCase()}))} placeholder="EH — EXTRA HIGH"/></div>
-              <div className="fg"><div className="fl">Dimensiones</div><input className="fi" value={cfgNewCont.dim} onChange={e=>setCfgNewCont(p=>({...p,dim:e.target.value.toUpperCase()}))} placeholder="88×56×60 IN"/></div>
+              <div className="fg"><div className="fl">Código</div><input className="fi" style={{fontFamily:"'DM Mono',monospace",fontWeight:700}} value={cfgNewCont.code} onChange={e=>setCfgNewCont(p=>({...p,code:e.target.value.toUpperCase()}))}/></div>
+              <div className="fg"><div className="fl">Nombre</div><input className="fi" value={cfgNewCont.name} onChange={e=>setCfgNewCont(p=>({...p,name:e.target.value.toUpperCase()}))}/></div>
+              <div className="fg"><div className="fl">Dimensiones</div><input className="fi" value={cfgNewCont.dim} onChange={e=>setCfgNewCont(p=>({...p,dim:e.target.value.toUpperCase()}))}/></div>
               <div className="fg"><div className="fl">Máx. lb</div><input className="fi" type="number" value={cfgNewCont.maxLb} onChange={e=>setCfgNewCont(p=>({...p,maxLb:e.target.value}))}/></div>
               <div style={{display:"flex",gap:6,alignSelf:"flex-end"}}>
                 <button className="btn-p" style={{padding:"8px 14px"}} onClick={()=>{
@@ -7731,8 +7731,8 @@ export default function SistemaCarga(){
               {/* Agregar país */}
               <div style={{padding:"10px 12px",borderBottom:"1px solid var(--b1)"}}>
                 <div style={{display:"grid",gridTemplateColumns:"60px 1fr auto",gap:6,alignItems:"flex-end"}}>
-                  <div className="fg"><div className="fl" style={{fontSize:11}}>Código</div><input className="fi" style={{fontFamily:"'DM Mono',monospace",fontSize:13}} value={cfgNewPais.dial} onChange={e=>setCfgNewPais(p=>({...p,dial:e.target.value}))} placeholder="57"/></div>
-                  <div className="fg"><div className="fl" style={{fontSize:11}}>País + Bandera</div><input className="fi" style={{fontSize:13}} value={cfgNewPais.name} onChange={e=>setCfgNewPais(p=>({...p,name:e.target.value}))} placeholder="Colombia 🇨🇴"/></div>
+                  <div className="fg"><div className="fl" style={{fontSize:11}}>Código</div><input className="fi" style={{fontFamily:"'DM Mono',monospace",fontSize:13}} value={cfgNewPais.dial} onChange={e=>setCfgNewPais(p=>({...p,dial:e.target.value}))}/></div>
+                  <div className="fg"><div className="fl" style={{fontSize:11}}>País + Bandera</div><input className="fi" style={{fontSize:13}} value={cfgNewPais.name} onChange={e=>setCfgNewPais(p=>({...p,name:e.target.value.toUpperCase()}))}/></div>
                   <button className="btn-p" style={{padding:"6px 10px",fontSize:13,alignSelf:"flex-end"}} onClick={()=>{
                     if(cfgNewPais.dial&&cfgNewPais.name){
                       const n=[...COUNTRIES,{dial:cfgNewPais.dial,name:cfgNewPais.name,cities:[]}];
@@ -7767,7 +7767,7 @@ export default function SistemaCarga(){
                 const guardar=()=>dbSetConfig('countries',COUNTRIES);
                 return <div style={{padding:"10px 12px",borderBottom:"1px solid var(--b1)"}}>
                   <div className="fgrid g2">
-                    <div className="fg"><div className="fl">Código de país</div><input className="fi" maxLength={3} style={{fontFamily:"'DM Mono',monospace",fontWeight:700}} value={co.iso||""} placeholder="VE"
+                    <div className="fg"><div className="fl">Código de país</div><input className="fi" maxLength={3} style={{fontFamily:"'DM Mono',monospace",fontWeight:700}} value={co.iso||""}
                       onChange={e=>setCo({iso:e.target.value.toUpperCase().replace(/[^A-Z]/g,"")})}
                       onBlur={()=>{const iso=String(co.iso||"");if(iso&&COUNTRIES.some((c,i)=>i!==cfgSelPais&&String(c.iso||"")===iso)){window.alert(`El código ${iso} ya lo usa otro país.`);setCo({iso:""});return;}guardar();}}/></div>
                     <div className="fg"><div className="fl">Moneda</div><select className="fs" value={co.moneda||""} onChange={e=>{const n=COUNTRIES.map((c,i)=>i===cfgSelPais?{...c,moneda:e.target.value}:c);setCountries(n);dbSetConfig('countries',n);}}>
@@ -7781,8 +7781,8 @@ export default function SistemaCarga(){
                 <>
                   <div style={{padding:"10px 12px",borderBottom:"1px solid var(--b1)"}}>
                     <div style={{display:"grid",gridTemplateColumns:"80px 1fr auto",gap:6,alignItems:"flex-end"}}>
-                      <div className="fg"><div className="fl" style={{fontSize:11}}>Código</div><input className="fi" style={{fontFamily:"'DM Mono',monospace",fontWeight:700}} value={cfgNewCity.code} onChange={e=>setCfgNewCity(p=>({...p,code:e.target.value.toUpperCase()}))} placeholder="MED"/></div>
-                      <div className="fg"><div className="fl" style={{fontSize:11}}>Nombre Ciudad</div><input className="fi" value={cfgNewCity.name} onChange={e=>setCfgNewCity(p=>({...p,name:e.target.value}))} placeholder="Medellín"/></div>
+                      <div className="fg"><div className="fl" style={{fontSize:11}}>Código</div><input className="fi" style={{fontFamily:"'DM Mono',monospace",fontWeight:700}} value={cfgNewCity.code} onChange={e=>setCfgNewCity(p=>({...p,code:e.target.value.toUpperCase()}))}/></div>
+                      <div className="fg"><div className="fl" style={{fontSize:11}}>Nombre Ciudad</div><input className="fi" value={cfgNewCity.name} onChange={e=>setCfgNewCity(p=>({...p,name:e.target.value.toUpperCase()}))}/></div>
                       <button className="btn-p" style={{padding:"6px 12px",alignSelf:"flex-end"}} onClick={()=>{
                         if(cfgNewCity.code&&cfgNewCity.name){
                           const n=COUNTRIES.map((c,i)=>i===cfgSelPais?{...c,cities:[...c.cities,{code:cfgNewCity.code,name:cfgNewCity.name}]}:c);
@@ -7964,7 +7964,7 @@ export default function SistemaCarga(){
                 <div className="modal msm" onClick={e=>e.stopPropagation()}>
                   <div className="mhd"><div className="mt">{editOficina?"Editar Oficina":"Nueva Oficina"}</div><button className="mcl" onClick={()=>{setShowNewOficina(false);setEditOficina(null);}}>✕</button></div>
                   <div className="fgrid g2" style={{marginBottom:10}}>
-                    <div className="fg full"><div className="fl">Nombre de la Oficina *</div><input className="fi" value={ofForm.nombre} onChange={e=>setOfForm(p=>({...p,nombre:e.target.value.toUpperCase()}))} placeholder="Ej: Oficina Valencia"/></div>
+                    <div className="fg full"><div className="fl">Nombre de la Oficina *</div><input className="fi" value={ofForm.nombre} onChange={e=>setOfForm(p=>({...p,nombre:e.target.value.toUpperCase()}))}/></div>
                     {(()=>{const esA=currentUser.rol==="A";const bloqueado=!esA&&editOficina&&esMatriz(editOficina);
                       return <div className="fg full">
                       <div className="fl">Tipo de Oficina *</div>
@@ -8837,7 +8837,7 @@ export default function SistemaCarga(){
                   <div className="sdiv" style={{marginTop:0}}>CONFIRMAR</div>
                   <div className="fgrid" style={{gap:8,alignItems:"end",gridTemplateColumns:"150px 1fr 1fr 110px 90px"}}>
                     <div className="fg"><div className="fl">Fecha programada</div><input className="fi" type="date" value={puConf.fecha} onChange={e=>setPuConf(x=>({...x,fecha:e.target.value}))}/></div>
-                    <div className="fg"><div className="fl">Empresa / carrier</div><input className="fi" value={puConf.transportista} placeholder="Propio o subcontratado" onChange={e=>setPuConf(x=>({...x,transportista:e.target.value.toUpperCase()}))}/></div>
+                    <div className="fg"><div className="fl">Empresa / carrier</div><input className="fi" value={puConf.transportista} onChange={e=>setPuConf(x=>({...x,transportista:e.target.value.toUpperCase()}))}/></div>
                     <div className="fg"><div className="fl">Chofer</div><input className="fi" value={puConf.chofer} onChange={e=>setPuConf(x=>({...x,chofer:e.target.value.toUpperCase()}))}/></div>
                     <div className="fg"><div className="fl">Cargo pick-up</div><input className="fi" type="number" step="0.01" min="0" value={puConf.monto} onChange={e=>setPuConf(x=>({...x,monto:e.target.value}))}/></div>
                     <div className="fg"><div className="fl">Moneda</div><select className="fs" value={puConf.moneda} onChange={e=>setPuConf(x=>({...x,moneda:e.target.value}))}><option>USD</option><option>EUR</option></select></div>
@@ -12652,7 +12652,7 @@ export default function SistemaCarga(){
               <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1fr auto",gap:8,alignItems:"end"}}>
                 <div>
                   <div style={{fontSize:11,color:"var(--t3)",fontWeight:600,marginBottom:3}}>Buscar (N° guía o destino)</div>
-                  <input className="fi" placeholder="Ej: GUI-2026-001 / Caracas…" value={rdArchSearch} onChange={e=>setRdArchSearch(e.target.value)} style={{fontSize:14,padding:"7px 10px",width:"100%"}}/>
+                  <input className="fi" value={rdArchSearch} onChange={e=>setRdArchSearch(e.target.value)} style={{fontSize:14,padding:"7px 10px",width:"100%"}}/>
                 </div>
                 <div>
                   <div style={{fontSize:11,color:"var(--t3)",fontWeight:600,marginBottom:3}}>Tipo de envío</div>
@@ -12852,7 +12852,7 @@ export default function SistemaCarga(){
               {pideCli&&<div className="fg"><div className="fl">Pagado al cliente (USD) *</div><input className="fi" type="number" min="0" step="0.01" value={alForm.montoCliente} onChange={e=>setAlForm(p=>({...p,montoCliente:e.target.value}))}/></div>}
               {pideTr&&<div className="fg"><div className="fl">Recuperado del transportista (USD){accion==="recobro"?" *":""}</div><input className="fi" type="number" min="0" step="0.01" value={alForm.montoTransportista} onChange={e=>setAlForm(p=>({...p,montoTransportista:e.target.value}))}/></div>}
               {pideTr&&<div className="fg"><div className="fl">Transportista / N° de reclamo</div><input className="fi" value={alForm.referencia} onChange={e=>setAlForm(p=>({...p,referencia:e.target.value}))}/></div>}
-              <div className="fg"><div className="fl">Nota{notaObl?" *":""}</div><textarea className="fi" rows={3} value={alForm.nota} onChange={e=>setAlForm(p=>({...p,nota:e.target.value}))} placeholder={accion==="investigar"?"Seguro, causante, cláusula $100, otro…":""}/></div>
+              <div className="fg"><div className="fl">Nota{notaObl?" *":""}</div><textarea className="fi" rows={3} value={alForm.nota} onChange={e=>setAlForm(p=>({...p,nota:e.target.value}))} /></div>
             </div>
             <div className="mft">
               <button className="btn-s" onClick={()=>setAlModal(null)}>Cancelar</button>
@@ -13652,7 +13652,7 @@ export default function SistemaCarga(){
                 )}
                 <div className="fg" style={{marginBottom:6}}>
                   <div className="fl">Motivo del override *</div>
-                  <textarea className="fi" rows={3} placeholder="Ej: WR quedó atrapado en Almacén tras cierre fallido de guía; movido manualmente a Por Entrega."
+                  <textarea className="fi" rows={3}
                     value={m.motivo} onChange={e=>setOverrideModal(p=>({...p,motivo:e.target.value}))}
                     style={{resize:"vertical",minHeight:64,fontFamily:"inherit",fontSize:14,lineHeight:1.5}}/>
                 </div>
@@ -13679,7 +13679,7 @@ export default function SistemaCarga(){
               <div style={{padding:"8px 16px 0",display:"grid",gap:10}}>
                 <div className="fg">
                   <div className="fl">Nombre del receptor *</div>
-                  <input className="fi" value={f.nombre} onChange={e=>setCrIndivModal(p=>({...p,nombre:e.target.value.toUpperCase()}))} placeholder="Ej: JUAN PÉREZ" style={{textTransform:"uppercase",fontWeight:600}} autoFocus/>
+                  <input className="fi" value={f.nombre} onChange={e=>setCrIndivModal(p=>({...p,nombre:e.target.value.toUpperCase()}))} style={{textTransform:"uppercase",fontWeight:600}} autoFocus/>
                 </div>
                 <div className="fg">
                   <div className="fl">ID Identificación *</div>
@@ -13687,7 +13687,7 @@ export default function SistemaCarga(){
                 </div>
                 <div className="fg">
                   <div className="fl">Empresa</div>
-                  <input className="fi" value={f.empresa} onChange={e=>setCrIndivModal(p=>({...p,empresa:e.target.value.toUpperCase()}))} placeholder="Ej: TRANSPORTES XYZ" style={{textTransform:"uppercase"}}/>
+                  <input className="fi" value={f.empresa} onChange={e=>setCrIndivModal(p=>({...p,empresa:e.target.value.toUpperCase()}))} style={{textTransform:"uppercase"}}/>
                 </div>
                 <div className="fg">
                   <div className="fl">Notas</div>
@@ -14178,13 +14178,13 @@ export default function SistemaCarga(){
                     <datalist id="cr-agentes">{agentesCarga.map(a=>(<option key={a.id||a.nombre} value={a.nombre||a.name||""}/>))}</datalist>
                   </div>
                   <div><div style={{fontSize:12,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Contacto (persona)</div>
-                    <input className="fi" value={f.contacto} onChange={e=>setCrModal(p=>({...p,contacto:e.target.value}))} placeholder="Ej: Luis Pérez · 0414-1234567"/>
+                    <input className="fi" value={f.contacto} onChange={e=>setCrModal(p=>({...p,contacto:e.target.value}))}/>
                   </div>
                   <div><div style={{fontSize:12,fontWeight:700,color:"var(--t2)",marginBottom:4}}>ID Identificación</div>
                     <input className="fi" value={f.documento} onChange={e=>setCrModal(p=>({...p,documento:e.target.value}))} placeholder="Nº de identificación"/>
                   </div>
                   <div><div style={{fontSize:12,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Vehículo (placa/modelo)</div>
-                    <input className="fi" value={f.vehiculo} onChange={e=>setCrModal(p=>({...p,vehiculo:e.target.value}))} placeholder="AB1234 · Ford 350"/>
+                    <input className="fi" value={f.vehiculo} onChange={e=>setCrModal(p=>({...p,vehiculo:e.target.value}))}/>
                   </div>
                 </div>
                 <div style={{marginBottom:12}}>
@@ -14609,7 +14609,7 @@ export default function SistemaCarga(){
                         {ocCampo(f.receptorDocumento,"",null,()=>setDnModal(p=>({...p,receptorDocumento:""})))||<input className="fi" value={f.receptorDocumento} onChange={e=>setDnModal(p=>({...p,receptorDocumento:e.target.value}))} placeholder="Nº de identificación"/>}
                       </div>
                       <div><div style={{fontSize:11,fontWeight:600,color:"var(--t2)",marginBottom:2}}>Teléfono</div>
-                        {ocCampo(f.receptorTelefono,"",null,()=>setDnModal(p=>({...p,receptorTelefono:""})))||<input className="fi" value={f.receptorTelefono} onChange={e=>setDnModal(p=>({...p,receptorTelefono:e.target.value}))} placeholder="0414-1234567"/>}
+                        {ocCampo(f.receptorTelefono,"",null,()=>setDnModal(p=>({...p,receptorTelefono:""})))||<input className="fi" value={f.receptorTelefono} onChange={e=>setDnModal(p=>({...p,receptorTelefono:e.target.value}))}/>}
                       </div>
                       <div><div style={{fontSize:11,fontWeight:600,color:"var(--t2)",marginBottom:2}}>Método de entrega</div>
                         <select className="fs" value={f.metodoEntrega} onChange={e=>setDnModal(p=>({...p,metodoEntrega:e.target.value}))} style={{width:"100%"}}>
@@ -14620,12 +14620,12 @@ export default function SistemaCarga(){
                       </div>
                       {f.metodoEntrega==="transportista"&&(
                         <div><div style={{fontSize:11,fontWeight:600,color:"var(--t2)",marginBottom:2}}>Transportista</div>
-                          <input className="fi" value={f.transportista} onChange={e=>setDnModal(p=>({...p,transportista:e.target.value}))} placeholder="MRW, Zoom…"/>
+                          <input className="fi" value={f.transportista} onChange={e=>setDnModal(p=>({...p,transportista:e.target.value}))}/>
                         </div>
                       )}
                       <div style={{gridColumn:"1/-1"}}>
                         <div style={{fontSize:11,fontWeight:600,color:"var(--t2)",marginBottom:2}}>Dirección de entrega</div>
-                        <input className="fi" value={f.direccionEntrega} onChange={e=>setDnModal(p=>({...p,direccionEntrega:e.target.value}))} placeholder="Av. Principal, Edif X — Municipio, Estado"/>
+                        <input className="fi" value={f.direccionEntrega} onChange={e=>setDnModal(p=>({...p,direccionEntrega:e.target.value}))}/>
                       </div>
                       <div style={{gridColumn:"1/-1"}}>
                         <div style={{fontSize:11,fontWeight:600,color:"var(--t2)",marginBottom:2}}>Notas</div>
@@ -15033,7 +15033,7 @@ export default function SistemaCarga(){
                 </div>
                 <div style={{marginBottom:10}}>
                   <label className="fl">Referencia</label>
-                  <input className="fi" value={p.referencia} onChange={e=>setPagoModal(x=>({...x,referencia:e.target.value}))} placeholder="Nº confirmación, últimos 4 dígitos, etc."/>
+                  <input className="fi" value={p.referencia} onChange={e=>setPagoModal(x=>({...x,referencia:e.target.value}))}/>
                 </div>
                 <div>
                   <label className="fl">Nota referencial</label>
@@ -15078,7 +15078,7 @@ export default function SistemaCarga(){
                   </div>);})()}
                 <div style={{marginBottom:10}}>
                   <label className="fl">Motivo</label>
-                  <input className="fi" value={ncModal.motivo} onChange={e=>setNcModal(x=>({...x,motivo:e.target.value}))} placeholder="Ej: Descuento por retraso, devolución parcial…"/>
+                  <input className="fi" value={ncModal.motivo} onChange={e=>setNcModal(x=>({...x,motivo:e.target.value}))}/>
                 </div>
                 <div>
                   <label className="fl">Notas internas</label>
