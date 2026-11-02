@@ -1767,7 +1767,7 @@ const emptyCaja=()=>({
 // elemento del listado es el que predetermina cada Nuevo WR. Si no hay nada
 // configurado (caso límite), queda vacío y el select queda en el primer option.
 const emptyWRF=(defaultTipoPago="")=>({
-  consignee:"",casilleroSearch:"",casillero:"",clienteId:"",sucursalEntrega:"",
+  consignee:"",casilleroSearch:"",casillero:"",clienteId:"",sucursalEntrega:"",destPais:"",
   remitente:"",remitenteDir:"",remitenteTel:"",remitenteEmail:"",remitenteDoc:"",remitenteId:"",
   chofer:"",idChofer:"",proNumber:"",ocNumber:"",
   tipoPago:defaultTipoPago,tipoEnvio:"",
@@ -2625,6 +2625,12 @@ export default function SistemaCarga(){
   const ofiActiva=o=>o&&o.activo!==false;
   const matrizDe=o=>!o?null:esMatriz(o)?o:(oficinas.find(x=>x.id===o.matriz_id)||null);
   const matricesDePais=(co,todas=false)=>oficinas.filter(o=>esMatriz(o)&&(todas||ofiActiva(o))&&paisDeOfi(o)===co);
+  const paisPorNombre=v=>{const n=sinAcentos(String(v||"").replace(/[^\p{L}\s]/gu,""));return n?COUNTRIES.find(co=>nomPaisCo(co)===n)||null:null;};
+  // Matriz que atiende una dirección: la de la ciudad (zona) del cliente o, si no, la principal del país
+  const matrizZona=(co,cli)=>{if(!co)return null;const mats=matricesDePais(co);if(!mats.length)return null;
+    const txt=[cli?.municipio,cli?.estado].map(sinAcentos).filter(Boolean);
+    const ci=(co.cities||[]).find(c=>txt.includes(sinAcentos(c.name))||txt.includes(sinAcentos(c.code)));
+    return mats.find(m=>m.id===ci?.matriz)||mats.find(m=>m.principal)||mats[0];};
   const ofiOrigen=oficinas.find(o=>o.id===currentUser?.oficinaId)||oficinas.find(o=>esMatriz(o)&&o.principal&&ofiActiva(o))||oficinas.find(o=>esMatriz(o)&&ofiActiva(o))||oficinas[0]||null;
   const ofiDestinoDef=(()=>{const pa=paisDeOfi(ofiOrigen);
     const fuera=oficinas.filter(o=>esMatriz(o)&&ofiActiva(o)&&paisDeOfi(o)!==pa);
@@ -3142,6 +3148,7 @@ export default function SistemaCarga(){
     sw("clienteId",c.id);
     sw("casilleroSearch",c.casillero);
     sw("sucursalEntrega",c.oficinaId||"");
+    {const pm=paisDeOfi(oficinas.find(o=>o.id===c.matrizId))||paisDeOfi(oficinas.find(o=>o.id===c.oficinaId));if(pm)sw("destPais",nomPaisCo(pm));}
     setClientSearch(fullName(c));
     setClientResults([]);
   };
@@ -3262,7 +3269,10 @@ export default function SistemaCarga(){
 
   // Derivar códigos de oficina para numeración
   const _origOff=ofiOrigen;
-  const _destOff=oficinas.find(o=>o.id===wrf.sucursalEntrega)||ofiDestinoDef;
+  const _sucEnt=oficinas.find(o=>o.id===wrf.sucursalEntrega)||null;
+  const _destPaisCo=COUNTRIES.find(co=>nomPaisCo(co)===wrf.destPais)||paisDeOfi(_sucEnt)||paisDeOfi(ofiDestinoDef);
+  const _destMatriz=_sucEnt?matrizDe(_sucEnt):(matrizZona(_destPaisCo,clients.find(c=>c.id===wrf.clienteId))||matrizDe(ofiDestinoDef));
+  const _destOff=_sucEnt||_destMatriz||ofiDestinoDef;
   // Tipo 3 usa país+ciudad de Países y Ciudades (OFFICE_CONFIG); Tipo 2 usa código de oficina
   const _wrOrigCode=wrNumTipo===3?`${String(OFFICE_CONFIG.origCountry).padStart(2,"0")}${OFFICE_CONFIG.origCity.slice(0,2).toUpperCase()}`:(offCode(_origOff));
   const _wrDestCode=wrNumTipo===3?`${String(OFFICE_CONFIG.destCountry).padStart(2,"0")}${OFFICE_CONFIG.destCity.slice(0,2).toUpperCase()}`:(offCode(_destOff));
@@ -3426,6 +3436,7 @@ export default function SistemaCarga(){
         notas:wrf.notas,tipoEnvio:wrf.tipoEnvio,tipoPago:wrf.tipoPago,
         shipper:wrf.remitente,remitenteDir:wrf.remitenteDir||"",remitenteTel:wrf.remitenteTel||"",remitenteEmail:(wrf.remitenteEmail||"").trim(),remitenteDoc:(wrf.remitenteDoc||"").trim(),remitenteId:_remitenteId,cargos:wrf.cargos,
         sucursalEntrega:wrf.sucursalEntrega||"",
+        ...(_destMatriz?{ofiDestino:_destMatriz.id,destCountry:ofiCodigos(_destOff).pais,destCity:ofiCodigos(_destOff).code}:{}),
       };
       // Con tipo de envío asignado y aún en Recibido/Origen → Confirmado
       {const _w=updated;const _st3=WR_STATUSES.find(x=>x.code==="3");
@@ -3450,6 +3461,7 @@ export default function SistemaCarga(){
         origCity:OFFICE_CONFIG.origCity,
         destCountry:ofiCodigos(_destOff).pais,
         destCity:ofiCodigos(_destOff).code,
+        ofiOrigen:_origOff?.id||"",ofiDestino:_destMatriz?.id||"",ofiActual:_origOff?.id||"",
         cajas:totalCajasCount,
         branch:OFFICE_CONFIG.branch,
         fecha:now,
@@ -4253,11 +4265,18 @@ export default function SistemaCarga(){
               </div>
               <div className="fg"><div className="fl">Nombre (si no está registrado)</div><input className="fi" value={wrf.consignee} onChange={e=>sw("consignee",e.target.value)} placeholder="Nombre completo"/></div>
               <div className="fg"><div className="fl">N° Casillero</div><input className="fi" value={wrf.casillero} onChange={e=>sw("casillero",e.target.value)} style={{fontFamily:"'DM Mono',monospace",fontWeight:800,fontSize:16,color:"var(--navy)",letterSpacing:1,background:"#EEF3FF",border:"2px solid #B8C8F0"}}/></div>
-              <div className="fg"><div className="fl">Sucursal de entrega</div>
-                <select className="fs" value={wrf.sucursalEntrega||""} onChange={e=>sw("sucursalEntrega",e.target.value)}>
-                  <option value="">Principal</option>
-                  {oficinas.map(o=><option key={o.id} value={o.id}>{o.nombre}{o.ciudad?` — ${o.ciudad}`:""}{o.pais?`, ${o.pais}`:""}</option>)}
+              <div className="fg"><div className="fl">País destino</div>
+                <select className="fs" value={_destPaisCo?nomPaisCo(_destPaisCo):""} onChange={e=>{sw("destPais",e.target.value);sw("sucursalEntrega","");}}>
+                  {COUNTRIES.filter(co=>matricesDePais(co).length>0).map(co=><option key={nomPaisCo(co)} value={nomPaisCo(co)}>{co.name}</option>)}
                 </select>
+              </div>
+              <div className="fg"><div className="fl">Entregar en</div>
+                {(()=>{const zona=matrizZona(_destPaisCo,clients.find(c=>c.id===wrf.clienteId));
+                  const otras=oficinas.filter(o=>ofiActiva(o)&&paisDeOfi(o)===_destPaisCo&&o.id!==zona?.id).sort((a,b)=>String(a.codigo||"").localeCompare(String(b.codigo||"")));
+                  return <select className="fs" value={wrf.sucursalEntrega||""} onChange={e=>sw("sucursalEntrega",e.target.value)}>
+                    <option value="">{zona?`${zona.codigo} — ${zona.nombre}`:"—"}</option>
+                    {otras.map(o=><option key={o.id} value={o.id}>{o.codigo} — {o.nombre}{o.ciudad?` (${o.ciudad})`:""}</option>)}
+                  </select>;})()}
               </div>
             </div>
           </div>
@@ -4523,6 +4542,7 @@ export default function SistemaCarga(){
                 cajas:_rawCajas,
                 consignee:selWR.consignee||"",casilleroSearch:selWR.casillero||"",casillero:selWR.casillero||"",clienteId:selWR.clienteId||"",
                 sucursalEntrega:sucursalDeWR(selWR,cliDeWRCon(selWR,clients)),
+                destPais:(()=>{const co=paisDeOfi(oficinas.find(o=>o.id===selWR.ofiDestino))||paisPorNombre(selWR.destCountry);return co?nomPaisCo(co):"";})(),
                 remitente:selWR.shipper||"",remitenteDir:selWR.remitenteDir||"",remitenteTel:selWR.remitenteTel||"",remitenteEmail:selWR.remitenteEmail||"",remitenteDoc:selWR.remitenteDoc||"",remitenteId:selWR.remitenteId||"",tipoPago:selWR.tipoPago||"",tipoEnvio:selWR.tipoEnvio||"",
                 notas:selWR.notas||"",cargos:selWR.cargos||[],
               });
@@ -4672,6 +4692,10 @@ export default function SistemaCarga(){
               {_destAddr&&<div className="wf"><div className="wfl">Dirección</div><div className="wfv">{_destAddr}</div></div>}
               <div className="wf"><div className="wfl">Sucursal de entrega</div><div className="wfv" style={{fontWeight:600}}>{(()=>{const id=sucursalDeWR(selWR,cliDeWRCon(selWR,clients));const o=oficinas.find(x=>x.id===id);return o?`${o.nombre}${o.ciudad?` — ${o.ciudad}`:""}`:"Principal";})()}</div></div>
               <div className="wf"><div className="wfl">Ciudad Destino</div><div className="wfv" style={{fontWeight:600,color:"var(--navy)"}}>{selWR.destCity||"—"} · {selWR.destCountry||"—"}</div></div>
+              {(()=>{const n=id=>{const o=oficinas.find(x=>x.id===id);return o?`${o.codigo} — ${o.nombre}`:"—";};
+                return (selWR.ofiOrigen||selWR.ofiDestino)&&<>
+                <div className="wf"><div className="wfl">Oficina origen → destino</div><div className="wfv" style={{fontWeight:600}}>{n(selWR.ofiOrigen)} → {n(selWR.ofiDestino)}</div></div>
+                <div className="wf"><div className="wfl">Ubicación actual</div><div className="wfv" style={{fontWeight:700,color:"var(--navy)"}}>{n(selWR.ofiActual)}</div></div></>;})()}
               {_cl?.tel1&&<div className="wf"><div className="wfl">Teléfono</div><div className="wfv">{oc(_cl.tel1)}</div></div>}
               {_cl?.email&&<div className="wf"><div className="wfl">Email</div><div className="wfv">{_cl.email}</div></div>}
             </div>
