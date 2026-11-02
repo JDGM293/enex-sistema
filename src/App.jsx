@@ -2446,6 +2446,7 @@ export default function SistemaCarga(){
   const [filterSt,setFilterSt]=useState("all");
   // Default vacío: el módulo abre en blanco y obliga a elegir Clientes / Usuarios / Todos
   const [clFilter,setClFilter]=useState("");
+  const [clBusca,setClBusca]=useState("");
   const [dimOpen,setDimOpen]=useState(null);
   // Atajo a Reempaque / Cargo Release en ventana, sin abandonar la pantalla actual
   const [quickTab,setQuickTab]=useState(null);
@@ -3109,7 +3110,11 @@ export default function SistemaCarga(){
 
   // Si clFilter es "" se muestra el selector y la tabla no se renderiza, así que devolvemos vacío
   const verCliTipo=c=>c.tipo==="usuario"?(hasPerm("ver_usuarios")||hasPerm("ver_bd_usuarios")):hasPerm("ver_bd_clientes");
-  const filteredCl=!clFilter?[]:clientesMiOficina.filter(verCliTipo).filter(c=>clFilter==="todos"?true:c.tipo===(clFilter==="clientes"?"cliente":"usuario"));
+  const filteredCl=!clFilter?[]:clientesMiOficina.filter(verCliTipo).filter(c=>clFilter==="todos"?true:c.tipo===(clFilter==="clientes"?"cliente":"usuario"))
+    .filter(c=>{const q=sinAcentos(clBusca).trim();if(!q)return true;
+      const campos=[fullName(c),c.casillero,c.id,c.login,...(verDatos?[c.cedula,c.email,c.tel1,c.tel2]:[])];
+      const qd=q.replace(/\D/g,"");
+      return q.split(/\s+/).every(t=>campos.some(v=>sinAcentos(v).includes(t)))||(qd.length>=4&&verDatos&&[c.tel1,c.tel2,c.cedula].some(v=>String(v||"").replace(/\D/g,"").includes(qd)));});
 
   // Stats — usar SOLO códigos del modelo actual (WR_STATUSES). Los antiguos
   // "7.1", "6.1", "12C", "12P" fueron retirados del modelo y la tabla de
@@ -3970,6 +3975,12 @@ export default function SistemaCarga(){
         </div>
         {(()=>{const t=clFilter==="usuarios"?tiposCrear.filter(x=>x==="usuario"):clFilter==="clientes"?tiposCrear.filter(x=>x==="cliente"):tiposCrear;
           return t.length>0&&<button className="btn-p" onClick={()=>setShowNewCl(t)}>+ Agregar</button>;})()}
+      </div>
+      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
+        <input className="fi" style={{flex:1,maxWidth:520}} value={clBusca} onChange={e=>{setClBusca(e.target.value);setPags(p=>({...p,clientes:1}));}}
+          placeholder={verDatos?"Buscar por nombre, casillero, ID, cédula, email o teléfono…":"Buscar por nombre, casillero o ID…"}/>
+        {clBusca&&<button className="btn-s" style={{fontSize:13}} onClick={()=>setClBusca("")}>✕</button>}
+        <span style={{fontSize:13,color:"var(--t3)"}}>{filteredCl.length} resultado{filteredCl.length===1?"":"s"}</span>
       </div>
       <div className="card" style={{padding:0}}>
         <div className="ct-wrap">
