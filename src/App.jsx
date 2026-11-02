@@ -3051,6 +3051,18 @@ export default function SistemaCarga(){
     const enCarga=new Set(wrList.map(w=>cliDeWRCon(w,clients)?.id).filter(Boolean));
     return clients.filter(c=>c.id===currentUser.id||alcanceUsr.clienteOk(c)||enCarga.has(c.id));
   })();
+  // Internos con oficina: solo lo de su matriz (clientes, usuarios, agentes, oficinas) y los clientes de su carga
+  const misOficinas=(()=>{const u=currentUser;if(!u||u.rol==="A"||["E","E1","F","G","I"].includes(u.rol)||!u.oficinaId)return null;
+    const yo=oficinas.find(o=>o.id===u.oficinaId);const m=matrizDe(yo);
+    return new Set([yo?.id,m?.id,...oficinas.filter(o=>m&&o.matriz_id===m.id).map(o=>o.id)].filter(Boolean));})();
+  const enMiAlcance=id=>!misOficinas||!id||misOficinas.has(id);
+  const agenteEnAlcance=a=>enMiAlcance(a?.matriz_id);
+  const clientesMiOficina=(()=>{if(!misOficinas)return clientesVisibles;
+    const enCarga=new Set(wrList.map(w=>cliDeWRCon(w,clients)?.id).filter(Boolean));
+    return clientesVisibles.filter(c=>{
+      if(c.tipo==="usuario"){if(["E","E1"].includes(c.rol))return agenteEnAlcance(agentes.find(a=>a.id===c.agenteId));
+        if(c.rol==="F")return enMiAlcance(c.matrizId);return enMiAlcance(c.oficinaId);}
+      return enMiAlcance(c.matrizId)||enCarga.has(c.id);});})();
   // Nota legal según el país de origen del WR (o la predeterminada)
   const notaLegalWR=w=>{
     const t=docCfg(w?.origCountry,"exp").notaLegal||NOTA_LEGAL_DEFAULT;
@@ -3089,7 +3101,7 @@ export default function SistemaCarga(){
 
   // Si clFilter es "" se muestra el selector y la tabla no se renderiza, así que devolvemos vacío
   const verCliTipo=c=>c.tipo==="usuario"?(hasPerm("ver_usuarios")||hasPerm("ver_bd_usuarios")):hasPerm("ver_bd_clientes");
-  const filteredCl=!clFilter?[]:clientesVisibles.filter(verCliTipo).filter(c=>clFilter==="todos"?true:c.tipo===(clFilter==="clientes"?"cliente":"usuario"));
+  const filteredCl=!clFilter?[]:clientesMiOficina.filter(verCliTipo).filter(c=>clFilter==="todos"?true:c.tipo===(clFilter==="clientes"?"cliente":"usuario"));
 
   // Stats — usar SOLO códigos del modelo actual (WR_STATUSES). Los antiguos
   // "7.1", "6.1", "12C", "12P" fueron retirados del modelo y la tabla de
@@ -3898,7 +3910,7 @@ export default function SistemaCarga(){
 
   // ── CLIENTS ────────────────────────────────────────────────────────────────
   const renderClients=()=>{
-    const clients=clientesVisibles.filter(verCliTipo);
+    const clients=clientesMiOficina.filter(verCliTipo);
     const vCli=hasPerm("ver_bd_clientes"),vUsr=hasPerm("ver_usuarios")||hasPerm("ver_bd_usuarios");
     const filtrosOk=[vCli&&"clientes",vUsr&&"usuarios",vCli&&vUsr&&"todos"].filter(Boolean);
     // Cuando no hay filtro seleccionado, mostramos sólo el selector (módulo en blanco)
@@ -4857,7 +4869,7 @@ export default function SistemaCarga(){
     setEcCliente(null);
     const t=q.trim(), bq=crearBuscador(t);
     if(!bq||(t.length<2&&!/^\d$/.test(t))){setEcResults([]);return;}
-    const res=clientesVisibles.filter(c=>c.tipo==="cliente"&&(
+    const res=clientesMiOficina.filter(c=>c.tipo==="cliente"&&(
       bq.casillero(c.casillero)||(t.length>=2&&(
       fullName(c).toLowerCase().includes(q.toLowerCase())||
       (c.casillero||"").toLowerCase().includes(q.toLowerCase())||
@@ -5064,10 +5076,10 @@ export default function SistemaCarga(){
     const ecGrpResults=(ecModo==="cliente"||ecGrupo)?[]:(()=>{
       const q=(ecSearch||"").toLowerCase().trim();
       let base=[];
-      if(ecModo==="agente")  base=agentes.map(a=>({tipo:"agente",id:a.id,nombre:a.nombre||a.codigo||"Agente",sub:[a.codigo,a.ciudad].filter(Boolean).join(" · "),email:a.email||"",tel:a.tel||""}));
-      if(ecModo==="oficina") base=oficinas.map(o=>({tipo:"oficina",id:o.id,nombre:o.nombre||o.codigo||"Oficina",sub:[o.codigo,o.ciudad].filter(Boolean).join(" · "),email:o.email||"",tel:o.tel||""}));
-      if(ecModo==="vendedor")base=clients.filter(c=>c.tipo==="usuario"&&c.rol==="E1").map(c=>({tipo:"vendedor",id:c.id,nombre:fullName(c),sub:[agentes.find(a=>a.id===c.agenteId)?.nombre,c.email].filter(Boolean).join(" · "),email:c.email||"",tel:c.tel1||""}));
-      if(ecModo==="autonomo")base=clients.filter(c=>c.tipo==="usuario"&&c.rol==="F").map(c=>({tipo:"autonomo",id:c.id,nombre:fullName(c),sub:[c.casillero,c.email].filter(Boolean).join(" · "),email:c.email||"",tel:c.tel1||""}));
+      if(ecModo==="agente")  base=agentes.filter(agenteEnAlcance).map(a=>({tipo:"agente",id:a.id,nombre:a.nombre||a.codigo||"Agente",sub:[a.codigo,a.ciudad].filter(Boolean).join(" · "),email:a.email||"",tel:a.tel||""}));
+      if(ecModo==="oficina") base=oficinas.filter(o=>enMiAlcance(o.id)).map(o=>({tipo:"oficina",id:o.id,nombre:o.nombre||o.codigo||"Oficina",sub:[o.codigo,o.ciudad].filter(Boolean).join(" · "),email:o.email||"",tel:o.tel||""}));
+      if(ecModo==="vendedor")base=clients.filter(c=>c.tipo==="usuario"&&c.rol==="E1"&&agenteEnAlcance(agentes.find(a=>a.id===c.agenteId))).map(c=>({tipo:"vendedor",id:c.id,nombre:fullName(c),sub:[agentes.find(a=>a.id===c.agenteId)?.nombre,c.email].filter(Boolean).join(" · "),email:c.email||"",tel:c.tel1||""}));
+      if(ecModo==="autonomo")base=clients.filter(c=>c.tipo==="usuario"&&c.rol==="F"&&enMiAlcance(c.matrizId)).map(c=>({tipo:"autonomo",id:c.id,nombre:fullName(c),sub:[c.casillero,c.email].filter(Boolean).join(" · "),email:c.email||"",tel:c.tel1||""}));
       return base.filter(g=>!q||[g.nombre,g.sub].some(v=>String(v||"").toLowerCase().includes(q)));
     })();
 
@@ -6785,7 +6797,7 @@ export default function SistemaCarga(){
         W("Movimiento","nWR","WR","num",r=>wrList.filter(w=>w.clienteId===r.id||(r.casillero&&w.casillero===r.casillero)).length),
         W("Movimiento","ultimoWR","Último WR","fecha",r=>{const ws=wrList.filter(w=>w.clienteId===r.id||(r.casillero&&w.casillero===r.casillero));return ws.length?ws.map(w=>new Date(w.fecha)).sort((a,b)=>b-a)[0]:null;}),
         ...(puedeFin?[W("Dinero","deuda","Nos debe","money",r=>mObj(deudaDe({tipo:"cliente",id:r.id}))),W("Dinero","favor","Saldo a favor","money",r=>mObj(favorDe({tipo:"cliente",id:r.id})))]:[])],
-        filas:()=>clientesVisibles.filter(c=>c.tipo==="cliente")},
+        filas:()=>clientesMiOficina.filter(c=>c.tipo==="cliente")},
       ...(ext?{}:{
       usuario:{l:"Usuarios del sistema",ic:<Ico e="🧑‍💼"/>,fecha:"",campos:[
         W("Usuario","id","N° usuario","txt",r=>r.id),W("Usuario","nombre","Nombre","txt",r=>fullName(r)),W("Usuario","rol","Rol","txt",r=>ROLN[r.rol]||r.rol||""),
@@ -7937,7 +7949,7 @@ export default function SistemaCarga(){
                 </tr></thead>
                 <tbody>
                   {agentes.length===0&&<tr><td colSpan={9} style={{textAlign:"center",padding:30,color:"var(--t3)"}}>No hay agentes registrados.</td></tr>}
-                  {pagSlice("agentes",agentes).map(a0=>{const a=conDatos(a0);return(
+                  {pagSlice("agentes",agentes.filter(agenteEnAlcance)).map(a0=>{const a=conDatos(a0);return(
                     <tr key={a.id} style={{cursor:"pointer"}} onClick={()=>setVerAgente(a0)}>
                       <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",background:"#EEF3FF",padding:"2px 8px",borderRadius:4,border:"1px solid #B8C8F0"}}>{a.codigo}</span></td>
                       <td style={{fontWeight:600}}>{a.nombre}</td>
@@ -7955,7 +7967,7 @@ export default function SistemaCarga(){
                     </tr>
                   );})}
                 </tbody>
-              </table>{pagPie("agentes",(agentes).length)}</>
+              </table>{pagPie("agentes",agentes.filter(agenteEnAlcance).length)}</>
             </div>
             {verAgente&&(()=>{const a=conDatos(verAgente);const us=usuariosDe(verAgente);
               const cls=clients.filter(c=>c.tipo==="cliente"&&["agente","vendedor_agente"].includes(c.clienteTipo)&&c.agenteId===verAgente.id);
@@ -8043,7 +8055,7 @@ export default function SistemaCarga(){
                 </tr></thead>
                 <tbody>
                   {oficinas.length===0&&<tr><td colSpan={11} style={{textAlign:"center",padding:30,color:"var(--t3)"}}>No hay oficinas registradas aún.</td></tr>}
-                  {pagSlice("oficinas",[...oficinas].sort((x,y)=>String(x.codigo||"").localeCompare(String(y.codigo||"")))).map(o=>(
+                  {pagSlice("oficinas",oficinas.filter(o=>enMiAlcance(o.id)).sort((x,y)=>String(x.codigo||"").localeCompare(String(y.codigo||"")))).map(o=>(
                     <tr key={o.id}>
                       <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--purple)",background:"#F3EFFE",padding:"2px 8px",borderRadius:4,border:"1px solid #C0A0F0"}}>{o.codigo}</span></td>
                       <td style={{fontWeight:600}}>{o.nombre}</td>
@@ -8065,7 +8077,7 @@ export default function SistemaCarga(){
                     </tr>
                   ))}
                 </tbody>
-              </table>{pagPie("oficinas",(oficinas).length)}</>
+              </table>{pagPie("oficinas",oficinas.filter(o=>enMiAlcance(o.id)).length)}</>
             </div>
             {showNewOficina&&(
               <div className="ov">
