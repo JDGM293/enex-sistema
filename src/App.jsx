@@ -7751,6 +7751,7 @@ export default function SistemaCarga(){
                       <div style={{fontWeight:600,fontSize:14}}>{c.name}</div>
                       <div style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--t3)"}}>{c.iso?`${c.iso} · `:""}+{c.dial} · {c.cities.length} ciudades · {matricesDePais(c).length} matriz</div>
                     </div>
+                    {hasPerm("cfg_paises_editar")&&<span className="ic-b" onClick={e=>{e.stopPropagation();setCfgSelPais(i);setTimeout(()=>{const el=document.getElementById("cfg-pais-nombre");if(el){el.focus();el.select();}},50);}}><Ico e="✏️" solo/></span>}
                     {currentUser.rol==="A"&&<span onClick={e=>{e.stopPropagation();const n=COUNTRIES.filter((_,j)=>j!==i);setCountries(n);dbSetConfig('countries',n);if(cfgSelPais>=i)setCfgSelPais(Math.max(0,cfgSelPais-1));}} style={{color:"var(--red)",cursor:"pointer",fontSize:15,fontWeight:700}}>×</span>}
                   </div>
                 ))}
@@ -7767,6 +7768,15 @@ export default function SistemaCarga(){
                 const guardar=()=>dbSetConfig('countries',COUNTRIES);
                 return <div style={{padding:"10px 12px",borderBottom:"1px solid var(--b1)"}}>
                   <div className="fgrid g2">
+                    <div className="fg"><div className="fl">Nombre del país</div><input id="cfg-pais-nombre" className="fi" value={co.name||""}
+                      onFocus={e=>{e.target.dataset.old=nomPaisCo(co);}}
+                      onChange={e=>setCo({name:e.target.value.toUpperCase()})}
+                      onBlur={e=>{const old=e.target.dataset.old||"",nuevo=nomPaisCo(co);
+                        if(!String(co.name||"").trim()){window.alert("El país necesita un nombre.");return;}
+                        if(old&&nuevo&&old!==nuevo){const cambia=oficinas.filter(o=>sinAcentos(o.pais)===old).map(o=>({...o,pais:nuevo}));
+                          if(cambia.length){setOficinas(p=>p.map(o=>cambia.find(x=>x.id===o.id)||o));cambia.forEach(o=>dbUpsertOficina(o));}}
+                        guardar();}}/></div>
+                    <div className="fg"><div className="fl">Código telefónico</div><input className="fi" style={{fontFamily:"'DM Mono',monospace"}} value={co.dial||""} onChange={e=>setCo({dial:e.target.value.replace(/[^0-9]/g,"")})} onBlur={guardar}/></div>
                     <div className="fg"><div className="fl">Código de país</div><input className="fi" maxLength={3} style={{fontFamily:"'DM Mono',monospace",fontWeight:700}} value={co.iso||""}
                       onChange={e=>setCo({iso:e.target.value.toUpperCase().replace(/[^A-Z]/g,"")})}
                       onBlur={()=>{const iso=String(co.iso||"");if(iso&&COUNTRIES.some((c,i)=>i!==cfgSelPais&&String(c.iso||"")===iso)){window.alert(`El código ${iso} ya lo usa otro país.`);setCo({iso:""});return;}guardar();}}/></div>
