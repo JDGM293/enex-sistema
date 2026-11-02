@@ -7770,8 +7770,8 @@ export default function SistemaCarga(){
                     <div className="fg"><div className="fl">Código de país</div><input className="fi" maxLength={3} style={{fontFamily:"'DM Mono',monospace",fontWeight:700}} value={co.iso||""} placeholder="VE"
                       onChange={e=>setCo({iso:e.target.value.toUpperCase().replace(/[^A-Z]/g,"")})}
                       onBlur={()=>{const iso=String(co.iso||"");if(iso&&COUNTRIES.some((c,i)=>i!==cfgSelPais&&String(c.iso||"")===iso)){window.alert(`El código ${iso} ya lo usa otro país.`);setCo({iso:""});return;}guardar();}}/></div>
-                    <div className="fg"><div className="fl">Moneda</div><select className="fs" value={co.moneda||"USD"} onChange={e=>{const n=COUNTRIES.map((c,i)=>i===cfgSelPais?{...c,moneda:e.target.value}:c);setCountries(n);dbSetConfig('countries',n);}}>
-                      {["USD","EUR","VES","COP","MXN","ARS","CLP","PEN","BRL","DOP","PAB"].map(m=><option key={m} value={m}>{m}</option>)}</select></div>
+                    <div className="fg"><div className="fl">Moneda</div><select className="fs" value={co.moneda||""} onChange={e=>{const n=COUNTRIES.map((c,i)=>i===cfgSelPais?{...c,moneda:e.target.value}:c);setCountries(n);dbSetConfig('countries',n);}}>
+                      <option value="">—</option>{["USD","EUR","VES","COP","MXN","ARS","CLP","PEN","BRL","DOP","PAB"].map(m=><option key={m} value={m}>{m}</option>)}</select></div>
                     <div className="fg"><div className="fl">Razón social</div><input className="fi" value={co.razon||""} onChange={e=>setCo({razon:e.target.value.toUpperCase()})} onBlur={guardar}/></div>
                     <div className="fg"><div className="fl">Número fiscal</div><input className="fi" value={co.idFiscal||""} onChange={e=>setCo({idFiscal:e.target.value.toUpperCase()})} onBlur={guardar}/></div>
                     <div className="fg full"><div className="fl">Dirección fiscal</div><input className="fi" value={co.dirFiscal||""} onChange={e=>setCo({dirFiscal:e.target.value.toUpperCase()})} onBlur={guardar}/></div>
