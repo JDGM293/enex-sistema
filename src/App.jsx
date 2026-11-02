@@ -2592,6 +2592,7 @@ export default function SistemaCarga(){
     dbGetConfig('documentos_pais').then(v=>{if(v&&typeof v==="object"&&!Array.isArray(v))setDocPais(v);}).catch(()=>{});
   },[authUid]);
   const [cfgNewCity,setCfgNewCity]=useState("");
+  const [cfgEditCity,setCfgEditCity]=useState(null); // {ci,code,name}
   const [cfgNewPais,setCfgNewPais]=useState("");
   const [cfgNewCont,setCfgNewCont]=useState({code:"",name:"",dim:"",maxLb:""});
   const [cfgEditContIdx,setCfgEditContIdx]=useState(null);
@@ -7744,7 +7745,7 @@ export default function SistemaCarga(){
               </div>
               <div style={{maxHeight:"60vh",overflowY:"auto"}}>
                 {COUNTRIES.map((c,i)=>(
-                  <div key={i} onClick={()=>setCfgSelPais(i)}
+                  <div key={i} onClick={()=>{setCfgSelPais(i);setCfgEditCity(null);}}
                     style={{padding:"9px 14px",cursor:"pointer",borderBottom:"1px solid var(--b2)",display:"flex",alignItems:"center",gap:8,
                       background:cfgSelPais===i?"#EEF3FF":"",borderLeft:cfgSelPais===i?"3px solid var(--navy)":"3px solid transparent"}}>
                     <div style={{flex:1}}>
@@ -7805,8 +7806,24 @@ export default function SistemaCarga(){
                   <div style={{padding:"8px 12px",display:"flex",flexWrap:"wrap",gap:6}}>
                     {(COUNTRIES[cfgSelPais]?.cities||[]).map((c,ci)=>(
                       <div key={ci} style={{display:"inline-flex",alignItems:"center",gap:5,background:"var(--bg4)",border:"1px solid var(--b1)",borderRadius:6,padding:"4px 10px",fontSize:14}}>
+                        {cfgEditCity?.ci===ci?(()=>{const guardarCiudad=()=>{const code=String(cfgEditCity.code||"").trim(),name=String(cfgEditCity.name||"").trim();
+                            if(!code||!name){window.alert("La ciudad necesita código y nombre.");return;}
+                            const co=COUNTRIES[cfgSelPais];
+                            if(co.cities.some((x,j)=>j!==ci&&x.code===code)){window.alert(`El código ${code} ya existe en ${co.name}.`);return;}
+                            const n=COUNTRIES.map((x,i)=>i===cfgSelPais?{...x,cities:x.cities.map((y,j)=>j===ci?{...y,code,name}:y)}:x);
+                            setCountries(n);dbSetConfig('countries',n);
+                            const viejo=[sinAcentos(c.name),sinAcentos(c.code)];
+                            const cambia=oficinas.filter(o=>paisDeOfi(o)===co&&viejo.includes(sinAcentos(o.ciudad))).map(o=>({...o,ciudad:name}));
+                            if(cambia.length){setOficinas(p=>p.map(o=>cambia.find(x=>x.id===o.id)||o));cambia.forEach(o=>dbUpsertOficina(o));}
+                            setCfgEditCity(null);};
+                          return <>
+                          <input className="fi" style={{width:70,fontFamily:"'DM Mono',monospace",fontWeight:700,fontSize:13,padding:"2px 6px"}} value={cfgEditCity.code} onChange={e=>setCfgEditCity(p=>({...p,code:e.target.value.toUpperCase()}))}/>
+                          <input className="fi" style={{width:150,fontSize:13,padding:"2px 6px"}} value={cfgEditCity.name} onChange={e=>setCfgEditCity(p=>({...p,name:e.target.value.toUpperCase()}))} onKeyDown={e=>{if(e.key==="Enter")guardarCiudad();if(e.key==="Escape")setCfgEditCity(null);}}/>
+                          <span className="ic-b" onClick={guardarCiudad}><Ico e="✅" solo/></span>
+                          <span className="ic-b" onClick={()=>setCfgEditCity(null)}><Ico e="✖️" solo/></span></>;})():<>
                         <span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",fontSize:13}}>{c.code}</span>
                         <span style={{color:"var(--t2)"}}>{c.name}</span>
+                        {hasPerm("cfg_paises_editar")&&<span className="ic-b" onClick={()=>setCfgEditCity({ci,code:c.code||"",name:c.name||""})}><Ico e="✏️" solo/></span>}</>}
                         {(()=>{const mats=matricesDePais(COUNTRIES[cfgSelPais]);if(mats.length<2)return null;
                           return <select className="fs" style={{fontSize:12,padding:"1px 4px",width:"auto"}} value={c.matriz||""} onChange={e=>{const n=COUNTRIES.map((co,i)=>i===cfgSelPais?{...co,cities:co.cities.map((x,j)=>j===ci?{...x,matriz:e.target.value}:x)}:co);setCountries(n);dbSetConfig('countries',n);}}>
                             <option value="">{(mats.find(m=>m.principal)||mats[0]).codigo} (principal)</option>{mats.map(m=><option key={m.id} value={m.id}>{m.codigo} {m.nombre}</option>)}</select>;})()}
