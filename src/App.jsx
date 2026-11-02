@@ -294,6 +294,8 @@ input.fi:not([type="email"]):not([type="password"]):not([type="number"]){text-tr
 
 /* ── CLIENT TABLE ────────────────────────────────────────────────────────── */
 .ct-wrap{overflow-x:auto}
+.ct-scroll{overflow:auto;max-height:70vh}
+.ct-scroll .ct thead th{position:sticky;top:0;z-index:3}
 .ct{width:100%;border-collapse:collapse;font-size:14.5px}
 .ct th{text-align:left;font-size:12px;letter-spacing:.8px;text-transform:uppercase;color:rgba(255,255,255,0.85);padding:9px 11px;border-bottom:2px solid var(--navy3);font-weight:700;background:var(--navy);white-space:nowrap}
 .ct td{padding:11px 11px;color:var(--t1);border-bottom:1px solid var(--b2);font-size:14.5px}
@@ -2065,14 +2067,14 @@ const PriceListEditor=({title,items,onSave,placeholder})=>{
         <button className="btn-p" onClick={add}>+ Agregar</button>
       </div>
       {items.length===0?<div style={{color:"var(--t3)",fontSize:14}}>Sin conceptos.</div>:
-        <table className="ct"><thead><tr><th>Concepto</th><th style={{width:140,textAlign:"right"}}>Precio</th><th style={{width:50}}></th></tr></thead>
+        <div className="ct-scroll"><table className="ct"><thead><tr><th>Concepto</th><th style={{width:140,textAlign:"right"}}>Precio</th><th style={{width:50}}></th></tr></thead>
           <tbody>{items.map((it,i)=>(
             <tr key={it.nombre}>
               <td style={{fontWeight:600}}>{it.nombre}</td>
               <td style={{textAlign:"right"}}><input className="fi" type="number" step="0.01" style={{width:110,textAlign:"right",fontFamily:"'DM Mono',monospace"}} defaultValue={it.precio}
                 onBlur={e=>{const v=parseFloat(e.target.value)||0;if(v!==it.precio)onSave(items.map((x,j)=>j===i?{...x,precio:v}:x));}}/></td>
               <td><button className="btn-d" style={{fontSize:12,padding:"2px 8px"}} onClick={()=>{if(window.confirm(`¿Quitar ${it.nombre}?`))onSave(items.filter((_,j)=>j!==i));}}>✕</button></td>
-            </tr>))}</tbody></table>}
+            </tr>))}</tbody></table></div>}
     </div>
   );
 };
@@ -3833,7 +3835,7 @@ export default function SistemaCarga(){
             <span style={{fontSize:12,background:"#EEF3FF",padding:"2px 8px",borderRadius:4,border:"1px solid #B8C8F0",color:"var(--navy)",fontWeight:700}}>{por.length}</span>
             <input className="fi" style={{marginLeft:"auto",maxWidth:300}} value={paFil.qPuerta||""} onChange={e=>setPaFil(p=>({...p,qPuerta:e.target.value}))} placeholder="Buscar tracking o cliente…"/>
           </div>
-          <table className="ct"><thead><tr><th>N°</th><th>Fecha</th><th>Cliente</th><th>Carrier</th><th>Tracking</th><th>Tienda / contenido</th><th>Factura</th></tr></thead>
+          <div className="ct-scroll"><table className="ct"><thead><tr><th>N°</th><th>Fecha</th><th>Cliente</th><th>Carrier</th><th>Tracking</th><th>Tienda / contenido</th><th>Factura</th></tr></thead>
             <tbody>{pagSlice("pa_puerta",l).map(p=>(<tr key={p.id}>
               <td><span className="c-wr">{p.id}</span></td>
               <td style={{fontFamily:"'DM Mono',monospace",fontSize:13}}>{fmtDate(p.creado)}</td>
@@ -3842,7 +3844,7 @@ export default function SistemaCarga(){
               <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--cyan)"}}>{p.tracking}</td>
               <td>{p.tienda||"—"}<div style={{fontSize:12,color:"var(--t3)"}}>{p.descripcion}</div></td>
               <td><div style={{display:"flex",flexDirection:"column",gap:3,alignItems:"flex-start"}}>{p.archivos.length?paArchivos(p,true):<span style={{color:"var(--t4)"}}>—</span>}</div></td>
-            </tr>))}</tbody></table>{pagPie("pa_puerta",l.length)}
+            </tr>))}</tbody></table></div>{pagPie("pa_puerta",l.length)}
         </div>);})()}
 
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
@@ -3854,7 +3856,7 @@ export default function SistemaCarga(){
           </div>
           {pending.length===0
             ?<div style={{textAlign:"center",padding:"24px 0",color:"var(--t3)",fontSize:13}}>Sin pendientes <Ico e="✅"/></div>
-            :<table className="ct">
+            :<div className="ct-scroll"><table className="ct">
               <thead><tr><th>#</th><th>Carrier</th><th>Tracking</th><th>Hora</th><th></th></tr></thead>
               <tbody>{pending.map((s,i)=>(
                 <tr key={i}>
@@ -3868,7 +3870,7 @@ export default function SistemaCarga(){
                     setWrf(p=>({...p,cajas:[{...p.cajas[0],carrier:s.carrier||"",tracking:s.tracking},...p.cajas.slice(1)]}));setShowNewWR(true);}}>WR →</button>:<span style={{fontSize:12,color:"var(--t4)"}}>—</span>}</td>
                 </tr>
               ))}</tbody>
-            </table>
+            </table></div>
           }
         </div>
 
@@ -3892,7 +3894,7 @@ export default function SistemaCarga(){
                     {hasPerm("borrar_rp")&&<button className="btn-d" style={{fontSize:11,padding:"2px 8px"}} onClick={e=>{e.stopPropagation();const ids=items.map(s=>s.id).filter(Boolean);setScanLog(p=>p.filter(s=>fmtDate(s.ts)!==day||!s.registered));dbDeleteScanIds(ids);}}><Ico e="🗑" sp/>Borrar día</button>}
                   </div>
                   {open&&(
-                    <table className="ct" style={{fontSize:12}}>
+                    <div className="ct-scroll"><table className="ct" style={{fontSize:12}}>
                       <thead><tr><th>#</th><th>Carrier</th><th>Tracking</th><th>Hora</th></tr></thead>
                       <tbody>{items.map((s,i)=>(
                         <tr key={i}>
@@ -3902,7 +3904,7 @@ export default function SistemaCarga(){
                           <td style={{fontFamily:"'DM Mono',monospace",fontSize:11}}>{fmtTime(s.ts)}</td>
                         </tr>
                       ))}</tbody>
-                    </table>
+                    </table></div>
                   )}
                 </div>
               );
@@ -3971,7 +3973,7 @@ export default function SistemaCarga(){
       </div>
       <div className="card" style={{padding:0}}>
         <div className="ct-wrap">
-          <><table className="ct">
+          <><div className="ct-scroll"><table className="ct">
             <thead><tr>
               <th>ID</th><th>Tipo</th><th>Nombre Completo</th><th>ID Identificación</th>
               <th>Casillero</th><th>Dirección</th><th>Municipio</th><th>Estado</th>
@@ -4023,7 +4025,7 @@ export default function SistemaCarga(){
                 );
               })}
             </tbody>
-          </table>{pagPie("clientes",(filteredCl).length)}</>
+          </table></div>{pagPie("clientes",(filteredCl).length)}</>
         </div>
       </div>
     </div>
@@ -5507,14 +5509,14 @@ export default function SistemaCarga(){
                   <span style={{fontSize:15,fontWeight:700,color:"var(--navy)"}}><Ico e="💰" sp/>Cuentas de sus clientes</span>
                   <span style={{marginLeft:"auto",fontWeight:800,color:"var(--orange)",fontFamily:"'DM Mono',monospace"}}>{dinero(tot)}</span>
                 </div>
-                <table className="ct"><thead><tr><th>Cliente</th><th>Casillero</th><th style={{textAlign:"right"}}>Facturas abiertas</th><th style={{textAlign:"right"}}>Nos debe</th><th style={{textAlign:"right"}}>Saldo a favor</th></tr></thead>
+                <div className="ct-scroll"><table className="ct"><thead><tr><th>Cliente</th><th>Casillero</th><th style={{textAlign:"right"}}>Facturas abiertas</th><th style={{textAlign:"right"}}>Nos debe</th><th style={{textAlign:"right"}}>Saldo a favor</th></tr></thead>
                   <tbody>{filas.map(x=>(<tr key={x.c.id} style={{cursor:"pointer"}} onClick={()=>{setEcModo("cliente");setEcGrupo(null);selEcCliente(x.c);}}>
                     <td style={{fontWeight:600}}>{fullName(x.c)}</td><td style={{fontFamily:"'DM Mono',monospace",color:"var(--gold2)"}}>{x.c.casillero||"—"}</td>
                     <td style={{textAlign:"right"}}>{x.n}</td>
                     <td style={{textAlign:"right",fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--orange)"}}>{dinero(x.deb)}</td>
                     <td style={{textAlign:"right",fontFamily:"'DM Mono',monospace",color:"var(--green)"}}>{x.favor>0.004?fmtMoney(x.favor,"USD"):"—"}</td></tr>))}
                     {filas.length===0&&<tr><td colSpan={5} style={{textAlign:"center",padding:24,color:"var(--t3)"}}>Sin clientes.</td></tr>}
-                  </tbody></table>
+                  </tbody></table></div>
               </div>);})()}
           </>
         )}
@@ -5929,7 +5931,7 @@ export default function SistemaCarga(){
         </div>
       ):(
         <div className="card" style={{padding:0}}>
-          <><table className="ct">
+          <><div className="ct-scroll"><table className="ct">
             <thead><tr>
               <th>N° Guía</th><th>Fecha</th><th>Origen</th><th>Destino</th><th>Tipo Envío</th>
               <th style={{textAlign:"center"}}>Cont.</th><th style={{textAlign:"center"}}>WR</th><th style={{textAlign:"center"}}>Cajas</th>
@@ -5969,7 +5971,7 @@ export default function SistemaCarga(){
                 );
               })}
             </tbody>
-          </table>{pagPie("guias",(consolList.filter(c=>guiaEnFiltro(c,lmFilter))).length)}</>
+          </table></div>{pagPie("guias",(consolList.filter(c=>guiaEnFiltro(c,lmFilter))).length)}</>
         </div>
       )}
 
@@ -6146,7 +6148,7 @@ export default function SistemaCarga(){
                     {/* WR en este contenedor */}
                     {cont.wr.length>0&&(
                       <div style={{border:"1px solid var(--b1)",borderRadius:7,overflow:"hidden"}}>
-                        <table className="ct" style={{fontSize:12}}>
+                        <div className="ct-scroll"><table className="ct" style={{fontSize:12}}>
                           <thead><tr><th>#</th><th>N° WR</th><th>Consignatario</th><th>Cajas</th><th>Peso lb</th><th>Ft³</th><th>Descripción</th><th></th></tr></thead>
                           <tbody>
                             {cont.wr.map((w,wi)=>(
@@ -6165,7 +6167,7 @@ export default function SistemaCarga(){
                               </tr>
                             ))}
                           </tbody>
-                        </table>
+                        </table></div>
                       </div>
                     )}
 
@@ -7069,7 +7071,7 @@ export default function SistemaCarga(){
         </div>
         <div className="card" style={{padding:0,overflow:"auto",maxHeight:"64vh"}}>
           {R.filas.length===0?<div style={{textAlign:"center",padding:40,color:"var(--t3)"}}>Sin resultados.</div>:(
-          <table className="ct" style={{fontSize:13}}>
+          <div className="ct-scroll"><table className="ct" style={{fontSize:13}}>
             <thead style={{position:"sticky",top:0,zIndex:1}}><tr>
               {rep.soloTot&&R.grupos?<><th>{R.gl}</th><th style={{textAlign:"right"}}>Cantidad</th>{NC.map(c=><th key={c.k} style={{textAlign:"right"}}>{c.l}</th>)}</>
                 :R.cols.map(c=>{const o=par.orden||rep.orden;return <th key={c.k} style={{cursor:"pointer",whiteSpace:"nowrap",textAlign:repNum(c)?"right":"left"}} onClick={()=>setP({orden:{k:c.k,dir:o?.k===c.k?-(o.dir||1):1}})}>{c.l}{o?.k===c.k?(o.dir>0?" ▲":" ▼"):""}</th>;})}
@@ -7085,7 +7087,7 @@ export default function SistemaCarga(){
                   g.rows.forEach((r,i)=>{if(mostradas++<MAXF)out.push(fila(r,`${gi}-${i}`));});out.push(tot("Subtotal",g.rows.length,g.tot,"s"+gi));}});
               else R.filas.forEach((r,i)=>{if(i<MAXF)out.push(fila(r,i));});
               out.push(tot("TOTAL",R.filas.length,R.tot,"T"));return out;})()}</tbody>
-          </table>)}
+          </table></div>)}
           {R.filas.length>MAXF&&!rep.soloTot&&<div style={{padding:10,textAlign:"center",fontSize:13,color:"var(--t3)"}}>{MAXF} de {R.filas.length}</div>}
         </div>
       </div>);
@@ -7175,9 +7177,9 @@ export default function SistemaCarga(){
           {d.orden&&<div className="fg"><div className="fl">&nbsp;</div>{seg([[1,"Ascendente"],[-1,"Descendente"]],d.orden.dir||1,v=>setD({orden:{...d.orden,dir:v}}))}</div>}
 </div>)}
         {prev&&paso(6,`Vista previa (${prev.filas.length} registros)`,<div style={{overflow:"auto",maxHeight:300}}>
-          <table className="ct" style={{fontSize:12}}><thead><tr>{d.soloTot&&prev.grupos?<><th>{prev.gl}</th><th>Cantidad</th>{prev.cols.filter(repNum).map(c=><th key={c.k}>{c.l}</th>)}</>:prev.cols.map(c=><th key={c.k}>{c.l}</th>)}</tr></thead>
+          <div className="ct-scroll"><table className="ct" style={{fontSize:12}}><thead><tr>{d.soloTot&&prev.grupos?<><th>{prev.gl}</th><th>Cantidad</th>{prev.cols.filter(repNum).map(c=><th key={c.k}>{c.l}</th>)}</>:prev.cols.map(c=><th key={c.k}>{c.l}</th>)}</tr></thead>
             <tbody>{d.soloTot&&prev.grupos?prev.grupos.slice(0,15).map(g=><tr key={g.k}><td>{g.k}</td><td>{g.rows.length}</td>{prev.cols.filter(repNum).map(c=><td key={c.k}>{repFmt(c,g.tot[c.k])}</td>)}</tr>)
-              :(prev.grupos?prev.grupos.flatMap(g=>g.rows):prev.filas).slice(0,15).map((r,i)=><tr key={i}>{prev.cols.map(c=><td key={c.k}>{repFmt(c,c.v(r),r)}</td>)}</tr>)}</tbody></table></div>)}
+              :(prev.grupos?prev.grupos.flatMap(g=>g.rows):prev.filas).slice(0,15).map((r,i)=><tr key={i}>{prev.cols.map(c=><td key={c.k}>{repFmt(c,c.v(r),r)}</td>)}</tr>)}</tbody></table></div></div>)}
       </div>
     </div>);
   };
@@ -7259,7 +7261,7 @@ export default function SistemaCarga(){
         {hasPerm("pre_tracking")&&<button className="btn-p" onClick={paNueva}><Ico e="➕" sp/>Nueva pre-alerta</button>}
       </div>
       <div className="card" style={{padding:0}}>
-        <><table className="ct">
+        <><div className="ct-scroll"><table className="ct">
           <thead><tr><th>N°</th><th>Fecha</th><th>Cliente</th><th>Tracking</th><th>Tienda / contenido</th><th>Valor</th><th>Factura</th><th>Estado</th><th>WR</th><th></th></tr></thead>
           <tbody>{pagSlice("prealertas",lista).map(p=>(
             <tr key={p.id}>
@@ -7278,7 +7280,7 @@ export default function SistemaCarga(){
               </td>
             </tr>))}
             {lista.length===0&&<tr><td colSpan={10} style={{textAlign:"center",padding:30,color:"var(--t3)"}}>No hay pre-alertas.</td></tr>}
-          </tbody></table>{pagPie("prealertas",lista.length)}</>
+          </tbody></table></div>{pagPie("prealertas",lista.length)}</>
       </div>
 
       {paModal&&(()=>{const m=paModal;const set=x=>setPaModal(p=>({...p,...x}));
@@ -7414,7 +7416,7 @@ export default function SistemaCarga(){
           <div key={l} className="card" style={{padding:14}}><div style={{fontSize:13,color:"var(--t3)",fontWeight:700}}>{l}</div><div style={{fontSize:18,fontWeight:800,color:"var(--navy)",fontFamily:"'DM Mono',monospace",marginTop:4}}>{v}</div></div>))}
       </div>
       <div className="card" style={{padding:0}}>
-        <><table className="ct">
+        <><div className="ct-scroll"><table className="ct">
           <thead><tr><th>N° Factura</th><th>Fecha</th>{!em&&<th>Emisor</th>}<th>Cliente</th><th>Guía</th><th>WR</th><th>Factura empresa</th><th>Total</th><th>Cobrado</th><th>Saldo</th><th>Estado</th><th></th></tr></thead>
           <tbody>{pagSlice("fpropias",lista).map(f=>(
             <tr key={f.id}>
@@ -7436,7 +7438,7 @@ export default function SistemaCarga(){
               </td>
             </tr>))}
             {lista.length===0&&<tr><td colSpan={em?11:12} style={{textAlign:"center",padding:30,color:"var(--t3)"}}>No hay facturas.</td></tr>}
-          </tbody></table>{pagPie("fpropias",lista.length)}</>
+          </tbody></table></div>{pagPie("fpropias",lista.length)}</>
       </div>
 
       {fpModal&&(()=>{const m=fpModal;const set=x=>setFpModal(p=>({...p,...x}));
@@ -7457,7 +7459,7 @@ export default function SistemaCarga(){
           </div>
           {m.clienteId&&<>
             {m.lineas.filter(l=>l.tipo==="flete").length===0&&<div style={{padding:14,textAlign:"center",color:"var(--t3)"}}>Los WR de este cliente en la guía ya están facturados.</div>}
-            <table className="ct" style={{marginBottom:8}}>
+            <div className="ct-scroll"><table className="ct" style={{marginBottom:8}}>
               <thead><tr><th>Concepto</th><th style={{width:140}}>Cantidad</th><th style={{width:140}}>Precio</th><th style={{width:130,textAlign:"right"}}>Importe</th><th style={{width:40}}></th></tr></thead>
               <tbody>{m.lineas.map((l,i)=>(
                 <tr key={i}>
@@ -7467,7 +7469,7 @@ export default function SistemaCarga(){
                   <td style={{textAlign:"right",fontFamily:"'DM Mono',monospace",fontWeight:700}}>{fmtMoney((parseFloat(l.cantidad)||0)*(parseFloat(l.precio)||0),m.moneda)}</td>
                   <td>{l.tipo!=="flete"&&<span className="ic-b" style={{color:"var(--red)"}} onClick={()=>set({lineas:m.lineas.filter((_,j)=>j!==i)})}><Ico e="🗑" solo/></span>}</td>
                 </tr>))}</tbody>
-            </table>
+            </table></div>
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
               <button className="btn-s" onClick={()=>set({lineas:[...m.lineas,{tipo:"adicional",descripcion:"",cantidad:"1",precio:""}]})}><Ico e="➕" sp/>Cobro adicional</button>
               <span style={{marginLeft:"auto",fontSize:17,fontWeight:800,color:"var(--navy)"}}>Total: {fmtMoney(tot,m.moneda)}</span>
@@ -7721,7 +7723,7 @@ export default function SistemaCarga(){
           return(
           <div className="card" style={{marginTop:14}}>
             <div className="card-tt"><Ico e="🧮" sp/>Cálculo por tipo de envío</div>
-            <table className="ct">
+            <div className="ct-scroll"><table className="ct">
               <thead><tr><th>Tipo de envío</th><th>Divisor</th><th>Cálculo</th><th>Redondeo</th></tr></thead>
               <tbody>{SEND_TYPES.map(t=>{const C={...CALC_DEF,...(D[t]||{})};const porPeso=tipoPorPeso(t);
                 const otro=!!C.divOtro||!CALC_DIVS.some(o=>o.v===C.div);const otroF=!!C.divFt3Otro||C.divFt3!==1728;
@@ -7745,7 +7747,7 @@ export default function SistemaCarga(){
                   </>}
                   <td><select className="fs" value={C.red} onChange={e=>set(t,{red:e.target.value})}>{CALC_REDS.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}</select></td>
                 </tr>);})}</tbody>
-            </table>
+            </table></div>
             {calcDraft&&<div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:10}}>
               <button className="btn-s" onClick={()=>setCalcDraft(null)}>Descartar</button>
               <button className="btn-p" onClick={guardar}><Ico e="💾" sp/>Guardar</button></div>}
@@ -7798,7 +7800,7 @@ export default function SistemaCarga(){
               </div>
             </div>
             {/* Lista */}
-            <table className="ct">
+            <div className="ct-scroll"><table className="ct">
               <thead><tr><th>Código</th><th>Nombre</th><th>Dimensiones</th><th>Máx. lb</th><th>Acc.</th></tr></thead>
               <tbody>
                 {CONTAINER_TYPES.length===0&&<tr><td colSpan={5} style={{textAlign:"center",padding:24,color:"var(--t3)"}}>No hay tipos de contenedor registrados.</td></tr>}
@@ -7815,7 +7817,7 @@ export default function SistemaCarga(){
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           </div>
         )}
 
@@ -7949,7 +7951,7 @@ export default function SistemaCarga(){
               {hasPerm("crear_agente")&&<button className="btn-p" style={{fontSize:13}} onClick={()=>{setAgForm({nombre:"",ciudad:"",pais:"",tel:"",email:"",contacto:"",notas:""});setShowNewAgente(true);}}>+ Nuevo Agente</button>}
             </div>
             <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,overflow:"hidden"}}>
-              <><table className="ct">
+              <><div className="ct-scroll"><table className="ct">
                 <thead><tr>
                   <th>Código</th><th>Nombre</th><th>Ciudad</th><th>País</th><th>Teléfono</th><th>Email</th><th>Contacto</th><th>Estado</th><th>Acc.</th>
                 </tr></thead>
@@ -7973,7 +7975,7 @@ export default function SistemaCarga(){
                     </tr>
                   );})}
                 </tbody>
-              </table>{pagPie("agentes",agentes.filter(agenteEnAlcance).length)}</>
+              </table></div>{pagPie("agentes",agentes.filter(agenteEnAlcance).length)}</>
             </div>
             {verAgente&&(()=>{const a=conDatos(verAgente);const us=usuariosDe(verAgente);
               const cls=clients.filter(c=>c.tipo==="cliente"&&["agente","vendedor_agente"].includes(c.clienteTipo)&&c.agenteId===verAgente.id);
@@ -8056,7 +8058,7 @@ export default function SistemaCarga(){
               {hasPerm("crear_oficina")&&<button className="btn-p" style={{fontSize:13}} onClick={()=>{setEditOficina(null);setOfForm({nombre:"",ciudad:"",pais:"",tel:"",email:"",contacto:"",notas:"",tipo:"",matriz_id:"",moneda:"",principal:false,com_prepaid_pct:"",com_entrega_monto:"",com_entrega_por:"",activo:true});setShowNewOficina(true);}}>+ Nueva Oficina</button>}
             </div>
             <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,overflow:"hidden"}}>
-              <><table className="ct">
+              <><div className="ct-scroll"><table className="ct">
                 <thead><tr>
                   <th>Código</th><th>Nombre</th><th>Tipo</th><th>Matriz</th><th>Ciudad</th><th>País</th><th>Moneda</th><th>Teléfono</th><th>Email</th><th>Estado</th><th>Acc.</th>
                 </tr></thead>
@@ -8084,7 +8086,7 @@ export default function SistemaCarga(){
                     </tr>
                   ))}
                 </tbody>
-              </table>{pagPie("oficinas",oficinas.filter(o=>enMiAlcance(o.id)).length)}</>
+              </table></div>{pagPie("oficinas",oficinas.filter(o=>enMiAlcance(o.id)).length)}</>
             </div>
             {showNewOficina&&(
               <div className="ov">
@@ -8240,7 +8242,7 @@ export default function SistemaCarga(){
                   <input className="fi" style={{marginLeft:"auto",width:220,fontSize:13,padding:"6px 8px"}} placeholder="Buscar origen o destino…" value={tafQ} onChange={e=>setTafQ(e.target.value)}/>
                   <select className="fs" style={{width:160,fontSize:13}} value={tafTipoFil} onChange={e=>setTafTipoFil(e.target.value)}><option value="">Todos los envíos</option>{SEND_TYPES.map(t=><option key={t} value={t}>{t}</option>)}</select>
                 </div>
-              <><table className="ct">
+              <><div className="ct-scroll"><table className="ct">
                 <thead><tr>
                   <th>Origen</th><th>Destino</th><th>Tipo Envío</th><th>Monto</th><th>Mínimo</th><th>Moneda</th><th>Estado</th><th>Acc.</th>
                 </tr></thead>
@@ -8269,7 +8271,7 @@ export default function SistemaCarga(){
                     );
                   })}
                 </tbody>
-              </table>{pagPie("tarifas",(lista).length)}</>
+              </table></div>{pagPie("tarifas",(lista).length)}</>
               </div>
             </div>);
             })()}
@@ -8336,7 +8338,7 @@ export default function SistemaCarga(){
                         {selector("dest","DESTINO")}
                       </div>
                       <div className="sdiv">TARIFAS</div>
-                      <table className="ct" style={{marginBottom:8}}>
+                      <div className="ct-scroll"><table className="ct" style={{marginBottom:8}}>
                         <thead><tr><th>Tipo de envío</th><th>Se cobra por</th><th>Precio</th><th>Mínimo</th><th>Moneda</th><th></th></tr></thead>
                         <tbody>{(F.filas||[]).map((f,i)=>{const mar=tipoEsMaritimo(f.tipoEnvio),aer=tipoEsAereo(f.tipoEnvio);return(
                           <tr key={i}>
@@ -8348,7 +8350,7 @@ export default function SistemaCarga(){
                             <td><select className="fs" value={f.moneda} onChange={e=>setFila(i,{moneda:e.target.value})}>{MONEDAS.map(m=><option key={m}>{m}</option>)}</select></td>
                             <td>{(F.filas||[]).length>1&&<span className="ic-b" style={{color:"var(--red)"}} onClick={()=>set({filas:F.filas.filter((_,j)=>j!==i)})}><Ico e="🗑" solo/></span>}</td>
                           </tr>);})}</tbody>
-                      </table>
+                      </table></div>
                       <button className="btn-s" style={{fontSize:13,marginBottom:10}} onClick={()=>set({filas:[...(F.filas||[]),filaNueva(SEND_TYPES.find(t=>!(F.filas||[]).some(f=>f.tipoEnvio===t)))]})}>+ Agregar tarifa</button>
                       <div className="mft">
                         <span style={{marginRight:"auto",fontSize:13,fontWeight:700,color:"var(--navy)"}}>{combos.filter(c=>c.f.tipoEnvio).length} tarifa(s)</span>
@@ -8374,7 +8376,7 @@ export default function SistemaCarga(){
               <button className="btn-s" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>prnVer("Registro de actividad",htmlActividad(actLog.filter(a=>!actFilter||a.user.toLowerCase().includes(actFilter.toLowerCase())||a.action.toLowerCase().includes(actFilter.toLowerCase())||a.detail.toLowerCase().includes(actFilter.toLowerCase()))))}><Ico e="🖨" sp/>Imprimir</button>
             </div>
             <div style={{maxHeight:"60vh",overflowY:"auto"}}>
-              <><table className="ct">
+              <><div className="ct-scroll"><table className="ct">
                 <thead><tr>
                   <th>Fecha / Hora</th><th>Usuario</th><th>Rol</th><th>Acción</th><th>Detalle</th>
                 </tr></thead>
@@ -8389,7 +8391,7 @@ export default function SistemaCarga(){
                     </tr>
                   ))}
                 </tbody>
-              </table>{pagPie("actividad",(actLog.filter(a=>!actFilter||a.user.toLowerCase().includes(actFilter.toLowerCase())||a.action.toLowerCase().includes(actFilter.toLowerCase())||a.detail.toLowerCase().includes(actFilter.toLowerCase()))).length)}</>
+              </table></div>{pagPie("actividad",(actLog.filter(a=>!actFilter||a.user.toLowerCase().includes(actFilter.toLowerCase())||a.action.toLowerCase().includes(actFilter.toLowerCase())||a.detail.toLowerCase().includes(actFilter.toLowerCase()))).length)}</>
             </div>
           </div>
         )}
@@ -8927,7 +8929,7 @@ export default function SistemaCarga(){
 
       <div className="card" style={{padding:0}}>
         {lista.length===0?<div style={{textAlign:"center",padding:40,color:"var(--t3)"}}>{Q?"Sin coincidencias.":"No hay solicitudes."}</div>:(
-        <><table className="ct">
+        <><div className="ct-scroll"><table className="ct">
           <thead><tr><th>N°</th><th>Para</th><th>Dirección</th><th>Fecha</th><th>Bultos</th><th>Recoge</th>{esEmpleadoPU&&<th>Pidió</th>}<th>Estado</th></tr></thead>
           <tbody>{pagSlice("pickups",lista).map(p=>(
             <tr key={p.id} style={{cursor:"pointer"}} onClick={()=>{setPickupSel(p);setPuConf({fecha:p.fechaProgramada||p.fechaDeseada||"",transportista:p.transportista||"",chofer:p.chofer||"",monto:p.monto?String(p.monto):"",moneda:p.moneda||"USD"});}}>
@@ -8940,7 +8942,7 @@ export default function SistemaCarga(){
               {esEmpleadoPU&&<td style={{fontSize:12,color:"var(--t2)"}}>{p.solicitanteNombre||"—"}</td>}
               <td>{puChip(p.status)}{p.wrId&&<div style={{...mono,fontSize:11,color:"var(--t3)",marginTop:2}}>WR <Num t="wr" id={p.wrId}/></div>}</td>
             </tr>))}</tbody>
-        </table>{pagPie("pickups",(lista).length)}</>)}
+        </table></div>{pagPie("pickups",(lista).length)}</>)}
       </div>
 
       {/* DETALLE */}
@@ -8958,11 +8960,11 @@ export default function SistemaCarga(){
                 ].map(([l,v])=><div key={l}><div className="fl">{l}</div><div style={{fontSize:14,fontWeight:600}}>{v||"—"}</div></div>)}
               </div>
               <div className="sdiv">BULTOS ({puBultos(sel)})</div>
-              <table className="ct" style={{marginBottom:12}}>
+              <div className="ct-scroll"><table className="ct" style={{marginBottom:12}}>
                 <thead><tr><th>Cant.</th><th>Contenido aprox.</th><th>Peso c/u</th><th>Medidas c/u (in)</th><th>Peso total</th></tr></thead>
                 <tbody>{(sel.paquetes||[]).map((x,i)=><tr key={i}><td style={{fontWeight:700}}>{x.cantidad||1}</td><td>{x.descripcion||"—"}</td><td style={mono}>{x.pesoLb?`${fmtDec(x.pesoLb,2)} lb`:"—"}</td><td style={mono}>{x.largo&&x.ancho&&x.alto?`${x.largo}×${x.ancho}×${x.alto}`:"—"}</td><td style={{...mono,fontWeight:700}}>{x.pesoLb?`${Math.round((parseFloat(x.pesoLb)||0)*(parseInt(x.cantidad)||1)*100)/100} lb`:"—"}</td></tr>)}
                   {(()=>{const t=puTot(sel);return <tr style={{background:"var(--bg3)"}}><td style={{fontWeight:800}}>{t.bultos}</td><td style={{fontWeight:800}}>Total aprox.</td><td/><td style={{...mono,fontWeight:700}}>{t.ft3?`${fmtDec(t.ft3,2)} ft³`:""}</td><td style={{...mono,fontWeight:800}}>{t.lb?`${t.lb} lb`:"—"}</td></tr>;})()}</tbody>
-              </table>
+              </table></div>
               {puGestiona&&sel.status==="solicitado"&&(
                 <div className="card" style={{background:"var(--bg4)",marginBottom:12}}>
                   <div className="sdiv" style={{marginTop:0}}>CONFIRMAR</div>
@@ -10244,7 +10246,7 @@ export default function SistemaCarga(){
                   {(ctaDesde||ctaHasta)&&<button className="btn-s" style={{fontSize:12,padding:"3px 10px"}} onClick={()=>{setCtaDesde("");setCtaHasta("");}}>Todo</button>}
                 </div>
                 {movs.length===0?<div style={{textAlign:"center",padding:30,color:"var(--t3)"}}>Sin movimientos.</div>:(
-                <><table className="ct">
+                <><div className="ct-scroll"><table className="ct">
                   <thead><tr><th>Fecha</th><th>Documento</th><th>Detalle</th><th style={{textAlign:"right"}}>Debe</th><th style={{textAlign:"right"}}>Haber</th><th style={{textAlign:"right"}}>Saldo</th><th></th></tr></thead>
                   <tbody>
                     {d0&&<tr style={{background:"var(--bg3)"}}><td></td><td colSpan={4} style={{fontWeight:700}}>Saldo anterior</td><td style={{...mono,textAlign:"right",fontWeight:800}}>{saldoTxt(anterior)}</td><td></td></tr>}
@@ -10267,7 +10269,7 @@ export default function SistemaCarga(){
                         </td>
                       </tr>);})}
                   </tbody>
-                </table>{pagPie("ctaMovs",(vis).length)}</>)}
+                </table></div>{pagPie("ctaMovs",(vis).length)}</>)}
               </div>
 
               {["agente","autonomo","oficina"].includes(pg.tipo)&&hasPerm("ver_comisiones")&&(
@@ -10277,7 +10279,7 @@ export default function SistemaCarga(){
                   {puede&&pend.length>0&&<button className="btn-p" style={{fontSize:13,padding:"5px 12px",marginLeft:"auto"}} onClick={()=>cuadreAcreditar(pg,pend)}><Ico e="⭐" sp/>Acreditar todas ({pend.length})</button>}
                 </div>
                 {cm.length===0?<div style={{textAlign:"center",padding:24,color:"var(--t3)"}}>Sin WR PREPAID cobrados de sus clientes.</div>:(
-                <><table className="ct">
+                <><div className="ct-scroll"><table className="ct">
                   <thead><tr><th>WR</th><th>Factura</th><th>Cliente</th><th style={{textAlign:"right"}}>Cobrado</th><th>Su tarifa</th><th style={{textAlign:"right"}}>Costo</th><th style={{textAlign:"right"}}>Comisión</th><th>Estado</th></tr></thead>
                   <tbody>{pagSlice("comisiones",cm).map(x=>{const cl=cliDeWR(x.w);return(
                     <tr key={x.ref}>
@@ -10297,7 +10299,7 @@ export default function SistemaCarga(){
                           {puede&&<button className="btn-s" style={{fontSize:12,padding:"2px 8px",marginLeft:6,color:"var(--red)",borderColor:"var(--red)"}} onClick={()=>cuadreQuitarComision(pg,x)}>Quitar comisión</button>}</>}
                       </td>
                     </tr>);})}</tbody>
-                </table>{pagPie("comisiones",(cm).length)}</>)}
+                </table></div>{pagPie("comisiones",(cm).length)}</>)}
               </div>)}
             </div>
           );
@@ -10435,7 +10437,7 @@ export default function SistemaCarga(){
             </div>
             <div className="card" style={{padding:0}}>
               {facFilt.length===0?<div style={{textAlign:"center",padding:40,color:"var(--t3)"}}>No hay facturas con esos filtros.</div>:(
-                <><table className="ct">
+                <><div className="ct-scroll"><table className="ct">
                   <thead><tr>
                     <th>N° Factura</th><th>Tipo</th><th>Fecha</th><th>Receptor</th>
                     <th>WR / Guía</th><th>Despacho</th><th>Entrega</th>
@@ -10487,7 +10489,7 @@ export default function SistemaCarga(){
                       );
                     })}
                   </tbody>
-                </table>{pagPie("facturas",(facFilt).length)}</>
+                </table></div>{pagPie("facturas",(facFilt).length)}</>
               )}
             </div>
           </>
@@ -10523,7 +10525,7 @@ export default function SistemaCarga(){
                   {puede&&<button className="btn-p" style={{fontSize:13,padding:"6px 12px",marginLeft:"auto"}} onClick={()=>cobroAbrir(null)}><Ico e="💵" sp/>Recibir pago</button>}
                 </div>
                 {filas.length===0?<div style={{textAlign:"center",padding:40,color:"var(--t3)"}}>{Q?"Sin coincidencias.":ctaSoloSaldo==="con"?"No hay cuentas con saldo. ":"No hay cuentas."}</div>:(
-                <><table className="ct">
+                <><div className="ct-scroll"><table className="ct">
                   <thead><tr><th>Cuenta</th><th style={{textAlign:"right"}}>Nos debe</th><th style={{textAlign:"right"}}>Le debemos</th><th></th></tr></thead>
                   <tbody>
                     {pagSlice("cuentas",filas).map(r=>(
@@ -10540,7 +10542,7 @@ export default function SistemaCarga(){
                       <td style={{...mono,textAlign:"right",fontWeight:800,color:"var(--green)"}}>{tot("favor")}</td><td></td>
                     </tr>
                   </tbody>
-                </table>{pagPie("cuentas",(filas).length)}</>)}
+                </table></div>{pagPie("cuentas",(filas).length)}</>)}
               </div>
             );
           }
@@ -10605,7 +10607,7 @@ export default function SistemaCarga(){
               </div>
               {filasR.length>0&&(
               <div className="card" style={{padding:0,marginBottom:10}}>
-                <table className="ct">
+                <div className="ct-scroll"><table className="ct">
                   <thead><tr><th>Forma de pago</th><th>Moneda</th><th style={{textAlign:"right"}}>Entró</th><th style={{textAlign:"right"}}>Salió</th><th style={{textAlign:"right"}}>Neto</th></tr></thead>
                   <tbody>{filasR.map(r=>(
                     <tr key={r.metodo+r.moneda}>
@@ -10614,11 +10616,11 @@ export default function SistemaCarga(){
                       <td style={{...mono,textAlign:"right",color:"var(--red)"}}>{fmtMoney(r.sale,r.moneda)}</td>
                       <td style={{...mono,textAlign:"right",fontWeight:800}}>{fmtMoney(r.entra-r.sale,r.moneda)}</td>
                     </tr>))}</tbody>
-                </table>
+                </table></div>
               </div>)}
               {grupos.length>0&&(
               <div className="card" style={{padding:0}}>
-                <><table className="ct">
+                <><div className="ct-scroll"><table className="ct">
                   <thead><tr><th>Fecha</th><th>Documento</th><th>Quién</th><th>Forma</th><th>Referencia</th><th style={{textAlign:"right"}}>Monto</th><th>Usuario</th><th></th></tr></thead>
                   <tbody>{pagSlice("caja",grupos).map(g=>(
                     <tr key={g.id}>
@@ -10635,7 +10637,7 @@ export default function SistemaCarga(){
                         {(hasPerm("anular_pago")||hasPerm("cobrar"))&&<button className="btn-s" style={{fontSize:12,padding:"2px 6px",color:"var(--red)",borderColor:"var(--red)"}} title="Anular" onClick={()=>pagoAnularGrupo(pagos.filter(p=>!p.anulado&&(g.pagos[0].reciboId?p.reciboId===g.pagos[0].reciboId:p.id===g.id)))}>✕</button>}
                       </td>
                     </tr>))}</tbody>
-                </table>{pagPie("caja",(grupos).length)}</>
+                </table></div>{pagPie("caja",(grupos).length)}</>
               </div>)}
             </div>
           );
@@ -10721,7 +10723,7 @@ export default function SistemaCarga(){
                 </span>
               </div>
               <div className="card" style={{padding:0,overflow:"hidden"}}>
-                <table className="ct" style={{width:"100%",fontSize:14}}>
+                <div className="ct-scroll"><table className="ct" style={{width:"100%",fontSize:14}}>
                   <thead><tr><th>Receptor</th><th style={{textAlign:"right"}}>WR</th><th style={{textAlign:"right"}}>A cobrar</th><th>Tarifa</th><th style={{textAlign:"right"}}>Importe</th><th>Factura</th><th style={{width:240}}></th></tr></thead>
                   <tbody>
                     {grupos.map(gr=>{
@@ -10759,12 +10761,12 @@ export default function SistemaCarga(){
                     })}
                     {grupos.length===0&&<tr><td colSpan={7} style={{textAlign:"center",padding:30,color:"var(--t3)"}}>No hay WR por facturar en esta guía.</td></tr>}
                   </tbody>
-                </table>
+                </table></div>
               </div>
               {prepaid.length>0&&(
                 <div className="card" style={{padding:0,overflow:"hidden",marginTop:12}}>
                   <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",fontSize:15,fontWeight:700,color:"var(--navy)"}}><Ico e="💳" sp/>PREPAID ({prepaid.length})</div>
-                  <><table className="ct">
+                  <><div className="ct-scroll"><table className="ct">
                     <thead><tr><th>WR</th><th>Consignatario</th><th>Paga</th><th>Factura</th><th>Total</th><th>Estado</th><th></th></tr></thead>
                     <tbody>{pagSlice("prepaid",prepaid).map(w=>{const f=facPrepaid.find(x=>x.wrIds.includes(w.id));return(
                       <tr key={w.id}>
@@ -10777,7 +10779,7 @@ export default function SistemaCarga(){
                         <td style={{whiteSpace:"nowrap"}}>{f?<button className="btn-s" style={{fontSize:12,padding:"3px 6px"}} onClick={()=>setFacPrint(f)}><Ico e="🖨️" solo/></button>
                           :puedeFac&&<button className="btn-p" style={{fontSize:12,padding:"3px 8px"}} onClick={()=>{if(!w.tipoEnvio){window.alert("Asigna primero el tipo de envío del WR.");return;}facOpenNew(facConstruirWR(w));}}><Ico e="💰" sp/>Facturar</button>}</td>
                       </tr>);})}</tbody>
-                  </table>{pagPie("prepaid",(prepaid).length)}</>
+                  </table></div>{pagPie("prepaid",(prepaid).length)}</>
                 </div>)}
             </div>
           );
@@ -10814,7 +10816,7 @@ export default function SistemaCarga(){
               <div className="card" style={{padding:0}}>
                 <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",fontFamily:"Arial,Helvetica,sans-serif",fontSize:16,fontWeight:700,color:"var(--navy)"}}><Ico e="📊" sp/>Ingresos por Período (separado por moneda)</div>
                 {meses.length===0?<div style={{textAlign:"center",padding:30,color:"var(--t3)"}}>No hay datos para reportar aún.</div>:(
-                  <table className="ct">
+                  <div className="ct-scroll"><table className="ct">
                     <thead><tr><th>Período</th><th>Mon</th><th>Facturas</th><th>Total Facturado</th><th>Pagado</th><th>Saldo</th><th>% Cobrado</th></tr></thead>
                     <tbody>
                       {meses.map(m=>{
@@ -10839,13 +10841,13 @@ export default function SistemaCarga(){
                         );
                       })}
                     </tbody>
-                  </table>
+                  </table></div>
                 )}
               </div>
               <div className="card" style={{padding:0}}>
                 <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",fontFamily:"Arial,Helvetica,sans-serif",fontSize:16,fontWeight:700,color:"var(--navy)"}}><Ico e="👥" sp/>Quién debe cuánto</div>
                 {deudores.length===0?<div style={{textAlign:"center",padding:30,color:"var(--t3)"}}>No hay deudores. <Ico e="✅"/></div>:(
-                  <><table className="ct">
+                  <><div className="ct-scroll"><table className="ct">
                     <thead><tr><th>Tipo</th><th>Receptor</th><th>Mon</th><th>Facturas</th><th>Total</th><th>Pagado</th><th>Saldo</th></tr></thead>
                     <tbody>
                       {pagSlice("deudores",deudores).map((d,i)=>(
@@ -10860,7 +10862,7 @@ export default function SistemaCarga(){
                         </tr>
                       ))}
                     </tbody>
-                  </table>{pagPie("deudores",(deudores).length)}</>
+                  </table></div>{pagPie("deudores",(deudores).length)}</>
                 )}
               </div>
             </div>
@@ -11263,7 +11265,7 @@ export default function SistemaCarga(){
         <span style={{fontSize:15,fontWeight:700,color:"var(--navy)"}}><Ico e="📨" sp/>{propias?"Mis solicitudes de reempaque":"Solicitudes de reempaque"}</span>
         {!propias&&<span style={{fontSize:12,background:"#FDE8EA",padding:"2px 8px",borderRadius:4,border:"1px solid #F0A0A8",color:"var(--red)",fontWeight:700}}>{srList.filter(r=>r.status==="pendiente").length}</span>}
       </div>
-      <><table className="ct">
+      <><div className="ct-scroll"><table className="ct">
         <thead><tr><th>N°</th><th>Fecha</th>{!propias&&<th>Solicitó</th>}<th>Cliente</th><th>WR</th><th>Notas</th><th>Estado</th><th></th></tr></thead>
         <tbody>{pagSlice(propias?"sr_mias":"sr_todas",lista).map(r=>(
           <tr key={r.id}>
@@ -11281,7 +11283,7 @@ export default function SistemaCarga(){
             </td>
           </tr>))}
           {lista.length===0&&<tr><td colSpan={8} style={{textAlign:"center",padding:24,color:"var(--t3)"}}>Sin solicitudes.</td></tr>}
-        </tbody></table>{pagPie(propias?"sr_mias":"sr_todas",lista.length)}</>
+        </tbody></table></div>{pagPie(propias?"sr_mias":"sr_todas",lista.length)}</>
     </div>);
   };
 
@@ -12403,7 +12405,7 @@ export default function SistemaCarga(){
                         </span>
                       </div>
                       {(ct.wr||[]).length>0?(
-                        <table className="ct" style={{fontSize:12}}>
+                        <div className="ct-scroll"><table className="ct" style={{fontSize:12}}>
                           <thead><tr><th>#</th><th>N° WR</th><th>Consignatario</th><th>Cajas</th><th>Peso</th><th>Ft³</th><th>Descripción</th></tr></thead>
                           <tbody>
                             {(ct.wr||[]).map((w,wi)=>(
@@ -12418,7 +12420,7 @@ export default function SistemaCarga(){
                               </tr>
                             ))}
                           </tbody>
-                        </table>
+                        </table></div>
                       ):(
                         <div style={{padding:14,textAlign:"center",color:"var(--t3)",fontSize:12}}>(contenedor sin WR)</div>
                       )}
@@ -12591,7 +12593,7 @@ export default function SistemaCarga(){
             {guiasRecep.length===0?(
               <div style={{textAlign:"center",padding:30,color:"var(--t3)",fontSize:13}}>No hay guías en Tránsito 2 o en destino.</div>
             ):(
-              <><table className="ct">
+              <><div className="ct-scroll"><table className="ct">
                 <thead><tr>
                   <th>N° Guía</th><th>Fecha</th><th>Destino</th><th>Tipo</th><th>WR</th><th>Cajas</th>
                   <th>Vuelo/Barco</th><th>AWB / BL</th><th>Estado</th><th>Recibidos</th>
@@ -12620,7 +12622,7 @@ export default function SistemaCarga(){
                     );
                   })}
                 </tbody>
-              </table>{pagPie("guiasRecep",(guiasRecep).length)}</>
+              </table></div>{pagPie("guiasRecep",(guiasRecep).length)}</>
             )}
           </div>
 
@@ -12854,7 +12856,7 @@ export default function SistemaCarga(){
             {archFiltradas.length===0?(
               <div style={{textAlign:"center",padding:60,color:"var(--t3)"}}>{guiasArchivadas.length===0?"Aún no hay guías recibidas/archivadas.":"Ninguna guía coincide con los filtros."}</div>
             ):(
-              <><table className="ct">
+              <><div className="ct-scroll"><table className="ct">
                 <thead><tr>
                   <th>N° Guía</th><th>Destino</th><th>Tipo</th><th>WR</th><th>Cajas</th>
                   <th>Peso lb</th><th>Ft³</th><th>Fecha creación</th><th>Recibida en almacén</th>
@@ -12921,7 +12923,7 @@ export default function SistemaCarga(){
                     </tr>
                   ))}
                 </tbody>
-              </table>{pagPie("archivo",(archFiltradas).length)}</>
+              </table></div>{pagPie("archivo",(archFiltradas).length)}</>
             )}
           </div>
           </>
@@ -13070,7 +13072,7 @@ export default function SistemaCarga(){
           <div style={{textAlign:"center",padding:40,color:"var(--t3)"}}>{alTab==="abiertas"?(q?"Ningún caso abierto coincide.":"No hay faltantes ni sobrantes abiertos."):"Aún no hay casos cerrados."}</div>
         ):(
           <div style={{overflowX:"auto"}}>
-          <><table className="ct">
+          <><div className="ct-scroll"><table className="ct">
             <thead><tr>
               <th>Tipo</th><th>N° WR</th><th>Cliente</th><th>Guía</th><th>Estado</th>
               <th>{alTab==="abiertas"?"Abierto":"Cerrado"}</th>
@@ -13101,7 +13103,7 @@ export default function SistemaCarga(){
                 </tr>);
               })}
             </tbody>
-          </table>{pagPie("faltantes",(lista).length)}</>
+          </table></div>{pagPie("faltantes",(lista).length)}</>
           </div>
         )}
       </div>
@@ -13225,7 +13227,7 @@ export default function SistemaCarga(){
           </div>
           {crHistOpen&&(
             <div style={{maxHeight:"60vh",overflow:"auto",border:"1px solid var(--b1)",borderRadius:8}}>
-              <><table className="ct">
+              <><div className="ct-scroll"><table className="ct">
                 <thead><tr>
                   <th>N° Egreso</th><th>Fecha</th><th>Agente</th><th>Contacto</th><th>Vehículo</th>
                   <th style={{textAlign:"center"}}>WR</th><th>Usuario</th><th>Estado</th><th style={{width:200}}>Acciones</th>
@@ -13258,7 +13260,7 @@ export default function SistemaCarga(){
                     </tr>
                   ))}
                 </tbody>
-              </table>{pagPie("releases",(historico).length)}</>
+              </table></div>{pagPie("releases",(historico).length)}</>
             </div>
           )}
         </div>
@@ -13491,7 +13493,7 @@ export default function SistemaCarga(){
           {lista.length===0?(
             <div style={{textAlign:"center",padding:60,color:"var(--t3)"}}>No hay {tipoFiltro==="todos"?"entregas ni despachos":(tipoFiltro==="entrega"?"entregas":"despachos")} registrados.</div>
           ):(
-            <><table className="ct">
+            <><div className="ct-scroll"><table className="ct">
               <thead><tr>
                 <th>N° Nota</th><th>Tipo</th><th>Fecha</th><th>Guía</th><th>Receptor</th><th>Método</th>
                 <th style={{textAlign:"center"}}>WR</th><th>Factura</th><th>Usuario</th><th>Estado</th><th style={{width:200}}>Acciones</th>
@@ -13539,7 +13541,7 @@ export default function SistemaCarga(){
                   </tr>
                 );})}
               </tbody>
-            </table>{pagPie("notas",(lista).length)}</>
+            </table></div>{pagPie("notas",(lista).length)}</>
           )}
         </div>
       </div>
@@ -14978,7 +14980,7 @@ export default function SistemaCarga(){
                 {fl.length>0&&<>
                   <div style={secT}><Ico e="📦" sp/>WR y flete</div>
                   <div style={{overflowX:"auto",border:"1px solid var(--b1)",borderRadius:8}}>
-                    <table className="ct" style={{width:"100%",fontSize:14}}>
+                    <div className="ct-scroll"><table className="ct" style={{width:"100%",fontSize:14}}>
                       <thead><tr>
                         <th>N° WR</th>{conCli&&<th>Cliente</th>}<th style={{textAlign:"right"}}>Cajas</th>{colsMed.map(([k,t])=><th key={k} style={{textAlign:"right"}}>{t}</th>)}
                         <th style={{textAlign:"right"}}>A cobrar ({uni})</th><th style={{textAlign:"right"}}>Tarifa</th><th style={{textAlign:"right"}}>Importe</th><th></th>
@@ -15005,7 +15007,7 @@ export default function SistemaCarga(){
                           <td style={{textAlign:"right",fontFamily:"'DM Mono',monospace"}}>{fmtMoney(sum(fl,"total"),f.moneda)}</td><td></td>
                         </tr>}
                       </tbody>
-                    </table>
+                    </table></div>
                   </div>
                 </>}
 
@@ -15020,7 +15022,7 @@ export default function SistemaCarga(){
                   </select>
                 </div>
                 {ad.length===0?<div style={{fontSize:13,color:"var(--t3)"}}>—</div>:
-                  <table className="ct" style={{width:"100%",fontSize:14}}>
+                  <div className="ct-scroll"><table className="ct" style={{width:"100%",fontSize:14}}>
                     <thead><tr><th>N° WR</th><th>Concepto</th><th style={{textAlign:"right"}}>Cant.</th><th style={{textAlign:"right"}}>Precio</th><th style={{textAlign:"right"}}>Importe</th><th></th></tr></thead>
                     <tbody>{ad.map(l=>(
                       <tr key={l._i}>
@@ -15032,14 +15034,14 @@ export default function SistemaCarga(){
                         <td style={{textAlign:"right",fontFamily:"'DM Mono',monospace",fontWeight:700}}>{fmtMoney(l.total,f.moneda)}</td>
                         <td>{del(l._i)}</td>
                       </tr>))}</tbody>
-                  </table>}
+                  </table></div>}
 
                 {/* COBROS EXTRA */}
                 <div style={secT}><Ico e="➕" sp/>Cobros extra
                   <button className="btn-s" style={{fontSize:12,padding:"3px 10px"}} onClick={()=>addL({tipo:"extra"})}>+ Agregar</button>
                 </div>
                 {ex.length===0?<div style={{fontSize:13,color:"var(--t3)"}}>—</div>:
-                  <table className="ct" style={{width:"100%",fontSize:14}}>
+                  <div className="ct-scroll"><table className="ct" style={{width:"100%",fontSize:14}}>
                     <thead><tr><th>Concepto</th><th style={{textAlign:"right"}}>Cant.</th><th style={{textAlign:"right"}}>Precio</th><th style={{textAlign:"right"}}>Importe</th><th></th></tr></thead>
                     <tbody>{ex.map(l=>(
                       <tr key={l._i}>
@@ -15049,7 +15051,7 @@ export default function SistemaCarga(){
                         <td style={{textAlign:"right",fontFamily:"'DM Mono',monospace",fontWeight:700}}>{fmtMoney(l.total,f.moneda)}</td>
                         <td>{del(l._i)}</td>
                       </tr>))}</tbody>
-                  </table>}
+                  </table></div>}
 
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginTop:16}}>
                   <div>
@@ -15132,7 +15134,7 @@ export default function SistemaCarga(){
                   </div>
                   {mons.length>1&&<div style={{display:"flex",gap:6,marginBottom:10}}>{mons.map(k=><button key={k} className={m.moneda===k?"btn-p":"btn-s"} style={{fontSize:13,padding:"4px 12px"}} onClick={()=>{const sel={};facAbiertasDe(m.pagador).filter(f=>(f.moneda||"USD")===k).forEach(f=>{sel[f.id]=true;});set({moneda:k,sel,usarSaldo:saldoFavorDe(m.pagador,k)>0});}}>{k}</button>)}</div>}
                   {c.facs.length===0?<div style={{padding:14,textAlign:"center",color:"var(--t3)",border:"1px dashed var(--b1)",borderRadius:8,marginBottom:12}}>Sin facturas pendientes: el pago queda como saldo a favor.</div>:
-                  <table className="ct" style={{width:"100%",fontSize:14,marginBottom:12}}>
+                  <div className="ct-scroll"><table className="ct" style={{width:"100%",fontSize:14,marginBottom:12}}>
                     <thead><tr><th style={{width:30}}><input type="checkbox" checked={c.facs.every(f=>m.sel[f.id])} onChange={e=>{const sel={};if(e.target.checked)c.facs.forEach(f=>{sel[f.id]=true;});set({sel});}}/></th><th>Factura</th><th>Emisión</th><th style={{textAlign:"right"}}>Saldo</th><th style={{textAlign:"right"}}>Se abona</th><th style={{textAlign:"right"}}>Queda</th></tr></thead>
                     <tbody>{c.facs.map(f=>{const a=aplicDe(f.id);return(
                       <tr key={f.id} style={{opacity:m.sel[f.id]?1:.5}}>
@@ -15143,7 +15145,7 @@ export default function SistemaCarga(){
                         <td style={{textAlign:"right",fontFamily:"'DM Mono',monospace",fontWeight:800,color:a>0?"var(--green)":"var(--t4)"}}>{a>0?fmtMoney(a,f.moneda):"—"}</td>
                         <td style={{textAlign:"right",fontFamily:"'DM Mono',monospace",color:(f.saldo-a)>0.001?"var(--orange)":"var(--green)"}}>{m.sel[f.id]?fmtMoney(Math.max(0,f.saldo-a),f.moneda):""}</td>
                       </tr>);})}</tbody>
-                  </table>}
+                  </table></div>}
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
                     <div><label className="fl">Monto recibido ({m.moneda})</label>
                       <input className="fi" type="number" step="0.01" min="0" value={m.monto} onChange={e=>set({monto:e.target.value})} style={{fontSize:18,fontWeight:800}}/></div>
@@ -15300,7 +15302,7 @@ export default function SistemaCarga(){
                   <span style={{fontSize:13,fontWeight:700,color:"var(--navy)",marginLeft:"auto"}}>{ed.motivo==="Venta"?fmt.tituloCom:fmt.tituloPro} · formato {fmt._pais||"predeterminado"}</span>
                 </div>)}
               {conLineas&&(<>
-                <table className="ct" style={{marginBottom:6}}>
+                <div className="ct-scroll"><table className="ct" style={{marginBottom:6}}>
                   <thead><tr><th style={{width:70}}>Cant.</th><th>Descripción</th>{hs&&<th style={{width:120}}>Cód. arancelario</th>}{ori&&<th style={{width:130}}>País de origen</th>}{ed.tipo==="factura"&&<th style={{width:90}}>Peso kg</th>}<th style={{width:110}}>Valor unit.</th><th style={{width:100}}>Total</th><th style={{width:40}}></th></tr></thead>
                   <tbody>{(ed.lineas||[]).map((x,i)=>(
                     <tr key={i}>
@@ -15313,7 +15315,7 @@ export default function SistemaCarga(){
                       <td style={{fontFamily:"'DM Mono',monospace",fontWeight:700}}>{fmtMoney((parseFloat(x.cantidad)||0)*(parseFloat(x.valorUnit)||0),ed.moneda)}</td>
                       <td>{ed.lineas.length>1&&<span className="ic-b" style={{color:"var(--red)"}} onClick={()=>set({lineas:ed.lineas.filter((_,j)=>j!==i)})}><Ico e="🗑" solo/></span>}</td>
                     </tr>))}</tbody>
-                </table>
+                </table></div>
                 <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
                   <button className="btn-s" style={{fontSize:13}} onClick={()=>set({lineas:[...ed.lineas,{cantidad:"1",descripcion:"",hs:"",origen:nomPaisCo(ed.wr.origCountry),pesoKg:"",valorUnit:""}]})}>+ Agregar línea</button>
                   <span style={{marginLeft:"auto",fontWeight:800,color:"var(--navy)"}}>Total declarado: {fmtMoney(sum,ed.moneda)}</span>
