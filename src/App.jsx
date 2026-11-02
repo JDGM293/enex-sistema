@@ -6,7 +6,7 @@ import { descargarXlsx } from './xlsx'
 import { dbGetActividadReporte } from './supabase'
 import { dbGetFacturasPropias, dbUpsertFacturaPropia, dbGetPrealertas, dbUpsertPrealerta, paSubirArchivo, paUrlArchivo } from './supabase'
 import { chatFromDB, dbChatMensajes, dbChatEnviar, dbChatEditar, dbChatNoLeidos, dbChatMarcarLeido, chatSubirAdjunto, chatUrlAdjunto } from './supabase'
-import { supabase, resolverLogin, cuentaGuardar, cuentaEliminar, dbGetClientes, dbUpsertCliente, dbDeleteCliente, dbGetWR, dbUpsertWR as dbUpsertWRBase, dbDeleteWR, dbGetAgentes, dbUpsertAgente, dbDeleteAgente, dbGetOficinas, dbUpsertOficina, dbDeleteOficina, dbGetTarifas, dbUpsertTarifa, dbDeleteTarifa, dbGetConsolidaciones, dbUpsertConsolidacion, dbDeleteConsolidacion, dbGetCargoReleases, dbUpsertCargoRelease, dbDeleteCargoRelease, dbGetDeliveryNotes, dbUpsertDeliveryNote, dbDeleteDeliveryNote, dbGetFacturas, dbUpsertFactura, dbDeleteFactura, dbGetPagos, dbUpsertPago, dbDeletePago, storageUploadComprobante, dbLogActividad, dbGetActividad, dbGetConfig, dbSetConfig, dbGetScanLog, dbInsertScan, dbSetScanRegistered, dbDeleteScanIds, storageUploadFoto, storageDeleteFoto, dbGetFotosByWR, dbInsertFoto, dbDeleteFoto, storageUploadFotoConsol, storageDeleteFotoConsol, dbGetFotosByConsol, dbInsertFotoConsol, dbDeleteFotoConsol } from "./supabase";
+import { supabase, resolverLogin, cuentaGuardar, cuentaEliminar, dbGetClientes, dbUpsertCliente, dbDeleteCliente, dbGetWR, dbUpsertWR as dbUpsertWRBase, dbDeleteWR, dbGetAgentes, dbUpsertAgente, dbDeleteAgente, dbGetOficinas, dbUpsertOficina, dbDeleteOficina, dbGetTarifas, dbUpsertTarifa, dbDeleteTarifa, dbGetConsolidaciones, dbUpsertConsolidacion, dbDeleteConsolidacion, dbGetCargoReleases, dbUpsertCargoRelease, dbDeleteCargoRelease, dbGetDeliveryNotes, dbUpsertDeliveryNote, dbDeleteDeliveryNote, dbGetFacturas, dbUpsertFactura, dbDeleteFactura, dbGetPagos, dbUpsertPago as dbUpsertPagoBase, dbDeletePago, dbSigDocumento, dbRenombrarFactura, storageUploadComprobante, dbLogActividad, dbGetActividad, dbGetConfig, dbSetConfig, dbGetScanLog, dbInsertScan, dbSetScanRegistered, dbDeleteScanIds, storageUploadFoto, storageDeleteFoto, dbGetFotosByWR, dbInsertFoto, dbDeleteFoto, storageUploadFotoConsol, storageDeleteFotoConsol, dbGetFotosByConsol, dbInsertFotoConsol, dbDeleteFotoConsol } from "./supabase";
 
 // ─── TEMA CLARO PROFESIONAL ───────────────────────────────────────────────────
 const S = `
@@ -1885,7 +1885,7 @@ const PwInput=({style,...props})=>{
 };
 
 // ─── STANDALONE COMPONENTS (outside main component to avoid hook issues) ─────
-const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomos=[],allClients=[],tiposOk=["cliente","usuario"],rolesOk=null,acceso=true,ocultar=false,elegirMatriz=false})=>{
+const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomos=[],allClients=[],tiposOk=["cliente","usuario"],rolesOk=null,acceso=true,ocultar=false,elegirMatriz=false,esAdmin=false})=>{
   const _ROL_TO_TIPO_INIT={"E":"agente","E1":"vendedor_agente","F":"autonomo","G":"oficina"};
   // Los clientes ya no pertenecen a oficinas (son sucursales): los antiguos pasan a Casa Matriz
   const _ct0=initial?.clienteTipo||(initial?.tipo==="usuario"&&initial?.rol?_ROL_TO_TIPO_INIT[initial.rol]||"matriz":"matriz");
@@ -1971,6 +1971,7 @@ const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomo
               {mats.map(o=><option key={o.id} value={o.id}>{o.codigo} — {o.nombre}{o.ciudad?` (${o.ciudad})`:""}</option>)}
             </select>
           </div>;})()}
+        {esAdmin&&f.tipo==="usuario"&&f.rol==="F"&&<div className="fg" style={{marginBottom:14}}><label style={{display:"flex",alignItems:"center",gap:8,fontSize:14,cursor:"pointer"}}><input type="checkbox" checked={!!f.fpActivo} onChange={e=>setF(p=>({...p,fpActivo:e.target.checked}))}/>Puede emitir sus propias facturas (Mis facturas)</label></div>}
         {/* Usuario de agente: su agente */}
         {f.tipo==="usuario"&&["E","E1"].includes(f.rol)&&(
           <div className="fg" style={{marginBottom:14}}><div className="fl">Agente *</div>
@@ -2634,6 +2635,10 @@ export default function SistemaCarga(){
   const ofiActiva=o=>o&&o.activo!==false;
   const matrizDe=o=>!o?null:esMatriz(o)?o:(oficinas.find(x=>x.id===o.matriz_id)||null);
   const matricesDePais=(co,todas=false)=>oficinas.filter(o=>esMatriz(o)&&(todas||ofiActiva(o))&&paisDeOfi(o)===co);
+  // Cada pago queda en la matriz de su factura (o la del usuario) y en la oficina donde se cobró
+  const matrizDePago=p=>{const f=p.facturaId?facturas.find(x=>x.id===p.facturaId):null;
+    return f?.matrizId||matrizDe(oficinas.find(o=>o.id===currentUser?.oficinaId))?.id||"";};
+  const dbUpsertPago=p=>dbUpsertPagoBase({...p,matrizId:p.matrizId||matrizDePago(p),oficinaId:p.oficinaId!==undefined?p.oficinaId:(currentUser?.oficinaId||"")});
   const paisPorNombre=v=>{const n=sinAcentos(String(v||"").replace(/[^\p{L}\s]/gu,""));return n?COUNTRIES.find(co=>nomPaisCo(co)===n)||null:null;};
   // Matriz que atiende una dirección: la de la ciudad (zona) del cliente o, si no, la principal del país
   const matrizZona=(co,cli)=>{if(!co)return null;const mats=matricesDePais(co);if(!mats.length)return null;
@@ -2755,6 +2760,7 @@ export default function SistemaCarga(){
   const [cajaDesde,setCajaDesde]=useState(hoyISO());
   const [cajaHasta,setCajaHasta]=useState(hoyISO());
   const [cajaUsr,setCajaUsr]=useState("");
+  const [cajaOfi,setCajaOfi]=useState("");
   const [cuadreMarca,setCuadreMarca]=useState({}); // comisiones marcadas para acreditar
   const [cuadrePago,setCuadrePago]=useState(null); // {monto,moneda,tipoPago,referencia}
   const [facGuiaSel,setFacGuiaSel]=useState(null);   // guía abierta en Facturación › Por guía
@@ -5488,7 +5494,7 @@ export default function SistemaCarga(){
               </div>
             </div>
             {(()=>{const pgEC=ecCliente?{tipo:"cliente",id:ecCliente.id,nombre:fullName(ecCliente),casillero:ecCliente.casillero||""}
-              :(ecGrupo&&["agente","autonomo"].includes(ecGrupo.tipo))?{tipo:ecGrupo.tipo,id:ecGrupo.id,nombre:ecGrupo.nombre}:null;
+              :(ecGrupo&&["agente","autonomo","oficina"].includes(ecGrupo.tipo))?{tipo:ecGrupo.tipo,id:ecGrupo.id,nombre:ecGrupo.nombre}:null;
               return pgEC&&hasPerm("ver_estado_contable")&&<div style={{marginTop:14}}>{bloqueCuenta(pgEC)}</div>;})()}
             {ecGrupo?.tipo==="vendedor"&&hasPerm("ver_estado_contable")&&(()=>{
               const filas=ecCliGrupo.map(c=>{const pg={tipo:"cliente",id:c.id,nombre:fullName(c),casillero:c.casillero||""};
@@ -7313,9 +7319,9 @@ export default function SistemaCarga(){
   // Quedan registradas aparte: no entran en Cuentas, Caja, comisiones ni reportes de la matriz.
   const FP_ST={emitida:{l:"Pendiente",cls:"s4"},pagada_parcial:{l:"Abonada",cls:"s2"},pagada:{l:"Pagada",cls:"s3"},anulada:{l:"Anulada",cls:"s6"}};
   const fpMiEmisor=(()=>{const u=currentUser;
-    if(["E","E1"].includes(u.rol)&&u.agenteId){const a=agentes.find(x=>x.id===u.agenteId);return a?{tipo:"agente",id:a.id,nombre:a.nombre||a.codigo,codigo:`AG${parseInt(a.codigo,10)||""}`}:null;}
-    if(u.rol==="F")return {tipo:"autonomo",id:u.id,nombre:fullName(u),codigo:siglaUsuario(u,clients,agentes,oficinas)};
-    if(u.rol==="G"&&u.oficinaId){const o=oficinas.find(x=>x.id===u.oficinaId);return o?{tipo:"oficina",id:o.id,nombre:o.nombre,codigo:`OF${parseInt(String(o.codigo||"").replace(/\D/g,""),10)||""}`}:null;}
+    if(["E","E1"].includes(u.rol)&&u.agenteId){const a=agentes.find(x=>x.id===u.agenteId);return a&&a.fp_activo?{tipo:"agente",id:a.id,nombre:a.nombre||a.codigo,codigo:`AG${parseInt(a.codigo,10)||""}`}:null;}
+    if(u.rol==="F")return !u.fpActivo?null:{tipo:"autonomo",id:u.id,nombre:fullName(u),codigo:siglaUsuario(u,clients,agentes,oficinas)};
+    if(u.rol==="G"&&u.oficinaId){const o=oficinas.find(x=>x.id===u.oficinaId);return o&&o.fp_activo?{tipo:"oficina",id:o.id,nombre:o.nombre,codigo:`OF${parseInt(String(o.codigo||"").replace(/\D/g,""),10)||""}`}:null;}
     return null;})();
   const fpKey=em=>`${em.tipo}:${em.id}`;
   const fpNombreEmisor=(tipo,id)=>tipo==="agente"?(agentes.find(a=>a.id===id)?.nombre||id):tipo==="oficina"?(oficinas.find(o=>o.id===id)?.nombre||id):(()=>{const c=clients.find(x=>x.id===id);return c?fullName(c):id;})();
@@ -8007,6 +8013,7 @@ export default function SistemaCarga(){
                     <div className="fg"><div className="fl">Código postal</div><input className="fi" value={agForm.cp||""} onChange={e=>setAgForm(p=>({...p,cp:e.target.value.toUpperCase()}))}/></div>
                     <div className="fg"><div className="fl">Teléfono</div><input className="fi" value={agForm.tel} onChange={e=>setAgForm(p=>({...p,tel:e.target.value.toUpperCase()}))}/></div>
                     <div className="fg"><div className="fl">Email</div><input className="fi" type="email" value={agForm.email} onChange={e=>setAgForm(p=>({...p,email:e.target.value}))}/></div>
+                    {currentUser.rol==="A"&&<div className="fg full"><label style={{display:"flex",alignItems:"center",gap:8,fontSize:14,cursor:"pointer"}}><input type="checkbox" checked={!!agForm.fp_activo} onChange={e=>setAgForm(p=>({...p,fp_activo:e.target.checked}))}/>Puede emitir sus propias facturas (Mis facturas)</label></div>}
                     <div className="fg full"><div className="fl">Matriz *</div><select className="fs" value={agForm.matriz_id||""} onChange={e=>setAgForm(p=>({...p,matriz_id:e.target.value}))}>
                       <option value="">—</option>{oficinas.filter(o=>esMatriz(o)&&(ofiActiva(o)||o.id===agForm.matriz_id)).sort((a,b)=>String(a.codigo||"").localeCompare(String(b.codigo||""))).map(o=><option key={o.id} value={o.id}>{o.codigo} — {o.nombre}{o.ciudad?` (${o.ciudad})`:""}</option>)}</select></div>
                     <div className="fg full"><div className="fl">Dirección en los WR de sus clientes</div><select className="fs" value={agForm.wr_dir||"matriz"} onChange={e=>setAgForm(p=>({...p,wr_dir:e.target.value}))}><option value="matriz">Dirección de la casa matriz</option><option value="origen">Dirección de la oficina de origen del WR</option></select></div>
@@ -8107,6 +8114,7 @@ export default function SistemaCarga(){
                     {ofForm.tipo==="Matriz"&&<div className="fg full"><label style={{display:"flex",alignItems:"center",gap:8,fontSize:14,cursor:"pointer"}}><input type="checkbox" checked={!!ofForm.principal} disabled={currentUser.rol!=="A"} onChange={e=>setOfForm(p=>({...p,principal:e.target.checked}))}/>Matriz principal del país</label></div>}
                     <div className="fg"><div className="fl">Moneda</div><select className="fs" value={ofForm.moneda||""} onChange={e=>setOfForm(p=>({...p,moneda:e.target.value}))}>
                       <option value="">—</option>{["USD","EUR","VES","COP","MXN","ARS","CLP","PEN","BRL","DOP","PAB"].map(m=><option key={m} value={m}>{m}</option>)}</select></div>
+                    {currentUser.rol==="A"&&ofForm.tipo!=="Matriz"&&<div className="fg full"><label style={{display:"flex",alignItems:"center",gap:8,fontSize:14,cursor:"pointer"}}><input type="checkbox" checked={!!ofForm.fp_activo} onChange={e=>setOfForm(p=>({...p,fp_activo:e.target.checked}))}/>Puede emitir sus propias facturas (Mis facturas)</label></div>}
                     {editOficina&&<div className="fg"><div className="fl">Estado</div><select className="fs" value={ofForm.activo===false?"0":"1"} onChange={e=>setOfForm(p=>({...p,activo:e.target.value==="1"}))}><option value="1">Activa</option><option value="0">Inactiva</option></select></div>}
                     {ofForm.tipo!=="Matriz"&&<>
                       <div className="fg"><div className="fl">Comisión PREPAID (% del flete)</div><input className="fi" type="number" min="0" step="0.01" value={ofForm.com_prepaid_pct??""} onChange={e=>setOfForm(p=>({...p,com_prepaid_pct:e.target.value}))}/></div>
@@ -8156,7 +8164,7 @@ export default function SistemaCarga(){
                         matriz_id:esM?null:ofForm.matriz_id,moneda:ofForm.moneda,
                         com_prepaid_pct:esM||ofForm.com_prepaid_pct===""?null:parseFloat(ofForm.com_prepaid_pct)||0,
                         com_entrega_monto:esM||ofForm.com_entrega_monto===""?null:parseFloat(ofForm.com_entrega_monto)||0,
-                        com_entrega_por:esM?null:(ofForm.com_entrega_por||null),activo:ofForm.activo!==false};
+                        com_entrega_por:esM?null:(ofForm.com_entrega_por||null),activo:ofForm.activo!==false,fp_activo:!esM&&!!ofForm.fp_activo};
                       const reg=antes?{...antes,...limpio}:{...limpio,id:crypto.randomUUID()};
                       // Solo una matriz principal por país
                       const quitar=principal?otrasM.filter(x=>x.principal).map(x=>({...x,principal:false})):[];
@@ -9205,6 +9213,31 @@ export default function SistemaCarga(){
 
   const fmtMoney=(v,mon="USD")=>`${CUR_SYMBOL[mon]||"$"}${(parseFloat(v)||0).toFixed(2)}`;
   const buildFacturaId=(num)=>String(num).padStart(7,"0");
+  // Numeración legal por país: VE-F-0000001 (factura), NC (nota de crédito), L (liquidación), PF (proforma), RC (recibo), CM (nota de comisión)
+  const esDocNumerado=id=>/^[A-Z]{2,3}-(F|NC|L|PF)-\d+$/.test(String(id||""));
+  const nuevoIdBorrador=()=>`BOR-${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).slice(2,5).toUpperCase()}`;
+  const docPrefijo=f=>f.tipo==="nota_credito"?"NC":f.tipo==="proforma"?"PF":["agente","autonomo","oficina"].includes(f.receptorTipo)?"L":"F";
+  const docNombre=f=>({NC:"Nota de crédito",PF:"Proforma",L:"Liquidación",F:"Factura"})[docPrefijo(f)];
+  const matrizEmisora=f=>{if(!f)return null;
+    if(f.matrizId){const m=oficinas.find(o=>o.id===f.matrizId);if(m)return m;}
+    if(f.tipo==="nota_credito"&&f.ncFacturaOrigen){const o=facturas.find(x=>x.id===f.ncFacturaOrigen);const m=o&&oficinas.find(x=>x.id===o.matrizId);if(m)return m;}
+    const w=(f.wrIds||[]).map(id=>wrList.find(x=>x.id===id)).find(Boolean);
+    if(w){const m=esPrepaidWR(w)?matrizDe(oficinas.find(o=>o.id===w.ofiOrigen)):oficinas.find(o=>o.id===w.ofiDestino);if(m)return m;}
+    return matrizDe(oficinas.find(o=>o.id===currentUser.oficinaId))||null;};
+  const isoDeMatriz=m=>String(paisDeOfi(m)?.iso||"").toUpperCase();
+  const numeroDoc=async(matriz,pre)=>{const iso=isoDeMatriz(matriz);
+    if(!matriz){window.alert("Elige la matriz que emite el documento.");return null;}
+    if(!iso){window.alert(`El país de la matriz ${matriz.codigo} no tiene código. Agrégalo en Países y Ciudades.`);return null;}
+    const n=await dbSigDocumento(iso,pre);if(!n){window.alert("No se pudo obtener el número del documento.");return null;}
+    return {id:`${iso}-${pre}-${String(n).padStart(7,"0")}`,numero:n};};
+  // Asigna el número definitivo a un borrador (y lo renombra en la base si ya estaba guardado)
+  const numerarFactura=async f=>{if(esDocNumerado(f.id))return f;
+    const m=matrizEmisora(f);const d=await numeroDoc(m,docPrefijo(f));if(!d)return null;
+    if(f.id&&facturas.some(x=>x.id===f.id)){if(!(await dbRenombrarFactura(f.id,d.id))){window.alert("No se pudo numerar el documento.");return null;}}
+    return {...f,id:d.id,numero:d.numero,matrizId:m.id,_idAnterior:f.id||""};};
+  const reemplazarFactura=(lista,f)=>{const viejo=f._idAnterior;const limpio={...f};delete limpio._idAnterior;
+    const ex=lista.some(x=>x.id===limpio.id||(viejo&&x.id===viejo));
+    return ex?lista.map(x=>(x.id===limpio.id||(viejo&&x.id===viejo))?limpio:x):[limpio,...lista];};
 
   // Busca datos del receptor (snapshot al emitir) según tipo+id
   const lookupReceptor=(tipo,id)=>{
@@ -9500,38 +9533,29 @@ export default function SistemaCarga(){
     if(!(hasPerm("crear_factura")||hasPerm("facturar")||hasPerm("editar_factura")||(hasPerm("fac_prepaid")&&(f.wrIds||[]).length>0&&(f.wrIds||[]).every(id=>esPrepaidWR(wrList.find(w=>w.id===id)))))){window.alert("Tu rol no tiene permiso para esta acción.");return;}
     const isNew=!f._editing;
     let fact=recalcFactura(f);
-    if(isNew){
-      fact={...fact,id:buildFacturaId(nextInvoiceNum),numero:nextInvoiceNum};
+    if(isNew&&!fact.id){
+      fact={...fact,id:nuevoIdBorrador(),numero:0};
     }
+    {const me=matrizEmisora(fact);if(me&&!fact.matrizId)fact={...fact,matrizId:me.id};}
     setFacturas(p=>{
       const ex=p.find(x=>x.id===fact.id);
       return ex?p.map(x=>x.id===fact.id?fact:x):[fact,...p];
     });
     dbUpsertFactura(fact);
-    if(isNew){
-      setNextInvoiceNum(n=>{const nn=n+1;dbSetConfig('factura_sec_next',String(nn));return nn;});
-    }
     logAction(isNew?"Creó borrador factura":"Editó borrador factura",`${fact.id} · ${fmtMoney(fact.total,fact.moneda)} · ${fact.receptorNombre}`);
     setFacModal(null);
   };
-  const facEmitir=()=>{
+  const facEmitir=async()=>{
     const f=facModal; if(!f)return;
     if(!(hasPerm("crear_factura")||hasPerm("facturar")||(hasPerm("fac_prepaid")&&(f.wrIds||[]).length>0&&(f.wrIds||[]).every(id=>esPrepaidWR(wrList.find(w=>w.id===id)))))){window.alert("Tu rol no tiene permiso para esta acción.");return;}
     if(!f.receptorNombre.trim()){window.alert("Debes seleccionar o capturar un receptor.");return;}
     if(!f.lineas||f.lineas.length===0||f.lineas.every(l=>!l.descripcion.trim())){window.alert("Agrega al menos 1 línea con descripción.");return;}
     const isNew=!f._editing;
-    let fact=recalcFactura({...f,status:"emitida",fechaEmision:f.fechaEmision||new Date()});
-    if(isNew){
-      fact={...fact,id:buildFacturaId(nextInvoiceNum),numero:nextInvoiceNum};
-    }
-    setFacturas(p=>{
-      const ex=p.find(x=>x.id===fact.id);
-      return ex?p.map(x=>x.id===fact.id?fact:x):[fact,...p];
-    });
+    let fact=await numerarFactura(recalcFactura({...f,status:"emitida",fechaEmision:f.fechaEmision||new Date()}));
+    if(!fact)return;
+    setFacturas(p=>reemplazarFactura(p,fact));
+    fact={...fact};delete fact._idAnterior;
     dbUpsertFactura(fact);
-    if(isNew){
-      setNextInvoiceNum(n=>{const nn=n+1;dbSetConfig('factura_sec_next',String(nn));return nn;});
-    }
     logAction("Emitió factura",`${fact.id} · ${fmtMoney(fact.total,fact.moneda)} · ${fact.receptorNombre}`);
     // Sync: WRs vinculados que estén en 21 (Entregado) pasan a 22 (Por Cobrar)
     syncWRStatusFromFactura(fact,"emitida");
@@ -9700,7 +9724,7 @@ export default function SistemaCarga(){
     const n=new Set(pagos.filter(p=>String(p.reciboId||"").startsWith(prefix)).map(p=>p.reciboId)).size;
     return `${prefix}-${String(n+1).padStart(3,"0")}`;
   };
-  const cobroSubmit=()=>{
+  const cobroSubmit=async()=>{
     const m=cobroModal; if(!m)return;
     if(!(puedeCobrarGeneral()||(hasPerm("cobrar_prepaid")&&m.soloIds))){window.alert("Tu rol no tiene permiso para esta acción.");return;}
     if(!m.pagador){window.alert("Elige quién paga.");return;}
@@ -9708,9 +9732,12 @@ export default function SistemaCarga(){
     if(c.recibido<=0&&c.favorUsado<=0){window.alert("Escribe el monto recibido.");return;}
     if(c.totAplic<=0&&c.excedente<=0){window.alert("No hay nada que aplicar.");return;}
     if(c.excedente>0&&!window.confirm(`Sobran ${fmtMoney(c.excedente,m.moneda)}: quedarán como saldo a favor de ${m.pagador.nombre}. ¿Continuar?`))return;
-    const reciboId=reciboBuildId();
+    const _mRec=matrizEmisora(c.aplic[0]?.f)||matrizDe(oficinas.find(o=>o.id===currentUser.oficinaId))
+      ||oficinas.find(o=>o.id===(m.pagador.tipo==="cliente"?clients.find(x=>x.id===m.pagador.id)?.matrizId:m.pagador.tipo==="agente"?agentes.find(a=>a.id===m.pagador.id)?.matriz_id:clients.find(x=>x.id===m.pagador.id)?.matrizId));
+    const _dRec=await numeroDoc(_mRec,"RC");if(!_dRec)return;
+    const reciboId=_dRec.id;
     const fecha=m.fecha||new Date();
-    const base={fecha,moneda:m.moneda,referencia:(m.referencia||"").trim(),notaReferencial:(m.nota||"").trim(),anulado:false,motivoAnulacion:"",
+    const base={matrizId:_mRec.id,oficinaId:currentUser.oficinaId||"",fecha,moneda:m.moneda,referencia:(m.referencia||"").trim(),notaReferencial:(m.nota||"").trim(),anulado:false,motivoAnulacion:"",
       usuario:currentUser.id||currentUser.email||"",reciboId,pagadorTipo:m.pagador.tipo,pagadorId:m.pagador.id||"",pagadorNombre:m.pagador.nombre||"",comprobanteUrl:""};
     const nuevos=[];let n=0;
     let favorRest=c.favorUsado;
@@ -9780,6 +9807,14 @@ export default function SistemaCarga(){
       const ws=(f.wrIds||[]).map(id=>wrList.find(w=>w.id===id)).filter(Boolean);
       ws.forEach(w=>{
         if(!(w.tipoPago||"").toLowerCase().includes("prepa"))return;
+        {const o=oficinas.find(x=>x.id===w.ofiOrigen);const pct=parseFloat(o?.com_prepaid_pct)||0;
+          if(o&&!esMatriz(o)&&pct>0){const L=f.lineas||[];
+            const lin=L.filter(l=>l.tipo==="flete"&&l.wrId===w.id).reduce((t,l)=>t+(parseFloat(l.total)||0),0)
+              +(ws.length===1?L.filter(l=>l.tipo==="minimo").reduce((t,l)=>t+(parseFloat(l.total)||0),0):0);
+            const cobrado=r2(f.subtotal>0?lin*f.total/f.subtotal:lin);const ref=`${f.id}/${w.id}/OF`;
+            out.push({ref,f,w,dom:{tipo:"oficina",id:o.id,nombre:o.nombre},cobrado,costo:0,comision:r2(cobrado*pct/100),tf:null,monedaOk:true,moneda:f.moneda||"USD",
+              acreditada:acreditadas.has(ref),nota:`Comisión ${pct}% salida · WR ${w.id} · ${f.id}`,
+              faltante:["18","18.1"].includes(w.status?.code||""),perdido:["18.2","18.3"].includes(w.status?.code||"")});}}
         const rem=w.remitenteId?clients.find(c=>c.id===w.remitenteId):null;
         const dom=[dnDominioDeCliente(cliDeWR(w)),dnDominioDeCliente(rem)].find(d=>d&&["agente","autonomo"].includes(d.tipo));
         if(!dom)return;
@@ -9801,11 +9836,23 @@ export default function SistemaCarga(){
     });
     return out.filter(x=>!quitadas.has(x.ref));
   };
+  // Comisión de la oficina (sucursal o franquicia) que entrega el WR: monto por WR o por paquete
+  const comisionesEntrega=(pgs=pagos)=>{
+    const acreditadas=new Set(pgs.filter(p=>!p.anulado&&p.tipoPago==="comision").map(p=>p.referencia));
+    const quitadas=new Set(pgs.filter(p=>!p.anulado&&p.tipoPago==="comision_quitada").map(p=>p.referencia));
+    return wrList.filter(w=>["21","22","23","25"].includes(w.status?.code||"")&&w.sucursalEntrega).map(w=>{
+      const o=oficinas.find(x=>x.id===w.sucursalEntrega);const monto=parseFloat(o?.com_entrega_monto)||0;
+      if(!o||esMatriz(o)||monto<=0||!o.com_entrega_por)return null;
+      const cant=o.com_entrega_por==="paquete"?(parseInt(w.cajas,10)||1):1;const ref=`${w.id}/ENT`;
+      return {ref,f:null,w,dom:{tipo:"oficina",id:o.id,nombre:o.nombre},cobrado:0,costo:0,comision:r2(monto*cant),tf:null,monedaOk:true,moneda:o.moneda||"USD",
+        acreditada:acreditadas.has(ref),nota:`Comisión entrega · WR ${w.id}${cant>1?` · ${cant} paquetes`:""}`,faltante:false,perdido:false,entrega:true};
+    }).filter(x=>x&&!quitadas.has(x.ref));
+  };
   // Comisiones que se cargan solas cuando una factura PREPAID queda pagada
   const autoComisiones=(facs,pgs,facIds,offset=0)=>{
     const items=comisionesPrepaid(facs,pgs).filter(x=>!x.acreditada&&x.comision>0&&facIds.has(x.f.id));
     return items.map((x,i)=>({id:pagoBuildId(offset+i),facturaId:"",fecha:new Date(),monto:x.comision,moneda:x.moneda,tipoPago:"comision",
-      referencia:x.ref,notaReferencial:`Comisión WR ${x.w.id} · factura ${x.f.id}`,anulado:false,motivoAnulacion:"",
+      referencia:x.ref,notaReferencial:x.nota||`Comisión WR ${x.w.id} · factura ${x.f.id}`,anulado:false,motivoAnulacion:"",matrizId:x.f.matrizId||"",
       usuario:currentUser.id||currentUser.email||"",reciboId:"",pagadorTipo:x.dom.tipo,pagadorId:x.dom.id,pagadorNombre:x.dom.nombre,comprobanteUrl:""}));
   };
   // ── Cuentas: dinero real vs. movimientos internos
@@ -9895,14 +9942,16 @@ export default function SistemaCarga(){
     setPagos(pr=>[marca,...pr]);dbUpsertPago(marca);
     logAction("Quitó comisión",`${pg.nombre} · WR ${x.w.id} · ${fmtMoney(x.comision,x.moneda)}`);
   };
-  const cuadreAcreditar=(pg,lista)=>{
+  const cuadreAcreditar=async(pg,lista)=>{
     if(!hasPerm("registrar_pago")&&!hasPerm("cobrar")){window.alert("Tu rol no tiene permiso.");return;}
     const items=lista.filter(x=>x.comision>0&&!x.acreditada);if(!items.length)return;
     const tot={};items.forEach(x=>{tot[x.moneda]=r2((tot[x.moneda]||0)+x.comision);});
     if(!window.confirm(`Acreditar ${items.length} comisión(es) a ${pg.nombre}: ${Object.entries(tot).map(([m,v])=>fmtMoney(v,m)).join(" + ")}?`))return;
+    const _mCm=matrizEmisora(items[0].f)||oficinas.find(o=>o.id===items[0].w?.ofiDestino)||matrizDe(oficinas.find(o=>o.id===currentUser.oficinaId));
+    const _dCm=await numeroDoc(_mCm,"CM");if(!_dCm)return;
     const nuevos=items.map((x,i)=>({id:pagoBuildId(i),facturaId:"",fecha:new Date(),monto:x.comision,moneda:x.moneda,tipoPago:"comision",
-      referencia:x.ref,notaReferencial:`Comisión WR ${x.w.id} · factura ${x.f.id}`,anulado:false,motivoAnulacion:"",
-      usuario:currentUser.id||currentUser.email||"",reciboId:"",pagadorTipo:pg.tipo,pagadorId:pg.id,pagadorNombre:pg.nombre,comprobanteUrl:""}));
+      referencia:x.ref,notaReferencial:x.nota||`Comisión WR ${x.w.id} · factura ${x.f?.id||""}`,anulado:false,motivoAnulacion:"",matrizId:_mCm.id,
+      usuario:currentUser.id||currentUser.email||"",reciboId:_dCm.id,pagadorTipo:pg.tipo,pagadorId:pg.id,pagadorNombre:pg.nombre,comprobanteUrl:""}));
     setPagos(pr=>[...nuevos,...pr]);
     nuevos.forEach(p=>dbUpsertPago(p));
     setCuadreMarca({});
@@ -9942,7 +9991,7 @@ export default function SistemaCarga(){
     const monto=opts.monto!=null?Math.min(r2(opts.monto),disp):disp;
     setNcModal({facturaOrigenId:facturaOrigen.id,monto,motivo:opts.motivo||"",notas:"",destino:"favor"});
   };
-  const ncSubmit=()=>{
+  const ncSubmit=async()=>{
     const m=ncModal; if(!m)return;
     if(!(hasPerm("nota_credito"))){window.alert("Tu rol no tiene permiso para esta acción.");return;}
     const orig=facturas.find(f=>f.id===m.facturaOrigenId); if(!orig)return;
@@ -9953,9 +10002,9 @@ export default function SistemaCarga(){
     const aplicado=Math.min(monto,r2(orig.saldo||0));
     const excedente=r2(monto-aplicado);
     const destino=excedente>0?(m.destino||"favor"):"";
-    const nc={
+    let nc={
       ...emptyFactura(),
-      id:buildFacturaId(nextInvoiceNum),numero:nextInvoiceNum,
+      id:"",numero:0,matrizId:orig.matrizId||"",
       tipo:"nota_credito",status:"emitida",
       fecha:new Date(),fechaEmision:new Date(),
       moneda:orig.moneda,
@@ -9967,9 +10016,9 @@ export default function SistemaCarga(){
       ncFacturaOrigen:orig.id,notas:[m.notas||"",destino==="reembolso"?`Reembolsado ${fmtMoney(excedente,orig.moneda)}`:""].filter(Boolean).join(" · "),
       usuario:currentUser.id||currentUser.email||"",
     };
+    {const num=await numerarFactura(nc);if(!num)return;nc={...num};delete nc._idAnterior;}
     setFacturas(p=>[nc,...p]);
     dbUpsertFactura(nc);
-    setNextInvoiceNum(n=>{const nn=n+1;dbSetConfig('factura_sec_next',String(nn));return nn;});
     if(aplicado>0){
       const pagado=r2((parseFloat(orig.pagado)||0)+aplicado), saldo=Math.max(0,r2(orig.total-pagado));
       const updOrig={...orig,pagado,saldo,status:saldo<=0.001?"pagada":"pagada_parcial"};
@@ -10056,7 +10105,7 @@ export default function SistemaCarga(){
     const unidad=unidadTarifa(tf,isAereo);
     return recalcFactura({
       ...emptyFactura(),
-      id:seq?buildFacturaId(seq):"",numero:seq||0,
+      id:seq?nuevoIdBorrador():"",numero:0,
       tipo:"factura",status:"borrador",moneda:tf?.moneda||"USD",
       fecha:new Date(),fechaEmision:null,
       receptorTipo:r.tipo,receptorId:r.id||"",
@@ -10089,22 +10138,21 @@ export default function SistemaCarga(){
     const {grupos}=facGruposGuia(guia);
     const conPend=grupos.filter(g=>g.pendientes.length>0&&(!soloKey||g.key===soloKey));
     if(conPend.length===0){if(!silent)window.alert("No hay WR pendientes de facturar.");return [];}
-    let seq=nextInvoiceNum;
-    const nuevas=conPend.map(g=>facConstruir(guia,g.receptor,g.pendientes,seq++));
+    const nuevas=conPend.map(g=>{const f=facConstruir(guia,g.receptor,g.pendientes,1);const me=matrizEmisora(f);return me?{...f,matrizId:me.id}:f;});
     setFacturas(p=>[...nuevas,...p]);
     nuevas.forEach(f=>dbUpsertFactura(f));
-    setNextInvoiceNum(seq);
-    dbSetConfig('factura_sec_next',String(seq));
     logAction("Generó facturas de guía",`${guia.id} → ${nuevas.length} borrador(es)`);
     return nuevas;
   };
   // Emitir sin abrir el editor
-  const facEmitirRapido=f=>{
+  const facEmitirRapido=async f=>{
     if(!hasPerm("crear_factura")&&!hasPerm("facturar")&&!hasPerm("editar_factura")){window.alert("Tu rol no tiene permiso.");return;}
     if(!String(f.receptorNombre||"").trim()){window.alert("Falta el nombre del receptor: abre la factura y complétalo.");return;}
     if((f.total||0)<=0&&!window.confirm(`La factura ${f.id} tiene total ${fmtMoney(f.total||0,f.moneda)}. ¿Emitirla igual?`))return;
-    const fact=recalcFactura({...f,status:"emitida",fechaEmision:f.fechaEmision||new Date()});
-    setFacturas(p=>p.map(x=>x.id===fact.id?fact:x));
+    let fact=await numerarFactura(recalcFactura({...f,status:"emitida",fechaEmision:f.fechaEmision||new Date()}));
+    if(!fact)return;
+    setFacturas(p=>reemplazarFactura(p,fact));
+    fact={...fact};delete fact._idAnterior;
     dbUpsertFactura(fact);
     logAction("Emitió factura",`${fact.id} · ${fmtMoney(fact.total,fact.moneda)} · ${fact.receptorNombre}`);
     syncWRStatusFromFactura(fact,"emitida");
@@ -10112,7 +10160,7 @@ export default function SistemaCarga(){
   };
 
   // Emitir varios borradores de una vez (una sola confirmación)
-  const facEmitirVarios=lista=>{
+  const facEmitirVarios=async lista=>{
     if(!hasPerm("crear_factura")&&!hasPerm("facturar")&&!hasPerm("editar_factura")){window.alert("Tu rol no tiene permiso.");return;}
     const sinRec=lista.filter(f=>!String(f.receptorNombre||"").trim());
     const ok=lista.filter(f=>String(f.receptorNombre||"").trim());
@@ -10124,10 +10172,10 @@ export default function SistemaCarga(){
       +(sinRec.length?`\n\n${sinRec.length} sin receptor quedan en borrador: ${sinRec.map(f=>f.id).join(", ")}`:"");
     if(!window.confirm(msg))return;
     const now=new Date();
-    const emitidas=ok.map(f=>recalcFactura({...f,status:"emitida",fechaEmision:f.fechaEmision||now}));
-    const m=new Map(emitidas.map(f=>[f.id,f]));
-    setFacturas(p=>p.map(x=>m.get(x.id)||x));
-    emitidas.forEach(f=>{dbUpsertFactura(f);syncWRStatusFromFactura(f,"emitida");});
+    const emitidas=[];
+    for(const f0 of ok){const f=await numerarFactura(recalcFactura({...f0,status:"emitida",fechaEmision:f0.fechaEmision||now}));if(!f)break;emitidas.push(f);}
+    setFacturas(p=>emitidas.reduce((l,f)=>reemplazarFactura(l,f),p));
+    emitidas.forEach(f0=>{const f={...f0};delete f._idAnterior;dbUpsertFactura(f);syncWRStatusFromFactura(f,"emitida");});
     logAction("Emitió facturas",`${emitidas.length} · ${emitidas.map(f=>f.id).join(", ")}`);
   };
 
@@ -10136,8 +10184,8 @@ export default function SistemaCarga(){
   const bloqueCuenta=(pg,{onVolver=null}={})=>{
           const puede=hasPerm("registrar_pago")||hasPerm("cobrar");
           const puedeNC=hasPerm("nota_credito")||hasPerm("facturar");
-          const IC={cliente:<Ico e="👤"/>,agente:<Ico e="🤝"/>,autonomo:<Ico e="🧑‍💻"/>},TL={cliente:"Cliente",agente:"Agente",autonomo:"Autónomo"};
-          const coms=comisionesPrepaid();
+          const IC={cliente:<Ico e="👤"/>,agente:<Ico e="🤝"/>,autonomo:<Ico e="🧑‍💻"/>,oficina:<Ico e="🏢"/>},TL={cliente:"Cliente",agente:"Agente",autonomo:"Autónomo",oficina:"Oficina"};
+          const coms=[...comisionesPrepaid(),...(pg.tipo==="oficina"?comisionesEntrega():[])];
           const mono={fontFamily:"'DM Mono',monospace"};
           const k=pagKey(pg);
           const monsCon=["USD","EUR"].filter(mn=>movimientosCuenta(pg,mn).length>0);
@@ -10222,7 +10270,7 @@ export default function SistemaCarga(){
                 </table>{pagPie("ctaMovs",(vis).length)}</>)}
               </div>
 
-              {["agente","autonomo"].includes(pg.tipo)&&hasPerm("ver_comisiones")&&(
+              {["agente","autonomo","oficina"].includes(pg.tipo)&&hasPerm("ver_comisiones")&&(
               <div className="card" style={{padding:0}}>
                 <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",display:"flex",alignItems:"center",gap:10}}>
                   <span style={{fontSize:15,fontWeight:700,color:"var(--navy)"}}><Ico e="🤝" sp/>Comisiones PREPAID</span>
@@ -10234,7 +10282,7 @@ export default function SistemaCarga(){
                   <tbody>{pagSlice("comisiones",cm).map(x=>{const cl=cliDeWR(x.w);return(
                     <tr key={x.ref}>
                       <td style={{...mono,fontWeight:700}}><Num t="wr" id={x.w.id}/></td>
-                      <td style={mono}><Num t="factura" id={x.f.id}/></td>
+                      <td style={mono}>{x.f?<Num t="factura" id={x.f.id}/>:"Entrega"}</td>
                       <td style={{fontSize:13}}>{cl?fullName(cl):(x.w.consignee||"—")}</td>
                       <td style={{...mono,textAlign:"right"}}>{fmtMoney(x.cobrado,x.moneda)}</td>
                       <td style={{...mono,fontSize:12}}>{x.tf?`${x.tf.id}${x.tf._especial?" (especial)":""}`:"Sin tarifa"}{x.tf&&!x.monedaOk?<span style={{color:"var(--red)",marginLeft:6}}>{x.tf.moneda}</span>:""}</td>
@@ -10506,7 +10554,8 @@ export default function SistemaCarga(){
           const enRango=pagos.filter(p=>!p.anulado&&esDinero(p)&&new Date(p.fecha)>=d0&&new Date(p.fecha)<=d1);
           const usuarios=[...new Set(enRango.map(p=>p.usuario).filter(Boolean))];
           const nombreUsr=u=>{const c=clients.find(x=>x.id===u||x.email===u);return c?fullName(c):u;};
-          const movs=enRango.filter(p=>!cajaUsr||p.usuario===cajaUsr);
+          const ofisCaja=[...new Set(enRango.map(p=>p.oficinaId).filter(Boolean))].map(id=>oficinas.find(o=>o.id===id)).filter(Boolean).sort((a,b)=>String(a.codigo||"").localeCompare(String(b.codigo||"")));
+          const movs=enRango.filter(p=>(!cajaUsr||p.usuario===cajaUsr)&&(!cajaOfi||p.oficinaId===cajaOfi));
           const resumen={};movs.forEach(p=>{const kk=`${p.tipoPago}|${p.moneda||"USD"}`;if(!resumen[kk])resumen[kk]={metodo:p.tipoPago,moneda:p.moneda||"USD",entra:0,sale:0};
             if(p.monto>0)resumen[kk].entra=r2(resumen[kk].entra+p.monto);else resumen[kk].sale=r2(resumen[kk].sale-p.monto);});
           const filasR=Object.values(resumen).sort((a,b)=>(a.moneda+a.metodo).localeCompare(b.moneda+b.metodo));
@@ -10529,7 +10578,7 @@ export default function SistemaCarga(){
               pSec("Movimientos")+pTabla([{l:"Fecha"},{l:"Documento"},{l:"Quién"},{l:"Forma"},{l:"Referencia"},{l:"Monto",r:1}],
                 grupos.map(g=>`<tr><td>${fmtDate(g.fecha)} ${fmtTime(g.fecha)}</td><td class="mono">${prnE(g.id)}</td><td>${prnE(g.quien)}</td><td>${prnE(ml(g.metodo))}</td><td>${prnE(g.ref||"")}</td><td class="r">${fmtMoney(g.monto,g.moneda)}</td></tr>`).join(""))+
               pFirmas([["Entrega caja"],["Recibe / revisa"]]);
-            prnVer("Cierre de caja",prnHTML({titulo:"Cierre de caja",meta:[["Período",`${cajaDesde}${cajaHasta&&cajaHasta!==cajaDesde?` a ${cajaHasta}`:""}`],["Usuario",cajaUsr?nombreUsr(cajaUsr):"Todos"]],cuerpo}));
+            prnVer("Cierre de caja",prnHTML({titulo:"Cierre de caja",meta:[["Período",`${cajaDesde}${cajaHasta&&cajaHasta!==cajaDesde?` a ${cajaHasta}`:""}`],["Oficina",cajaOfi?(()=>{const o=oficinas.find(x=>x.id===cajaOfi);return o?`${o.codigo} — ${o.nombre}`:"";})():"Todas"],["Usuario",cajaUsr?nombreUsr(cajaUsr):"Todos"]],cuerpo}));
           };
           return(
             <div>
@@ -10538,6 +10587,8 @@ export default function SistemaCarga(){
                   <button key={l} className={cajaDesde===a&&cajaHasta===b?"btn-p":"btn-s"} style={{fontSize:13,padding:"5px 12px"}} onClick={()=>setRango(a,b)}>{l}</button>)}
                 <span style={{fontSize:13,color:"var(--t2)",marginLeft:8}}>Desde</span><input className="fi" type="date" style={{width:150,fontSize:13,padding:"4px 6px"}} value={cajaDesde} onChange={e=>setCajaDesde(e.target.value)}/>
                 <span style={{fontSize:13,color:"var(--t2)"}}>Hasta</span><input className="fi" type="date" style={{width:150,fontSize:13,padding:"4px 6px"}} value={cajaHasta} onChange={e=>setCajaHasta(e.target.value)}/>
+                <select className="fs" style={{width:220,fontSize:13}} value={cajaOfi} onChange={e=>setCajaOfi(e.target.value)}>
+                  <option value="">Todas las oficinas</option>{ofisCaja.map(o=><option key={o.id} value={o.id}>{o.codigo} — {o.nombre}</option>)}</select>
                 <select className="fs" style={{width:200,fontSize:13}} value={cajaUsr} onChange={e=>setCajaUsr(e.target.value)}>
                   <option value="">Todos los usuarios</option>{usuarios.map(u=><option key={u} value={u}>{nombreUsr(u)}</option>)}</select>
                 <button className="btn-s" style={{fontSize:13,marginLeft:"auto"}} onClick={imprimir}><Ico e="🖨️" sp/>Cierre de caja</button>
@@ -13548,7 +13599,7 @@ export default function SistemaCarga(){
     calculadora:["calculadora"],chat:["ver_chat"],docs:["ver_documentos"],reports:["ver_reportes"],
     roles:["gestionar_roles"],actividad:["registro_actividad"],
   };
-  const navVisible=n=>!NAV_PERMS[n.id]||NAV_PERMS[n.id].some(p=>hasPerm(p));
+  const navVisible=n=>(n.id!=="misfacturas"||!["E","E1","F","G"].includes(currentUser.rol)||!!fpMiEmisor)&&(!NAV_PERMS[n.id]||NAV_PERMS[n.id].some(p=>hasPerm(p)));
 
   const PAGE_TITLES={prealertas:"Pre-alertas",misfacturas:fpMiEmisor?"Mis facturas":"Facturas de agentes, autónomos y oficinas",dashboard:"Dashboard General",loadingmaster:"Loading Master",scan:"Recepción en Puerta",etiquetas:"Imprimir Etiquetas",clients:"Clientes & Usuarios",estadocuenta:"Estado de Cuenta",roles:"Roles & Permisos",consolidation:"Consolidación",tracking:"Tracking",pickup:"Pick-up",contabilidad:"Contabilidad",calculadora:"Calculadora de Envío",chat:"Chat Interno",docs:"Documentos",reports:"Reportes",alerts:"Alertas",settings:"Configuración",reempaque:"Reempaque",recepciondest:"Recepción en Almacén",cargorelease:"Cargo Release (Egreso)",entregas:"Notas de Entrega",entregasydespachos:"Entregas y Despachos",facturacion:"Facturación"};
 
@@ -14267,8 +14318,8 @@ export default function SistemaCarga(){
         );
       })()}
 
-      {showNewCl&&<ClientModal elegirMatriz={!["E","E1","F","G","I"].includes(currentUser.rol)} acceso={hasPerm("dar_acceso")} tiposOk={Array.isArray(showNewCl)?showNewCl:tiposCrear} rolesOk={rolesAsignables} agentes={agentes} oficinas={oficinas} autonomos={clients.filter(c=>c.tipo==="usuario"&&c.rol==="F")} allClients={clients} title="Nuevo Registro" initial={{tipo:(Array.isArray(showNewCl)?showNewCl:tiposCrear)[0]||"cliente",clienteTipo:"matriz",primerNombre:"",segundoNombre:"",primerApellido:"",segundoApellido:"",cedula:"",dir:"",municipio:"",estado:"",pais:"",cp:"",tel1:"",tel2:"",email:"",casillero:"",rol:"I",password:"",...presetDominio()}} onClose={()=>setShowNewCl(false)} onSave={async f=>{const _sec=await refrescarSec();const esUser=f.tipo==="usuario";const newId=sigIdRegistro(esUser,clients,_sec);const casillero=(!esUser&&!f.casillero)?nextCasillero(clients,_sec):f.casillero;const newRec={...f,id:newId,casillero,clienteTipo:f.clienteTipo||"matriz",password:""};setClients(p=>[...p,newRec]);setShowNewCl(false);logAction("Creó registro",`${newId} — ${f.primerNombre} ${f.primerApellido}`);(async()=>{await dbUpsertCliente(newRec);await sincronizarCuenta(newRec,f.password);})();}}/>}
-      {showEditCl&&<ClientModal elegirMatriz={!["E","E1","F","G","I"].includes(currentUser.rol)} ocultar={!verDatos} acceso={hasPerm("dar_acceso")} tiposOk={[showEditCl.tipo]} rolesOk={rolesAsignables} agentes={agentes} oficinas={oficinas} autonomos={clients.filter(c=>c.tipo==="usuario"&&c.rol==="F")} allClients={clients} title={`Editar — ${fullName(showEditCl)}`} initial={showEditCl} onClose={()=>setShowEditCl(null)} onSave={f=>{const ant=showEditCl;const rec={...f,clienteTipo:f.clienteTipo||"matriz",password:""};setClients(p=>p.map(c=>c.id===f.id?rec:c));logAction("Editó registro",`${f.id} — ${f.primerNombre} ${f.primerApellido}`);setShowEditCl(null);(async()=>{await dbUpsertCliente(rec);await sincronizarCuenta(rec,f.password,ant);})();}}/>}
+      {showNewCl&&<ClientModal esAdmin={currentUser.rol==="A"} elegirMatriz={!["E","E1","F","G","I"].includes(currentUser.rol)} acceso={hasPerm("dar_acceso")} tiposOk={Array.isArray(showNewCl)?showNewCl:tiposCrear} rolesOk={rolesAsignables} agentes={agentes} oficinas={oficinas} autonomos={clients.filter(c=>c.tipo==="usuario"&&c.rol==="F")} allClients={clients} title="Nuevo Registro" initial={{tipo:(Array.isArray(showNewCl)?showNewCl:tiposCrear)[0]||"cliente",clienteTipo:"matriz",primerNombre:"",segundoNombre:"",primerApellido:"",segundoApellido:"",cedula:"",dir:"",municipio:"",estado:"",pais:"",cp:"",tel1:"",tel2:"",email:"",casillero:"",rol:"I",password:"",...presetDominio()}} onClose={()=>setShowNewCl(false)} onSave={async f=>{const _sec=await refrescarSec();const esUser=f.tipo==="usuario";const newId=sigIdRegistro(esUser,clients,_sec);const casillero=(!esUser&&!f.casillero)?nextCasillero(clients,_sec):f.casillero;const newRec={...f,id:newId,casillero,clienteTipo:f.clienteTipo||"matriz",password:""};setClients(p=>[...p,newRec]);setShowNewCl(false);logAction("Creó registro",`${newId} — ${f.primerNombre} ${f.primerApellido}`);(async()=>{await dbUpsertCliente(newRec);await sincronizarCuenta(newRec,f.password);})();}}/>}
+      {showEditCl&&<ClientModal esAdmin={currentUser.rol==="A"} elegirMatriz={!["E","E1","F","G","I"].includes(currentUser.rol)} ocultar={!verDatos} acceso={hasPerm("dar_acceso")} tiposOk={[showEditCl.tipo]} rolesOk={rolesAsignables} agentes={agentes} oficinas={oficinas} autonomos={clients.filter(c=>c.tipo==="usuario"&&c.rol==="F")} allClients={clients} title={`Editar — ${fullName(showEditCl)}`} initial={showEditCl} onClose={()=>setShowEditCl(null)} onSave={f=>{const ant=showEditCl;const rec={...f,clienteTipo:f.clienteTipo||"matriz",password:""};setClients(p=>p.map(c=>c.id===f.id?rec:c));logAction("Editó registro",`${f.id} — ${f.primerNombre} ${f.primerApellido}`);setShowEditCl(null);(async()=>{await dbUpsertCliente(rec);await sincronizarCuenta(rec,f.password,ant);})();}}/>}
 
       {/* ── Cargo Release — MODAL FORMULARIO ───────────────────────────────── */}
       {crModal&&(()=>{
@@ -14823,9 +14874,13 @@ export default function SistemaCarga(){
                 <div className="mt">
                   <div>
                     {f._editing?"Editar factura":"Nueva factura"}
-                    {f.id?<Num t="factura" id={f.id} nolink style={{marginLeft:10}}/>:<span className="c-wr" style={{marginLeft:10,opacity:.55}}>{buildFacturaId(nextInvoiceNum)}</span>}
+                    {f.id&&esDocNumerado(f.id)?<Num t="factura" id={f.id} nolink style={{marginLeft:10}}/>:<span className="c-wr" style={{marginLeft:10,opacity:.55}}>{docNombre(f)} · borrador</span>}
                   </div>
-                  <div className="mst">Tipo: {f.tipo==="proforma"?"Proforma":"Factura"} · {f.status==="borrador"?"Borrador":FAC_STATUS_LABEL[f.status]}</div>
+                  <div className="mst">Tipo: {docNombre(f)} · {f.status==="borrador"?"Borrador":FAC_STATUS_LABEL[f.status]} · Emite: {(()=>{const me=matrizEmisora(f);
+                    return !misOficinas&&!esDocNumerado(f.id)
+                      ?<select className="fs" style={{width:"auto",display:"inline-block",fontSize:13,padding:"1px 4px"}} value={f.matrizId||me?.id||""} onChange={e=>setFacModal(x=>({...x,matrizId:e.target.value}))}>
+                        <option value="">—</option>{oficinas.filter(o=>esMatriz(o)&&ofiActiva(o)).map(o=><option key={o.id} value={o.id}>{o.codigo} — {o.nombre}</option>)}</select>
+                      :<b>{me?`${me.codigo} — ${me.nombre}`:"—"}</b>;})()}</div>
                 </div>
                 <button className="mcl" onClick={()=>setFacModal(null)}>✕</button>
               </div>

@@ -43,7 +43,7 @@ export const clienteFromDB = (r) => r ? ({
   agenteId: r.agente_id, oficinaId: r.oficina_id,
   autonomoId: r.autonomo_id, vendedorId: r.vendedor_id || '', activo: r.activo,
   authId: r.auth_id || null, password: '', wrDir: r.wr_dir || '',
-  matrizId: r.matriz_id || '', ofiRegistro: r.ofi_registro_id || '',
+  matrizId: r.matriz_id || '', ofiRegistro: r.ofi_registro_id || '', fpActivo: !!r.fp_activo,
 }) : null
 
 export const clienteToDB = (c) => ({
@@ -57,7 +57,7 @@ export const clienteToDB = (c) => ({
   password: '', cliente_tipo: c.clienteTipo || 'matriz',
   agente_id: c.agenteId, oficina_id: c.oficinaId,
   autonomo_id: c.autonomoId, vendedor_id: c.vendedorId || null, activo: c.activo ?? true,
-  wr_dir: c.wrDir || null,
+  wr_dir: c.wrDir || null, fp_activo: !!c.fpActivo,
   matriz_id: c.matrizId || null, ofi_registro_id: c.ofiRegistro || null,
 })
 
@@ -177,7 +177,7 @@ export const dbGetOficinas = async () => {
   return data
 }
 
-const OFICINA_COLS = ['id','codigo','nombre','ciudad','pais','activo','tel','email','contacto','notas','dir','estado','cp','tipo','matriz_id','moneda','principal','com_prepaid_pct','com_entrega_monto','com_entrega_por']
+const OFICINA_COLS = ['id','codigo','nombre','ciudad','pais','activo','tel','email','contacto','notas','dir','estado','cp','tipo','matriz_id','moneda','principal','com_prepaid_pct','com_entrega_monto','com_entrega_por','fp_activo']
 export const dbUpsertOficina = async (of) => {
   const fila = Object.fromEntries(OFICINA_COLS.filter(k => of[k] !== undefined).map(k => [k, of[k]]))
   const { error } = await supabase.from('oficinas').upsert(fila)
@@ -411,6 +411,7 @@ export const dbGetFacturas = async () => {
     moneda: r.moneda || 'USD',
     receptorTipo: r.receptor_tipo || 'cliente',
     receptorId: r.receptor_id || '',
+    matrizId: r.matriz_id || '',
     receptorNombre: r.receptor_nombre || '',
     receptorDoc: r.receptor_doc || '',
     receptorDir: r.receptor_dir || '',
@@ -449,6 +450,7 @@ export const dbUpsertFactura = async (f) => {
     moneda: f.moneda || 'USD',
     receptor_tipo: f.receptorTipo || 'cliente',
     receptor_id: f.receptorId || '',
+    matriz_id: f.matrizId || null,
     receptor_nombre: f.receptorNombre || '',
     receptor_doc: f.receptorDoc || '',
     receptor_dir: f.receptorDir || '',
@@ -477,6 +479,19 @@ export const dbUpsertFactura = async (f) => {
   if (error) console.error('upsertFactura:', error)
 }
 
+// Siguiente número de un documento (por país y tipo), atómico en el servidor
+export const dbSigDocumento = async (pais, tipo) => {
+  const { data, error } = await supabase.rpc('sig_documento', { p_pais: pais, p_tipo: tipo })
+  if (error) { console.error('sigDocumento:', error); return null }
+  return Number(data) || null
+}
+// Cambia el número (id) de un borrador al emitirlo
+export const dbRenombrarFactura = async (viejo, nuevo) => {
+  const { error } = await supabase.from('facturas').update({ id: nuevo }).eq('id', viejo)
+  if (error) { console.error('renombrarFactura:', error); return false }
+  return true
+}
+
 export const dbDeleteFactura = async (id) => {
   const { error } = await supabase.from('facturas').delete().eq('id', id)
   if (error) console.error('deleteFactura:', error)
@@ -503,6 +518,7 @@ export const dbGetPagos = async () => {
     pagadorId: r.pagador_id || '',
     pagadorNombre: r.pagador_nombre || '',
     comprobanteUrl: r.comprobante_url || '',
+    matrizId: r.matriz_id || '', oficinaId: r.oficina_id || '',
   }))
 }
 
@@ -524,6 +540,7 @@ export const dbUpsertPago = async (p) => {
     pagador_id: p.pagadorId || '',
     pagador_nombre: p.pagadorNombre || '',
     comprobante_url: p.comprobanteUrl || '',
+    matriz_id: p.matrizId || null, oficina_id: p.oficinaId || null,
   })
   if (error) console.error('upsertPago:', error)
 }
