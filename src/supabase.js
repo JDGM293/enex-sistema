@@ -245,6 +245,7 @@ export const dbGetConsolidaciones = async () => {
   if (error) { console.error('getConsolidaciones:', error); return [] }
   return data.map(r => ({
     id: r.id, destino: r.destino, tipoEnvio: r.tipo_envio,
+    ofiOrigen: r.ofi_origen_id || '', ofiDestino: r.ofi_destino_id || '',
     fecha: r.fecha || r.created_at || null,
     fechaSalida: r.fecha_salida, fechaLlegada: r.fecha_llegada,
     numVuelo: r.num_vuelo, awb: r.awb, bl: r.bl,
@@ -265,6 +266,7 @@ export const dbGetConsolidaciones = async () => {
 export const dbUpsertConsolidacion = async (c) => {
   const { error } = await supabase.from('consolidaciones').upsert({
     id: c.id, destino: c.destino, tipo_envio: c.tipoEnvio,
+    ofi_origen_id: c.ofiOrigen || null, ofi_destino_id: c.ofiDestino || null,
     fecha: c.fecha || new Date().toISOString(),
     fecha_salida: c.fechaSalida, fecha_llegada: c.fechaLlegada,
     num_vuelo: c.numVuelo, awb: c.awb, bl: c.bl,

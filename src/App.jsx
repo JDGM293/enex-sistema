@@ -6,7 +6,7 @@ import { descargarXlsx } from './xlsx'
 import { dbGetActividadReporte } from './supabase'
 import { dbGetFacturasPropias, dbUpsertFacturaPropia, dbGetPrealertas, dbUpsertPrealerta, paSubirArchivo, paUrlArchivo } from './supabase'
 import { chatFromDB, dbChatMensajes, dbChatEnviar, dbChatEditar, dbChatNoLeidos, dbChatMarcarLeido, chatSubirAdjunto, chatUrlAdjunto } from './supabase'
-import { supabase, resolverLogin, cuentaGuardar, cuentaEliminar, dbGetClientes, dbUpsertCliente, dbDeleteCliente, dbGetWR, dbUpsertWR, dbDeleteWR, dbGetAgentes, dbUpsertAgente, dbDeleteAgente, dbGetOficinas, dbUpsertOficina, dbDeleteOficina, dbGetTarifas, dbUpsertTarifa, dbDeleteTarifa, dbGetConsolidaciones, dbUpsertConsolidacion, dbDeleteConsolidacion, dbGetCargoReleases, dbUpsertCargoRelease, dbDeleteCargoRelease, dbGetDeliveryNotes, dbUpsertDeliveryNote, dbDeleteDeliveryNote, dbGetFacturas, dbUpsertFactura, dbDeleteFactura, dbGetPagos, dbUpsertPago, dbDeletePago, storageUploadComprobante, dbLogActividad, dbGetActividad, dbGetConfig, dbSetConfig, dbGetScanLog, dbInsertScan, dbSetScanRegistered, dbDeleteScanIds, storageUploadFoto, storageDeleteFoto, dbGetFotosByWR, dbInsertFoto, dbDeleteFoto, storageUploadFotoConsol, storageDeleteFotoConsol, dbGetFotosByConsol, dbInsertFotoConsol, dbDeleteFotoConsol } from "./supabase";
+import { supabase, resolverLogin, cuentaGuardar, cuentaEliminar, dbGetClientes, dbUpsertCliente, dbDeleteCliente, dbGetWR, dbUpsertWR as dbUpsertWRBase, dbDeleteWR, dbGetAgentes, dbUpsertAgente, dbDeleteAgente, dbGetOficinas, dbUpsertOficina, dbDeleteOficina, dbGetTarifas, dbUpsertTarifa, dbDeleteTarifa, dbGetConsolidaciones, dbUpsertConsolidacion, dbDeleteConsolidacion, dbGetCargoReleases, dbUpsertCargoRelease, dbDeleteCargoRelease, dbGetDeliveryNotes, dbUpsertDeliveryNote, dbDeleteDeliveryNote, dbGetFacturas, dbUpsertFactura, dbDeleteFactura, dbGetPagos, dbUpsertPago, dbDeletePago, storageUploadComprobante, dbLogActividad, dbGetActividad, dbGetConfig, dbSetConfig, dbGetScanLog, dbInsertScan, dbSetScanRegistered, dbDeleteScanIds, storageUploadFoto, storageDeleteFoto, dbGetFotosByWR, dbInsertFoto, dbDeleteFoto, storageUploadFotoConsol, storageDeleteFotoConsol, dbGetFotosByConsol, dbInsertFotoConsol, dbDeleteFotoConsol } from "./supabase";
 
 // ─── TEMA CLARO PROFESIONAL ───────────────────────────────────────────────────
 const S = `
@@ -1033,6 +1033,15 @@ const buildConsolNum=(origCode,destCode,seq,tipo=1,secInicio=1,tipoEnvio="Marít
 //              "consolidacion"  → editable desde la barra de 7 fases de la guía
 //              "recepcion"      → editable desde Recepción en Almacén
 // exc:true → estado de excepción (faltante / investigación / sobrante)
+// Dónde está físicamente el WR según su estado (id de oficina, o "" si va en tránsito)
+const ubicacionWR=w=>{if(!w)return "";const c=String(w.status?.code||"1"),n=parseFloat(c)||0;
+  if(c==="20.2")return w.sucursalEntrega||w.ofiDestino||w.ofiActual||"";
+  if(c==="20.1"||(n>=5&&n<17))return "";
+  if(n>=17&&n<21)return w.ofiDestino||w.ofiActual||"";
+  if(n>=21)return w.ofiActual||"";
+  return w.ofiActual||w.ofiOrigen||"";};
+// Guardar WR anotando su ubicación actual
+const dbUpsertWR=w=>dbUpsertWRBase(w&&w.ofiOrigen?{...w,ofiActual:ubicacionWR(w)}:w);
 const WR_STATUSES=[
   {code:"1",   label:"Recibido",        cls:"s1", phase:"origen",   auto:true,  manual:false, channels:["dashboard"]},
   {code:"2",   label:"Origen",          cls:"s2", phase:"origen",   auto:true,  manual:false, channels:["dashboard","cliente"]},
@@ -2134,7 +2143,7 @@ const TimelineWR=({w,applyStatus,trkCanUpdate,statusAllowed,CU})=>{
 };
 
 const emptyConsol=()=>({
-  destino:"", tipoEnvio:"",
+  destino:"", tipoEnvio:"", ofiOrigen:"", ofiDestino:"",
   fechaSalida:"", fechaLlegada:"",
   numVuelo:"", awb:"", bl:"",
   notas:"",
@@ -4705,7 +4714,8 @@ export default function SistemaCarga(){
               {(()=>{const n=id=>{const o=oficinas.find(x=>x.id===id);return o?`${o.codigo} — ${o.nombre}`:"—";};
                 return (selWR.ofiOrigen||selWR.ofiDestino)&&<>
                 <div className="wf"><div className="wfl">Oficina origen → destino</div><div className="wfv" style={{fontWeight:600}}>{n(selWR.ofiOrigen)} → {n(selWR.ofiDestino)}</div></div>
-                <div className="wf"><div className="wfl">Ubicación actual</div><div className="wfv" style={{fontWeight:700,color:"var(--navy)"}}>{n(selWR.ofiActual)}</div></div></>;})()}
+                <div className="wf"><div className="wfl">Ubicación actual</div><div className="wfv" style={{fontWeight:700,color:"var(--navy)"}}>{(()=>{const u=ubicacionWR(selWR);const c=selWR.status?.code||"";
+                  return u?n(u):c==="20.1"?`En camino a ${n(selWR.sucursalEntrega)}`:"En tránsito";})()}</div></div></>;})()}
               {_cl?.tel1&&<div className="wf"><div className="wfl">Teléfono</div><div className="wfv">{oc(_cl.tel1)}</div></div>}
               {_cl?.email&&<div className="wf"><div className="wfl">Email</div><div className="wfv">{_cl.email}</div></div>}
             </div>
@@ -5689,7 +5699,13 @@ export default function SistemaCarga(){
   const submitConsol=async()=>{
     if(!hasPerm(editConsolId?"editar_guia":"crear_guia")){window.alert("Tu rol no tiene permiso para esta acción.");return;}
     // Validaciones — destino y tipoEnvio son obligatorios
-    if(!cf.destino){window.alert("Debes seleccionar la Ciudad Destino antes de cerrar el embarque.");return;}
+    const _gOrig=oficinas.find(o=>o.id===(cf.ofiOrigen||matrizDe(oficinas.find(x=>x.id===currentUser.oficinaId))?.id));
+    const _gDest=oficinas.find(o=>o.id===cf.ofiDestino);
+    if(!_gOrig){window.alert("Elige la matriz de origen.");return;}
+    if(!_gDest){window.alert("Elige la matriz de destino.");return;}
+    {const otros=(cf.containers||[]).flatMap(c=>c.wr||[]).map(r=>wrList.find(w=>w.id===r.id)).filter(w=>w&&w.ofiDestino&&w.ofiDestino!==_gDest.id);
+      if(otros.length&&!window.confirm(`Estos WR tienen otra matriz de destino:\n${otros.map(w=>`${w.id} → ${oficinas.find(o=>o.id===w.ofiDestino)?.codigo||"?"}`).join("\n")}\n\n¿Guardar la guía igual?`))return;}
+    const _gDestCod=ofiCodigos(_gDest).code;
     if(!cf.tipoEnvio){window.alert("Debes seleccionar el Tipo de Envío antes de cerrar el embarque.");return;}
     const now=new Date();
     const allWR=(cf.containers||[]).flatMap(c=>c.wr||[]);
@@ -5703,8 +5719,8 @@ export default function SistemaCarga(){
     const existing=editConsolId?consolList.find(c=>c.id===editConsolId):null;
     const n={
       ...(existing||{}),
-      id:existing?existing.id:buildConsolNum(offCode(ofiOrigen),offCode(oficinas.find(o=>ofiCodigos(o).code===cf.destino)||ofiDestinoDef),(()=>{if(consolList.length===0)return 1;const nums=consolList.map(c=>{const m=String(c.id||"").match(/(\d+)(?=[^0-9]*$)/);return m?parseInt(m[1]):0;});return Math.max(...nums)+1;})(),consolNumTipo,consolSecInicio,cf.tipoEnvio||"Marítimo"),
-      fecha:existing?existing.fecha:now,destino:cf.destino,tipoEnvio:cf.tipoEnvio,
+      id:existing?existing.id:buildConsolNum(offCode(_gOrig),offCode(_gDest),(()=>{if(consolList.length===0)return 1;const nums=consolList.map(c=>{const m=String(c.id||"").match(/(\d+)(?=[^0-9]*$)/);return m?parseInt(m[1]):0;});return Math.max(...nums)+1;})(),consolNumTipo,consolSecInicio,cf.tipoEnvio||"Marítimo"),
+      fecha:existing?existing.fecha:now,destino:_gDestCod,tipoEnvio:cf.tipoEnvio,ofiOrigen:_gOrig.id,ofiDestino:_gDest.id,
       fechaSalida:cf.fechaSalida,fechaLlegada:existing?.fechaLlegada||"",numVuelo:cf.numVuelo,awb:cf.awb,bl:cf.bl,
       notas:cf.notas,containers:cf.containers,
       wrIds:allWR.map(w=>w.id),
@@ -5806,7 +5822,7 @@ export default function SistemaCarga(){
     }catch(e){console.error("dbGetFotosByConsol:",e);}
     const conts=(c.containers||[]).map((ct,i)=>({...ct,fotos:[...(fotosByCont[i]||[]),...(ct.fotos||[]).filter(f=>!f.id)]}));
     setCf({
-      destino:c.destino,tipoEnvio:c.tipoEnvio,fechaSalida:c.fechaSalida||"",numVuelo:c.numVuelo||"",
+      destino:c.destino,tipoEnvio:c.tipoEnvio,ofiOrigen:c.ofiOrigen||"",ofiDestino:c.ofiDestino||"",fechaSalida:c.fechaSalida||"",numVuelo:c.numVuelo||"",
       awb:c.awb||"",bl:c.bl||"",notas:c.notas||"",containers:conts,
     });
     setEditConsolId(c.id);setShowNewConsol(true);
@@ -5951,15 +5967,19 @@ export default function SistemaCarga(){
             {/* INFO GENERAL */}
             <div className="sdiv">INFORMACIÓN DEL EMBARQUE</div>
             <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:14}}>
+              {(()=>{const miM=matrizDe(oficinas.find(x=>x.id===currentUser.oficinaId));
+                const opciones=sel=>COUNTRIES.map(co=>{const ms=oficinas.filter(o=>esMatriz(o)&&(ofiActiva(o)||o.id===sel)&&paisDeOfi(o)===co);
+                  return ms.length>0&&<optgroup key={nomPaisCo(co)} label={co.name}>{ms.map(m=><option key={m.id} value={m.id}>{m.codigo} — {m.nombre}</option>)}</optgroup>;});
+                return <>
               <div className="fg">
-                <div className="fl">Ciudad Destino *</div>
-                <select className="fs" value={cf.destino} onChange={e=>sc2("destino",e.target.value)}>
-                  <option value="">— Selecciona ciudad destino —</option>
-                  {COUNTRIES.map(co=>(co.cities||[]).length>0&&<optgroup key={co.name} label={co.name}>
-                    {co.cities.map(c=><option key={c.code} value={c.code}>{c.name} ({c.code})</option>)}
-                  </optgroup>)}
-                </select>
+                <div className="fl">Matriz origen *</div>
+                {miM&&!editConsolId?<div className="fi" style={{background:"var(--bg3)"}}>{miM.codigo} — {miM.nombre}</div>
+                  :<select className="fs" value={cf.ofiOrigen||""} onChange={e=>sc2("ofiOrigen",e.target.value)}><option value="">—</option>{opciones(cf.ofiOrigen)}</select>}
               </div>
+              <div className="fg">
+                <div className="fl">Matriz destino *</div>
+                <select className="fs" value={cf.ofiDestino||""} onChange={e=>sc2("ofiDestino",e.target.value)}><option value="">—</option>{opciones(cf.ofiDestino)}</select>
+              </div></>;})()}
               <div className="fg">
                 <div className="fl">Tipo de Envío *</div>
                 <select className="fs" value={cf.tipoEnvio} onChange={e=>sc2("tipoEnvio",e.target.value)}>
