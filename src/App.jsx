@@ -1891,7 +1891,7 @@ const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomo
     const val=typeof v==="string"&&!NO_UPPER_F.includes(k)?v.toUpperCase():v;
     const upd={...p,[k]:val};
     // Cuando cambia el rol de un usuario → sincronizar clienteTipo automáticamente
-    if(k==="rol"&&p.tipo==="usuario") upd.clienteTipo=ROL_TO_TIPO[v]||"matriz";
+    if(k==="rol"&&p.tipo==="usuario"){upd.clienteTipo=ROL_TO_TIPO[v]||"matriz";if(v!==p.rol)upd.oficinaId="";}
     return upd;
   });
   return (
@@ -1961,15 +1961,17 @@ const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomo
             </select>
           </div>
         )}
-        {/* Usuario de oficina: su sucursal */}
-        {f.tipo==="usuario"&&f.rol==="G"&&(
-          <div className="fg" style={{marginBottom:14}}><div className="fl">Oficina (sucursal) *</div>
+        {/* Oficina donde trabaja el usuario: Admin/Gerente opcional (sin oficina = todas); internos en una matriz; Oficina en sucursal o franquicia */}
+        {f.tipo==="usuario"&&["A","B","C","D","D1","D2","G"].includes(f.rol)&&(()=>{
+          const esM=o=>(o.tipo==="Asociado"?"Franquicia":(o.tipo||"Matriz"))==="Matriz";
+          const lista=oficinas.filter(o=>o.activo!==false||o.id===f.oficinaId).filter(o=>f.rol==="G"?!esM(o):["A","B"].includes(f.rol)?true:esM(o))
+            .sort((a,b)=>String(a.codigo||"").localeCompare(String(b.codigo||"")));
+          return <div className="fg" style={{marginBottom:14}}><div className="fl">Oficina{["A","B"].includes(f.rol)?"":" *"}</div>
             <select className="fs" value={f.oficinaId||""} onChange={e=>ff("oficinaId",e.target.value)}>
-              <option value="">— Selecciona la oficina —</option>
-              {oficinas.map(o=><option key={o.id} value={o.id}>{o.nombre}{o.ciudad?` — ${o.ciudad}`:""}{o.pais?`, ${o.pais}`:""}</option>)}
+              <option value="">{["A","B"].includes(f.rol)?"Todas las oficinas":"—"}</option>
+              {lista.map(o=><option key={o.id} value={o.id}>{o.codigo} — {o.nombre}{o.ciudad?` (${o.ciudad})`:""}</option>)}
             </select>
-          </div>
-        )}
+          </div>;})()}
         <div className="sdiv">DATOS PERSONALES</div>
         <div className="fgrid g4" style={{marginBottom:10}}>
           <div className="fg"><div className="fl">Primer Nombre *</div><input className="fi" value={f.primerNombre} onChange={e=>ff("primerNombre",e.target.value)} placeholder="Primer nombre"/></div>
@@ -2018,6 +2020,7 @@ const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomo
           if(f.password&&!(f.email||"").trim()&&!(f.login||"").trim()){setEmailErr(f.tipo==="usuario"?"Para dar acceso hace falta un email o un nombre de usuario.":"Para dar acceso al cliente hace falta su email.");return;}
           // Un usuario del sistema necesita un rol de trabajo (no "Cliente")
           if(f.tipo==="usuario"&&(!f.rol||f.rol==="I")){setEmailErr("Selecciona el rol del usuario.");return;}
+          if(f.tipo==="usuario"&&["C","D","D1","D2","G"].includes(f.rol)&&!f.oficinaId){setEmailErr("Selecciona la oficina del usuario.");return;}
           setEmailErr("");
           onSave(f);
         }}>Guardar <Ico e="✅"/></button></div>
@@ -3924,7 +3927,9 @@ export default function SistemaCarga(){
                 const ct=c.clienteTipo||"";
                 const ctLabel=CT_LABEL[ct]||"—";
                 const parentAut=c.autonomoId?clients.find(x=>x.id===c.autonomoId):null;
-                const parentName=
+                const ofiUsr=c.tipo==="usuario"&&c.oficinaId?oficinas.find(o=>o.id===c.oficinaId):null;
+                const parentName=ofiUsr?`${ofiUsr.codigo} — ${ofiUsr.nombre}`:
+                  c.tipo==="usuario"&&["A","B"].includes(c.rol)?"Todas las oficinas":
                   ct==="matriz"?`${empresaNombre||"Casa Matriz"}`:
                   ct==="agente"||ct==="vendedor_agente"?(agentes.find(a=>a.id===c.agenteId)?.nombre||"Sin agente asignado"):
                   ct==="autonomo"?(parentAut?`${parentAut.primerNombre} ${parentAut.primerApellido}`:"Sin autónomo asignado"):
