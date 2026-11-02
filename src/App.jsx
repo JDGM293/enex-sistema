@@ -3147,6 +3147,8 @@ export default function SistemaCarga(){
     sw("casillero",c.casillero);
     sw("clienteId",c.id);
     sw("casilleroSearch",c.casillero);
+    {const co=paisPorNombre(c.pais);const suc=oficinas.find(o=>o.id===c.oficinaId&&ofiActiva(o));
+      sw("destPais",co?nomPaisCo(co):"");sw("sucursalEntrega",co&&suc&&paisDeOfi(suc)===co?suc.id:"");}
     setClientSearch(fullName(c));
     setClientResults([]);
   };
