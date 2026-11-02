@@ -7416,17 +7416,17 @@ export default function SistemaCarga(){
 
     const CFG_TABS=[
       {k:"empresa",l:"Empresa",ic:<Ico e="🏢"/>},
+      {k:"paises",l:"Países y Ciudades",ic:<Ico e="🌎"/>},
+      {k:"oficinas",l:"Oficinas",ic:<Ico e="🏢"/>},
       {k:"documentos",l:"Documentos por país",ic:<Ico e="🌎"/>},
       {k:"numeracion",l:"Numeración",ic:<Ico e="🔢"/>},
-      {k:"tipoenvio",l:"Tipo de Envío",ic:<Ico e="✈️"/>},
+      {k:"agentes",l:"Agentes",ic:<Ico e="🤝"/>},
+      {k:"tarifas",l:"Tarifas",ic:<Ico e="💰"/>},
       {k:"servicios",l:"Servicios Adicionales",ic:<Ico e="⚡"/>},
       {k:"cargos",l:"Gastos Adicionales",ic:<Ico e="💲"/>},
-      {k:"pagos",l:"Tipos de Pago",ic:<Ico e="💳"/>},
+      {k:"tipoenvio",l:"Tipo de Envío",ic:<Ico e="✈️"/>},
       {k:"contenedores",l:"Tipos de Contenedor",ic:<Ico e="📦"/>},
-      {k:"paises",l:"Países y Ciudades",ic:<Ico e="🌎"/>},
-      {k:"agentes",l:"Agentes",ic:<Ico e="🤝"/>},
-      {k:"oficinas",l:"Oficinas",ic:<Ico e="🏢"/>},
-      {k:"tarifas",l:"Tarifas",ic:<Ico e="💰"/>},
+      {k:"pagos",l:"Tipos de Pago",ic:<Ico e="💳"/>},
       {k:"chat",l:"Chat",ic:<Ico e="💬"/>},
       ...(hasPerm("registro_actividad")?[{k:"actividad",l:"Registro de Actividad",ic:<Ico e="📋"/>}]:[]),
     ];
