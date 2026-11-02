@@ -3930,6 +3930,8 @@ export default function SistemaCarga(){
                 const ofiUsr=c.tipo==="usuario"&&c.oficinaId?oficinas.find(o=>o.id===c.oficinaId):null;
                 const parentName=ofiUsr?`${ofiUsr.codigo} — ${ofiUsr.nombre}`:
                   c.tipo==="usuario"&&["A","B"].includes(c.rol)?"Todas las oficinas":
+                  c.tipo==="usuario"&&["E","E1"].includes(c.rol)?(agentes.find(a=>a.id===c.agenteId)?.nombre||"Sin agente asignado"):
+                  c.tipo==="usuario"&&c.rol==="F"?`${empresaNombre||"Casa Matriz"}`:
                   ct==="matriz"?`${empresaNombre||"Casa Matriz"}`:
                   ct==="agente"||ct==="vendedor_agente"?(agentes.find(a=>a.id===c.agenteId)?.nombre||"Sin agente asignado"):
                   ct==="autonomo"?(parentAut?`${parentAut.primerNombre} ${parentAut.primerApellido}`:"Sin autónomo asignado"):
