@@ -1767,7 +1767,7 @@ const emptyCaja=()=>({
 // elemento del listado es el que predetermina cada Nuevo WR. Si no hay nada
 // configurado (caso límite), queda vacío y el select queda en el primer option.
 const emptyWRF=(defaultTipoPago="")=>({
-  consignee:"",casilleroSearch:"",casillero:"",clienteId:"",sucursalEntrega:"",destPais:"",
+  consignee:"",casilleroSearch:"",casillero:"",clienteId:"",sucursalEntrega:"",destPais:"",origSel:"",
   remitente:"",remitenteDir:"",remitenteTel:"",remitenteEmail:"",remitenteDoc:"",remitenteId:"",
   chofer:"",idChofer:"",proNumber:"",ocNumber:"",
   tipoPago:defaultTipoPago,tipoEnvio:"",
@@ -1946,7 +1946,7 @@ const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomo
             )}
             <div className="fg" style={{marginTop:10}}><div className="fl">Sucursal de entrega</div>
               <select className="fs" value={f.oficinaId||""} onChange={e=>ff("oficinaId",e.target.value)}>
-                <option value="">Principal</option>
+                <option value="">—</option>
                 {oficinas.map(o=><option key={o.id} value={o.id}>{o.nombre}{o.ciudad?` — ${o.ciudad}`:""}{o.pais?`, ${o.pais}`:""}</option>)}
               </select>
             </div>
@@ -3029,7 +3029,7 @@ export default function SistemaCarga(){
     const o=oficinas.find(x=>x.id===u?.oficinaId)||ofiOrigen;return matrizDe(o)?.id||"";
   };
   const presetDominio=()=>{
-    const u=currentUser;const base={matrizId:matrizDelUsuario(u),ofiRegistro:u.oficinaId||""};
+    const u=currentUser;const base={matrizId:["E","E1","F"].includes(u.rol)?matrizDelUsuario(u):"",ofiRegistro:u.oficinaId||""};
     if(u.rol==="E")return {...base,clienteTipo:"agente",agenteId:u.agenteId||"",vendedorId:""};
     if(u.rol==="E1")return {...base,clienteTipo:"vendedor_agente",agenteId:u.agenteId||"",vendedorId:u.id};
     if(u.rol==="F")return {...base,clienteTipo:"autonomo",autonomoId:u.id};
@@ -3147,8 +3147,6 @@ export default function SistemaCarga(){
     sw("casillero",c.casillero);
     sw("clienteId",c.id);
     sw("casilleroSearch",c.casillero);
-    sw("sucursalEntrega",c.oficinaId||"");
-    {const pm=paisDeOfi(oficinas.find(o=>o.id===c.matrizId))||paisDeOfi(oficinas.find(o=>o.id===c.oficinaId));if(pm)sw("destPais",nomPaisCo(pm));}
     setClientSearch(fullName(c));
     setClientResults([]);
   };
@@ -3268,14 +3266,16 @@ export default function SistemaCarga(){
   const dimCalc={volKg:totalVolKg,volLb:totalVolLb,ft3:totalFt3,m3:totalM3};
 
   // Derivar códigos de oficina para numeración
-  const _origOff=ofiOrigen;
+  // Origen: la oficina del usuario; quien no tiene oficina la elige. Al editar, la del WR.
+  const _origOff=editWR?(oficinas.find(o=>o.id===editWR.ofiOrigen)||ofiOrigen):(oficinas.find(o=>o.id===currentUser?.oficinaId)||oficinas.find(o=>o.id===wrf.origSel)||null);
   const _sucEnt=oficinas.find(o=>o.id===wrf.sucursalEntrega)||null;
-  const _destPaisCo=COUNTRIES.find(co=>nomPaisCo(co)===wrf.destPais)||paisDeOfi(_sucEnt)||paisDeOfi(ofiDestinoDef);
-  const _destMatriz=_sucEnt?matrizDe(_sucEnt):(matrizZona(_destPaisCo,clients.find(c=>c.id===wrf.clienteId))||matrizDe(ofiDestinoDef));
-  const _destOff=_sucEnt||_destMatriz||ofiDestinoDef;
+  const _destPaisCo=COUNTRIES.find(co=>nomPaisCo(co)===wrf.destPais)||null;
+  const _destMatriz=_sucEnt?matrizDe(_sucEnt):null;
+  const _destOff=_sucEnt||ofiDestinoDef;
+  const _oC=ofiCodigos(_origOff),_dC=ofiCodigos(_destOff);
   // Tipo 3 usa país+ciudad de Países y Ciudades (OFFICE_CONFIG); Tipo 2 usa código de oficina
-  const _wrOrigCode=wrNumTipo===3?`${String(OFFICE_CONFIG.origCountry).padStart(2,"0")}${OFFICE_CONFIG.origCity.slice(0,2).toUpperCase()}`:(offCode(_origOff));
-  const _wrDestCode=wrNumTipo===3?`${String(OFFICE_CONFIG.destCountry).padStart(2,"0")}${OFFICE_CONFIG.destCity.slice(0,2).toUpperCase()}`:(offCode(_destOff));
+  const _wrOrigCode=wrNumTipo===3?`${String(_oC.dial).padStart(2,"0")}${String(_oC.code).slice(0,2).toUpperCase()}`:(offCode(_origOff));
+  const _wrDestCode=wrNumTipo===3?`${String(_dC.dial).padStart(2,"0")}${String(_dC.code).slice(0,2).toUpperCase()}`:(offCode(_destOff));
   // Usar el máximo secuencial existente +1 para evitar duplicados al borrar WRs
   const wrSigSeq=(sec=secSrv)=>{
     const nums=wrList.map(w=>{const m=String(w.id||"").match(/(\d+)$/);return m?parseInt(m[1]):0;});
@@ -3353,6 +3353,8 @@ export default function SistemaCarga(){
   const submitWR=async ()=>{
     if(!(editWR?hasPerm("editar_wr"):(wrf.reempaqueDe?.length?hasPerm("crear_reempaque"):hasPerm("crear_wr")))){window.alert("Tu rol no tiene permiso para esta acción.");return;}
     if(editWR&&!wrEditable(editWR)){window.alert(`El WR ${editWR.id} ya no se puede modificar con tu rol (${editWR.status?.label||""}).`);return;}
+    if(!editWR&&!_origOff){window.alert("Elige la oficina de origen.");return;}
+    if(!_destPaisCo||!_sucEnt){window.alert("Elige el país destino y dónde se entrega.");return;}
     // Expand dims: each registro × cantidad generates individual dim entries
     const dims=[];
     cajaCalcs.forEach((c,i)=>{
@@ -3436,7 +3438,7 @@ export default function SistemaCarga(){
         notas:wrf.notas,tipoEnvio:wrf.tipoEnvio,tipoPago:wrf.tipoPago,
         shipper:wrf.remitente,remitenteDir:wrf.remitenteDir||"",remitenteTel:wrf.remitenteTel||"",remitenteEmail:(wrf.remitenteEmail||"").trim(),remitenteDoc:(wrf.remitenteDoc||"").trim(),remitenteId:_remitenteId,cargos:wrf.cargos,
         sucursalEntrega:wrf.sucursalEntrega||"",
-        ...(_destMatriz?{ofiDestino:_destMatriz.id,destCountry:ofiCodigos(_destOff).pais,destCity:ofiCodigos(_destOff).code}:{}),
+        ofiDestino:_destMatriz?.id||"",destCountry:ofiCodigos(_destOff).pais,destCity:ofiCodigos(_destOff).code,
       };
       // Con tipo de envío asignado y aún en Recibido/Origen → Confirmado
       {const _w=updated;const _st3=WR_STATUSES.find(x=>x.code==="3");
@@ -3457,13 +3459,13 @@ export default function SistemaCarga(){
       const esReempaque=reempaqueIds.length>0;
       const n={
         id:buildWRNum(_wrOrigCode,_wrDestCode,wrSigSeq(_sec),wrNumTipo,wrSecInicio,empresaSlug),
-        origCountry:OFFICE_CONFIG.origCountryName,
-        origCity:OFFICE_CONFIG.origCity,
+        origCountry:_oC.pais,
+        origCity:_oC.code,
         destCountry:ofiCodigos(_destOff).pais,
         destCity:ofiCodigos(_destOff).code,
         ofiOrigen:_origOff?.id||"",ofiDestino:_destMatriz?.id||"",ofiActual:_origOff?.id||"",
         cajas:totalCajasCount,
-        branch:OFFICE_CONFIG.branch,
+        branch:_origOff?.nombre||"",
         fecha:now,
         consignee:wrf.consignee,casillero:_casillero,clienteId:_clienteId,
         carrier:esReempaque?"REEMPAQUE":(wrf.cajas[0]?.carrier||""),tracking:normTrk(wrf.cajas[0]?.tracking),
@@ -4189,10 +4191,10 @@ export default function SistemaCarga(){
               <span className="seg sn">{seqPrev}</span>
             </>)}
             {(wrNumTipo===3||!wrNumTipo)&&(<>
-              <span className="seg sc">{String(OFFICE_CONFIG.origCountry).padStart(2,"0")}</span>
-              <span className="seg sk">{OFFICE_CONFIG.origCity.slice(0,2).toUpperCase()}</span>
-              <span className="seg sc">{String(OFFICE_CONFIG.destCountry).padStart(2,"0")}</span>
-              <span className="seg sk">{OFFICE_CONFIG.destCity.slice(0,2).toUpperCase()}</span>
+              <span className="seg sc">{_origOff?String(_oC.dial).padStart(2,"0"):"—"}</span>
+              <span className="seg sk">{_origOff?String(_oC.code).slice(0,2).toUpperCase():"—"}</span>
+              <span className="seg sc">{_sucEnt?String(_dC.dial).padStart(2,"0"):"—"}</span>
+              <span className="seg sk">{_sucEnt?String(_dC.code).slice(0,2).toUpperCase():"—"}</span>
               <span className="seg sn">{seqPrev}</span>
             </>)}
           </div>
@@ -4200,7 +4202,13 @@ export default function SistemaCarga(){
           {wrNumTipo===2&&<div className="seg-leg"><span><Ico e="🟢" sp/>Empresa</span><span><Ico e="🔵" sp/>Oficina Origen</span><span><Ico e="🔵" sp/>Oficina Destino</span><span><Ico e="🟡" sp/>Secuencia</span></div>}
           {(wrNumTipo===3||!wrNumTipo)&&<div className="seg-leg"><span><Ico e="🔵" sp/>País Origen</span><span><Ico e="🟢" sp/>Ciudad Origen</span><span><Ico e="🔵" sp/>País Destino</span><span><Ico e="🟢" sp/>Ciudad Destino</span><span><Ico e="🟡" sp/>Secuencia</span></div>}
           <div style={{display:"flex",gap:8,justifyContent:"center",fontSize:13,color:"var(--t2)",marginTop:4}}>
-            <span><Ico e="🏢" sp/><strong>{OFFICE_CONFIG.branch}</strong></span>
+            {!editWR&&!currentUser?.oficinaId
+              ?<span style={{display:"flex",alignItems:"center",gap:6}}><Ico e="🏢"/><b>Oficina origen *</b>
+                <select className="fs" style={{width:"auto"}} value={wrf.origSel||""} onChange={e=>sw("origSel",e.target.value)}>
+                  <option value="">—</option>
+                  {oficinas.filter(ofiActiva).sort((a,b)=>String(a.codigo||"").localeCompare(String(b.codigo||""))).map(o=><option key={o.id} value={o.id}>{o.codigo} — {o.nombre}</option>)}
+                </select></span>
+              :<span><Ico e="🏢" sp/><strong>{_origOff?`${_origOff.codigo} — ${_origOff.nombre}`:"—"}</strong></span>}
           </div>
         </div>
 
@@ -4265,16 +4273,16 @@ export default function SistemaCarga(){
               </div>
               <div className="fg"><div className="fl">Nombre (si no está registrado)</div><input className="fi" value={wrf.consignee} onChange={e=>sw("consignee",e.target.value)} placeholder="Nombre completo"/></div>
               <div className="fg"><div className="fl">N° Casillero</div><input className="fi" value={wrf.casillero} onChange={e=>sw("casillero",e.target.value)} style={{fontFamily:"'DM Mono',monospace",fontWeight:800,fontSize:16,color:"var(--navy)",letterSpacing:1,background:"#EEF3FF",border:"2px solid #B8C8F0"}}/></div>
-              <div className="fg"><div className="fl">País destino</div>
+              <div className="fg"><div className="fl">País destino *</div>
                 <select className="fs" value={_destPaisCo?nomPaisCo(_destPaisCo):""} onChange={e=>{sw("destPais",e.target.value);sw("sucursalEntrega","");}}>
+                  <option value="">—</option>
                   {COUNTRIES.filter(co=>matricesDePais(co).length>0).map(co=><option key={nomPaisCo(co)} value={nomPaisCo(co)}>{co.name}</option>)}
                 </select>
               </div>
-              <div className="fg"><div className="fl">Entregar en</div>
-                {(()=>{const zona=matrizZona(_destPaisCo,clients.find(c=>c.id===wrf.clienteId));
-                  const otras=oficinas.filter(o=>ofiActiva(o)&&paisDeOfi(o)===_destPaisCo&&o.id!==zona?.id).sort((a,b)=>String(a.codigo||"").localeCompare(String(b.codigo||"")));
+              <div className="fg"><div className="fl">Entregar en *</div>
+                {(()=>{const otras=_destPaisCo?oficinas.filter(o=>(ofiActiva(o)||o.id===wrf.sucursalEntrega)&&paisDeOfi(o)===_destPaisCo).sort((a,b)=>String(a.codigo||"").localeCompare(String(b.codigo||""))):[];
                   return <select className="fs" value={wrf.sucursalEntrega||""} onChange={e=>sw("sucursalEntrega",e.target.value)}>
-                    <option value="">{zona?`${zona.codigo} — ${zona.nombre}`:"—"}</option>
+                    <option value="">—</option>
                     {otras.map(o=><option key={o.id} value={o.id}>{o.codigo} — {o.nombre}{o.ciudad?` (${o.ciudad})`:""}</option>)}
                   </select>;})()}
               </div>
@@ -8004,7 +8012,7 @@ export default function SistemaCarga(){
           <div>
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
               <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:17,fontWeight:700,color:"var(--navy)",flex:1}}><Ico e="🏢" sp/>Oficinas / Sucursales</div>
-              {hasPerm("crear_oficina")&&<button className="btn-p" style={{fontSize:13}} onClick={()=>{setEditOficina(null);setOfForm({nombre:"",ciudad:"",pais:"",tel:"",email:"",contacto:"",notas:"",tipo:currentUser.rol==="A"?"Matriz":"Sucursal",matriz_id:"",moneda:"",principal:false,com_prepaid_pct:"",com_entrega_monto:"",com_entrega_por:"wr",activo:true});setShowNewOficina(true);}}>+ Nueva Oficina</button>}
+              {hasPerm("crear_oficina")&&<button className="btn-p" style={{fontSize:13}} onClick={()=>{setEditOficina(null);setOfForm({nombre:"",ciudad:"",pais:"",tel:"",email:"",contacto:"",notas:"",tipo:"",matriz_id:"",moneda:"",principal:false,com_prepaid_pct:"",com_entrega_monto:"",com_entrega_por:"",activo:true});setShowNewOficina(true);}}>+ Nueva Oficina</button>}
             </div>
             <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,overflow:"hidden"}}>
               <><table className="ct">
@@ -8027,7 +8035,7 @@ export default function SistemaCarga(){
                       <td style={{fontSize:13,color:"var(--cyan)"}}>{o.email||"—"}</td>
                       <td><span style={{fontSize:11,padding:"2px 8px",borderRadius:4,fontWeight:700,background:o.activo?"#E8F8EE":"#FEE8E8",color:o.activo?"var(--green)":"var(--red)",border:"1px solid",borderColor:o.activo?"#80D0A0":"#F0A0A0"}}>{o.activo?"Activo":"Inactivo"}</span></td>
                       <td><div style={{display:"flex",gap:4}}>
-                        {hasPerm("editar_oficina")&&<span className="ic-b" onClick={()=>{setOfForm({...o,tipo:tipoOfi(o),com_entrega_por:o.com_entrega_por||"wr"});setEditOficina(o);setShowNewOficina(true);}}><Ico e="✏️" solo/></span>}
+                        {hasPerm("editar_oficina")&&<span className="ic-b" onClick={()=>{setOfForm({...o,tipo:tipoOfi(o),com_entrega_por:o.com_entrega_por||""});setEditOficina(o);setShowNewOficina(true);}}><Ico e="✏️" solo/></span>}
                         {hasPerm("borrar_oficina")&&<span className="ic-b" style={{color:"var(--red)"}} onClick={()=>{if(esMatriz(o)){if(oficinas.some(x=>x.matriz_id===o.id&&x.id!==o.id)){window.alert("Esta matriz tiene oficinas que dependen de ella.");return;}
                           if(ofiActiva(o)&&matricesDePais(paisDeOfi(o)).filter(x=>x.id!==o.id).length===0){window.alert("Cada país debe tener al menos una matriz activa.");return;}}
                           if(!window.confirm(`¿Borrar oficina ${o.codigo} — ${o.nombre}?`))return;setOficinas(p=>p.filter(x=>x.id!==o.id));dbDeleteOficina(o.id);logAction("Borró oficina",`${o.codigo} — ${o.nombre}`);}}><Ico e="🗑" solo/></span>}
@@ -8056,21 +8064,21 @@ export default function SistemaCarga(){
                     </div>;})()}
                     {(()=>{const co=COUNTRIES.find(c=>nomPaisCo(c)===sinAcentos(ofForm.pais))||null;const mats=co?matricesDePais(co).filter(m=>m.id!==editOficina?.id):[];
                       return <>
-                    <div className="fg"><div className="fl">País *</div><select className="fs" value={co?nomPaisCo(co):""} onChange={e=>{const c=COUNTRIES.find(x=>nomPaisCo(x)===e.target.value);setOfForm(p=>({...p,pais:e.target.value,ciudad:"",matriz_id:"",moneda:p.moneda||c?.moneda||""}));}}>
+                    <div className="fg"><div className="fl">País *</div><select className="fs" value={co?nomPaisCo(co):""} onChange={e=>{const c=COUNTRIES.find(x=>nomPaisCo(x)===e.target.value);setOfForm(p=>({...p,pais:e.target.value,ciudad:"",matriz_id:""}));}}>
                       <option value="">—</option>{COUNTRIES.map(c=><option key={nomPaisCo(c)} value={nomPaisCo(c)}>{c.name}</option>)}</select></div>
                     <div className="fg"><div className="fl">Ciudad *</div><select className="fs" value={(co?.cities||[]).find(ci=>sinAcentos(ci.name)===sinAcentos(ofForm.ciudad)||sinAcentos(ci.code)===sinAcentos(ofForm.ciudad))?.code||""} onChange={e=>{const ci=(co?.cities||[]).find(x=>x.code===e.target.value);setOfForm(p=>({...p,ciudad:ci?String(ci.name).toUpperCase():""}));}}>
                       <option value="">—</option>{(co?.cities||[]).map(ci=><option key={ci.code} value={ci.code}>{ci.code} — {ci.name}</option>)}</select></div>
                     {ofForm.tipo!=="Matriz"&&<div className="fg full"><div className="fl">Matriz a la que pertenece *</div><select className="fs" value={ofForm.matriz_id||""} onChange={e=>setOfForm(p=>({...p,matriz_id:e.target.value}))}>
                       <option value="">—</option>{mats.map(m=><option key={m.id} value={m.id}>{m.codigo} — {m.nombre}{m.ciudad?` (${m.ciudad})`:""}</option>)}</select></div>}
                     {ofForm.tipo==="Matriz"&&<div className="fg full"><label style={{display:"flex",alignItems:"center",gap:8,fontSize:14,cursor:"pointer"}}><input type="checkbox" checked={!!ofForm.principal} disabled={currentUser.rol!=="A"} onChange={e=>setOfForm(p=>({...p,principal:e.target.checked}))}/>Matriz principal del país</label></div>}
-                    <div className="fg"><div className="fl">Moneda</div><select className="fs" value={ofForm.moneda||co?.moneda||"USD"} onChange={e=>setOfForm(p=>({...p,moneda:e.target.value}))}>
-                      {["USD","EUR","VES","COP","MXN","ARS","CLP","PEN","BRL","DOP","PAB"].map(m=><option key={m} value={m}>{m}</option>)}</select></div>
+                    <div className="fg"><div className="fl">Moneda</div><select className="fs" value={ofForm.moneda||""} onChange={e=>setOfForm(p=>({...p,moneda:e.target.value}))}>
+                      <option value="">—</option>{["USD","EUR","VES","COP","MXN","ARS","CLP","PEN","BRL","DOP","PAB"].map(m=><option key={m} value={m}>{m}</option>)}</select></div>
                     {editOficina&&<div className="fg"><div className="fl">Estado</div><select className="fs" value={ofForm.activo===false?"0":"1"} onChange={e=>setOfForm(p=>({...p,activo:e.target.value==="1"}))}><option value="1">Activa</option><option value="0">Inactiva</option></select></div>}
                     {ofForm.tipo!=="Matriz"&&<>
                       <div className="fg"><div className="fl">Comisión PREPAID (% del flete)</div><input className="fi" type="number" min="0" step="0.01" value={ofForm.com_prepaid_pct??""} onChange={e=>setOfForm(p=>({...p,com_prepaid_pct:e.target.value}))}/></div>
                       <div className="fg"><div className="fl">Comisión por entrega</div><div style={{display:"flex",gap:6}}>
                         <input className="fi" type="number" min="0" step="0.01" value={ofForm.com_entrega_monto??""} onChange={e=>setOfForm(p=>({...p,com_entrega_monto:e.target.value}))}/>
-                        <select className="fs" style={{width:130}} value={ofForm.com_entrega_por||"wr"} onChange={e=>setOfForm(p=>({...p,com_entrega_por:e.target.value}))}><option value="wr">por WR</option><option value="paquete">por paquete</option></select></div></div>
+                        <select className="fs" style={{width:130}} value={ofForm.com_entrega_por||""} onChange={e=>setOfForm(p=>({...p,com_entrega_por:e.target.value}))}><option value="">—</option><option value="wr">por WR</option><option value="paquete">por paquete</option></select></div></div>
                     </>}
                     <div className="fg full"><div className="fl">Dirección</div><input className="fi" value={ofForm.dir||""} onChange={e=>setOfForm(p=>({...p,dir:e.target.value.toUpperCase()}))}/></div>
                     <div className="fg"><div className="fl">Estado / provincia</div><input className="fi" value={ofForm.estado||""} onChange={e=>setOfForm(p=>({...p,estado:e.target.value.toUpperCase()}))}/></div>
@@ -8088,6 +8096,9 @@ export default function SistemaCarga(){
                       if(!ofForm.nombre.trim()||!co||!ofForm.ciudad){window.alert("Completa nombre, país y ciudad.");return;}
                       const iso=String(co.iso||"").toUpperCase();
                       if(!iso){window.alert(`${co.name} no tiene código de país. Agrégalo en Países y Ciudades.`);return;}
+                      if(!["Matriz","Sucursal","Franquicia"].includes(ofForm.tipo)){window.alert("Elige el tipo de oficina.");return;}
+                      if(!ofForm.moneda){window.alert("Elige la moneda de la oficina.");return;}
+                      if(ofForm.tipo!=="Matriz"&&String(ofForm.com_entrega_monto??"")!==""&&!ofForm.com_entrega_por){window.alert("Elige si la comisión por entrega es por WR o por paquete.");return;}
                       const esM=ofForm.tipo==="Matriz", esA=currentUser.rol==="A";
                       const antes=editOficina, eraM=antes&&esMatriz(antes);
                       if(esM&&!eraM&&!esA){window.alert("Solo el Administrador puede crear matrices.");return;}
@@ -8108,10 +8119,10 @@ export default function SistemaCarga(){
                         codigo=`${iso}-${String(n).padStart(2,"0")}`;}
                       const principal=esM&&(!!ofForm.principal||!otrasM.some(x=>x.principal));
                       const limpio={...ofForm,tipo:ofForm.tipo,pais:nomPaisCo(co),codigo,principal,
-                        matriz_id:esM?null:ofForm.matriz_id,moneda:ofForm.moneda||co.moneda||"USD",
+                        matriz_id:esM?null:ofForm.matriz_id,moneda:ofForm.moneda,
                         com_prepaid_pct:esM||ofForm.com_prepaid_pct===""?null:parseFloat(ofForm.com_prepaid_pct)||0,
                         com_entrega_monto:esM||ofForm.com_entrega_monto===""?null:parseFloat(ofForm.com_entrega_monto)||0,
-                        com_entrega_por:esM?null:(ofForm.com_entrega_por||"wr"),activo:ofForm.activo!==false};
+                        com_entrega_por:esM?null:(ofForm.com_entrega_por||null),activo:ofForm.activo!==false};
                       const reg=antes?{...antes,...limpio}:{...limpio,id:crypto.randomUUID()};
                       // Solo una matriz principal por país
                       const quitar=principal?otrasM.filter(x=>x.principal).map(x=>({...x,principal:false})):[];
