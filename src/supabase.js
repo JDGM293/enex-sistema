@@ -173,7 +173,7 @@ export const dbGetOficinas = async () => {
   return data
 }
 
-const OFICINA_COLS = ['id','codigo','nombre','ciudad','pais','activo','tel','email','contacto','notas','dir','estado','cp','tipo']
+const OFICINA_COLS = ['id','codigo','nombre','ciudad','pais','activo','tel','email','contacto','notas','dir','estado','cp','tipo','matriz_id','moneda','principal','com_prepaid_pct','com_entrega_monto','com_entrega_por']
 export const dbUpsertOficina = async (of) => {
   const fila = Object.fromEntries(OFICINA_COLS.filter(k => of[k] !== undefined).map(k => [k, of[k]]))
   const { error } = await supabase.from('oficinas').upsert(fila)

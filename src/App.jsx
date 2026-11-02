@@ -978,7 +978,7 @@ const SEARCH_PARAMS=["N° WR","Consignatario","Casillero","Tracking","Factura","
 
 // ─── NUMBERING BUILDERS ───────────────────────────────────────────────────────
 // offCode: convierte un registro de oficina a código → "01MIA", "01VLN", etc.
-const offCode=(o)=>o?`${String(o.codigo).padStart(2,"0")}${(o.ciudad||"").slice(0,3).toUpperCase()}`:"00???";
+const offCode=(o)=>o?`${String(String(o.codigo||"").replace(/\D/g,"")||"0").padStart(2,"0")}${(o.ciudad||"").slice(0,3).toUpperCase()}`:"00???";
 // Prefijo de casillero — cambiar aquí para cada empresa
 const CASILLERO_PREFIX=""; // solo número: 001, 002 …
 const CASILLERO_DIGITS=3;
@@ -2601,8 +2601,19 @@ export default function SistemaCarga(){
   const ofiCodigos=o=>{const C=sinAcentos(o?.ciudad||"");
     for(const co of COUNTRIES)for(const ci of (co.cities||[]))if(C&&(sinAcentos(ci.name)===C||sinAcentos(ci.code)===C))return {dial:co.dial||"",pais:co.name||"",code:ci.code||""};
     return {dial:"",pais:o?.pais||"",code:(o?.ciudad||"").slice(0,3).toUpperCase()};};
-  const ofiOrigen=oficinas.find(o=>o.id===currentUser?.oficinaId)||oficinas.find(o=>o.id===marca.ofiOrigen)||oficinas[0]||null;
-  const ofiDestinoDef=oficinas.find(o=>o.id===marca.ofiDestino)||oficinas.find(o=>o.id!==ofiOrigen?.id)||ofiOrigen;
+  // ── Oficinas: Matriz (01–05 por país), Sucursal y Franquicia (06 en adelante) ──
+  const nomPaisCo=co=>sinAcentos(String(co?.name||"").replace(/[^\p{L}\s]/gu,""));
+  const paisDeOfi=o=>!o?null:(COUNTRIES.find(co=>nomPaisCo(co)&&nomPaisCo(co)===sinAcentos(o.pais))
+    ||COUNTRIES.find(co=>(co.cities||[]).some(ci=>sinAcentos(ci.name)===sinAcentos(o.ciudad)||sinAcentos(ci.code)===sinAcentos(o.ciudad)))||null);
+  const tipoOfi=o=>o?.tipo==="Asociado"?"Franquicia":(o?.tipo||"Matriz");
+  const esMatriz=o=>tipoOfi(o)==="Matriz";
+  const ofiActiva=o=>o&&o.activo!==false;
+  const matrizDe=o=>!o?null:esMatriz(o)?o:(oficinas.find(x=>x.id===o.matriz_id)||null);
+  const matricesDePais=(co,todas=false)=>oficinas.filter(o=>esMatriz(o)&&(todas||ofiActiva(o))&&paisDeOfi(o)===co);
+  const ofiOrigen=oficinas.find(o=>o.id===currentUser?.oficinaId)||oficinas.find(o=>esMatriz(o)&&o.principal&&ofiActiva(o))||oficinas.find(o=>esMatriz(o)&&ofiActiva(o))||oficinas[0]||null;
+  const ofiDestinoDef=(()=>{const pa=paisDeOfi(ofiOrigen);
+    const fuera=oficinas.filter(o=>esMatriz(o)&&ofiActiva(o)&&paisDeOfi(o)!==pa);
+    return fuera.find(o=>o.principal)||fuera[0]||oficinas.find(o=>o.id!==ofiOrigen?.id)||ofiOrigen;})();
   const OFFICE_CONFIG=(()=>{const a=ofiCodigos(ofiOrigen),b=ofiCodigos(ofiDestinoDef);
     return {origCountry:a.dial,origCountryName:a.pais,origCity:a.code,destCountry:b.dial,destCountryName:b.pais,destCity:b.code,branch:ofiOrigen?.nombre||"Casa Matriz"};})();
   const [showNewAgente,setShowNewAgente]=useState(false);
@@ -6303,15 +6314,15 @@ export default function SistemaCarga(){
     const tot=`<tr class="tot"><td colspan="3">${w.cajas||dims.length||0} pieza${(w.cajas||dims.length)===1?"":"s"}</td><td class="r">${fmtDec(w.pesoLb,2)}</td><td class="r">${fmtDec(w.volLb,2,"—")}</td><td class="r">${fmtDec(w.ft3,2,"—")}</td><td class="r">${fmtDec(w.m3,3,"—")}</td></tr>`;
     const cuerpo=
       pGrid(2,[pBox("Remitente",`<b>${prnE(w.shipper||"—")}</b>`,prnE([w.remitenteDir,[w.remitenteTel,w.remitenteEmail].filter(Boolean).join(" · ")].filter(Boolean).join(" · "))),
-        pBox("Consignatario",`<b>${prnE(w.consignee||"—")}</b>${w.casillero?` · #${prnE(w.casillero)}`:""}`,prnE([dest,`${w.destCity||""} ${nomPais(w.destCountry)}`.trim()].filter(Boolean).join(" · ")))])+
-      pGrid(4,[pBox("Tipo de pago",prnE(w.tipoPago||"—")),pBox("Tipo de envío",prnE(w.tipoEnvio||"Por definir")),pBox("Destino",prnE(`${w.destCity||""} · ${nomPais(w.destCountry)}`)),pBox("Tipo de cliente",prnE(tipoCli||"—"))])+
+        pBox("Consignatario",`<b>${prnE(w.consignee||"—")}</b>${w.casillero?` · #${prnE(w.casillero)}`:""}`,prnE([dest,`${w.destCity||""} ${nomPaisCo(w.destCountry)}`.trim()].filter(Boolean).join(" · ")))])+
+      pGrid(4,[pBox("Tipo de pago",prnE(w.tipoPago||"—")),pBox("Tipo de envío",prnE(w.tipoEnvio||"Por definir")),pBox("Destino",prnE(`${w.destCity||""} · ${nomPaisCo(w.destCountry)}`)),pBox("Tipo de cliente",prnE(tipoCli||"—"))])+
       (w.notas?`<div class="nota"><b>Notas:</b> ${prnE(w.notas)}</div>`:"")+
       pSec("Detalle de la carga")+
       pTabla([{l:"#"},{l:"Medidas (in)"},{l:"Tracking / contenido"},{l:"Peso lb",r:1},{l:"Vol. lb",r:1},{l:"Ft³",r:1},{l:"M³",r:1}],filas,tot)+
       pFirmas([["Empresa"],["Nombre"],["Firma"]])+
       `<div class="legal">${prnE(notaLegalWR(w))}</div>`;
     return prnHTML({titulo:"Warehouse Receipt",numero:w.id,barcode:true,pais:w.origCountry,emisor,
-      meta:[["Fecha",`${fmtDate(w.fecha)} ${fmtTime(w.fecha)}`],["Origen",`${w.origCity||""} · ${nomPais(w.origCountry)}`],["Recibido por",usr?fullName(usr):(w.usuario||"")]],cuerpo});
+      meta:[["Fecha",`${fmtDate(w.fecha)} ${fmtTime(w.fecha)}`],["Origen",`${w.origCity||""} · ${nomPaisCo(w.origCountry)}`],["Recibido por",usr?fullName(usr):(w.usuario||"")]],cuerpo});
   };
 
   const htmlGuia=c=>{
@@ -6631,8 +6642,8 @@ export default function SistemaCarga(){
       W("Remitente","remitente","Remitente","txt",r=>r.w.shipper||""),W("Remitente","idRem","ID remitente","txt",r=>r.w.remitenteDoc||""),
       W("Remitente","telRem","Teléfono remitente","txt",r=>r.w.remitenteTel||""),W("Remitente","emailRem","Email remitente","txt",r=>r.w.remitenteEmail||""),
       W("Remitente","dirRem","Dirección remitente","txt",r=>r.w.remitenteDir||""),
-      W("Ruta","paisOrig","País origen","txt",r=>nomPais(r.w.origCountry)),W("Ruta","ciudadOrig","Ciudad origen","txt",r=>ciudadNombre(r.w.origCity)),
-      W("Ruta","paisDest","País destino","txt",r=>nomPais(r.w.destCountry)),W("Ruta","ciudadDest","Ciudad destino","txt",r=>ciudadNombre(r.w.destCity)),
+      W("Ruta","paisOrig","País origen","txt",r=>nomPaisCo(r.w.origCountry)),W("Ruta","ciudadOrig","Ciudad origen","txt",r=>ciudadNombre(r.w.origCity)),
+      W("Ruta","paisDest","País destino","txt",r=>nomPaisCo(r.w.destCountry)),W("Ruta","ciudadDest","Ciudad destino","txt",r=>ciudadNombre(r.w.destCity)),
       W("Ruta","ruta","Ruta","txt",r=>`${ciudadNombre(r.w.origCity)} → ${ciudadNombre(r.w.destCity)}`),
       W("Guía","guia","Guía","txt",r=>r.g.guia||""),W("Guía","contenedor","Contenedor","txt",r=>r.g.cont||""),
       W("Guía","awb","AWB / BL","txt",r=>r.g.g?(r.g.g.awb||r.g.g.bl||""):""),W("Guía","vuelo","Vuelo / viaje","txt",r=>r.g.g?.numVuelo||""),
@@ -7213,7 +7224,7 @@ export default function SistemaCarga(){
   const fpMiEmisor=(()=>{const u=currentUser;
     if(["E","E1"].includes(u.rol)&&u.agenteId){const a=agentes.find(x=>x.id===u.agenteId);return a?{tipo:"agente",id:a.id,nombre:a.nombre||a.codigo,codigo:`AG${parseInt(a.codigo,10)||""}`}:null;}
     if(u.rol==="F")return {tipo:"autonomo",id:u.id,nombre:fullName(u),codigo:siglaUsuario(u,clients,agentes,oficinas)};
-    if(u.rol==="G"&&u.oficinaId){const o=oficinas.find(x=>x.id===u.oficinaId);return o?{tipo:"oficina",id:o.id,nombre:o.nombre,codigo:`OF${parseInt(o.codigo,10)||""}`}:null;}
+    if(u.rol==="G"&&u.oficinaId){const o=oficinas.find(x=>x.id===u.oficinaId);return o?{tipo:"oficina",id:o.id,nombre:o.nombre,codigo:`OF${parseInt(String(o.codigo||"").replace(/\D/g,""),10)||""}`}:null;}
     return null;})();
   const fpKey=em=>`${em.tipo}:${em.id}`;
   const fpNombreEmisor=(tipo,id)=>tipo==="agente"?(agentes.find(a=>a.id===id)?.nombre||id):tipo==="oficina"?(oficinas.find(o=>o.id===id)?.nombre||id):(()=>{const c=clients.find(x=>x.id===id);return c?fullName(c):id;})();
@@ -7481,8 +7492,6 @@ export default function SistemaCarga(){
                 <div className="fg"><div className="fl">Código postal</div><input className="fi" value={m.cp||""} onChange={e=>set({cp:e.target.value.toUpperCase()})}/></div>
                 <div className="fg"><div className="fl">Teléfono</div><input className="fi" value={m.tel||""} onChange={e=>set({tel:e.target.value})}/></div>
                 <div className="fg"><div className="fl">Correo</div><input className="fi" style={{textTransform:"none"}} value={m.email||""} onChange={e=>set({email:e.target.value.toLowerCase()})}/></div>
-                <div className="fg"><div className="fl">Oficina de origen (casa matriz)</div><select className="fs" value={m.ofiOrigen||""} onChange={e=>set({ofiOrigen:e.target.value})}><option value="">—</option>{oficinas.map(o=><option key={o.id} value={o.id}>{o.nombre}{o.ciudad?` — ${o.ciudad}`:""}</option>)}</select></div>
-                <div className="fg"><div className="fl">Oficina de destino predeterminada</div><select className="fs" value={m.ofiDestino||""} onChange={e=>set({ofiDestino:e.target.value})}><option value="">—</option>{oficinas.map(o=><option key={o.id} value={o.id}>{o.nombre}{o.ciudad?` — ${o.ciudad}`:""}</option>)}</select></div>
                 <div className="fg"><div className="fl">Sitio web</div><input className="fi" style={{textTransform:"none"}} value={m.web||""} onChange={e=>set({web:e.target.value.toLowerCase()})}/></div>
               </div>
               <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:10}}>
@@ -7740,7 +7749,7 @@ export default function SistemaCarga(){
                       background:cfgSelPais===i?"#EEF3FF":"",borderLeft:cfgSelPais===i?"3px solid var(--navy)":"3px solid transparent"}}>
                     <div style={{flex:1}}>
                       <div style={{fontWeight:600,fontSize:14}}>{c.name}</div>
-                      <div style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--t3)"}}>+{c.dial} · {c.cities.length} ciudades</div>
+                      <div style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--t3)"}}>{c.iso?`${c.iso} · `:""}+{c.dial} · {c.cities.length} ciudades · {matricesDePais(c).length} matriz</div>
                     </div>
                     {currentUser.rol==="A"&&<span onClick={e=>{e.stopPropagation();const n=COUNTRIES.filter((_,j)=>j!==i);setCountries(n);dbSetConfig('countries',n);if(cfgSelPais>=i)setCfgSelPais(Math.max(0,cfgSelPais-1));}} style={{color:"var(--red)",cursor:"pointer",fontSize:15,fontWeight:700}}>×</span>}
                   </div>
@@ -7753,6 +7762,21 @@ export default function SistemaCarga(){
               <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",fontFamily:"Arial,Helvetica,sans-serif",fontSize:15,fontWeight:700,color:"var(--navy)"}}>
                 <Ico e="🏙️" sp/>Ciudades — {COUNTRIES[cfgSelPais]?.name||"Selecciona un país"}
               </div>
+              {COUNTRIES[cfgSelPais]&&(()=>{const co=COUNTRIES[cfgSelPais];
+                const setCo=cambio=>setCountries(COUNTRIES.map((c,i)=>i===cfgSelPais?{...c,...cambio}:c));
+                const guardar=()=>dbSetConfig('countries',COUNTRIES);
+                return <div style={{padding:"10px 12px",borderBottom:"1px solid var(--b1)"}}>
+                  <div className="fgrid g2">
+                    <div className="fg"><div className="fl">Código de país</div><input className="fi" maxLength={3} style={{fontFamily:"'DM Mono',monospace",fontWeight:700}} value={co.iso||""} placeholder="VE"
+                      onChange={e=>setCo({iso:e.target.value.toUpperCase().replace(/[^A-Z]/g,"")})}
+                      onBlur={()=>{const iso=String(co.iso||"");if(iso&&COUNTRIES.some((c,i)=>i!==cfgSelPais&&String(c.iso||"")===iso)){window.alert(`El código ${iso} ya lo usa otro país.`);setCo({iso:""});return;}guardar();}}/></div>
+                    <div className="fg"><div className="fl">Moneda</div><select className="fs" value={co.moneda||"USD"} onChange={e=>{const n=COUNTRIES.map((c,i)=>i===cfgSelPais?{...c,moneda:e.target.value}:c);setCountries(n);dbSetConfig('countries',n);}}>
+                      {["USD","EUR","VES","COP","MXN","ARS","CLP","PEN","BRL","DOP","PAB"].map(m=><option key={m} value={m}>{m}</option>)}</select></div>
+                    <div className="fg"><div className="fl">Razón social</div><input className="fi" value={co.razon||""} onChange={e=>setCo({razon:e.target.value.toUpperCase()})} onBlur={guardar}/></div>
+                    <div className="fg"><div className="fl">Número fiscal</div><input className="fi" value={co.idFiscal||""} onChange={e=>setCo({idFiscal:e.target.value.toUpperCase()})} onBlur={guardar}/></div>
+                    <div className="fg full"><div className="fl">Dirección fiscal</div><input className="fi" value={co.dirFiscal||""} onChange={e=>setCo({dirFiscal:e.target.value.toUpperCase()})} onBlur={guardar}/></div>
+                  </div>
+                </div>;})()}
               {COUNTRIES[cfgSelPais]&&(
                 <>
                   <div style={{padding:"10px 12px",borderBottom:"1px solid var(--b1)"}}>
@@ -7773,6 +7797,9 @@ export default function SistemaCarga(){
                       <div key={ci} style={{display:"inline-flex",alignItems:"center",gap:5,background:"var(--bg4)",border:"1px solid var(--b1)",borderRadius:6,padding:"4px 10px",fontSize:14}}>
                         <span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",fontSize:13}}>{c.code}</span>
                         <span style={{color:"var(--t2)"}}>{c.name}</span>
+                        {(()=>{const mats=matricesDePais(COUNTRIES[cfgSelPais]);if(mats.length<2)return null;
+                          return <select className="fs" style={{fontSize:12,padding:"1px 4px",width:"auto"}} value={c.matriz||""} onChange={e=>{const n=COUNTRIES.map((co,i)=>i===cfgSelPais?{...co,cities:co.cities.map((x,j)=>j===ci?{...x,matriz:e.target.value}:x)}:co);setCountries(n);dbSetConfig('countries',n);}}>
+                            <option value="">{(mats.find(m=>m.principal)||mats[0]).codigo} (principal)</option>{mats.map(m=><option key={m.id} value={m.id}>{m.codigo} {m.nombre}</option>)}</select>;})()}
                         {currentUser.rol==="A"&&<span onClick={()=>{const n=COUNTRIES.map((co,i)=>i===cfgSelPais?{...co,cities:co.cities.filter((_,j)=>j!==ci)}:co);setCountries(n);dbSetConfig('countries',n);}} style={{color:"var(--red)",cursor:"pointer",fontSize:16,fontWeight:700}}>×</span>}
                       </div>
                     ))}
@@ -7899,35 +7926,33 @@ export default function SistemaCarga(){
           <div>
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
               <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:17,fontWeight:700,color:"var(--navy)",flex:1}}><Ico e="🏢" sp/>Oficinas / Sucursales</div>
-              {hasPerm("crear_oficina")&&<button className="btn-p" style={{fontSize:13}} onClick={()=>{setOfForm({nombre:"",ciudad:"",pais:"",tel:"",email:"",contacto:"",notas:"",tipo:"Matriz"});setShowNewOficina(true);}}>+ Nueva Oficina</button>}
+              {hasPerm("crear_oficina")&&<button className="btn-p" style={{fontSize:13}} onClick={()=>{setEditOficina(null);setOfForm({nombre:"",ciudad:"",pais:"",tel:"",email:"",contacto:"",notas:"",tipo:currentUser.rol==="A"?"Matriz":"Sucursal",matriz_id:"",moneda:"",principal:false,com_prepaid_pct:"",com_entrega_monto:"",com_entrega_por:"wr",activo:true});setShowNewOficina(true);}}>+ Nueva Oficina</button>}
             </div>
             <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,overflow:"hidden"}}>
               <><table className="ct">
                 <thead><tr>
-                  <th>Código</th><th>Nombre</th><th>Tipo</th><th>Ciudad</th><th>País</th><th>Teléfono</th><th>Email</th><th>Contacto</th><th>Estado</th><th>Acc.</th>
+                  <th>Código</th><th>Nombre</th><th>Tipo</th><th>Matriz</th><th>Ciudad</th><th>País</th><th>Moneda</th><th>Teléfono</th><th>Email</th><th>Estado</th><th>Acc.</th>
                 </tr></thead>
                 <tbody>
-                  {oficinas.length===0&&<tr><td colSpan={10} style={{textAlign:"center",padding:30,color:"var(--t3)"}}>No hay oficinas registradas aún.</td></tr>}
-                  {pagSlice("oficinas",oficinas).map(o=>(
+                  {oficinas.length===0&&<tr><td colSpan={11} style={{textAlign:"center",padding:30,color:"var(--t3)"}}>No hay oficinas registradas aún.</td></tr>}
+                  {pagSlice("oficinas",[...oficinas].sort((x,y)=>String(x.codigo||"").localeCompare(String(y.codigo||"")))).map(o=>(
                     <tr key={o.id}>
                       <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--purple)",background:"#F3EFFE",padding:"2px 8px",borderRadius:4,border:"1px solid #C0A0F0"}}>{o.codigo}</span></td>
                       <td style={{fontWeight:600}}>{o.nombre}</td>
-                      <td><span style={{fontSize:11,padding:"2px 10px",borderRadius:4,fontWeight:700,
-                        background:o.tipo==="Asociado"?"#FEF0E8":"#EEF3FF",
-                        color:o.tipo==="Asociado"?"var(--orange)":"var(--navy)",
-                        border:"1px solid",
-                        borderColor:o.tipo==="Asociado"?"#F0B880":"#B8C8F0"}}>
-                        {o.tipo==="Asociado"?"Asociado":"Matriz"}
-                      </span></td>
+                      <td>{(()=>{const t=tipoOfi(o);const c={Matriz:["#EEF3FF","var(--navy)","#B8C8F0"],Sucursal:["#E8F8EE","var(--green)","#80D0A0"],Franquicia:["#FEF0E8","var(--orange)","#F0B880"]}[t]||["#EEF3FF","var(--navy)","#B8C8F0"];
+                        return <span style={{fontSize:11,padding:"2px 10px",borderRadius:4,fontWeight:700,background:c[0],color:c[1],border:"1px solid",borderColor:c[2],whiteSpace:"nowrap"}}>{t}{esMatriz(o)&&o.principal?" ★":""}</span>;})()}</td>
+                      <td style={{fontSize:13}}>{esMatriz(o)?"—":(()=>{const m=matrizDe(o);return m?`${m.codigo} ${m.nombre}`:"—";})()}</td>
                       <td style={{fontSize:13}}>{o.ciudad||"—"}</td>
                       <td style={{fontSize:13}}>{o.pais||"—"}</td>
+                      <td style={{fontSize:13,fontFamily:"'DM Mono',monospace"}}>{o.moneda||paisDeOfi(o)?.moneda||"—"}</td>
                       <td style={{fontSize:13,fontFamily:"'DM Mono',monospace"}}>{o.tel||"—"}</td>
                       <td style={{fontSize:13,color:"var(--cyan)"}}>{o.email||"—"}</td>
-                      <td style={{fontSize:13}}>{o.contacto||"—"}</td>
                       <td><span style={{fontSize:11,padding:"2px 8px",borderRadius:4,fontWeight:700,background:o.activo?"#E8F8EE":"#FEE8E8",color:o.activo?"var(--green)":"var(--red)",border:"1px solid",borderColor:o.activo?"#80D0A0":"#F0A0A0"}}>{o.activo?"Activo":"Inactivo"}</span></td>
                       <td><div style={{display:"flex",gap:4}}>
-                        {hasPerm("editar_oficina")&&<span className="ic-b" onClick={()=>{setOfForm(o);setEditOficina(o);setShowNewOficina(true);}}><Ico e="✏️" solo/></span>}
-                        {hasPerm("borrar_oficina")&&<span className="ic-b" style={{color:"var(--red)"}} onClick={()=>{if(!window.confirm(`¿Borrar oficina ${o.codigo} — ${o.nombre}?`))return;setOficinas(p=>p.filter(x=>x.id!==o.id));dbDeleteOficina(o.id);logAction("Borró oficina",`${o.codigo} — ${o.nombre}`);}}><Ico e="🗑" solo/></span>}
+                        {hasPerm("editar_oficina")&&<span className="ic-b" onClick={()=>{setOfForm({...o,tipo:tipoOfi(o),com_entrega_por:o.com_entrega_por||"wr"});setEditOficina(o);setShowNewOficina(true);}}><Ico e="✏️" solo/></span>}
+                        {hasPerm("borrar_oficina")&&<span className="ic-b" style={{color:"var(--red)"}} onClick={()=>{if(esMatriz(o)){if(oficinas.some(x=>x.matriz_id===o.id&&x.id!==o.id)){window.alert("Esta matriz tiene oficinas que dependen de ella.");return;}
+                          if(ofiActiva(o)&&matricesDePais(paisDeOfi(o)).filter(x=>x.id!==o.id).length===0){window.alert("Cada país debe tener al menos una matriz activa.");return;}}
+                          if(!window.confirm(`¿Borrar oficina ${o.codigo} — ${o.nombre}?`))return;setOficinas(p=>p.filter(x=>x.id!==o.id));dbDeleteOficina(o.id);logAction("Borró oficina",`${o.codigo} — ${o.nombre}`);}}><Ico e="🗑" solo/></span>}
                       </div></td>
                     </tr>
                   ))}
@@ -7940,22 +7965,38 @@ export default function SistemaCarga(){
                   <div className="mhd"><div className="mt">{editOficina?"Editar Oficina":"Nueva Oficina"}</div><button className="mcl" onClick={()=>{setShowNewOficina(false);setEditOficina(null);}}>✕</button></div>
                   <div className="fgrid g2" style={{marginBottom:10}}>
                     <div className="fg full"><div className="fl">Nombre de la Oficina *</div><input className="fi" value={ofForm.nombre} onChange={e=>setOfForm(p=>({...p,nombre:e.target.value.toUpperCase()}))} placeholder="Ej: Oficina Valencia"/></div>
-                    <div className="fg full">
+                    {(()=>{const esA=currentUser.rol==="A";const bloqueado=!esA&&editOficina&&esMatriz(editOficina);
+                      return <div className="fg full">
                       <div className="fl">Tipo de Oficina *</div>
                       <div style={{display:"flex",gap:8,marginTop:4}}>
-                        {["Matriz","Asociado"].map(t=>(
-                          <button key={t} className={`btn-${(ofForm.tipo||"Matriz")===t?"p":"s"}`}
+                        {["Matriz","Sucursal","Franquicia"].map(t=>(
+                          <button key={t} className={`btn-${ofForm.tipo===t?"p":"s"}`} disabled={bloqueado||(t==="Matriz"&&!esA)}
                             style={{flex:1,fontSize:13}}
-                            onClick={()=>setOfForm(p=>({...p,tipo:t}))}>
-                            {t==="Matriz"?"Matriz (Oficina Propia)":"Asociado (Franquiciado)"}
-                          </button>
+                            onClick={()=>setOfForm(p=>({...p,tipo:t}))}>{t}</button>
                         ))}
                       </div>
-                    </div>
+                    </div>;})()}
+                    {(()=>{const co=COUNTRIES.find(c=>nomPaisCo(c)===sinAcentos(ofForm.pais))||null;const mats=co?matricesDePais(co).filter(m=>m.id!==editOficina?.id):[];
+                      return <>
+                    <div className="fg"><div className="fl">País *</div><select className="fs" value={co?nomPaisCo(co):""} onChange={e=>{const c=COUNTRIES.find(x=>nomPaisCo(x)===e.target.value);setOfForm(p=>({...p,pais:e.target.value,ciudad:"",matriz_id:"",moneda:p.moneda||c?.moneda||""}));}}>
+                      <option value="">—</option>{COUNTRIES.map(c=><option key={nomPaisCo(c)} value={nomPaisCo(c)}>{c.name}</option>)}</select></div>
+                    <div className="fg"><div className="fl">Ciudad *</div><select className="fs" value={(co?.cities||[]).find(ci=>sinAcentos(ci.name)===sinAcentos(ofForm.ciudad)||sinAcentos(ci.code)===sinAcentos(ofForm.ciudad))?.code||""} onChange={e=>{const ci=(co?.cities||[]).find(x=>x.code===e.target.value);setOfForm(p=>({...p,ciudad:ci?String(ci.name).toUpperCase():""}));}}>
+                      <option value="">—</option>{(co?.cities||[]).map(ci=><option key={ci.code} value={ci.code}>{ci.code} — {ci.name}</option>)}</select></div>
+                    {ofForm.tipo!=="Matriz"&&<div className="fg full"><div className="fl">Matriz a la que pertenece *</div><select className="fs" value={ofForm.matriz_id||""} onChange={e=>setOfForm(p=>({...p,matriz_id:e.target.value}))}>
+                      <option value="">—</option>{mats.map(m=><option key={m.id} value={m.id}>{m.codigo} — {m.nombre}{m.ciudad?` (${m.ciudad})`:""}</option>)}</select></div>}
+                    {ofForm.tipo==="Matriz"&&<div className="fg full"><label style={{display:"flex",alignItems:"center",gap:8,fontSize:14,cursor:"pointer"}}><input type="checkbox" checked={!!ofForm.principal} disabled={currentUser.rol!=="A"} onChange={e=>setOfForm(p=>({...p,principal:e.target.checked}))}/>Matriz principal del país</label></div>}
+                    <div className="fg"><div className="fl">Moneda</div><select className="fs" value={ofForm.moneda||co?.moneda||"USD"} onChange={e=>setOfForm(p=>({...p,moneda:e.target.value}))}>
+                      {["USD","EUR","VES","COP","MXN","ARS","CLP","PEN","BRL","DOP","PAB"].map(m=><option key={m} value={m}>{m}</option>)}</select></div>
+                    {editOficina&&<div className="fg"><div className="fl">Estado</div><select className="fs" value={ofForm.activo===false?"0":"1"} onChange={e=>setOfForm(p=>({...p,activo:e.target.value==="1"}))}><option value="1">Activa</option><option value="0">Inactiva</option></select></div>}
+                    {ofForm.tipo!=="Matriz"&&<>
+                      <div className="fg"><div className="fl">Comisión PREPAID (% del flete)</div><input className="fi" type="number" min="0" step="0.01" value={ofForm.com_prepaid_pct??""} onChange={e=>setOfForm(p=>({...p,com_prepaid_pct:e.target.value}))}/></div>
+                      <div className="fg"><div className="fl">Comisión por entrega</div><div style={{display:"flex",gap:6}}>
+                        <input className="fi" type="number" min="0" step="0.01" value={ofForm.com_entrega_monto??""} onChange={e=>setOfForm(p=>({...p,com_entrega_monto:e.target.value}))}/>
+                        <select className="fs" style={{width:130}} value={ofForm.com_entrega_por||"wr"} onChange={e=>setOfForm(p=>({...p,com_entrega_por:e.target.value}))}><option value="wr">por WR</option><option value="paquete">por paquete</option></select></div></div>
+                    </>}
                     <div className="fg full"><div className="fl">Dirección</div><input className="fi" value={ofForm.dir||""} onChange={e=>setOfForm(p=>({...p,dir:e.target.value.toUpperCase()}))}/></div>
-                    <div className="fg"><div className="fl">Ciudad</div><input className="fi" value={ofForm.ciudad} onChange={e=>setOfForm(p=>({...p,ciudad:e.target.value.toUpperCase()}))}/></div>
                     <div className="fg"><div className="fl">Estado / provincia</div><input className="fi" value={ofForm.estado||""} onChange={e=>setOfForm(p=>({...p,estado:e.target.value.toUpperCase()}))}/></div>
-                    <div className="fg"><div className="fl">País</div><input className="fi" value={ofForm.pais} onChange={e=>setOfForm(p=>({...p,pais:e.target.value.toUpperCase()}))}/></div>
+                    </>;})()}
                     <div className="fg"><div className="fl">Código postal</div><input className="fi" value={ofForm.cp||""} onChange={e=>setOfForm(p=>({...p,cp:e.target.value.toUpperCase()}))}/></div>
                     <div className="fg"><div className="fl">Teléfono</div><input className="fi" value={ofForm.tel} onChange={e=>setOfForm(p=>({...p,tel:e.target.value.toUpperCase()}))}/></div>
                     <div className="fg"><div className="fl">Email</div><input className="fi" type="email" value={ofForm.email} onChange={e=>setOfForm(p=>({...p,email:e.target.value}))}/></div>
@@ -7965,19 +8006,40 @@ export default function SistemaCarga(){
                   <div className="mft">
                     <button className="btn-s" onClick={()=>{setShowNewOficina(false);setEditOficina(null);}}>Cancelar</button>
                     <button className="btn-p" onClick={()=>{
-                      if(!ofForm.nombre.trim())return;
-                      if(editOficina){
-                        setOficinas(p=>p.map(o=>o.id===editOficina.id?{...o,...ofForm}:o));
-                        dbUpsertOficina({...editOficina,...ofForm});
-                        logAction("Actualizó oficina",`${editOficina.codigo} — ${ofForm.nombre}`);
-                      }
-                      else{
-                        const nextCod=String(oficinas.length+1).padStart(2,"0");
-                        const no={...ofForm,id:crypto.randomUUID(),codigo:nextCod,activo:true};
-                        setOficinas(p=>[...p,no]);
-                        dbUpsertOficina(no);
-                        logAction("Creó oficina",`${nextCod} — ${ofForm.nombre}`);
-                      }
+                      const co=COUNTRIES.find(c=>nomPaisCo(c)===sinAcentos(ofForm.pais))||null;
+                      if(!ofForm.nombre.trim()||!co||!ofForm.ciudad){window.alert("Completa nombre, país y ciudad.");return;}
+                      const iso=String(co.iso||"").toUpperCase();
+                      if(!iso){window.alert(`${co.name} no tiene código de país. Agrégalo en Países y Ciudades.`);return;}
+                      const esM=ofForm.tipo==="Matriz", esA=currentUser.rol==="A";
+                      const antes=editOficina, eraM=antes&&esMatriz(antes);
+                      if(esM&&!eraM&&!esA){window.alert("Solo el Administrador puede crear matrices.");return;}
+                      if(!esA&&eraM&&!esM){window.alert("Solo el Administrador puede cambiar el tipo de una matriz.");return;}
+                      if(!esM){const m=oficinas.find(x=>x.id===ofForm.matriz_id);if(!m||paisDeOfi(m)!==co){window.alert("Elige la matriz a la que pertenece (del mismo país).");return;}}
+                      const otrasM=matricesDePais(co).filter(x=>x.id!==antes?.id);
+                      if(esM&&otrasM.length>=5&&!(eraM&&paisDeOfi(antes)===co)){window.alert("Ese país ya tiene 5 matrices.");return;}
+                      if(eraM&&ofiActiva(antes)){const pa=paisDeOfi(antes);const quedan=matricesDePais(pa).filter(x=>x.id!==antes.id).length;
+                        if(quedan===0&&(!esM||ofForm.activo===false||pa!==co)){window.alert("Cada país debe tener al menos una matriz activa.");return;}
+                        if(!esM&&oficinas.some(x=>x.matriz_id===antes.id)){window.alert("Esta matriz tiene oficinas que dependen de ella.");return;}}
+                      // Código: país + número (01–05 matriz, 06 en adelante oficinas)
+                      const numDe=o=>parseInt(String(o?.codigo||"").replace(/\D/g,""),10)||0;
+                      const codOk=antes&&String(antes.codigo||"").startsWith(iso+"-")&&paisDeOfi(antes)===co&&(esM?numDe(antes)<=5:numDe(antes)>=6);
+                      let codigo=antes?.codigo||"";
+                      if(!codOk){const usados=new Set(oficinas.filter(o=>o.id!==antes?.id&&paisDeOfi(o)===co).map(numDe));
+                        let n=esM?1:6;while(usados.has(n))n++;
+                        if(esM&&n>5){window.alert("Ese país ya tiene 5 matrices.");return;}
+                        codigo=`${iso}-${String(n).padStart(2,"0")}`;}
+                      const principal=esM&&(!!ofForm.principal||!otrasM.some(x=>x.principal));
+                      const limpio={...ofForm,tipo:ofForm.tipo,pais:nomPaisCo(co),codigo,principal,
+                        matriz_id:esM?null:ofForm.matriz_id,moneda:ofForm.moneda||co.moneda||"USD",
+                        com_prepaid_pct:esM||ofForm.com_prepaid_pct===""?null:parseFloat(ofForm.com_prepaid_pct)||0,
+                        com_entrega_monto:esM||ofForm.com_entrega_monto===""?null:parseFloat(ofForm.com_entrega_monto)||0,
+                        com_entrega_por:esM?null:(ofForm.com_entrega_por||"wr"),activo:ofForm.activo!==false};
+                      const reg=antes?{...antes,...limpio}:{...limpio,id:crypto.randomUUID()};
+                      // Solo una matriz principal por país
+                      const quitar=principal?otrasM.filter(x=>x.principal).map(x=>({...x,principal:false})):[];
+                      setOficinas(p=>{const l=antes?p.map(o=>o.id===antes.id?reg:o):[...p,reg];return l.map(o=>quitar.find(q=>q.id===o.id)||o);});
+                      dbUpsertOficina(reg);quitar.forEach(q=>dbUpsertOficina(q));
+                      logAction(antes?"Actualizó oficina":"Creó oficina",`${codigo} — ${reg.nombre}`);
                       setShowNewOficina(false);setEditOficina(null);
                     }}>Guardar <Ico e="✅"/></button>
                   </div>
@@ -15075,7 +15137,7 @@ export default function SistemaCarga(){
                     </tr>))}</tbody>
                 </table>
                 <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
-                  <button className="btn-s" style={{fontSize:13}} onClick={()=>set({lineas:[...ed.lineas,{cantidad:"1",descripcion:"",hs:"",origen:nomPais(ed.wr.origCountry),pesoKg:"",valorUnit:""}]})}>+ Agregar línea</button>
+                  <button className="btn-s" style={{fontSize:13}} onClick={()=>set({lineas:[...ed.lineas,{cantidad:"1",descripcion:"",hs:"",origen:nomPaisCo(ed.wr.origCountry),pesoKg:"",valorUnit:""}]})}>+ Agregar línea</button>
                   <span style={{marginLeft:"auto",fontWeight:800,color:"var(--navy)"}}>Total declarado: {fmtMoney(sum,ed.moneda)}</span>
                 </div></>)}
               <iframe title="Documento" srcDoc={docHTML(ed)} style={{width:"100%",height:"62vh",border:"1px solid var(--b1)",borderRadius:8,background:"#fff",display:"block"}}/>
