@@ -1755,7 +1755,7 @@ const WRTable=({rows,selId,onSelect,unitL,unitW,onSort,sortCol,sortDir,dimOpen,o
               <tr><td colSpan={21} style={{textAlign:"center",padding:40,color:"var(--t3)"}}>No se encontraron registros.</td></tr>
             ):pageRows.map(w=>(
               <WRRow key={w.id} w={w} sel={selId===w.id} onClick={()=>onSelect(w)}
-                unitL={unitL} unitW={unitW} clients={clients} agentes={agentesVis} oficinas={oficinas} empresaNombre={empresaNombre}
+                unitL={unitL} unitW={unitW} clients={clients} agentes={agentes} oficinas={oficinas} empresaNombre={empresaNombre}
                 sendTypes={sendTypes} onAssignTipo={onAssignTipo} onFotoClick={onFotoClick} onTimelineClick={onTimelineClick}
                 consolList={consolList} onGuiaClick={onGuiaClick} canBypass={canBypass}
                 dimOpen={dimOpen===w.id} onDimToggle={()=>onDimToggle(w.id)}/>
