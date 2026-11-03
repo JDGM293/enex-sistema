@@ -1919,7 +1919,7 @@ const PwInput=({style,...props})=>{
 };
 
 // ─── STANDALONE COMPONENTS (outside main component to avoid hook issues) ─────
-const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomos=[],allClients=[],tiposOk=["cliente","usuario"],rolesOk=null,acceso=true,ocultar=false,elegirMatriz=false,esAdmin=false})=>{
+const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomos=[],allClients=[],tiposOk=["cliente","usuario"],rolesOk=null,acceso=true,ocultar=false,elegirMatriz=false,esAdmin=false,matrizFija=""})=>{
   const _ROL_TO_TIPO_INIT={"E":"agente","E1":"vendedor_agente","F":"autonomo","G":"oficina"};
   // Los clientes ya no pertenecen a oficinas (son sucursales): los antiguos pasan a Casa Matriz
   const _ct0=initial?.clienteTipo||(initial?.tipo==="usuario"&&initial?.rol?_ROL_TO_TIPO_INIT[initial.rol]||"matriz":"matriz");
@@ -1937,6 +1937,19 @@ const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomo
     if(k==="rol"&&p.tipo==="usuario"){upd.clienteTipo=ROL_TO_TIPO[v]||"matriz";if(v!==p.rol)upd.oficinaId="";}
     return upd;
   });
+  // Con una matriz de trabajo, solo se ofrecen sus oficinas y sus agentes
+  const enMF=o=>!matrizFija||o.id===matrizFija||o.matriz_id===matrizFija;
+  const esMtz=o=>(o.tipo==="Asociado"?"Franquicia":(o.tipo||"Matriz"))==="Matriz";
+  const agentesMF=agentes.filter(a=>!matrizFija||a.matriz_id===matrizFija);
+  const ofisUsuario=oficinas.filter(o=>(o.activo!==false||o.id===f.oficinaId)&&enMF(o)).filter(o=>f.rol==="G"?!esMtz(o):["A","B"].includes(f.rol)?true:esMtz(o))
+    .sort((a,b)=>String(a.codigo||"").localeCompare(String(b.codigo||"")));
+  useEffect(()=>{ // si solo hay una opción posible, se pone sola
+    if(f.tipo!=="usuario"&&f.tipo!=="cliente")return;
+    if(f.tipo==="usuario"&&["C","D","D1","D2","G"].includes(f.rol)&&!f.oficinaId&&ofisUsuario.length===1)setF(p=>({...p,oficinaId:ofisUsuario[0].id}));
+    if(matrizFija&&!f.matrizId&&((f.tipo==="usuario"&&f.rol==="F")||(f.tipo==="cliente"&&!["agente","vendedor_agente","autonomo"].includes(f.clienteTipo||""))))setF(p=>({...p,matrizId:matrizFija}));
+    if(f.tipo==="usuario"&&["E","E1"].includes(f.rol)&&!f.agenteId&&agentesMF.length===1)setF(p=>({...p,agenteId:agentesMF[0].id}));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[f.tipo,f.rol,f.clienteTipo,matrizFija,ofisUsuario.length,agentesMF.length]);
   // El cliente de un agente o de un autónomo pertenece a la matriz de ese agente o autónomo
   const matrizHeredada=(()=>{const ct=f.clienteTipo||"";
     if(["agente","vendedor_agente"].includes(ct)){const a=agentes.find(x=>x.id===f.agenteId);return {dueno:"agente",elegido:!!a,id:a?.matriz_id||""};}
@@ -1995,7 +2008,7 @@ const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomo
             <div className="fg" style={{marginTop:10}}><div className="fl">Sucursal de entrega</div>
               <select className="fs" value={f.oficinaId||""} onChange={e=>ff("oficinaId",e.target.value)}>
                 <option value="">—</option>
-                {oficinas.map(o=><option key={o.id} value={o.id}>{o.nombre}{o.ciudad?` — ${o.ciudad}`:""}{o.pais?`, ${o.pais}`:""}</option>)}
+                {oficinas.filter(o=>{const m=matrizHeredada.dueno?matrizHeredada.id:(f.matrizId||matrizFija);return o.id===f.oficinaId||(o.activo!==false&&(!m||o.id===m||o.matriz_id===m));}).map(o=><option key={o.id} value={o.id}>{o.codigo?`${o.codigo} — `:""}{o.nombre}{o.ciudad?` (${o.ciudad})`:""}</option>)}
               </select>
             </div>
           </div>
@@ -2005,7 +2018,7 @@ const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomo
           return <div className="fg" style={{marginBottom:14}}><div className="fl">Matriz</div>
             <div className="fi" style={{background:"var(--bg4)"}}>{m?<b>{m.codigo} — {m.nombre}</b>:<span style={{color:"var(--t3)"}}>{matrizHeredada.elegido?`${matrizHeredada.dueno==="agente"?"El agente":"El autónomo"} no tiene matriz`:`La de su ${matrizHeredada.dueno==="agente"?"agente":"autónomo"}`}</span>}</div></div>;})()}
         {elegirMatriz&&((f.tipo==="cliente"&&!matrizHeredada.dueno)||(f.tipo==="usuario"&&f.rol==="F"))&&(()=>{
-          const mats=oficinas.filter(o=>(o.tipo==="Asociado"?"Franquicia":(o.tipo||"Matriz"))==="Matriz"&&(o.activo!==false||o.id===f.matrizId))
+          const mats=oficinas.filter(o=>(o.tipo==="Asociado"?"Franquicia":(o.tipo||"Matriz"))==="Matriz"&&(o.activo!==false||o.id===f.matrizId)&&(!matrizFija||o.id===matrizFija||o.id===f.matrizId))
             .sort((a,b)=>String(a.codigo||"").localeCompare(String(b.codigo||"")));
           return <div className="fg" style={{marginBottom:14}}><div className="fl">Matriz *</div>
             <select className="fs" value={f.matrizId||""} onChange={e=>ff("matrizId",e.target.value)}>
@@ -2019,15 +2032,14 @@ const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomo
           <div className="fg" style={{marginBottom:14}}><div className="fl">Agente *</div>
             <select className="fs" value={f.agenteId||""} onChange={e=>ff("agenteId",e.target.value)}>
               <option value="">— Selecciona un Agente —</option>
-              {agentes.map(a=><option key={a.id} value={a.id}>{a.codigo} — {a.nombre}</option>)}
+              {agentesMF.map(a=><option key={a.id} value={a.id}>{a.codigo} — {a.nombre}</option>)}
             </select>
           </div>
         )}
         {/* Oficina donde trabaja el usuario: Admin/Gerente opcional (sin oficina = todas); internos en una matriz; Oficina en sucursal o franquicia */}
         {f.tipo==="usuario"&&["A","B","C","D","D1","D2","G"].includes(f.rol)&&(()=>{
           const esM=o=>(o.tipo==="Asociado"?"Franquicia":(o.tipo||"Matriz"))==="Matriz";
-          const lista=oficinas.filter(o=>o.activo!==false||o.id===f.oficinaId).filter(o=>f.rol==="G"?!esM(o):["A","B"].includes(f.rol)?true:esM(o))
-            .sort((a,b)=>String(a.codigo||"").localeCompare(String(b.codigo||"")));
+          const lista=ofisUsuario;void esM;
           return <div className="fg" style={{marginBottom:14}}><div className="fl">Oficina{["A","B"].includes(f.rol)?"":" *"}</div>
             <select className="fs" value={f.oficinaId||""} onChange={e=>ff("oficinaId",e.target.value)}>
               <option value="">{["A","B"].includes(f.rol)?"Todas las oficinas":"—"}</option>
@@ -2491,7 +2503,7 @@ export default function SistemaCarga(){
   const [clFilter,setClFilter]=useState("");
   const [clBusca,setClBusca]=useState("");
   const [clUsrGrupo,setClUsrGrupo]=useState("todos");
-  const [clUsrMatriz,setClUsrMatriz]=useState("");
+  const [matrizSel,setMatrizSel]=useState("");
   const [dimOpen,setDimOpen]=useState(null);
   // Atajo a Reempaque / Cargo Release en ventana, sin abandonar la pantalla actual
   const [quickTab,setQuickTab]=useState(null);
@@ -3134,6 +3146,13 @@ export default function SistemaCarga(){
       return enMiAlcance(c.matrizId)||enCarga.has(c.id);});})();
   // Agentes y autónomos de mi matriz (todos si no tengo oficina)
   const agentesVis=agentes.filter(agenteEnAlcance);
+  // Matriz de trabajo: la del usuario si tiene oficina; si no, la elegida en el filtro de matriz
+  const matrizTrabajo=(()=>{if(misOficinas){const o=oficinas.find(x=>x.id===currentUser.oficinaId);return matrizDe(o)?.id||"";}return matrizSel||"";})();
+  const ofisDeMatriz=mid=>!mid?null:oficinas.filter(o=>o.id===mid||o.matriz_id===mid);
+  const selMatrizJSX=(onCh)=>{const mats=oficinas.filter(o=>esMatriz(o)&&enMiAlcance(o.id)).sort((a,b)=>String(a.codigo).localeCompare(String(b.codigo)));
+    if(misOficinas||mats.length<2)return null;
+    return <select className="fs" style={{width:"auto",minWidth:240}} value={matrizSel} onChange={e=>{setMatrizSel(e.target.value);onCh&&onCh();}}>
+      <option value="">Todas las matrices</option>{mats.map(m=><option key={m.id} value={m.id}>{m.codigo} — {m.nombre}{m.pais?` · ${m.pais}`:""}</option>)}</select>;};
   const autonomosVis=clients.filter(c=>c.tipo==="usuario"&&c.rol==="F"&&enMiAlcance(c.matrizId));
   // Nota legal según el país de origen del WR (o la predeterminada)
   const notaLegalWR=w=>{
@@ -4116,7 +4135,7 @@ export default function SistemaCarga(){
     const base=filteredCl.filter(c=>c.tipo==="usuario");
     const roles=g=>(USR_GRUPOS.find(x=>x[0]===g)||[])[2];
     const enGrupo=(c,g)=>!roles(g)||roles(g).includes(c.rol);
-    const enMatriz=c=>!clUsrMatriz||matrizDeUsuario(c)===clUsrMatriz;
+    const enMatriz=c=>!matrizSel||matrizDeUsuario(c)===matrizSel;
     const lista=base.filter(c=>enGrupo(c,clUsrGrupo)&&enMatriz(c)).sort((a,b)=>{const O=["A","B","C","D","D1","D2","G","E","E1","F"];return O.indexOf(a.rol)-O.indexOf(b.rol)||fullName(a).localeCompare(fullName(b));});
     const mats=oficinas.filter(o=>esMatriz(o)&&enMiAlcance(o.id)).sort((a,b)=>String(a.codigo).localeCompare(String(b.codigo)));
     const perteneceA=c=>{
@@ -4132,8 +4151,7 @@ export default function SistemaCarga(){
           {USR_GRUPOS.map(([k,l])=>{const n=base.filter(c=>enGrupo(c,k)&&enMatriz(c)).length;return <button key={k} onClick={()=>{setClUsrGrupo(k);setPags(p=>({...p,usuarios:1}));}}
             style={{padding:"6px 14px",borderRadius:6,border:"none",cursor:"pointer",fontSize:14,fontWeight:600,background:clUsrGrupo===k?"var(--navy)":"transparent",color:clUsrGrupo===k?"#fff":"var(--t2)"}}>{l} <span style={{opacity:.75}}>({n})</span></button>;})}
         </div>
-        {mats.length>1&&<select className="fs" style={{width:"auto",minWidth:240}} value={clUsrMatriz} onChange={e=>{setClUsrMatriz(e.target.value);setPags(p=>({...p,usuarios:1}));}}>
-          <option value="">Todas las matrices</option>{mats.map(m=><option key={m.id} value={m.id}>{m.codigo} — {m.nombre}{m.pais?` · ${m.pais}`:""}</option>)}</select>}
+        {selMatrizJSX(()=>setPags(p=>({...p,usuarios:1})))}
       </div>
       <div className="card" style={{padding:0}}>
         <div className="ct-scroll"><table className="ct">
@@ -8157,7 +8175,8 @@ export default function SistemaCarga(){
           <div>
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
               <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:17,fontWeight:700,color:"var(--navy)",flex:1}}><Ico e="🤝" sp/>Agentes registrados</div>
-              {hasPerm("crear_agente")&&<button className="btn-p" style={{fontSize:13}} onClick={()=>{setAgForm({nombre:"",ciudad:"",pais:"",tel:"",email:"",contacto:"",notas:""});setShowNewAgente(true);}}>+ Nuevo Agente</button>}
+              {selMatrizJSX(()=>setPags(p=>({...p,agentes:1})))}
+              {hasPerm("crear_agente")&&<button className="btn-p" style={{fontSize:13}} onClick={()=>{setAgForm({nombre:"",ciudad:"",pais:"",tel:"",email:"",contacto:"",notas:"",matriz_id:matrizTrabajo||""});setShowNewAgente(true);}}>+ Nuevo Agente</button>}
             </div>
             <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,overflow:"hidden"}}>
               <><div className="ct-scroll"><table className="ct">
@@ -8166,7 +8185,7 @@ export default function SistemaCarga(){
                 </tr></thead>
                 <tbody>
                   {agentes.length===0&&<tr><td colSpan={9} style={{textAlign:"center",padding:30,color:"var(--t3)"}}>No hay agentes registrados.</td></tr>}
-                  {pagSlice("agentes",agentes.filter(agenteEnAlcance)).map(a0=>{const a=conDatos(a0);return(
+                  {pagSlice("agentes",agentes.filter(a=>agenteEnAlcance(a)&&(!matrizSel||a.matriz_id===matrizSel))).map(a0=>{const a=conDatos(a0);return(
                     <tr key={a.id} style={{cursor:"pointer"}} onClick={()=>setVerAgente(a0)}>
                       <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",background:"#EEF3FF",padding:"2px 8px",borderRadius:4,border:"1px solid #B8C8F0"}}>{a.codigo}</span></td>
                       <td style={{fontWeight:600}}>{a.nombre}</td>
@@ -8184,7 +8203,7 @@ export default function SistemaCarga(){
                     </tr>
                   );})}
                 </tbody>
-              </table></div>{pagPie("agentes",agentes.filter(agenteEnAlcance).length)}</>
+              </table></div>{pagPie("agentes",agentes.filter(a=>agenteEnAlcance(a)&&(!matrizSel||a.matriz_id===matrizSel)).length)}</>
             </div>
             {verAgente&&(()=>{const a=conDatos(verAgente);const us=usuariosDe(verAgente);
               const cls=clients.filter(c=>c.tipo==="cliente"&&["agente","vendedor_agente"].includes(c.clienteTipo)&&c.agenteId===verAgente.id);
@@ -8264,7 +8283,8 @@ export default function SistemaCarga(){
           <div>
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
               <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:17,fontWeight:700,color:"var(--navy)",flex:1}}><Ico e="🏢" sp/>Oficinas / Sucursales</div>
-              {hasPerm("crear_oficina")&&<button className="btn-p" style={{fontSize:13}} onClick={()=>{setEditOficina(null);setOfForm({nombre:"",ciudad:"",pais:"",tel:"",email:"",contacto:"",notas:"",tipo:"",matriz_id:"",moneda:"",principal:false,com_prepaid_pct:"",com_entrega_monto:"",com_entrega_por:"",activo:true});setShowNewOficina(true);}}>+ Nueva Oficina</button>}
+              {selMatrizJSX(()=>setPags(p=>({...p,oficinas:1})))}
+              {hasPerm("crear_oficina")&&<button className="btn-p" style={{fontSize:13}} onClick={()=>{const mt=oficinas.find(o=>o.id===matrizTrabajo);setEditOficina(null);setOfForm({nombre:"",ciudad:"",pais:mt?.pais||"",tel:"",email:"",contacto:"",notas:"",tipo:"",matriz_id:mt?.id||"",moneda:"",principal:false,com_prepaid_pct:"",com_entrega_monto:"",com_entrega_por:"",activo:true});setShowNewOficina(true);}}>+ Nueva Oficina</button>}
             </div>
             <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,overflow:"hidden"}}>
               <><div className="ct-scroll"><table className="ct">
@@ -8273,7 +8293,7 @@ export default function SistemaCarga(){
                 </tr></thead>
                 <tbody>
                   {oficinas.length===0&&<tr><td colSpan={11} style={{textAlign:"center",padding:30,color:"var(--t3)"}}>No hay oficinas registradas aún.</td></tr>}
-                  {pagSlice("oficinas",oficinas.filter(o=>enMiAlcance(o.id)).sort((x,y)=>String(x.codigo||"").localeCompare(String(y.codigo||"")))).map(o=>(
+                  {pagSlice("oficinas",oficinas.filter(o=>enMiAlcance(o.id)&&(!matrizSel||o.id===matrizSel||o.matriz_id===matrizSel)).sort((x,y)=>String(x.codigo||"").localeCompare(String(y.codigo||"")))).map(o=>(
                     <tr key={o.id}>
                       <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--purple)",background:"#F3EFFE",padding:"2px 8px",borderRadius:4,border:"1px solid #C0A0F0"}}>{o.codigo}</span></td>
                       <td style={{fontWeight:600}}>{o.nombre}</td>
@@ -8295,7 +8315,7 @@ export default function SistemaCarga(){
                     </tr>
                   ))}
                 </tbody>
-              </table></div>{pagPie("oficinas",oficinas.filter(o=>enMiAlcance(o.id)).length)}</>
+              </table></div>{pagPie("oficinas",oficinas.filter(o=>enMiAlcance(o.id)&&(!matrizSel||o.id===matrizSel||o.matriz_id===matrizSel)).length)}</>
             </div>
             {showNewOficina&&(
               <div className="ov">
@@ -14871,8 +14891,8 @@ export default function SistemaCarga(){
         );
       })()}
 
-      {showNewCl&&<ClientModal esAdmin={currentUser.rol==="A"} elegirMatriz={!["E","E1","F","G","I"].includes(currentUser.rol)} acceso={hasPerm("dar_acceso")} tiposOk={Array.isArray(showNewCl)?showNewCl:tiposCrear} rolesOk={rolesAsignables} agentes={agentesVis} oficinas={oficinas} autonomos={autonomosVis} allClients={clients} title="Nuevo Registro" initial={{tipo:(Array.isArray(showNewCl)?showNewCl:tiposCrear)[0]||"cliente",clienteTipo:"matriz",primerNombre:"",segundoNombre:"",primerApellido:"",segundoApellido:"",cedula:"",dir:"",municipio:"",estado:"",pais:"",cp:"",tel1:"",tel2:"",email:"",casillero:"",rol:"I",password:"",...presetDominio()}} onClose={()=>setShowNewCl(false)} onSave={async f=>{const _sec=await refrescarSec();const esUser=f.tipo==="usuario";const newId=sigIdRegistro(esUser,clients,_sec);const casillero=(!esUser&&!f.casillero)?nextCasillero(clients,_sec):f.casillero;const newRec={...f,id:newId,casillero,clienteTipo:f.clienteTipo||"matriz",password:""};setClients(p=>[...p,newRec]);setShowNewCl(false);logAction("Creó registro",`${newId} — ${f.primerNombre} ${f.primerApellido}`);(async()=>{await dbUpsertCliente(newRec);await sincronizarCuenta(newRec,f.password);})();}}/>}
-      {showEditCl&&<ClientModal esAdmin={currentUser.rol==="A"} elegirMatriz={!["E","E1","F","G","I"].includes(currentUser.rol)} ocultar={!verDatos} acceso={hasPerm("dar_acceso")} tiposOk={[showEditCl.tipo]} rolesOk={rolesAsignables} agentes={agentesVis} oficinas={oficinas} autonomos={autonomosVis} allClients={clients} title={`Editar — ${fullName(showEditCl)}`} initial={showEditCl} onClose={()=>setShowEditCl(null)} onSave={f=>{const ant=showEditCl;const rec={...f,clienteTipo:f.clienteTipo||"matriz",password:""};setClients(p=>p.map(c=>c.id===f.id?rec:c));logAction("Editó registro",`${f.id} — ${f.primerNombre} ${f.primerApellido}`);setShowEditCl(null);(async()=>{await dbUpsertCliente(rec);await sincronizarCuenta(rec,f.password,ant);})();}}/>}
+      {showNewCl&&<ClientModal matrizFija={matrizTrabajo} esAdmin={currentUser.rol==="A"} elegirMatriz={!["E","E1","F","G","I"].includes(currentUser.rol)} acceso={hasPerm("dar_acceso")} tiposOk={Array.isArray(showNewCl)?showNewCl:tiposCrear} rolesOk={rolesAsignables} agentes={agentesVis} oficinas={oficinas} autonomos={autonomosVis} allClients={clients} title="Nuevo Registro" initial={{tipo:(Array.isArray(showNewCl)?showNewCl:tiposCrear)[0]||"cliente",clienteTipo:"matriz",primerNombre:"",segundoNombre:"",primerApellido:"",segundoApellido:"",cedula:"",dir:"",municipio:"",estado:"",pais:"",cp:"",tel1:"",tel2:"",email:"",casillero:"",rol:"I",password:"",...presetDominio()}} onClose={()=>setShowNewCl(false)} onSave={async f=>{const _sec=await refrescarSec();const esUser=f.tipo==="usuario";const newId=sigIdRegistro(esUser,clients,_sec);const casillero=(!esUser&&!f.casillero)?nextCasillero(clients,_sec):f.casillero;const newRec={...f,id:newId,casillero,clienteTipo:f.clienteTipo||"matriz",password:""};setClients(p=>[...p,newRec]);setShowNewCl(false);logAction("Creó registro",`${newId} — ${f.primerNombre} ${f.primerApellido}`);(async()=>{await dbUpsertCliente(newRec);await sincronizarCuenta(newRec,f.password);})();}}/>}
+      {showEditCl&&<ClientModal matrizFija={matrizTrabajo} esAdmin={currentUser.rol==="A"} elegirMatriz={!["E","E1","F","G","I"].includes(currentUser.rol)} ocultar={!verDatos} acceso={hasPerm("dar_acceso")} tiposOk={[showEditCl.tipo]} rolesOk={rolesAsignables} agentes={agentesVis} oficinas={oficinas} autonomos={autonomosVis} allClients={clients} title={`Editar — ${fullName(showEditCl)}`} initial={showEditCl} onClose={()=>setShowEditCl(null)} onSave={f=>{const ant=showEditCl;const rec={...f,clienteTipo:f.clienteTipo||"matriz",password:""};setClients(p=>p.map(c=>c.id===f.id?rec:c));logAction("Editó registro",`${f.id} — ${f.primerNombre} ${f.primerApellido}`);setShowEditCl(null);(async()=>{await dbUpsertCliente(rec);await sincronizarCuenta(rec,f.password,ant);})();}}/>}
 
       {/* ── Cargo Release — MODAL FORMULARIO ───────────────────────────────── */}
       {crModal&&(()=>{
