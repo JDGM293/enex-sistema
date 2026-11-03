@@ -1210,7 +1210,31 @@ const CALC_DEF={div:5000,divFt3:1728,modo:"wr",red:"0.01"};
 const CALC_DIVS=[{v:6000,l:"6000 cm³/kg · 166 in³/lb (IATA, carga aérea internacional)"},{v:5000,l:"5000 cm³/kg · 139 in³/lb (courier EE. UU.)"}];
 const CALC_REDS=[{v:"0.01",l:"Exacto (2 decimales)"},{v:"0.1",l:"Hacia arriba, a la décima"},{v:"0.5",l:"Hacia arriba, a la media unidad"},{v:"1",l:"Hacia arriba, a la unidad"}];
 // Monedas sugeridas (código ISO de 3 letras)
-const MONEDAS=["USD","EUR","VES","COP","MXN","ARS","CLP","PEN","BRL","DOP","PAB","GTQ","HNL","NIO","CRC","BOB","PYG","UYU","CAD","GBP","CNY","CUP"];
+const MONEDA_NOMBRE={USD:"Dólar estadounidense",EUR:"Euro",VES:"Bolívar venezolano",COP:"Peso colombiano",MXN:"Peso mexicano",ARS:"Peso argentino",CLP:"Peso chileno",
+  PEN:"Sol peruano",BRL:"Real brasileño",DOP:"Peso dominicano",PAB:"Balboa panameño",GTQ:"Quetzal guatemalteco",HNL:"Lempira hondureño",NIO:"Córdoba nicaragüense",
+  CRC:"Colón costarricense",BOB:"Boliviano",PYG:"Guaraní paraguayo",UYU:"Peso uruguayo",CUP:"Peso cubano",JMD:"Dólar jamaiquino",TTD:"Dólar de Trinidad y Tobago",
+  HTG:"Gourde haitiano",BSD:"Dólar bahameño",BBD:"Dólar de Barbados",AWG:"Florín arubeño",ANG:"Florín antillano",XCD:"Dólar del Caribe Oriental",BZD:"Dólar beliceño",
+  CAD:"Dólar canadiense",GBP:"Libra esterlina",CHF:"Franco suizo",CNY:"Yuan chino",JPY:"Yen japonés",TRY:"Lira turca",AED:"Dírham de los Emiratos",
+  PTE:"Escudo portugués",SRD:"Dólar surinamés",GYD:"Dólar guyanés",KYD:"Dólar de las Islas Caimán"};
+const MONEDAS=Object.keys(MONEDA_NOMBRE);
+const monedaTxt=m=>m?`${m}${MONEDA_NOMBRE[m]?` — ${MONEDA_NOMBRE[m]}`:""}`:"";
+// Elegir moneda escribiendo el código o el nombre (sin listas largas)
+const MonedaPicker=({value,onChange,disabled})=>{
+  const [q,setQ]=useState("");
+  if(value)return <div className="fi" style={{display:"flex",alignItems:"center",gap:8,background:"var(--bg4)"}}>
+    <b style={{flex:1}}>{monedaTxt(value)}</b>{!disabled&&<span style={{cursor:"pointer",color:"var(--t3)"}} title="Cambiar" onClick={()=>{onChange("");setQ("");}}>✕</span>}</div>;
+  const Q=sinAcentos(q).trim();
+  const res=Q?MONEDAS.filter(m=>m.includes(Q)||sinAcentos(MONEDA_NOMBRE[m]).includes(Q)).slice(0,8):[];
+  const libre=/^[A-Z]{3}$/.test(Q)&&!MONEDAS.includes(Q);
+  return <div style={{position:"relative"}}>
+    <input className="fi" disabled={disabled} value={q} onChange={e=>setQ(e.target.value.toUpperCase())} placeholder="Escribe el código o el nombre de la moneda"/>
+    {(res.length>0||libre)&&<div style={{position:"absolute",zIndex:30,left:0,right:0,top:"100%",background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:6,boxShadow:"var(--shadow2)",maxHeight:260,overflow:"auto"}}>
+      {res.map(m=><div key={m} style={{padding:"8px 10px",cursor:"pointer",borderBottom:"1px solid var(--b2)",fontSize:14}} onClick={()=>{onChange(m);setQ("");}}><b>{m}</b> — {MONEDA_NOMBRE[m]}</div>)}
+      {libre&&<div style={{padding:"8px 10px",cursor:"pointer",fontSize:14}} onClick={()=>{onChange(Q);setQ("");}}>Usar <b>{Q}</b></div>}
+    </div>}
+    {Q&&!res.length&&!libre&&<div style={{fontSize:13,color:"var(--t3)",marginTop:4}}>Sin coincidencias.</div>}
+  </div>;
+};
 const lineaCiudad=o=>[o?.ciudad||o?.municipio,[o?.estado,o?.cp].filter(Boolean).join(" "),o?.pais].filter(Boolean).join(", ");
 const nm2=v=>(Math.round(v*100)/100).toFixed(2);
 const redondearArriba=(v,paso)=>{const p=parseFloat(paso)||0.01;if(p<0.01)return Math.round(v/p)*p;if(p===0.01)return Math.round(v*100)/100;return Math.round(Math.ceil(v/p-1e-9)*p*100)/100;};
@@ -6747,7 +6771,7 @@ export default function SistemaCarga(){
               {selF("hs","Código arancelario",[["si","Mostrar"],["no","No mostrar"]])}
               {selF("origenMerc","País de origen de la mercancía",[["si","Mostrar"],["no","No mostrar"]])}
               {selF("incoterm","Incoterm",INCOTERMS.map(x=>[x,x]))}
-              {selF("moneda","Moneda",[["USD","USD"],["EUR","EUR"]])}
+              {selF("moneda","Moneda",MONEDAS.map(m=>[m,monedaTxt(m)]))}
             </div>
             {area("declaracion","Declaración al pie de la factura",3)}</>}
           <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:6}}>
@@ -7955,7 +7979,6 @@ export default function SistemaCarga(){
               onChange={e=>{let v=e.target.value;v=o.lower?v.toLowerCase():o.num?v.replace(/\D/g,""):o.letras?v.toUpperCase().replace(/[^A-Z]/g,""):v.toUpperCase();setD({[k]:v});}}/></div>;
           return (
           <div style={{display:"grid",gridTemplateColumns:"300px minmax(0,1fr)",gap:14,alignItems:"start"}}>
-            <datalist id="lista-monedas">{MONEDAS.map(m=><option key={m} value={m}/>)}</datalist>
             {/* Países */}
             <div className="card" style={{padding:0,overflow:"hidden"}}>
               <div style={{padding:8,borderBottom:"1px solid var(--b1)",background:"var(--bg3)",display:"flex",gap:6}}>
@@ -7988,7 +8011,7 @@ export default function SistemaCarga(){
                 {campo("name","Nombre del país",{req:1})}
                 {campo("iso","Código de país (2 letras)",{req:1,max:2,mono:1,letras:1})}
                 {campo("dial","Código telefónico",{req:1,max:4,mono:1,num:1})}
-                {campo("moneda","Moneda",{req:1,max:3,mono:1,letras:1,list:"lista-monedas"})}
+                <div className="fg"><div className="fl">Moneda *</div><MonedaPicker value={d?.moneda||""} disabled={!puedeEd} onChange={v=>setD({moneda:v})}/></div>
                 <div className="fg full" style={{fontSize:13,color:"var(--t3)"}}>{(()=>{const u=usoPais(co);return txtUso(u)?`En uso: ${txtUso(u)}.`:"Sin uso todavía.";})()}</div>
               </div>}
               {cfgPaisTab==="fiscal"&&<div className="fgrid g2" style={{gap:12}}>
@@ -8042,7 +8065,7 @@ export default function SistemaCarga(){
                   <div className="fg full"><div className="fl">Nombre del país *</div><input className="fi" autoFocus value={f.name} onChange={e=>setF({name:e.target.value.toUpperCase()})}/></div>
                   <div className="fg"><div className="fl">Código de país (2 letras) *</div><input className="fi" maxLength={2} style={{fontFamily:"'DM Mono',monospace",fontWeight:700}} value={f.iso} onChange={e=>setF({iso:e.target.value.toUpperCase().replace(/[^A-Z]/g,"")})}/></div>
                   <div className="fg"><div className="fl">Código telefónico *</div><input className="fi" maxLength={4} style={{fontFamily:"'DM Mono',monospace"}} value={f.dial} onChange={e=>setF({dial:e.target.value.replace(/\D/g,"")})}/></div>
-                  <div className="fg"><div className="fl">Moneda *</div><input className="fi" maxLength={3} list="lista-monedas" style={{fontFamily:"'DM Mono',monospace",fontWeight:700}} value={f.moneda} onChange={e=>setF({moneda:e.target.value.toUpperCase().replace(/[^A-Z]/g,"")})}/></div>
+                  <div className="fg"><div className="fl">Moneda *</div><MonedaPicker value={f.moneda||""} onChange={v=>setF({moneda:v})}/></div>
                 </div>
                 <div className="mft"><button className="btn-s" onClick={()=>setCfgNewPais(null)}>Cancelar</button><button className="btn-p" onClick={crear}>Crear país</button></div>
               </div></div>;})()}
@@ -8250,8 +8273,7 @@ export default function SistemaCarga(){
                     {ofForm.tipo!=="Matriz"&&<div className="fg full"><div className="fl">Matriz a la que pertenece *</div><select className="fs" value={ofForm.matriz_id||""} onChange={e=>setOfForm(p=>({...p,matriz_id:e.target.value}))}>
                       <option value="">—</option>{mats.map(m=><option key={m.id} value={m.id}>{m.codigo} — {m.nombre}{m.ciudad?` (${m.ciudad})`:""}</option>)}</select></div>}
                     {ofForm.tipo==="Matriz"&&<div className="fg full"><label style={{display:"flex",alignItems:"center",gap:8,fontSize:14,cursor:"pointer"}}><input type="checkbox" checked={!!ofForm.principal} disabled={currentUser.rol!=="A"} onChange={e=>setOfForm(p=>({...p,principal:e.target.checked}))}/>Matriz principal del país</label></div>}
-                    <div className="fg"><div className="fl">Moneda</div><select className="fs" value={ofForm.moneda||""} onChange={e=>setOfForm(p=>({...p,moneda:e.target.value}))}>
-                      <option value="">—</option>{[...new Set([...MONEDAS,...COUNTRIES.map(c=>c.moneda).filter(Boolean),ofForm.moneda].filter(Boolean))].map(m=><option key={m} value={m}>{m}</option>)}</select></div>
+                    <div className="fg"><div className="fl">Moneda</div><MonedaPicker value={ofForm.moneda||""} onChange={v=>setOfForm(p=>({...p,moneda:v}))}/></div>
                     {currentUser.rol==="A"&&ofForm.tipo!=="Matriz"&&<div className="fg full"><label style={{display:"flex",alignItems:"center",gap:8,fontSize:14,cursor:"pointer"}}><input type="checkbox" checked={!!ofForm.fp_activo} onChange={e=>setOfForm(p=>({...p,fp_activo:e.target.checked}))}/>Puede emitir sus propias facturas (Mis facturas)</label></div>}
                     {editOficina&&<div className="fg"><div className="fl">Estado</div><select className="fs" value={ofForm.activo===false?"0":"1"} onChange={e=>setOfForm(p=>({...p,activo:e.target.value==="1"}))}><option value="1">Activa</option><option value="0">Inactiva</option></select></div>}
                     {ofForm.tipo!=="Matriz"&&<>
@@ -8327,7 +8349,6 @@ export default function SistemaCarga(){
             orig:(t.paisOrig||t.ciudadOrig)?[{pais:t.paisOrig||"",ciudad:t.ciudadOrig||""}]:[],
             dest:(t.paisDest||t.ciudadDest)?[{pais:t.paisDest||"",ciudad:t.ciudadDest||""}]:[],
             filas:[{tipoEnvio:t.tipoEnvio||"",unidad:t.unidad||"",precio:String(precioTarifa(t,!tipoEsMaritimo(t.tipoEnvio))||""),min:String(t.min??""),moneda:t.moneda||"USD"}]});
-          const MONEDAS=["USD","EUR","VES","COP","MXN","ARS","CLP","PEN","BRL","DOP","PAB"];
           return(
           <div>
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
