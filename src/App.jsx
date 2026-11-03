@@ -1209,6 +1209,8 @@ const calcVol = (l,a,h,unit="cm",div=5000,divFt3=1728) => {
 const CALC_DEF={div:5000,divFt3:1728,modo:"wr",red:"0.01"};
 const CALC_DIVS=[{v:6000,l:"6000 cm³/kg · 166 in³/lb (IATA, carga aérea internacional)"},{v:5000,l:"5000 cm³/kg · 139 in³/lb (courier EE. UU.)"}];
 const CALC_REDS=[{v:"0.01",l:"Exacto (2 decimales)"},{v:"0.1",l:"Hacia arriba, a la décima"},{v:"0.5",l:"Hacia arriba, a la media unidad"},{v:"1",l:"Hacia arriba, a la unidad"}];
+// Monedas sugeridas (código ISO de 3 letras)
+const MONEDAS=["USD","EUR","VES","COP","MXN","ARS","CLP","PEN","BRL","DOP","PAB","GTQ","HNL","NIO","CRC","BOB","PYG","UYU","CAD","GBP","CNY","CUP"];
 const lineaCiudad=o=>[o?.ciudad||o?.municipio,[o?.estado,o?.cp].filter(Boolean).join(" "),o?.pais].filter(Boolean).join(", ");
 const nm2=v=>(Math.round(v*100)/100).toFixed(2);
 const redondearArriba=(v,paso)=>{const p=parseFloat(paso)||0.01;if(p<0.01)return Math.round(v/p)*p;if(p===0.01)return Math.round(v*100)/100;return Math.round(Math.ceil(v/p-1e-9)*p*100)/100;};
@@ -2634,7 +2636,7 @@ export default function SistemaCarga(){
   const [repGuardados,setRepGuardados]=useState(null); // null = aún no se guardó nada (se muestran los ejemplos)
   const [repAct,setRepAct]=useState(null);
   const [paisSel,setPaisSel]=useState("_default");
-  const [paisSec,setPaisSec]=useState("empresa");
+  const [paisSec,setPaisSec]=useState("exp");
   const [paisDraft,setPaisDraft]=useState(null);
   const [paisQ,setPaisQ]=useState("");
   useEffect(()=>{
@@ -2644,14 +2646,20 @@ export default function SistemaCarga(){
   },[authUid]);
   const [cfgNewCity,setCfgNewCity]=useState("");
   const [cfgEditCity,setCfgEditCity]=useState(null); // {ci,code,name}
-  const [cfgNewPais,setCfgNewPais]=useState("");
+  const [cfgNewPais,setCfgNewPais]=useState(null);
+  const [cfgPaisQ,setCfgPaisQ]=useState("");
+  const [cfgPaisDraft,setCfgPaisDraft]=useState(null);
+  const [cfgPaisTab,setCfgPaisTab]=useState("datos");
+  const [cfgCiudadQ,setCfgCiudadQ]=useState("");
   const [cfgNewCont,setCfgNewCont]=useState({code:"",name:"",dim:"",maxLb:""});
   const [cfgEditContIdx,setCfgEditContIdx]=useState(null);
   const [agentes,setAgentes]=useState([]);
   const [oficinas,setOficinas]=useState([]);
   // Origen: oficina del usuario o la casa matriz de Configuración → Empresa. Destino: la predeterminada de Empresa.
-  const ofiCodigos=o=>{const C=sinAcentos(o?.ciudad||"");
-    for(const co of COUNTRIES)for(const ci of (co.cities||[]))if(C&&(sinAcentos(ci.name)===C||sinAcentos(ci.code)===C))return {dial:co.dial||"",pais:co.name||"",code:ci.code||""};
+  // La ciudad se busca siempre dentro del país de la oficina (hay ciudades con el mismo nombre en países distintos)
+  const ofiCodigos=o=>{const C=sinAcentos(o?.ciudad||"");const P=sinAcentos(String(o?.pais||"").replace(/[^\p{L}\s]/gu,""));
+    const cos=P?COUNTRIES.filter(co=>sinAcentos(String(co.name||"").replace(/[^\p{L}\s]/gu,""))===P):[];
+    for(const co of (cos.length?cos:COUNTRIES))for(const ci of (co.cities||[]))if(C&&(sinAcentos(ci.name)===C||sinAcentos(ci.code)===C))return {dial:co.dial||"",pais:co.name||"",code:ci.code||""};
     return {dial:"",pais:o?.pais||"",code:(o?.ciudad||"").slice(0,3).toUpperCase()};};
   // ── Oficinas: Matriz (01–05 por país), Sucursal y Franquicia (06 en adelante) ──
   const nomPaisCo=co=>sinAcentos(String(co?.name||"").replace(/[^\p{L}\s]/gu,""));
@@ -2660,6 +2668,7 @@ export default function SistemaCarga(){
   const tipoOfi=o=>o?.tipo==="Asociado"?"Franquicia":(o?.tipo||"Matriz");
   const esMatriz=o=>tipoOfi(o)==="Matriz";
   const ofiActiva=o=>o&&o.activo!==false;
+  const paisesActivos=COUNTRIES.filter(c=>c.activo!==false).map(c=>({...c,cities:(c.cities||[]).filter(ci=>ci.activo!==false)}));
   const matrizDe=o=>!o?null:esMatriz(o)?o:(oficinas.find(x=>x.id===o.matriz_id)||null);
   const matricesDePais=(co,todas=false)=>oficinas.filter(o=>esMatriz(o)&&(todas||ofiActiva(o))&&paisDeOfi(o)===co);
   // Cada pago queda en la matriz de su factura (o la del usuario) y en la oficina donde se cobró
@@ -6448,7 +6457,7 @@ export default function SistemaCarga(){
     const of=oficinas.find(o=>(o.ciudad||"").toUpperCase().startsWith((w.origCity||"").toUpperCase()))||_origOff;
     const ct=cl?.clienteTipo||"matriz";let emisor=null;
     // Agentes y autónomos: su nombre, teléfono y correo; la dirección es la de la matriz o la de la oficina de origen
-    const dirDe=pref=>pref==="origen"&&of&&(of.dir||of.ciudad)?[of.dir,lineaCiudad(of)]:[marca.dir,lineaCiudad(marca)];
+    const dirDe=pref=>{if(pref==="origen"&&of&&(of.dir||of.ciudad))return [of.dir,lineaCiudad(of)];const E=docCfg(w.origCountry,"empresa");return [E.dir,E.dir2];};
     if(ct==="agente"||ct==="vendedor_agente"){const ag=agentes.find(a=>a.id===cl?.agenteId);
       if(ag)emisor={nombre:String(ag.nombre||ag.codigo||"").toUpperCase(),lineas:[...dirDe(ag.wr_dir),[ag.tel,ag.email].filter(Boolean).join(" · ")],powered:`Powered by ${empresaNombre}`};}
     else if(ct==="autonomo"){const au=clients.find(c=>c.id===cl?.autonomoId);
@@ -6611,7 +6620,9 @@ export default function SistemaCarga(){
   // Valores efectivos de una sección para un país: base del sistema → predeterminado → país
   const docCfg=(pais,sec)=>{const k=docPaisKey(pais);
     const base={...DOC_DEF[sec],...(sec==="exp"?{notaLegal:NOTA_LEGAL_DEFAULT}:{}),
-      ...(sec==="empresa"?sinVacios({razon:marca.razon,dir:marca.dir,dir2:lineaCiudad(marca),tel:marca.tel,email:marca.email,web:marca.web,idFiscal:marca.idFiscal}):{})};
+      ...(sec==="empresa"?(()=>{const P=paisCanon(pais);const co=P?COUNTRIES.find(c=>soloLetras(c.name)===P):null;
+        return {razon:co?.razon||empresaNombre||"",dir:co?.dirFiscal||"",dir2:co?.dirFiscal2||"",tel:co?.tel||"",email:co?.email||"",web:marca.web||"",idFiscal:co?.idFiscal||""};})():{})};
+    if(sec==="empresa")return {...base,_pais:k}; // los datos fiscales salen solo de la ficha del país
     return {...base,...sinVacios(docPais._default?.[sec]),...sinVacios(k?docPais[k]?.[sec]:null),_pais:k};};
   const fmtFCDe=pais=>docCfg(pais,"imp");
   const MOTIVOS_FC=["Venta","Regalo","Muestra sin valor comercial","Efectos personales","Uso personal","Devolución / reparación"];
@@ -6710,7 +6721,7 @@ export default function SistemaCarga(){
     const guardar=async()=>{const n={...docPais};const lv=limpiar(v);if(Object.keys(lv).length)n[sel]=lv;else delete n[sel];
       const ok=await dbSetConfig('documentos_pais',n);if(ok===false){window.alert("No se pudo guardar.");return;}
       setDocPais(n);setPaisDraft(null);logAction("Editó documentos por país",sel==="_default"?"Predeterminado":sel);};
-    const SECS=[["empresa","Empresa en el país"],["exp","Exportación (sale de aquí)"],["imp","Importación (llega aquí)"]];
+    const SECS=[["exp","Exportación (sale de aquí)"],["imp","Importación (llega aquí)"]];
     const tiene=k=>docPais[k]?SECS.filter(([s2])=>docPais[k][s2]&&Object.keys(docPais[k][s2]).length).map(([s2])=>s2.toUpperCase()).join(" · "):"";
     return(
     <div>
@@ -6726,7 +6737,6 @@ export default function SistemaCarga(){
           <div style={{display:"flex",gap:3,background:"var(--bg4)",borderRadius:8,padding:3,border:"1px solid var(--b1)",marginBottom:12,flexWrap:"wrap"}}>
             {SECS.map(([k,l])=><button key={k} onClick={()=>setPaisSec(k)} style={{flex:"1 1 160px",padding:"7px 10px",borderRadius:6,border:"none",cursor:"pointer",fontSize:13,fontWeight:600,background:sec===k?"var(--navy)":"transparent",color:sec===k?"#fff":"var(--t2)"}}>{l}</button>)}
           </div>
-          {sec==="empresa"&&<div className="fgrid g2" style={{gap:10}}>{inp("razon","Razón social")}{inp("idFiscal","ID fiscal")}{inp("dir","Dirección")}{inp("tel","Teléfono")}{inp("email","Email")}</div>}
           {sec==="exp"&&<>{area("notaLegal","Nota legal del WR",4)}{area("declaracion","Declaración de contenido")}{area("autorizacion","Autorización de inspección y carta de instrucciones")}
             <div style={{fontSize:13,color:"var(--t3)"}}>{"{EMPRESA}"} · {"{REMITENTE}"}</div></>}
           {sec==="imp"&&<>
@@ -7629,7 +7639,7 @@ export default function SistemaCarga(){
             const k=Math.min(1,240/Math.max(img.width,img.height));const c=document.createElement("canvas");c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);
             c.getContext("2d").drawImage(img,0,0,c.width,c.height);set({logo:c.toDataURL("image/png")});};img.src=rd.result;};rd.readAsDataURL(f);};
           const guardar=async()=>{const n={nombre:(m.nombre||"").trim(),subtitulo:(m.subtitulo||"").trim(),iniciales:(m.iniciales||"").trim().toUpperCase(),logo:m.logo||"",
-              razon:(m.razon||"").trim(),idFiscal:(m.idFiscal||"").trim(),dir:(m.dir||"").trim(),ciudad:(m.ciudad||"").trim(),estado:(m.estado||"").trim(),pais:(m.pais||"").trim(),cp:(m.cp||"").trim(),tel:(m.tel||"").trim(),email:(m.email||"").trim(),web:(m.web||"").trim(),ofiOrigen:m.ofiOrigen||"",ofiDestino:m.ofiDestino||""};
+              razon:(m.razon||"").trim(),idFiscal:(m.idFiscal||"").trim(),dir:(m.dir||"").trim(),/* se conservan; los datos fiscales vigentes son los del país */ciudad:(m.ciudad||"").trim(),estado:(m.estado||"").trim(),pais:(m.pais||"").trim(),cp:(m.cp||"").trim(),tel:(m.tel||"").trim(),email:(m.email||"").trim(),web:(m.web||"").trim(),ofiOrigen:m.ofiOrigen||"",ofiDestino:m.ofiDestino||""};
             if(!n.nombre){window.alert("Escribe el nombre de la empresa.");return;}
             const ok=await dbSetConfig('marca',n);if(ok===false){window.alert("No se pudo guardar.");return;}
             setMarca(n);setMarcaDraft(null);try{localStorage.setItem("marca",JSON.stringify(n));}catch{/* sin almacenamiento */}logAction("Editó datos de la empresa",n.nombre);};
@@ -7649,19 +7659,8 @@ export default function SistemaCarga(){
                   <div className="fg" style={{marginBottom:10,maxWidth:160}}><div className="fl">Iniciales (sin logo)</div><input className="fi" maxLength={4} value={m.iniciales} onChange={e=>set({iniciales:e.target.value.toUpperCase()})}/></div>
                 </div>
               </div>
-              <div className="sdiv" style={{marginTop:6}}>Datos de la empresa</div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-                <div className="fg"><div className="fl">Razón social</div><input className="fi" value={m.razon||""} onChange={e=>set({razon:e.target.value.toUpperCase()})}/></div>
-                <div className="fg"><div className="fl">ID fiscal (RIF / EIN / NIF)</div><input className="fi" value={m.idFiscal||""} onChange={e=>set({idFiscal:e.target.value.toUpperCase()})}/></div>
-                <div className="fg" style={{gridColumn:"1/-1"}}><div className="fl">Dirección</div><input className="fi" value={m.dir||""} onChange={e=>set({dir:e.target.value.toUpperCase()})}/></div>
-                <div className="fg"><div className="fl">Ciudad</div><input className="fi" value={m.ciudad||""} onChange={e=>set({ciudad:e.target.value.toUpperCase()})}/></div>
-                <div className="fg"><div className="fl">Estado / provincia</div><input className="fi" value={m.estado||""} onChange={e=>set({estado:e.target.value.toUpperCase()})}/></div>
-                <div className="fg"><div className="fl">País</div><input className="fi" value={m.pais||""} onChange={e=>set({pais:e.target.value.toUpperCase()})}/></div>
-                <div className="fg"><div className="fl">Código postal</div><input className="fi" value={m.cp||""} onChange={e=>set({cp:e.target.value.toUpperCase()})}/></div>
-                <div className="fg"><div className="fl">Teléfono</div><input className="fi" value={m.tel||""} onChange={e=>set({tel:e.target.value})}/></div>
-                <div className="fg"><div className="fl">Correo</div><input className="fi" style={{textTransform:"none"}} value={m.email||""} onChange={e=>set({email:e.target.value.toLowerCase()})}/></div>
-                <div className="fg"><div className="fl">Sitio web</div><input className="fi" style={{textTransform:"none"}} value={m.web||""} onChange={e=>set({web:e.target.value.toLowerCase()})}/></div>
-              </div>
+              <div className="fg" style={{marginTop:6,maxWidth:360}}><div className="fl">Sitio web</div><input className="fi" style={{textTransform:"none"}} value={m.web||""} onChange={e=>set({web:e.target.value.toLowerCase()})}/></div>
+              <div style={{fontSize:13,color:"var(--t3)",marginTop:8}}>Razón social, número fiscal, dirección, teléfono y correo: Configuración → Países y Ciudades → Datos fiscales de cada país.</div>
               <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:10}}>
                 {marcaDraft&&<button className="btn-s" onClick={()=>setMarcaDraft(null)}>Descartar</button>}
                 <button className="btn-p" disabled={!marcaDraft} onClick={guardar}><Ico e="💾" sp/>Guardar</button>
@@ -7891,119 +7890,187 @@ export default function SistemaCarga(){
         )}
 
         {/* ── PAÍSES Y CIUDADES ── */}
-        {cfgTab==="paises"&&(
-          <div style={{display:"grid",gridTemplateColumns:"300px 1fr",gap:14}}>
-            {/* Lista de países */}
-            <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,overflow:"hidden"}}>
-              <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",fontFamily:"Arial,Helvetica,sans-serif",fontSize:15,fontWeight:700,color:"var(--navy)"}}><Ico e="🌎" sp/>Países</div>
-              {/* Agregar país */}
-              <div style={{padding:"10px 12px",borderBottom:"1px solid var(--b1)"}}>
-                <div style={{display:"grid",gridTemplateColumns:"60px 1fr auto",gap:6,alignItems:"flex-end"}}>
-                  <div className="fg"><div className="fl" style={{fontSize:11}}>Código</div><input className="fi" style={{fontFamily:"'DM Mono',monospace",fontSize:13}} value={cfgNewPais.dial} onChange={e=>setCfgNewPais(p=>({...p,dial:e.target.value}))}/></div>
-                  <div className="fg"><div className="fl" style={{fontSize:11}}>País + Bandera</div><input className="fi" style={{fontSize:13}} value={cfgNewPais.name} onChange={e=>setCfgNewPais(p=>({...p,name:e.target.value.toUpperCase()}))}/></div>
-                  <button className="btn-p" style={{padding:"6px 10px",fontSize:13,alignSelf:"flex-end"}} onClick={()=>{
-                    if(cfgNewPais.dial&&cfgNewPais.name){
-                      const n=[...COUNTRIES,{dial:cfgNewPais.dial,name:cfgNewPais.name,cities:[]}];
-                      setCountries(n);dbSetConfig('countries',n);
-                      setCfgNewPais({dial:"",name:""});
-                    }
-                  }}>+</button>
+        {cfgTab==="paises"&&(()=>{
+          const puedeEd=hasPerm("cfg_paises_editar");const esAdm=currentUser.rol==="A";
+          const guardarPaises=async(n,msg)=>{const ok=await dbSetConfig('countries',n);if(ok===false){window.alert("No se pudo guardar.");return false;}setCountries(n);if(msg)logAction(msg[0],msg[1]);return true;};
+          const Q=sinAcentos(cfgPaisQ).trim();
+          const lista=COUNTRIES.map((c,i)=>({c,i})).filter(({c})=>!Q||[c.name,c.iso,c.dial,c.moneda].some(v=>sinAcentos(v).includes(Q)))
+            .sort((a,b)=>(a.c.activo===false)-(b.c.activo===false)||String(a.c.name).localeCompare(String(b.c.name)));
+          const co=COUNTRIES[cfgSelPais]||null;
+          const P=co?soloLetras(co.name):"";
+          const usoPais=c=>{const p=soloLetras(c.name);return {ofis:oficinas.filter(o=>paisDeOfi(o)===c).length,
+            wrs:wrList.filter(w=>paisCanon(w.origCountry)===p||paisCanon(w.destCountry)===p).length,
+            clientes:clients.filter(x=>x.pais&&paisCanon(x.pais)===p).length};};
+          const usoCiudad=ci=>{const k=[sinAcentos(ci.name),sinAcentos(ci.code)];return {ofis:oficinas.filter(o=>paisDeOfi(o)===co&&k.includes(sinAcentos(o.ciudad))).length,
+            wrs:wrList.filter(w=>(paisCanon(w.origCountry)===P&&k.includes(sinAcentos(w.origCity)))||(paisCanon(w.destCountry)===P&&k.includes(sinAcentos(w.destCity)))).length};};
+          const txtUso=u=>Object.entries({ofis:"oficinas",wrs:"WR",clientes:"clientes"}).filter(([k])=>u[k]).map(([k,l])=>`${u[k]} ${l}`).join(", ");
+          // Ficha del país (borrador con Guardar)
+          const d=cfgPaisDraft&&cfgPaisDraft._i===cfgSelPais?cfgPaisDraft:(co?{...co,_i:cfgSelPais}:null);
+          const setD=x=>setCfgPaisDraft({...d,...x});
+          const cambiado=!!cfgPaisDraft&&cfgPaisDraft._i===cfgSelPais;
+          const validarPais=(x,idx)=>{
+            const nombre=String(x.name||"").trim(),iso=String(x.iso||"").trim(),dial=String(x.dial||"").trim(),mon=String(x.moneda||"").trim();
+            if(!nombre)return "Escribe el nombre del país.";
+            if(!/^[A-Z]{2}$/.test(iso))return "El código de país debe tener 2 letras (US, VE, ES…).";
+            if(!/^\d{1,4}$/.test(dial))return "Escribe el código telefónico (solo números).";
+            if(!/^[A-Z]{3}$/.test(mon))return "La moneda debe tener 3 letras (USD, EUR…).";
+            if(COUNTRIES.some((c,j)=>j!==idx&&soloLetras(c.name)===soloLetras(nombre)))return `Ya existe un país llamado ${nombre}.`;
+            if(COUNTRIES.some((c,j)=>j!==idx&&String(c.iso||"")===iso))return `El código ${iso} ya lo usa otro país.`;
+            return null;};
+          const guardarFicha=async()=>{const e=validarPais(d,cfgSelPais);if(e){window.alert(e);return;}
+            const old=COUNTRIES[cfgSelPais];
+            if(old.iso&&old.iso!==d.iso&&usoPais(old).ofis&&!window.confirm(`Cambiar el código de ${old.iso} a ${d.iso} hace que la numeración de los documentos de este país empiece de nuevo con ${d.iso}. ¿Seguir?`))return;
+            const limpio={...d};delete limpio._i;["name","razon","idFiscal","dirFiscal","dirFiscal2"].forEach(k=>{limpio[k]=String(limpio[k]||"").trim().toUpperCase();});
+            limpio.email=String(limpio.email||"").trim().toLowerCase();limpio.tel=String(limpio.tel||"").trim();
+            const n=COUNTRIES.map((c,i)=>i===cfgSelPais?limpio:c);
+            if(!(await guardarPaises(n,["Editó país",limpio.name])))return;
+            const oldN=soloLetras(old.name),newN=soloLetras(limpio.name);
+            if(oldN!==newN){const cambia=oficinas.filter(o=>soloLetras(o.pais)===oldN).map(o=>({...o,pais:limpio.name}));
+              if(cambia.length){setOficinas(p=>p.map(o=>cambia.find(x=>x.id===o.id)||o));cambia.forEach(o=>dbUpsertOficina(o));}}
+            setCfgPaisDraft(null);};
+          const elegirPais=i=>{if(cambiado&&!window.confirm("Hay cambios sin guardar. ¿Descartarlos?"))return;setCfgPaisDraft(null);setCfgSelPais(i);setCfgCiudadQ("");};
+          const borrarPais=async c=>{const i=COUNTRIES.indexOf(c);const u=usoPais(c);
+            if(txtUso(u)){window.alert(`No se puede borrar ${c.name}: lo usan ${txtUso(u)}. Puedes desactivarlo.`);return;}
+            if(!window.confirm(`¿Borrar ${c.name} y sus ${c.cities.length} ciudades?`))return;
+            if(await guardarPaises(COUNTRIES.filter((_,j)=>j!==i),["Borró país",c.name])){setCfgPaisDraft(null);setCfgSelPais(0);}};
+          const activarPais=c=>{const i=COUNTRIES.indexOf(c);const on=c.activo===false;
+            if(!on&&!window.confirm(`¿Desactivar ${c.name}? No aparecerá para elegirlo en oficinas, tarifas ni calculadora.`))return;
+            guardarPaises(COUNTRIES.map((x,j)=>j===i?{...x,activo:on}:x),[on?"Activó país":"Desactivó país",c.name]);setCfgPaisDraft(null);};
+          // Ciudades
+          const QC=sinAcentos(cfgCiudadQ).trim();
+          const ciudades=co?(co.cities||[]).map((c,ci)=>({c,ci})).filter(({c})=>!QC||[c.code,c.name].some(v=>sinAcentos(v).includes(QC)))
+            .sort((a,b)=>(a.c.activo===false)-(b.c.activo===false)||String(a.c.name).localeCompare(String(b.c.name))):[];
+          const mats=co?matricesDePais(co):[];
+          const setCiudades=(f,msg)=>guardarPaises(COUNTRIES.map((x,i)=>i===cfgSelPais?{...x,cities:f(x.cities||[])}:x),msg);
+          const borrarCiudad=async(c,ci)=>{const u=usoCiudad(c);
+            if(txtUso(u)){window.alert(`No se puede borrar ${c.name}: la usan ${txtUso(u)}. Puedes desactivarla.`);return;}
+            if(!window.confirm(`¿Borrar la ciudad ${c.code} — ${c.name}?`))return;
+            setCiudades(l=>l.filter((_,j)=>j!==ci),["Borró ciudad",`${c.code} — ${c.name} (${co.name})`]);};
+          const activarCiudad=(c,ci)=>{const on=c.activo===false;
+            if(!on&&!window.confirm(`¿Desactivar ${c.name}? No aparecerá para elegirla.`))return;
+            setCiudades(l=>l.map((x,j)=>j===ci?{...x,activo:on}:x),[on?"Activó ciudad":"Desactivó ciudad",`${c.code} — ${co.name}`]);};
+          const TABS=[["datos","Datos del país"],["fiscal","Datos fiscales"],["ciudades",`Ciudades (${co?.cities?.length||0})`]];
+          const campo=(k,l,o={})=><div className={`fg${o.full?" full":""}`}><div className="fl">{l}{o.req?" *":""}</div>
+            <input className="fi" disabled={!puedeEd} maxLength={o.max} list={o.list} style={o.mono?{fontFamily:"'DM Mono',monospace",fontWeight:700}:o.lower?{textTransform:"none"}:undefined} value={d?.[k]||""}
+              onChange={e=>{let v=e.target.value;v=o.lower?v.toLowerCase():o.num?v.replace(/\D/g,""):o.letras?v.toUpperCase().replace(/[^A-Z]/g,""):v.toUpperCase();setD({[k]:v});}}/></div>;
+          return (
+          <div style={{display:"grid",gridTemplateColumns:"300px minmax(0,1fr)",gap:14,alignItems:"start"}}>
+            <datalist id="lista-monedas">{MONEDAS.map(m=><option key={m} value={m}/>)}</datalist>
+            {/* Países */}
+            <div className="card" style={{padding:0,overflow:"hidden"}}>
+              <div style={{padding:8,borderBottom:"1px solid var(--b1)",background:"var(--bg3)",display:"flex",gap:6}}>
+                <input className="fi" style={{fontSize:13,padding:"6px 8px",flex:1}} placeholder="Buscar país" value={cfgPaisQ} onChange={e=>setCfgPaisQ(e.target.value.toUpperCase())}/>
+                {puedeEd&&<button className="btn-p" style={{fontSize:13,padding:"5px 10px"}} onClick={()=>setCfgNewPais({name:"",iso:"",dial:"",moneda:""})}>+ País</button>}
+              </div>
+              <div style={{maxHeight:"64vh",overflowY:"auto"}}>
+                {lista.length===0&&<div style={{padding:20,textAlign:"center",color:"var(--t3)",fontSize:14}}>Sin coincidencias.</div>}
+                {lista.map(({c,i})=>{const on=i===cfgSelPais;return(
+                  <div key={i} onClick={()=>elegirPais(i)} style={{padding:"9px 14px",cursor:"pointer",borderBottom:"1px solid var(--b2)",opacity:c.activo===false?.55:1,
+                    background:on?"#EEF3FF":"",borderLeft:on?"3px solid var(--navy)":"3px solid transparent"}}>
+                    <div style={{fontWeight:700,fontSize:14}}>{c.name}{c.activo===false&&<span style={{fontSize:11,color:"var(--red)",marginLeft:6}}>INACTIVO</span>}</div>
+                    <div style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--t3)"}}>{c.iso||"—"} · +{c.dial||"—"} · {c.moneda||"—"} · {(c.cities||[]).length} ciudades · {matricesDePais(c,true).length} matriz</div>
+                  </div>);})}
+              </div>
+            </div>
+            {/* Ficha */}
+            {!co?<div className="card" style={{textAlign:"center",padding:50,color:"var(--t3)"}}>Elige un país.</div>:
+            <div className="card">
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,flexWrap:"wrap"}}>
+                <div style={{fontSize:18,fontWeight:800,color:"var(--navy)",flex:1}}>{co.name} {co.iso&&<span style={{fontFamily:"'DM Mono',monospace",fontSize:14,color:"var(--t3)"}}>· {co.iso}</span>}</div>
+                {puedeEd&&<button className="btn-s" style={{fontSize:13}} onClick={()=>activarPais(co)}>{co.activo===false?"Activar":"Desactivar"}</button>}
+                {esAdm&&<button className="btn-s" style={{fontSize:13,color:"var(--red)"}} onClick={()=>borrarPais(co)}>Borrar</button>}
+              </div>
+              <div style={{display:"flex",gap:3,background:"var(--bg4)",borderRadius:8,padding:3,border:"1px solid var(--b1)",marginBottom:14}}>
+                {TABS.map(([k,l])=><button key={k} onClick={()=>setCfgPaisTab(k)} style={{flex:1,padding:"7px 10px",borderRadius:6,border:"none",cursor:"pointer",fontSize:14,fontWeight:600,
+                  background:cfgPaisTab===k?"var(--navy)":"transparent",color:cfgPaisTab===k?"#fff":"var(--t2)"}}>{l}</button>)}
+              </div>
+              {cfgPaisTab==="datos"&&<div className="fgrid g2" style={{gap:12}}>
+                {campo("name","Nombre del país",{req:1})}
+                {campo("iso","Código de país (2 letras)",{req:1,max:2,mono:1,letras:1})}
+                {campo("dial","Código telefónico",{req:1,max:4,mono:1,num:1})}
+                {campo("moneda","Moneda",{req:1,max:3,mono:1,letras:1,list:"lista-monedas"})}
+                <div className="fg full" style={{fontSize:13,color:"var(--t3)"}}>{(()=>{const u=usoPais(co);return txtUso(u)?`En uso: ${txtUso(u)}.`:"Sin uso todavía.";})()}</div>
+              </div>}
+              {cfgPaisTab==="fiscal"&&<div className="fgrid g2" style={{gap:12}}>
+                {campo("razon","Razón social")}
+                {campo("idFiscal","Número fiscal")}
+                {campo("dirFiscal","Dirección fiscal",{full:1})}
+                {campo("dirFiscal2","Ciudad, estado y código postal",{full:1})}
+                {campo("tel","Teléfono")}
+                {campo("email","Correo",{lower:1})}
+              </div>}
+              {["datos","fiscal"].includes(cfgPaisTab)&&puedeEd&&<div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:14}}>
+                {cambiado&&<button className="btn-s" onClick={()=>setCfgPaisDraft(null)}>Descartar</button>}
+                <button className="btn-p" disabled={!cambiado} style={{opacity:cambiado?1:.5}} onClick={guardarFicha}><Ico e="💾" sp/>Guardar</button>
+              </div>}
+              {cfgPaisTab==="ciudades"&&<>
+                <div style={{display:"flex",gap:8,marginBottom:10,alignItems:"center",flexWrap:"wrap"}}>
+                  <input className="fi" style={{flex:1,minWidth:220,maxWidth:420}} placeholder="Buscar ciudad por código o nombre" value={cfgCiudadQ} onChange={e=>{setCfgCiudadQ(e.target.value.toUpperCase());setPags(p=>({...p,cfg_ciudades:1}));}}/>
+                  <span style={{fontSize:13,color:"var(--t3)"}}>{ciudades.length} ciudad{ciudades.length===1?"":"es"}</span>
+                  {puedeEd&&<button className="btn-p" style={{marginLeft:"auto",fontSize:13}} onClick={()=>setCfgEditCity({ci:-1,code:"",name:""})}>+ Ciudad</button>}
                 </div>
-              </div>
-              <div style={{maxHeight:"60vh",overflowY:"auto"}}>
-                {COUNTRIES.map((c,i)=>(
-                  <div key={i} onClick={()=>{setCfgSelPais(i);setCfgEditCity(null);}}
-                    style={{padding:"9px 14px",cursor:"pointer",borderBottom:"1px solid var(--b2)",display:"flex",alignItems:"center",gap:8,
-                      background:cfgSelPais===i?"#EEF3FF":"",borderLeft:cfgSelPais===i?"3px solid var(--navy)":"3px solid transparent"}}>
-                    <div style={{flex:1}}>
-                      <div style={{fontWeight:600,fontSize:14}}>{c.name}</div>
-                      <div style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--t3)"}}>{c.iso?`${c.iso} · `:""}+{c.dial} · {c.cities.length} ciudades · {matricesDePais(c).length} matriz</div>
-                    </div>
-                    {hasPerm("cfg_paises_editar")&&<span className="ic-b" onClick={e=>{e.stopPropagation();setCfgSelPais(i);setTimeout(()=>{const el=document.getElementById("cfg-pais-nombre");if(el){el.focus();el.select();}},50);}}><Ico e="✏️" solo/></span>}
-                    {currentUser.rol==="A"&&<span onClick={e=>{e.stopPropagation();const n=COUNTRIES.filter((_,j)=>j!==i);setCountries(n);dbSetConfig('countries',n);if(cfgSelPais>=i)setCfgSelPais(Math.max(0,cfgSelPais-1));}} style={{color:"var(--red)",cursor:"pointer",fontSize:15,fontWeight:700}}>×</span>}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Ciudades del país seleccionado */}
-            <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,overflow:"hidden"}}>
-              <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",fontFamily:"Arial,Helvetica,sans-serif",fontSize:15,fontWeight:700,color:"var(--navy)"}}>
-                <Ico e="🏙️" sp/>Ciudades — {COUNTRIES[cfgSelPais]?.name||"Selecciona un país"}
-              </div>
-              {COUNTRIES[cfgSelPais]&&(()=>{const co=COUNTRIES[cfgSelPais];
-                const setCo=cambio=>setCountries(COUNTRIES.map((c,i)=>i===cfgSelPais?{...c,...cambio}:c));
-                const guardar=()=>dbSetConfig('countries',COUNTRIES);
-                return <div style={{padding:"10px 12px",borderBottom:"1px solid var(--b1)"}}>
-                  <div className="fgrid g2">
-                    <div className="fg"><div className="fl">Nombre del país</div><input id="cfg-pais-nombre" className="fi" value={co.name||""}
-                      onFocus={e=>{e.target.dataset.old=nomPaisCo(co);}}
-                      onChange={e=>setCo({name:e.target.value.toUpperCase()})}
-                      onBlur={e=>{const old=e.target.dataset.old||"",nuevo=nomPaisCo(co);
-                        if(!String(co.name||"").trim()){window.alert("El país necesita un nombre.");return;}
-                        if(old&&nuevo&&old!==nuevo){const cambia=oficinas.filter(o=>sinAcentos(o.pais)===old).map(o=>({...o,pais:nuevo}));
-                          if(cambia.length){setOficinas(p=>p.map(o=>cambia.find(x=>x.id===o.id)||o));cambia.forEach(o=>dbUpsertOficina(o));}}
-                        guardar();}}/></div>
-                    <div className="fg"><div className="fl">Código telefónico</div><input className="fi" style={{fontFamily:"'DM Mono',monospace"}} value={co.dial||""} onChange={e=>setCo({dial:e.target.value.replace(/[^0-9]/g,"")})} onBlur={guardar}/></div>
-                    <div className="fg"><div className="fl">Código de país</div><input className="fi" maxLength={3} style={{fontFamily:"'DM Mono',monospace",fontWeight:700}} value={co.iso||""}
-                      onChange={e=>setCo({iso:e.target.value.toUpperCase().replace(/[^A-Z]/g,"")})}
-                      onBlur={()=>{const iso=String(co.iso||"");if(iso&&COUNTRIES.some((c,i)=>i!==cfgSelPais&&String(c.iso||"")===iso)){window.alert(`El código ${iso} ya lo usa otro país.`);setCo({iso:""});return;}guardar();}}/></div>
-                    <div className="fg"><div className="fl">Moneda</div><select className="fs" value={co.moneda||""} onChange={e=>{const n=COUNTRIES.map((c,i)=>i===cfgSelPais?{...c,moneda:e.target.value}:c);setCountries(n);dbSetConfig('countries',n);}}>
-                      <option value="">—</option>{["USD","EUR","VES","COP","MXN","ARS","CLP","PEN","BRL","DOP","PAB"].map(m=><option key={m} value={m}>{m}</option>)}</select></div>
-                    <div className="fg"><div className="fl">Razón social</div><input className="fi" value={co.razon||""} onChange={e=>setCo({razon:e.target.value.toUpperCase()})} onBlur={guardar}/></div>
-                    <div className="fg"><div className="fl">Número fiscal</div><input className="fi" value={co.idFiscal||""} onChange={e=>setCo({idFiscal:e.target.value.toUpperCase()})} onBlur={guardar}/></div>
-                    <div className="fg full"><div className="fl">Dirección fiscal</div><input className="fi" value={co.dirFiscal||""} onChange={e=>setCo({dirFiscal:e.target.value.toUpperCase()})} onBlur={guardar}/></div>
-                  </div>
-                </div>;})()}
-              {COUNTRIES[cfgSelPais]&&(
-                <>
-                  <div style={{padding:"10px 12px",borderBottom:"1px solid var(--b1)"}}>
-                    <div style={{display:"grid",gridTemplateColumns:"80px 1fr auto",gap:6,alignItems:"flex-end"}}>
-                      <div className="fg"><div className="fl" style={{fontSize:11}}>Código</div><input className="fi" style={{fontFamily:"'DM Mono',monospace",fontWeight:700}} value={cfgNewCity.code} onChange={e=>setCfgNewCity(p=>({...p,code:e.target.value.toUpperCase()}))}/></div>
-                      <div className="fg"><div className="fl" style={{fontSize:11}}>Nombre Ciudad</div><input className="fi" value={cfgNewCity.name} onChange={e=>setCfgNewCity(p=>({...p,name:e.target.value.toUpperCase()}))}/></div>
-                      <button className="btn-p" style={{padding:"6px 12px",alignSelf:"flex-end"}} onClick={()=>{
-                        if(cfgNewCity.code&&cfgNewCity.name){
-                          const n=COUNTRIES.map((c,i)=>i===cfgSelPais?{...c,cities:[...c.cities,{code:cfgNewCity.code,name:cfgNewCity.name}]}:c);
-                          setCountries(n);dbSetConfig('countries',n);
-                          setCfgNewCity({code:"",name:""});
-                        }
-                      }}>+ Agregar</button>
-                    </div>
-                  </div>
-                  <div style={{padding:"8px 12px",display:"flex",flexWrap:"wrap",gap:6}}>
-                    {(COUNTRIES[cfgSelPais]?.cities||[]).map((c,ci)=>(
-                      <div key={ci} style={{display:"inline-flex",alignItems:"center",gap:5,background:"var(--bg4)",border:"1px solid var(--b1)",borderRadius:6,padding:"4px 10px",fontSize:14}}>
-                        {cfgEditCity?.ci===ci?(()=>{const guardarCiudad=()=>{const code=String(cfgEditCity.code||"").trim(),name=String(cfgEditCity.name||"").trim();
-                            if(!code||!name){window.alert("La ciudad necesita código y nombre.");return;}
-                            const co=COUNTRIES[cfgSelPais];
-                            if(co.cities.some((x,j)=>j!==ci&&x.code===code)){window.alert(`El código ${code} ya existe en ${co.name}.`);return;}
-                            const n=COUNTRIES.map((x,i)=>i===cfgSelPais?{...x,cities:x.cities.map((y,j)=>j===ci?{...y,code,name}:y)}:x);
-                            setCountries(n);dbSetConfig('countries',n);
-                            const viejo=[sinAcentos(c.name),sinAcentos(c.code)];
-                            const cambia=oficinas.filter(o=>paisDeOfi(o)===co&&viejo.includes(sinAcentos(o.ciudad))).map(o=>({...o,ciudad:name}));
-                            if(cambia.length){setOficinas(p=>p.map(o=>cambia.find(x=>x.id===o.id)||o));cambia.forEach(o=>dbUpsertOficina(o));}
-                            setCfgEditCity(null);};
-                          return <>
-                          <input className="fi" style={{width:70,fontFamily:"'DM Mono',monospace",fontWeight:700,fontSize:13,padding:"2px 6px"}} value={cfgEditCity.code} onChange={e=>setCfgEditCity(p=>({...p,code:e.target.value.toUpperCase()}))}/>
-                          <input className="fi" style={{width:150,fontSize:13,padding:"2px 6px"}} value={cfgEditCity.name} onChange={e=>setCfgEditCity(p=>({...p,name:e.target.value.toUpperCase()}))} onKeyDown={e=>{if(e.key==="Enter")guardarCiudad();if(e.key==="Escape")setCfgEditCity(null);}}/>
-                          <span className="ic-b" onClick={guardarCiudad}><Ico e="✅" solo/></span>
-                          <span className="ic-b" onClick={()=>setCfgEditCity(null)}><Ico e="✖️" solo/></span></>;})():<>
-                        <span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",fontSize:13}}>{c.code}</span>
-                        <span style={{color:"var(--t2)"}}>{c.name}</span>
-                        {hasPerm("cfg_paises_editar")&&<span className="ic-b" onClick={()=>setCfgEditCity({ci,code:c.code||"",name:c.name||""})}><Ico e="✏️" solo/></span>}</>}
-                        {(()=>{const mats=matricesDePais(COUNTRIES[cfgSelPais]);if(mats.length<2)return null;
-                          return <select className="fs" style={{fontSize:12,padding:"1px 4px",width:"auto"}} value={c.matriz||""} onChange={e=>{const n=COUNTRIES.map((co,i)=>i===cfgSelPais?{...co,cities:co.cities.map((x,j)=>j===ci?{...x,matriz:e.target.value}:x)}:co);setCountries(n);dbSetConfig('countries',n);}}>
-                            <option value="">{(mats.find(m=>m.principal)||mats[0]).codigo} (principal)</option>{mats.map(m=><option key={m.id} value={m.id}>{m.codigo} {m.nombre}</option>)}</select>;})()}
-                        {currentUser.rol==="A"&&<span onClick={()=>{const n=COUNTRIES.map((co,i)=>i===cfgSelPais?{...co,cities:co.cities.filter((_,j)=>j!==ci)}:co);setCountries(n);dbSetConfig('countries',n);}} style={{color:"var(--red)",cursor:"pointer",fontSize:16,fontWeight:700}}>×</span>}
-                      </div>
-                    ))}
-                    {(COUNTRIES[cfgSelPais]?.cities||[]).length===0&&<div style={{color:"var(--t3)",fontSize:13,padding:"8px 0"}}>No hay ciudades registradas.</div>}
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        )}
+                <div className="ct-scroll"><table className="ct">
+                  <thead><tr><th>Código IATA</th><th>Ciudad</th><th>Matriz de la zona</th><th style={{textAlign:"center"}}>Oficinas</th><th>Estado</th><th style={{textAlign:"right"}}>Acciones</th></tr></thead>
+                  <tbody>{ciudades.length===0?<tr><td colSpan={6} style={{textAlign:"center",padding:30,color:"var(--t3)"}}>{QC?"Sin coincidencias.":"No hay ciudades."}</td></tr>
+                    :pagSlice("cfg_ciudades",ciudades).map(({c,ci})=>{const u=usoCiudad(c);return(
+                    <tr key={`${c.code}-${ci}`} style={{opacity:c.activo===false?.55:1}}>
+                      <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)"}}>{c.code}</span></td>
+                      <td style={{fontWeight:600}}>{c.name}</td>
+                      <td>{mats.length>=2&&puedeEd
+                        ?<select className="fs" style={{fontSize:13,padding:"2px 6px",width:"auto"}} value={c.matriz||""} onChange={e=>setCiudades(l=>l.map((x,j)=>j===ci?{...x,matriz:e.target.value}:x),["Cambió matriz de zona",`${c.code} — ${co.name}`])}>
+                          <option value="">{(mats.find(m=>m.principal)||mats[0]).codigo} (principal)</option>{mats.map(m=><option key={m.id} value={m.id}>{m.codigo} — {m.nombre}</option>)}</select>
+                        :(()=>{const m=mats.find(x=>x.id===c.matriz)||mats.find(x=>x.principal)||mats[0];return m?`${m.codigo} — ${m.nombre}`:"—";})()}</td>
+                      <td style={{textAlign:"center",fontWeight:700}}>{u.ofis||"—"}</td>
+                      <td><span style={{fontSize:12,fontWeight:700,color:c.activo===false?"var(--red)":"var(--green)"}}>{c.activo===false?"Inactiva":"Activa"}</span></td>
+                      <td><div style={{display:"flex",gap:6,justifyContent:"flex-end"}}>
+                        {puedeEd&&<span className="ic-b" title="Editar" onClick={()=>setCfgEditCity({ci,code:c.code||"",name:c.name||""})}><Ico e="✏️" solo/></span>}
+                        {puedeEd&&<button className="btn-s" style={{fontSize:12,padding:"2px 8px"}} onClick={()=>activarCiudad(c,ci)}>{c.activo===false?"Activar":"Desactivar"}</button>}
+                        {esAdm&&<span className="ic-b" style={{color:"var(--red)"}} title="Borrar" onClick={()=>borrarCiudad(c,ci)}><Ico e="🗑" solo/></span>}
+                      </div></td>
+                    </tr>);})}</tbody>
+                </table></div>{pagPie("cfg_ciudades",ciudades.length)}
+              </>}
+            </div>}
+            {/* Nuevo país */}
+            {cfgNewPais&&typeof cfgNewPais==="object"&&(()=>{const f=cfgNewPais;const setF=x=>setCfgNewPais({...f,...x});
+              const crear=async()=>{const x={name:String(f.name||"").trim().toUpperCase(),iso:f.iso,dial:f.dial,moneda:f.moneda,cities:[]};
+                const e=validarPais(x,-1);if(e){window.alert(e);return;}
+                if(await guardarPaises([...COUNTRIES,x],["Creó país",x.name])){setCfgNewPais(null);setCfgPaisDraft(null);setCfgSelPais(COUNTRIES.length);setCfgPaisTab("datos");}};
+              return <div className="ov"><div className="modal mmd" onClick={e=>e.stopPropagation()}>
+                <div className="mhd"><div className="mt"><Ico e="🌎" sp/>Nuevo país</div><button className="mcl" onClick={()=>setCfgNewPais(null)}>✕</button></div>
+                <div className="fgrid g2" style={{gap:12}}>
+                  <div className="fg full"><div className="fl">Nombre del país *</div><input className="fi" autoFocus value={f.name} onChange={e=>setF({name:e.target.value.toUpperCase()})}/></div>
+                  <div className="fg"><div className="fl">Código de país (2 letras) *</div><input className="fi" maxLength={2} style={{fontFamily:"'DM Mono',monospace",fontWeight:700}} value={f.iso} onChange={e=>setF({iso:e.target.value.toUpperCase().replace(/[^A-Z]/g,"")})}/></div>
+                  <div className="fg"><div className="fl">Código telefónico *</div><input className="fi" maxLength={4} style={{fontFamily:"'DM Mono',monospace"}} value={f.dial} onChange={e=>setF({dial:e.target.value.replace(/\D/g,"")})}/></div>
+                  <div className="fg"><div className="fl">Moneda *</div><input className="fi" maxLength={3} list="lista-monedas" style={{fontFamily:"'DM Mono',monospace",fontWeight:700}} value={f.moneda} onChange={e=>setF({moneda:e.target.value.toUpperCase().replace(/[^A-Z]/g,"")})}/></div>
+                </div>
+                <div className="mft"><button className="btn-s" onClick={()=>setCfgNewPais(null)}>Cancelar</button><button className="btn-p" onClick={crear}>Crear país</button></div>
+              </div></div>;})()}
+            {/* Nueva / editar ciudad */}
+            {cfgEditCity&&co&&(()=>{const f=cfgEditCity;const nueva=f.ci<0;const setF=x=>setCfgEditCity({...f,...x});
+              const guardarC=async()=>{const code=String(f.code||"").trim(),name=String(f.name||"").trim();
+                if(!/^[A-Z]{3}$/.test(code)){window.alert("El código IATA debe tener 3 letras.");return;}
+                if(!name){window.alert("Escribe el nombre de la ciudad.");return;}
+                if((co.cities||[]).some((x,j)=>j!==f.ci&&x.code===code)){window.alert(`El código ${code} ya existe en ${co.name}.`);return;}
+                if((co.cities||[]).some((x,j)=>j!==f.ci&&sinAcentos(x.name)===sinAcentos(name))){window.alert(`${name} ya existe en ${co.name}.`);return;}
+                if(nueva){if(await setCiudades(l=>[...l,{code,name}],["Creó ciudad",`${code} — ${name} (${co.name})`]))setCfgEditCity(null);return;}
+                const old=co.cities[f.ci];
+                if(old.code!==code&&usoCiudad(old).wrs&&!window.confirm(`Hay WR con el código ${old.code}. Esos WR conservan su código. ¿Cambiarlo a ${code} igual?`))return;
+                if(!(await setCiudades(l=>l.map((x,j)=>j===f.ci?{...x,code,name}:x),["Editó ciudad",`${code} — ${name} (${co.name})`])))return;
+                const viejo=[sinAcentos(old.name),sinAcentos(old.code)];
+                const cambia=oficinas.filter(o=>paisDeOfi(o)===co&&viejo.includes(sinAcentos(o.ciudad))).map(o=>({...o,ciudad:name}));
+                if(cambia.length){setOficinas(p=>p.map(o=>cambia.find(x=>x.id===o.id)||o));cambia.forEach(o=>dbUpsertOficina(o));}
+                setCfgEditCity(null);};
+              return <div className="ov"><div className="modal mmd" onClick={e=>e.stopPropagation()}>
+                <div className="mhd"><div className="mt"><Ico e="🏙️" sp/>{nueva?"Nueva ciudad":"Editar ciudad"} — {co.name}</div><button className="mcl" onClick={()=>setCfgEditCity(null)}>✕</button></div>
+                <div className="fgrid g2" style={{gap:12}}>
+                  <div className="fg"><div className="fl">Código IATA (3 letras) *</div><input className="fi" autoFocus maxLength={3} style={{fontFamily:"'DM Mono',monospace",fontWeight:700}} value={f.code} onChange={e=>setF({code:e.target.value.toUpperCase().replace(/[^A-Z]/g,"")})}/></div>
+                  <div className="fg"><div className="fl">Nombre de la ciudad *</div><input className="fi" value={f.name} onChange={e=>setF({name:e.target.value.toUpperCase()})} onKeyDown={e=>{if(e.key==="Enter")guardarC();}}/></div>
+                </div>
+                <div className="mft"><button className="btn-s" onClick={()=>setCfgEditCity(null)}>Cancelar</button><button className="btn-p" onClick={guardarC}>{nueva?"Crear ciudad":"Guardar"}</button></div>
+              </div></div>;})()}
+          </div>);
+        })()}
 
         {/* ── REGISTRO DE ACTIVIDAD ── */}
         {/* ── AGENTES ── */}
@@ -8177,14 +8244,14 @@ export default function SistemaCarga(){
                     {(()=>{const co=COUNTRIES.find(c=>nomPaisCo(c)===sinAcentos(ofForm.pais))||null;const mats=co?matricesDePais(co).filter(m=>m.id!==editOficina?.id):[];
                       return <>
                     <div className="fg"><div className="fl">País *</div><select className="fs" value={co?nomPaisCo(co):""} onChange={e=>{const c=COUNTRIES.find(x=>nomPaisCo(x)===e.target.value);setOfForm(p=>({...p,pais:e.target.value,ciudad:"",matriz_id:""}));}}>
-                      <option value="">—</option>{COUNTRIES.map(c=><option key={nomPaisCo(c)} value={nomPaisCo(c)}>{c.name}</option>)}</select></div>
+                      <option value="">—</option>{COUNTRIES.filter(c=>c.activo!==false||c===co).map(c=><option key={nomPaisCo(c)} value={nomPaisCo(c)}>{c.name}</option>)}</select></div>
                     <div className="fg"><div className="fl">Ciudad *</div><select className="fs" value={(co?.cities||[]).find(ci=>sinAcentos(ci.name)===sinAcentos(ofForm.ciudad)||sinAcentos(ci.code)===sinAcentos(ofForm.ciudad))?.code||""} onChange={e=>{const ci=(co?.cities||[]).find(x=>x.code===e.target.value);setOfForm(p=>({...p,ciudad:ci?String(ci.name).toUpperCase():""}));}}>
-                      <option value="">—</option>{(co?.cities||[]).map(ci=><option key={ci.code} value={ci.code}>{ci.code} — {ci.name}</option>)}</select></div>
+                      <option value="">—</option>{(co?.cities||[]).filter(ci=>ci.activo!==false||sinAcentos(ci.name)===sinAcentos(ofForm.ciudad)||sinAcentos(ci.code)===sinAcentos(ofForm.ciudad)).map(ci=><option key={ci.code} value={ci.code}>{ci.code} — {ci.name}</option>)}</select></div>
                     {ofForm.tipo!=="Matriz"&&<div className="fg full"><div className="fl">Matriz a la que pertenece *</div><select className="fs" value={ofForm.matriz_id||""} onChange={e=>setOfForm(p=>({...p,matriz_id:e.target.value}))}>
                       <option value="">—</option>{mats.map(m=><option key={m.id} value={m.id}>{m.codigo} — {m.nombre}{m.ciudad?` (${m.ciudad})`:""}</option>)}</select></div>}
                     {ofForm.tipo==="Matriz"&&<div className="fg full"><label style={{display:"flex",alignItems:"center",gap:8,fontSize:14,cursor:"pointer"}}><input type="checkbox" checked={!!ofForm.principal} disabled={currentUser.rol!=="A"} onChange={e=>setOfForm(p=>({...p,principal:e.target.checked}))}/>Matriz principal del país</label></div>}
                     <div className="fg"><div className="fl">Moneda</div><select className="fs" value={ofForm.moneda||""} onChange={e=>setOfForm(p=>({...p,moneda:e.target.value}))}>
-                      <option value="">—</option>{["USD","EUR","VES","COP","MXN","ARS","CLP","PEN","BRL","DOP","PAB"].map(m=><option key={m} value={m}>{m}</option>)}</select></div>
+                      <option value="">—</option>{[...new Set([...MONEDAS,...COUNTRIES.map(c=>c.moneda).filter(Boolean),ofForm.moneda].filter(Boolean))].map(m=><option key={m} value={m}>{m}</option>)}</select></div>
                     {currentUser.rol==="A"&&ofForm.tipo!=="Matriz"&&<div className="fg full"><label style={{display:"flex",alignItems:"center",gap:8,fontSize:14,cursor:"pointer"}}><input type="checkbox" checked={!!ofForm.fp_activo} onChange={e=>setOfForm(p=>({...p,fp_activo:e.target.checked}))}/>Puede emitir sus propias facturas (Mis facturas)</label></div>}
                     {editOficina&&<div className="fg"><div className="fl">Estado</div><select className="fs" value={ofForm.activo===false?"0":"1"} onChange={e=>setOfForm(p=>({...p,activo:e.target.value==="1"}))}><option value="1">Activa</option><option value="0">Inactiva</option></select></div>}
                     {ofForm.tipo!=="Matriz"&&<>
@@ -8371,7 +8438,7 @@ export default function SistemaCarga(){
                   {(()=>{
                     const F=tafForm, set=x=>setTafForm(p=>({...p,...x}));
                     const lugares=k=>F[k]||[];
-                    const selector=(k,titulo)=><SelectorLugares titulo={titulo} countries={COUNTRIES} value={lugares(k)} onChange={v=>set({[k]:v})}/>;
+                    const selector=(k,titulo)=><SelectorLugares titulo={titulo} countries={paisesActivos} value={lugares(k)} onChange={v=>set({[k]:v})}/>;
                     const setFila=(i,x)=>set({filas:F.filas.map((f,j)=>j===i?{...f,...x}:f)});
                     const combos=(lugares("orig").length?lugares("orig"):[{pais:"",ciudad:""}]).flatMap(o=>(lugares("dest").length?lugares("dest"):[{pais:"",ciudad:""}]).flatMap(d=>(F.filas||[]).map(f=>({o,d,f}))));
                     const guardar=()=>{
@@ -9176,7 +9243,7 @@ export default function SistemaCarga(){
         {f[k]?<div><div className="sdiv">{titulo}</div>
             <span style={{display:"inline-block",fontSize:14,fontWeight:700,padding:"6px 12px",borderRadius:14,background:"#EEF3FF",color:"var(--navy)",border:"1px solid #B8C8F0"}}>{lugarTxt(f[k])}
               <span style={{cursor:"pointer",color:"var(--red)",marginLeft:8}} onClick={()=>setCalc({[k]:null})}>✕</span></span></div>
-          :<SelectorLugares titulo={titulo} countries={COUNTRIES} value={[]} onChange={v=>setCalc({[k]:v[0]||null})}/>}
+          :<SelectorLugares titulo={titulo} countries={paisesActivos} value={[]} onChange={v=>setCalc({[k]:v[0]||null})}/>}
       </div>);
     const esStaff=!["E","E1","F","I"].includes(currentUser?.rol);
     const UL={lb:"lb",kg:"kg",ft3:"ft³",m3:"m³"};
