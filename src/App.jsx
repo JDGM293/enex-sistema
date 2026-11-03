@@ -2490,6 +2490,8 @@ export default function SistemaCarga(){
   // Default vacío: el módulo abre en blanco y obliga a elegir Clientes / Usuarios / Todos
   const [clFilter,setClFilter]=useState("");
   const [clBusca,setClBusca]=useState("");
+  const [clUsrGrupo,setClUsrGrupo]=useState("todos");
+  const [clUsrMatriz,setClUsrMatriz]=useState("");
   const [dimOpen,setDimOpen]=useState(null);
   // Atajo a Reempaque / Cargo Release en ventana, sin abandonar la pantalla actual
   const [quickTab,setQuickTab]=useState(null);
@@ -4043,6 +4045,7 @@ export default function SistemaCarga(){
         {clBusca&&<button className="btn-s" style={{fontSize:13}} onClick={()=>setClBusca("")}>✕</button>}
         <span style={{fontSize:13,color:"var(--t3)"}}>{filteredCl.length} resultado{filteredCl.length===1?"":"s"}</span>
       </div>
+      {clFilter==="usuarios"?renderUsuariosLista():
       <div className="card" style={{padding:0}}>
         <div className="ct-wrap">
           <><div className="ct-scroll"><table className="ct">
@@ -4099,9 +4102,56 @@ export default function SistemaCarga(){
             </tbody>
           </table></div>{pagPie("clientes",(filteredCl).length)}</>
         </div>
-      </div>
+      </div>}
     </div>
     );
+  };
+  // Usuarios del sistema separados por grupo y por matriz
+  const USR_GRUPOS=[["todos","Todos",null],["empresa","Empresa",["A","B","C","D","D1","D2"]],["oficinas","Oficinas",["G"]],["agentes","Agentes y vendedores",["E","E1"]],["autonomos","Autónomos",["F"]]];
+  const matrizDeUsuario=c=>{
+    if(["E","E1"].includes(c.rol))return agentes.find(a=>a.id===c.agenteId)?.matriz_id||"";
+    if(c.rol==="F")return c.matrizId||"";
+    const o=oficinas.find(x=>x.id===c.oficinaId);return matrizDe(o)?.id||"";};
+  const renderUsuariosLista=()=>{
+    const base=filteredCl.filter(c=>c.tipo==="usuario");
+    const roles=g=>(USR_GRUPOS.find(x=>x[0]===g)||[])[2];
+    const enGrupo=(c,g)=>!roles(g)||roles(g).includes(c.rol);
+    const enMatriz=c=>!clUsrMatriz||matrizDeUsuario(c)===clUsrMatriz;
+    const lista=base.filter(c=>enGrupo(c,clUsrGrupo)&&enMatriz(c)).sort((a,b)=>{const O=["A","B","C","D","D1","D2","G","E","E1","F"];return O.indexOf(a.rol)-O.indexOf(b.rol)||fullName(a).localeCompare(fullName(b));});
+    const mats=oficinas.filter(o=>esMatriz(o)&&enMiAlcance(o.id)).sort((a,b)=>String(a.codigo).localeCompare(String(b.codigo)));
+    const perteneceA=c=>{
+      if(["E","E1"].includes(c.rol)){const a=agentes.find(x=>x.id===c.agenteId);return a?`${a.codigo} — ${a.nombre}`:"Sin agente";}
+      if(c.rol==="F"){const m=oficinas.find(o=>o.id===c.matrizId);return m?`${m.codigo} — ${m.nombre}`:"Sin matriz";}
+      const o=oficinas.find(x=>x.id===c.oficinaId);if(o)return `${o.codigo} — ${o.nombre}`;
+      return ["A","B"].includes(c.rol)?"Todas las oficinas":"Sin oficina";};
+    const colPert=clUsrGrupo==="agentes"?"Agente":clUsrGrupo==="autonomos"?"Matriz":clUsrGrupo==="todos"?"Oficina / agente / matriz":"Oficina";
+    const acc=hasPerm("editar_usuario")||hasPerm("borrar_usuario");
+    return <>
+      <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",marginBottom:12}}>
+        <div style={{display:"flex",gap:3,background:"var(--bg4)",borderRadius:8,padding:3,border:"1px solid var(--b1)",flexWrap:"wrap"}}>
+          {USR_GRUPOS.map(([k,l])=>{const n=base.filter(c=>enGrupo(c,k)&&enMatriz(c)).length;return <button key={k} onClick={()=>{setClUsrGrupo(k);setPags(p=>({...p,usuarios:1}));}}
+            style={{padding:"6px 14px",borderRadius:6,border:"none",cursor:"pointer",fontSize:14,fontWeight:600,background:clUsrGrupo===k?"var(--navy)":"transparent",color:clUsrGrupo===k?"#fff":"var(--t2)"}}>{l} <span style={{opacity:.75}}>({n})</span></button>;})}
+        </div>
+        {mats.length>1&&<select className="fs" style={{width:"auto",minWidth:240}} value={clUsrMatriz} onChange={e=>{setClUsrMatriz(e.target.value);setPags(p=>({...p,usuarios:1}));}}>
+          <option value="">Todas las matrices</option>{mats.map(m=><option key={m.id} value={m.id}>{m.codigo} — {m.nombre}{m.pais?` · ${m.pais}`:""}</option>)}</select>}
+      </div>
+      <div className="card" style={{padding:0}}>
+        <div className="ct-scroll"><table className="ct">
+          <thead><tr><th>ID</th><th>Nombre</th><th>Usuario</th><th>Rol</th><th>{colPert}</th><th>Email</th><th>Teléfono</th><th>Acceso</th>{acc&&<th>Acc.</th>}</tr></thead>
+          <tbody>{lista.length===0?<tr><td colSpan={acc?9:8} style={{textAlign:"center",padding:30,color:"var(--t3)"}}>No hay usuarios.</td></tr>
+            :pagSlice("usuarios",lista).map(c=><tr key={c.id}>
+              <td><span className="cid">{c.id}</span></td>
+              <td><span className="cn">{fullName(c)}</span></td>
+              <td style={{fontFamily:"'DM Mono',monospace",fontSize:13}}>{c.login||"—"}</td>
+              <td><RoleBadge code={c.rol}/></td>
+              <td style={{fontSize:13,fontWeight:600,whiteSpace:"nowrap",color:perteneceA(c).startsWith("Sin ")?"var(--red)":"var(--t1)"}}>{perteneceA(c)}</td>
+              <td style={{fontSize:13,color:"var(--cyan)"}}>{oc(c.email,"mail")||"—"}</td>
+              <td style={{fontSize:13,whiteSpace:"nowrap"}}>{oc(c.tel1)||"—"}</td>
+              <td><span style={{fontSize:12,fontWeight:700,color:c.activo===false?"var(--red)":c.authId?"var(--green)":"var(--t3)"}}>{c.activo===false?"Inactivo":c.authId?"Con acceso":"Sin acceso"}</span></td>
+              {acc&&<td><div style={{display:"flex",gap:3}}>{puedeEditarReg(c)&&<span className="ic-b" onClick={()=>setShowEditCl(c)}><Ico e="✏️" solo/></span>}</div></td>}
+            </tr>)}</tbody>
+        </table></div>{pagPie("usuarios",lista.length)}
+      </div></>;
   };
 
   // ── ROLES ──────────────────────────────────────────────────────────────────
