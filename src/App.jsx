@@ -6,7 +6,7 @@ import { descargarXlsx } from './xlsx'
 import { dbGetActividadReporte } from './supabase'
 import { dbGetFacturasPropias, dbUpsertFacturaPropia, dbGetPrealertas, dbUpsertPrealerta, paSubirArchivo, paUrlArchivo } from './supabase'
 import { chatFromDB, dbChatMensajes, dbChatEnviar, dbChatEditar, dbChatNoLeidos, dbChatMarcarLeido, chatSubirAdjunto, chatUrlAdjunto } from './supabase'
-import { supabase, resolverLogin, cuentaGuardar, cuentaEliminar, dbGetClientes, dbUpsertCliente, dbDeleteCliente, dbGetWR, dbUpsertWR as dbUpsertWRBase, dbDeleteWR, dbGetAgentes, dbUpsertAgente, dbDeleteAgente, dbGetOficinas, dbUpsertOficina, dbDeleteOficina, dbGetTarifas, dbUpsertTarifa, dbDeleteTarifa, dbGetConsolidaciones, dbUpsertConsolidacion, dbDeleteConsolidacion, dbGetCargoReleases, dbUpsertCargoRelease, dbDeleteCargoRelease, dbGetDeliveryNotes, dbUpsertDeliveryNote, dbDeleteDeliveryNote, dbGetFacturas, dbUpsertFactura, dbDeleteFactura, dbGetPagos, dbUpsertPago as dbUpsertPagoBase, dbDeletePago, dbSigDocumento, dbRenombrarFactura, storageUploadComprobante, dbLogActividad, dbGetActividad, dbGetConfig, dbSetConfig, dbGetScanLog, dbInsertScan, dbSetScanRegistered, dbDeleteScanIds, storageUploadFoto, storageDeleteFoto, dbGetFotosByWR, dbInsertFoto, dbDeleteFoto, storageUploadFotoConsol, storageDeleteFotoConsol, dbGetFotosByConsol, dbInsertFotoConsol, dbDeleteFotoConsol } from "./supabase";
+import { supabase, resolverLogin, cuentaGuardar, cuentaEliminar, dbGetClientes, dbUpsertCliente, dbDeleteCliente, dbGetWR, dbUpsertWR as dbUpsertWRBase, dbDeleteWR, dbGetAgentes, dbUpsertAgente, dbDeleteAgente, dbGetOficinas, dbUpsertOficina, dbDeleteOficina, dbGetTarifas, dbUpsertTarifa, dbDeleteTarifa, dbGetConsolidaciones, dbUpsertConsolidacion, dbDeleteConsolidacion, dbGetCargoReleases, dbUpsertCargoRelease, dbDeleteCargoRelease, dbGetDeliveryNotes, dbUpsertDeliveryNote, dbGetTraslados, dbUpsertTraslado, dbDeleteDeliveryNote, dbGetFacturas, dbUpsertFactura, dbDeleteFactura, dbGetPagos, dbUpsertPago as dbUpsertPagoBase, dbDeletePago, dbSigDocumento, dbRenombrarFactura, storageUploadComprobante, dbLogActividad, dbGetActividad, dbGetConfig, dbSetConfig, dbGetScanLog, dbInsertScan, dbSetScanRegistered, dbDeleteScanIds, storageUploadFoto, storageDeleteFoto, dbGetFotosByWR, dbInsertFoto, dbDeleteFoto, storageUploadFotoConsol, storageDeleteFotoConsol, dbGetFotosByConsol, dbInsertFotoConsol, dbDeleteFotoConsol } from "./supabase";
 
 // ─── TEMA CLARO PROFESIONAL ───────────────────────────────────────────────────
 const S = `
@@ -585,6 +585,8 @@ const ALL_PERMS=[
   "crear_reporte","editar_reporte","borrar_reporte",
   // Permiso especial: salta los bloqueos del proceso por estado
   "saltar_bloqueos",
+  // Traslados entre oficinas
+  "ver_traslado","crear_traslado","recibir_traslado","anular_traslado","imp_traslado",
   // Límites de edición, facturación PREPAID en origen
   "editar_wr_destino","editar_guia_destino","fac_prepaid","cobrar_prepaid","ver_estado_contable","ver_estado_autonomo","ver_estado_vendedor","ver_datos_completos","alerta_investigar","exportar_excel","ver_cierre_caja","ver_comisiones","alerta_aparecio","alerta_sobrante","registrar_remitente","imp_estado_cuenta","imp_listado_clientes","editar_wr_lib3","editar_guia_lib3","dar_acceso","imp_release","imp_pickup","imp_recibo_cobro","cfg_agentes_ver","cfg_oficinas_ver","cfg_tarifas_ver",
   // Configuración: cada pestaña con su ver / editar
@@ -593,7 +595,7 @@ const ALL_PERMS=[
 // Solo el Administrador puede borrar y ver el registro de actividad; no se asignan a otros roles
 const PERMS_SOLO_ADMIN=new Set([...ALL_PERMS.filter(p=>p.startsWith("borrar_")),"registro_actividad"]);
 
-const PERM_LBL={ver_estado_vendedor:"Estado de cuenta de vendedores",ver_estado_autonomo:"Estado de cuenta de autónomos",alerta_investigar:"Alertas: abrir investigación de faltantes",ver_datos_completos:"Ver datos personales completos (ID, teléfono, email)",exportar_excel:"Exportar reportes a Excel",ver_cierre_caja:"Contabilidad: ver Caja y cierre de caja",ver_comisiones:"Ver comisiones de agentes y autónomos",imp_estado_cuenta:"Impr. Estado de cuenta",imp_listado_clientes:"Imprimir / exportar listados de clientes, usuarios, agentes, autónomos y oficinas",alerta_sobrante:"Alertas: resolver sobrantes (entregar, devolver a origen, otra guía)",registrar_remitente:"Registrar al remitente (shipper) como cliente desde el WR",editar_wr_lib3:"Editar WR de Tránsito 2 hasta Liberado 3",editar_guia_lib3:"Editar guías de Tránsito 2 hasta Liberado 3",alerta_aparecio:"Alertas: marcar «Apareció»",ver_estado_contable:"Estado de cuenta: ver parte contable (facturas, pagos, saldo)",dar_acceso:"Dar acceso al sistema (contraseña)",imp_release:"Impr. Cargo Release",imp_pickup:"Impr. Pick-up",imp_recibo_cobro:"Impr. Recibo de cobro",cfg_agentes_ver:"Config · Agentes (ver)",cfg_oficinas_ver:"Config · Oficinas (ver)",cfg_tarifas_ver:"Config · Tarifas (ver)",editar_wr_destino:"Editar WR desde Liberado 3 hasta entregado",editar_guia_destino:"Editar guías desde Liberado 3",fac_prepaid:"Facturar PREPAID en origen (desde el WR)",cobrar_prepaid:"Cobrar facturas PREPAID",cfg_empresa_ver:"Config · Empresa (ver)",cfg_empresa_editar:"Config · Empresa (editar)",cfg_documentos_ver:"Config · Documentos por país (ver)",cfg_documentos_editar:"Config · Documentos por país (editar)",cfg_numeracion_ver:"Config · Numeración (ver)",cfg_numeracion_editar:"Config · Numeración (editar)",cfg_tipoenvio_ver:"Config · Tipo de Envío (ver)",cfg_tipoenvio_editar:"Config · Tipo de Envío (editar)",cfg_servicios_ver:"Config · Servicios Adicionales (ver)",cfg_servicios_editar:"Config · Servicios Adicionales (editar)",cfg_cargos_ver:"Config · Gastos Adicionales (ver)",cfg_cargos_editar:"Config · Gastos Adicionales (editar)",cfg_pagos_ver:"Config · Tipos de Pago (ver)",cfg_pagos_editar:"Config · Tipos de Pago (editar)",cfg_contenedores_ver:"Config · Tipos de Contenedor (ver)",cfg_contenedores_editar:"Config · Tipos de Contenedor (editar)",cfg_paises_ver:"Config · Países y Ciudades (ver)",cfg_paises_editar:"Config · Países y Ciudades (editar)",cfg_chat_ver:"Config · Canales de chat (ver)",cfg_chat_editar:"Config · Canales de chat (editar)",
+const PERM_LBL={ver_traslado:"Ver traslados",crear_traslado:"Crear traslados",recibir_traslado:"Recibir traslados",anular_traslado:"Anular traslados",imp_traslado:"Imprimir traslados",ver_estado_vendedor:"Estado de cuenta de vendedores",ver_estado_autonomo:"Estado de cuenta de autónomos",alerta_investigar:"Alertas: abrir investigación de faltantes",ver_datos_completos:"Ver datos personales completos (ID, teléfono, email)",exportar_excel:"Exportar reportes a Excel",ver_cierre_caja:"Contabilidad: ver Caja y cierre de caja",ver_comisiones:"Ver comisiones de agentes y autónomos",imp_estado_cuenta:"Impr. Estado de cuenta",imp_listado_clientes:"Imprimir / exportar listados de clientes, usuarios, agentes, autónomos y oficinas",alerta_sobrante:"Alertas: resolver sobrantes (entregar, devolver a origen, otra guía)",registrar_remitente:"Registrar al remitente (shipper) como cliente desde el WR",editar_wr_lib3:"Editar WR de Tránsito 2 hasta Liberado 3",editar_guia_lib3:"Editar guías de Tránsito 2 hasta Liberado 3",alerta_aparecio:"Alertas: marcar «Apareció»",ver_estado_contable:"Estado de cuenta: ver parte contable (facturas, pagos, saldo)",dar_acceso:"Dar acceso al sistema (contraseña)",imp_release:"Impr. Cargo Release",imp_pickup:"Impr. Pick-up",imp_recibo_cobro:"Impr. Recibo de cobro",cfg_agentes_ver:"Config · Agentes (ver)",cfg_oficinas_ver:"Config · Oficinas (ver)",cfg_tarifas_ver:"Config · Tarifas (ver)",editar_wr_destino:"Editar WR desde Liberado 3 hasta entregado",editar_guia_destino:"Editar guías desde Liberado 3",fac_prepaid:"Facturar PREPAID en origen (desde el WR)",cobrar_prepaid:"Cobrar facturas PREPAID",cfg_empresa_ver:"Config · Empresa (ver)",cfg_empresa_editar:"Config · Empresa (editar)",cfg_documentos_ver:"Config · Documentos por país (ver)",cfg_documentos_editar:"Config · Documentos por país (editar)",cfg_numeracion_ver:"Config · Numeración (ver)",cfg_numeracion_editar:"Config · Numeración (editar)",cfg_tipoenvio_ver:"Config · Tipo de Envío (ver)",cfg_tipoenvio_editar:"Config · Tipo de Envío (editar)",cfg_servicios_ver:"Config · Servicios Adicionales (ver)",cfg_servicios_editar:"Config · Servicios Adicionales (editar)",cfg_cargos_ver:"Config · Gastos Adicionales (ver)",cfg_cargos_editar:"Config · Gastos Adicionales (editar)",cfg_pagos_ver:"Config · Tipos de Pago (ver)",cfg_pagos_editar:"Config · Tipos de Pago (editar)",cfg_contenedores_ver:"Config · Tipos de Contenedor (ver)",cfg_contenedores_editar:"Config · Tipos de Contenedor (editar)",cfg_paises_ver:"Config · Países y Ciudades (ver)",cfg_paises_editar:"Config · Países y Ciudades (editar)",cfg_chat_ver:"Config · Canales de chat (ver)",cfg_chat_editar:"Config · Canales de chat (editar)",
   ver_usuarios:"Ver Usuarios",crear_usuario:"Crear Usuario",editar_usuario:"Editar Usuario",borrar_usuario:"Borrar Usuario",
   crear_cliente:"Crear Cliente",editar_cliente:"Editar Cliente",borrar_cliente:"Borrar Cliente",
   ver_agente:"Ver Agente",crear_agente:"Crear Agente",editar_agente:"Editar Agente",borrar_agente:"Borrar Agente",
@@ -649,6 +651,7 @@ const PERM_MODULES=[
   {m:"Confirmación",ic:"✅",ver:"ver_confirmacion",crear:"confirmar",editar:"editar_confirmacion",borrar:"desconfirmar"},
   {m:"Cargo Release (Egreso)",ic:"🚀",ver:"ver_egreso",crear:"hacer_egreso",editar:"editar_egreso",borrar:"borrar_egreso"},
   {m:"Recepción en Almacén",ic:"📥",ver:"ver_recepcion_dest",crear:"hacer_recepcion_dest",editar:"editar_recepcion_dest",borrar:"borrar_recepcion_dest"},
+  {m:"Traslados entre oficinas",ic:"🚚",ver:"ver_traslado",crear:"crear_traslado",editar:"recibir_traslado",borrar:"anular_traslado"},
   {m:"Entregas",ic:"📝",ver:"ver_entrega",crear:"entregar",editar:"editar_entrega",borrar:"borrar_entrega"},
   {m:"Alertas",ic:"🔔",ver:"ver_alertas",crear:"crear_alerta",editar:"editar_alerta",borrar:"borrar_alerta"},
   {m:"Facturas",ic:"🧾",ver:"ver_factura",crear:"crear_factura",editar:"editar_factura",borrar:"borrar_factura"},
@@ -687,7 +690,7 @@ const PERM_GROUPS=[
   {label:"Operaciones Origen",perms:["ver_rp","hacer_rp","editar_rp","ver_wr","crear_wr","editar_wr","borrar_wr","ver_booking","crear_booking","editar_booking","solicitar_reempaque","ver_reempaque","crear_reempaque","editar_reempaque","ver_guia","crear_guia","editar_guia","ver_confirmacion","confirmar","desconfirmar","ver_egreso","hacer_egreso","editar_egreso","status_origen"]},
   {label:"Operaciones Destino",perms:["ver_recepcion_dest","hacer_recepcion_dest","editar_recepcion_dest","ver_entrega","entregar","revertir_entrega","editar_entrega","status_destino"]},
   {label:"Reportes",perms:["ver_reportes","rep_confirmados","rep_guia_op","rep_postal","rep_packing","rep_maestro"]},
-  {label:"Impresión",perms:["imp_estado_cuenta","imp_listado_clientes","imp_release","imp_pickup","imp_recibo_cobro","imp_wr","imp_guia","imp_etiq_caja","imp_etiq_guia","imp_rp","imp_booking","imp_reempaque","imp_lista_conf","imp_guia_op","imp_postal","imp_packing","imp_recibo_entrega","imp_factura"]},
+  {label:"Impresión",perms:["imp_traslado","imp_estado_cuenta","imp_listado_clientes","imp_release","imp_pickup","imp_recibo_cobro","imp_wr","imp_guia","imp_etiq_caja","imp_etiq_guia","imp_rp","imp_booking","imp_reempaque","imp_lista_conf","imp_guia_op","imp_postal","imp_packing","imp_recibo_entrega","imp_factura"]},
   {label:"Estado de Cuenta & Tracking",perms:["ver_estado_cuenta","ver_estado_cliente","ver_estado_agente","ver_estado_oficina","ver_tracking","rastrear","ver_prealerta","pre_tracking","pre_factura"]},
   {label:"Servicios & Tarifas",perms:["ver_servicios","crear_servicio","editar_servicio","borrar_servicio","sel_servicio","ver_adicionales","crear_adicional","editar_adicional","borrar_adicional","sel_adicional","calculadora","ver_tarifas","crear_tarifa","editar_tarifa","borrar_tarifa"]},
   {label:"Chat & Pick-up",perms:["chat_directo","chat_adjuntar","chat_moderar","chat_canales","ver_pickup","solicitar_pickup"]},
@@ -967,6 +970,8 @@ const ROLE_DEFS={
 ROLE_DEFS.G.perms.push("ver_documentos","crear_factura"); // la oficina de origen factura los PREPAID
 // Quien ya podía crear/editar clientes sigue viendo el menú Clientes
 ["E","E1","F"].forEach(r=>ROLE_DEFS[r].perms.push("ver_bd_clientes"));
+// Traslados entre oficinas: operaciones y sucursales los hacen y los reciben
+["C","D","D1","D2","G"].forEach(r=>ROLE_DEFS[r].perms.push("ver_traslado","crear_traslado","recibir_traslado","imp_traslado"));
 const ALL_ROLES=Object.values(ROLE_DEFS);
 // Permisos por defecto de cada rol (los del código). Lo guardado en Configuración los reemplaza.
 const DEFAULT_ROLE_PERMS=Object.fromEntries(ALL_ROLES.map(r=>[r.code,[...r.perms]]));
@@ -1036,8 +1041,9 @@ const buildConsolNum=(origCode,destCode,seq,tipo=1,secInicio=1,tipoEnvio="Marít
 //              "recepcion"      → editable desde Recepción en Almacén
 // exc:true → estado de excepción (faltante / investigación / sobrante)
 // Dónde está físicamente el WR según su estado (id de oficina, o "" si va en tránsito)
-const ubicacionWR=w=>{if(!w)return "";const c=String(w.status?.code||"1"),n=parseFloat(c)||0;
-  if(c==="20.2")return w.sucursalEntrega||w.ofiDestino||w.ofiActual||"";
+const ubicacionWR=w=>{if(!w)return "";if(w.trasladoId)return ""; // va en un traslado entre oficinas
+  const c=String(w.status?.code||"1"),n=parseFloat(c)||0;
+  if(c==="20.2")return w.ofiActual||w.sucursalEntrega||w.ofiDestino||"";
   if(c==="20.1"||(n>=5&&n<17))return "";
   if(n>=17&&n<21)return w.ofiDestino||w.ofiActual||"";
   if(n>=21)return w.ofiActual||"";
@@ -1070,7 +1076,7 @@ const WR_STATUSES=[
   {code:"18.1",label:"Investigación",   cls:"s4", phase:"excep",    auto:false, manual:true,  channels:["dashboard","recepcion"], exc:true},
   {code:"19",  label:"Sobrante",        cls:"s5", phase:"excep",    auto:true,  manual:false, channels:["dashboard","recepcion"], exc:true},
   {code:"20",  label:"Por Entrega",     cls:"s3", phase:"entrega",  auto:true,  manual:false, channels:["dashboard","cliente"]},
-  {code:"20.1",label:"Despachado a Sucursal", cls:"s2", phase:"entrega", auto:true, manual:false, channels:["dashboard","cliente"]},
+  {code:"20.1",label:"En traslado a sucursal", cls:"s2", phase:"entrega", auto:true, manual:false, channels:["dashboard","cliente"]},
   {code:"20.2",label:"En Sucursal",     cls:"s6", phase:"entrega",  auto:true,  manual:false, channels:["dashboard","cliente"]},
   {code:"21",  label:"Entregado",       cls:"s3", phase:"entrega",  auto:true,  manual:false, channels:["dashboard","recepcion"]},
   {code:"22",  label:"Por Cobrar",      cls:"s5", phase:"entrega",  auto:true,  manual:false, channels:["dashboard"]},
@@ -2576,6 +2582,13 @@ export default function SistemaCarga(){
   const [crPrint,setCrPrint]=useState(null); // release a imprimir
   // Delivery Notes (entregas)
   const [deliveryNotes,setDeliveryNotes]=useState([]);
+  const [traslados,setTraslados]=useState([]);
+  const [trVista,setTrVista]=useState("enviar");
+  const [trForm,setTrForm]=useState(null);     // nuevo traslado
+  const [trRecibir,setTrRecibir]=useState(null); // recepción con escaneo
+  const [trPrint,setTrPrint]=useState(null);
+  const [trBusca,setTrBusca]=useState("");
+  const [trEstado,setTrEstado]=useState("");
   // Usuario de oficina: solo ve la carga de su sucursal. Se guarda la lista completa
   // aparte para poder recalcular cuando cambian clientes, oficinas o despachos.
   const wrAllRef=useRef(null);
@@ -2841,6 +2854,7 @@ export default function SistemaCarga(){
       ]);
       if(cls.length>0)setClients(cls);
       dbGetPickups().then(setPickupList);
+      dbGetTraslados().then(setTraslados);
       dbGetFacturasPropias().then(setFpList);
       dbGetPrealertas().then(setPaList);
       dbGetSolicitudesRpq().then(setSrList);
@@ -4746,6 +4760,7 @@ export default function SistemaCarga(){
                 return (selWR.ofiOrigen||selWR.ofiDestino)&&<>
                 <div className="wf"><div className="wfl">Oficina origen → destino</div><div className="wfv" style={{fontWeight:600}}>{n(selWR.ofiOrigen)} → {n(selWR.ofiDestino)}</div></div>
                 <div className="wf"><div className="wfl">Ubicación actual</div><div className="wfv" style={{fontWeight:700,color:"var(--navy)"}}>{(()=>{const u=ubicacionWR(selWR);const c=selWR.status?.code||"";
+                  if(selWR.trasladoId){const t=traslados.find(x=>x.id===selWR.trasladoId);return <span>En traslado a {n(t?.hasta)} · <Num t="traslado" id={selWR.trasladoId}/></span>;}
                   return u?n(u):c==="20.1"?`En camino a ${n(selWR.sucursalEntrega)}`:"En tránsito";})()}</div></div></>;})()}
               {_cl?.tel1&&<div className="wf"><div className="wfl">Teléfono</div><div className="wfv">{oc(_cl.tel1)}</div></div>}
               {_cl?.email&&<div className="wf"><div className="wfl">Email</div><div className="wfv">{_cl.email}</div></div>}
@@ -4921,6 +4936,7 @@ export default function SistemaCarga(){
     if(t==="entrega")return ir(deliveryNotes.find(n=>n.id===id),setDnPrint);
     if(t==="release")return ir(cargoReleases.find(c=>c.id===id),setCrPrint);
     if(t==="pickup")return ir(pickupList.find(p=>p.id===id),setPuPrint);
+    if(t==="traslado")return ir(traslados.find(x=>x.id===id),setTrPrint);
     if(t==="recibo")return ir(pagos.some(p=>p.reciboId===id)?id:null,setReciboVer);
     if(t==="fpropia")return ir(fpList.find(f=>f.id===id),f=>prnVer(`Factura ${f.id}`,fpHTML(f)));
     return false;
@@ -5660,6 +5676,13 @@ export default function SistemaCarga(){
       return `El WR ${wrId} es tipo ${wr.tipoEnvio} y la guía es ${cf.tipoEnvio}. No se mezclan tipos en un mismo embarque.`;
     }
     if(cf.containers.some(c=>c.wr.some(r=>r.id===wrId)))return "WR ya está en un contenedor";
+    // Bloqueo por ubicación: el WR tiene que estar físicamente en la matriz que despacha la guía
+    if(wr.ofiOrigen&&!hasPerm("saltar_bloqueos")){
+      const _mG=oficinas.find(o=>o.id===(cf.ofiOrigen||matrizDe(oficinas.find(x=>x.id===currentUser.oficinaId))?.id));
+      if(wr.trasladoId)return `El WR ${wrId} va en el traslado ${wr.trasladoId}. Recíbelo en la matriz antes de meterlo en la guía.`;
+      const _u=ubicacionWR(wr);
+      if(_mG&&_u&&_u!==_mG.id){const o=oficinas.find(x=>x.id===_u);return `El WR ${wrId} está en ${o?`${o.codigo} — ${o.nombre}`:"otra oficina"}. Trasládalo a ${_mG.codigo} — ${_mG.nombre} antes de meterlo en la guía.`;}
+    }
     {const otra=consolList.find(g=>g.id!==editConsolId&&(g.containers||[]).some(ct=>(ct.wr||[]).some(r=>r.id===wrId)));
      if(otra)return `El WR ${wrId} ya está en la guía ${otra.id}.`;}
     scCont(ci,"wr",[...cf.containers[ci].wr,{id:wr.id,consignee:wr.consignee,cajas:wr.cajas||1,pesoLb:wr.pesoLb||0,ft3:wr.ft3||0,descripcion:wr.descripcion||""}]);
@@ -6284,8 +6307,8 @@ export default function SistemaCarga(){
     const facIdsVis=new Set(facsVis.map(f=>f.id));
     const pagosVis=alcanceUsr?pagos.filter(p=>facIdsVis.has(p.facturaId)):pagos;
     const guiasVis=alcanceUsr?consolList.filter(g=>tocaVis((g.containers||[]).flatMap(c=>(c.wr||[]).map(w=>w.id)))):consolList;
-    const IMP_P={wr:"imp_wr",guia:"imp_guia",entrega:"imp_recibo_entrega",egreso:"imp_release",factura:"imp_factura",recibo:"imp_recibo_cobro",pickup:"imp_pickup"};
-    const TIPOS=[["wr","WR"],["guia","Guía"],["entrega","Nota de entrega"],["egreso","Cargo Release"],["factura","Factura"],["recibo","Recibo de cobro"],["pickup","Pick-up"]].filter(([k])=>hasPerm(IMP_P[k]));
+    const IMP_P={traslado:"imp_traslado",wr:"imp_wr",guia:"imp_guia",entrega:"imp_recibo_entrega",egreso:"imp_release",factura:"imp_factura",recibo:"imp_recibo_cobro",pickup:"imp_pickup"};
+    const TIPOS=[["wr","WR"],["guia","Guía"],["entrega","Nota de entrega"],["egreso","Cargo Release"],["traslado","Traslado"],["factura","Factura"],["recibo","Recibo de cobro"],["pickup","Pick-up"]].filter(([k])=>hasPerm(IMP_P[k]));
     if(!TIPOS.length)return <div className="page-scroll"><div className="card" style={{textAlign:"center",padding:60,color:"var(--t3)"}}>Sin acceso.</div></div>;
     if(!TIPOS.some(([k])=>k===tipo)){setTimeout(()=>setEtqTipo(TIPOS[0][0]),0);return null;}
     let filas=[];
@@ -6324,13 +6347,18 @@ export default function SistemaCarga(){
         izq:<><Num t="recibo" id={r.id}/><div style={{fontSize:13,color:"var(--t3)"}}>{fmtDate(r.fecha)} · {r.quien} · {fmtMoney(r.monto,r.moneda)}{r.facs.size?` · fact. ${[...r.facs].join(", ")}`:""}</div></>,
         estado:r.anulado?<span style={{fontSize:12,fontWeight:700,color:"var(--red)"}}>Anulado</span>:null,
         acc:verImp(()=>verRecibo(r.id),()=>printRecibo(r.id))}));}
+    if(tipo==="traslado")filas=trVisibles.filter(t=>hay(`${t.id} ${trOfiNom(t.desde)} ${trOfiNom(t.hasta)} ${t.chofer} ${t.carrier} ${t.tracking} ${(t.wrIds||[]).join(" ")}`))
+      .sort(porFecha).map(t=>({k:t.id,
+        izq:<><Num t="traslado" id={t.id}/><div style={{fontSize:13,color:"var(--t3)"}}>{fmtDate(t.fecha)} · {trOfiNom(t.desde)} → {trOfiNom(t.hasta)} · {(t.wrIds||[]).length} WR</div></>,
+        estado:trChip(t.estado),
+        acc:verImp(()=>setTrPrint(t),()=>prnImprimir(htmlTraslado(t)))}));
     if(tipo==="pickup")filas=pickupList.filter(p=>(!alcanceUsr||p.solicitanteId===currentUser.id||alcanceUsr.clienteOk(clients.find(c=>c.id===p.clienteId)))
         &&hay(`${p.id} ${p.clienteNombre} ${p.casillero} ${p.direccion} ${p.contacto} ${p.wrId}`))
       .sort((a,b)=>new Date(b.fecha)-new Date(a.fecha)).map(p=>({k:p.id,
         izq:<><Num t="pickup" id={p.id}/><div style={{fontSize:13,color:"var(--t3)"}}>{fmtDate(p.fecha)} · {p.clienteNombre||"—"} · {puBultos(p)} bulto{puBultos(p)===1?"":"s"}{p.wrId?` · WR ${p.wrId}`:""}</div></>,
         estado:puChip(p.status),
         acc:verImp(()=>setPuPrint(p),()=>prnImprimir(htmlPickup(p)))}));
-    const ph={pickup:"Buscar pick-up, cliente, dirección o WR…",wr:"Buscar WR, nombre, casillero o tracking…",guia:"Buscar guía, destino, AWB o BL…",entrega:"Buscar nota, receptor, guía o WR…",egreso:"Buscar cargo release, agente de carga o WR…",factura:"Buscar factura, cliente, casillero o WR…",recibo:"Buscar recibo, cliente o factura…"}[tipo];
+    const ph={traslado:"Buscar traslado, oficina, chofer, carrier o WR…",pickup:"Buscar pick-up, cliente, dirección o WR…",wr:"Buscar WR, nombre, casillero o tracking…",guia:"Buscar guía, destino, AWB o BL…",entrega:"Buscar nota, receptor, guía o WR…",egreso:"Buscar cargo release, agente de carga o WR…",factura:"Buscar factura, cliente, casillero o WR…",recibo:"Buscar recibo, cliente o factura…"}[tipo];
     return (
     <div className="page-scroll">
       <div className="card" style={{marginBottom:12}}>
@@ -6901,6 +6929,22 @@ export default function SistemaCarga(){
         ...(ext?[]:[W("Pick-up","cargo","Cargo","money",r=>r.monto||0,{cur:r=>r.moneda||"USD"})]),W("Pick-up","wr","WR","txt",r=>r.wrId||"")],
         filas:()=>pickupList.filter(p=>!ext||p.solicitanteId===currentUser.id||alcanceUsr.clienteOk(clients.find(c=>c.id===p.clienteId)))},
       ...(ext?{}:{
+      traslado:{l:"Traslados entre oficinas",ic:<Ico e="🚚"/>,fecha:"fecha",campos:[
+        W("Traslado","id","N° traslado","txt",r=>r.id),W("Traslado","fecha","Fecha","fecha",r=>r.fecha),W("Traslado","hora","Hora","txt",r=>fmtTime(r.fecha)),
+        W("Traslado","estado","Estado","txt",r=>(TR_ESTADO[r.estado]||{l:r.estado}).l),
+        W("Traslado","envia","Envía","txt",r=>trOfiNom(r.desde)),W("Traslado","recibe","Recibe","txt",r=>trOfiNom(r.hasta)),
+        W("Traslado","tipo","Tipo","txt",r=>esMatriz(trOfi(r.hasta))?"Origen (a matriz)":"Destino (a sucursal)"),
+        W("Traslado","transporte","Transporte","txt",r=>r.modo==="carrier"?"Carrier externo":"Chofer de la empresa"),
+        W("Traslado","chofer","Chofer","txt",r=>r.chofer||""),W("Traslado","vehiculo","Vehículo","txt",r=>r.vehiculo||""),
+        W("Traslado","carrier","Carrier","txt",r=>r.carrier||""),W("Traslado","tracking","Tracking","txt",r=>r.tracking||""),
+        W("Traslado","nWR","WR","num",r=>(r.wrIds||[]).length),W("Traslado","nRec","WR recibidos","num",r=>(r.recibidos||[]).length),
+        W("Traslado","wrs","N° de WR","txt",r=>(r.wrIds||[]).join(", ")),
+        W("Traslado","cajas","Cajas","num",r=>(r.wrIds||[]).reduce((t,id)=>t+(parseInt(wrList.find(w=>w.id===id)?.cajas,10)||0),0)),
+        W("Traslado","lb","Peso lb","num",r=>(r.wrIds||[]).reduce((t,id)=>t+(parseFloat(wrList.find(w=>w.id===id)?.pesoLb)||0),0)),
+        W("Traslado","fechaRec","Fecha de recepción","fecha",r=>r.fechaRecibido||null),W("Traslado","quienRec","Recibió","txt",r=>r.recibe||""),
+        W("Traslado","dias","Días en camino","num",r=>{const f=r.fechaRecibido||(["en_camino","parcial"].includes(r.estado)?new Date():null);return f?Math.max(0,Math.floor((new Date(f)-new Date(r.fecha))/864e5)):0;}),
+        W("Traslado","usuario","Registrado por","txt",r=>nomUsr(r.usuario)),W("Traslado","notas","Notas","txt",r=>r.notas||""),W("Traslado","motivo","Motivo de anulación","txt",r=>r.motivoAnulacion||"")],
+        filas:()=>trVisibles},
       puerta:{l:"Recepción en puerta",ic:<Ico e="📡"/>,fecha:"fecha",campos:[
         W("Recepción","fecha","Fecha","fecha",r=>r.ts),W("Recepción","hora","Hora","txt",r=>fmtTime(r.ts)),W("Recepción","tracking","Tracking","txt",r=>r.tracking),
         W("Recepción","carrier","Carrier","txt",r=>r.carrier||""),W("Recepción","registrado","Con WR","txt",r=>siNo(r.registered))],filas:()=>scanLog},
@@ -6918,7 +6962,7 @@ export default function SistemaCarga(){
     };
     void R2;
     if(!hasPerm("imp_listado_clientes")){delete F.cliente;delete F.usuario;delete F.agente;delete F.oficina;}
-    if(!hasPerm("ver_comisiones"))delete F.comision;
+    if(!hasPerm("ver_comisiones"))delete F.comision;if(!hasPerm("ver_traslado"))delete F.traslado;
     return F;
   };
   // Reportes de ejemplo (el usuario los puede editar o borrar)
@@ -10890,7 +10934,7 @@ export default function SistemaCarga(){
   // Bloque F — Solo se puede reempacar WR cuyo status sea ≤ Confirmado (1, 2 o 3).
   // Cualquier estado superior (4+) o el propio 2.3 (ya reempacado) queda bloqueado.
   const REEMPAQUE_ALLOWED_CODES=["1","2","3"];
-  const puedeReempacarse=(w)=>REEMPAQUE_ALLOWED_CODES.includes(w?.status?.code||"1");
+  const puedeReempacarse=(w)=>REEMPAQUE_ALLOWED_CODES.includes(w?.status?.code||"1")&&!w?.trasladoId; // no se reempaca lo que va en camino
   // Reglas de bloqueo del WR — Reempacado (2.3), Egresado (25) y todo lo que esté
   // en Consolidado (4) o posterior queda FIJO: no se edita, no se confirma tipo,
   // no se reempaqueta y no se egresa. Solo es modificable cuando el código es 1, 2 o 3.
@@ -11697,7 +11741,7 @@ export default function SistemaCarga(){
   // Al crear: todos los WRs pasan a estado 25 Egresado. Sólo se puede egresar desde Origen,
   // antes de Consolidación. Estados elegibles: 1 (Recibido), 2 (Origen), 3 (Confirmado).
   // No elegibles: 2.3 (Reempacado), 4+ (Consolidado en adelante), 25 (ya Egresado).
-  const crElegible=(w)=>["1","2","3"].includes(w.status?.code||"");
+  const crElegible=(w)=>["1","2","3"].includes(w.status?.code||"")&&!w.trasladoId;
   const crBuildId=()=>{
     const d=new Date();
     const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,"0"), dd=String(d.getDate()).padStart(2,"0");
@@ -13279,6 +13323,338 @@ export default function SistemaCarga(){
     );
   };
 
+  // ── TRASLADOS ENTRE OFICINAS ─────────────────────────────────────────────
+  // Origen: sucursal → matriz (antes de la guía). Destino: matriz → sucursal de entrega (después de la guía).
+  // El WR guarda en trasladoId el traslado en el que va; mientras va en camino no está en ninguna oficina.
+  const TR_ESTADO={en_camino:{l:"En camino",c:"#0080CC",bg:"#E3F2FD",bd:"#90CAF9"},parcial:{l:"Recibido parcial",c:"#E65100",bg:"#FFF3E0",bd:"#FFCC80"},
+    recibido:{l:"Recibido",c:"#2E7D32",bg:"#E8F5E9",bd:"#A5D6A7"},anulado:{l:"Anulado",c:"#C62828",bg:"#FFEBEE",bd:"#EF9A9A"}};
+  const trChip=e=>{const x=TR_ESTADO[e]||TR_ESTADO.en_camino;return <span style={{fontSize:12,fontWeight:700,padding:"2px 9px",borderRadius:10,background:x.bg,color:x.c,border:`1px solid ${x.bd}`,whiteSpace:"nowrap"}}>{x.l}</span>;};
+  const trOfi=id=>oficinas.find(o=>o.id===id)||null;
+  const trOfiNom=id=>{const o=trOfi(id);return o?`${o.codigo} — ${o.nombre}`:"—";};
+  // Oficinas en las que el usuario puede enviar o recibir (null = todas)
+  const trAlcance=currentUser?.rol==="G"?new Set([currentUser.oficinaId].filter(Boolean)):misOficinas;
+  const trEnAlcance=id=>!trAlcance||trAlcance.has(id);
+  const trVisibles=traslados.filter(t=>trEnAlcance(t.desde)||trEnAlcance(t.hasta));
+  const trCodigo=w=>String(w?.status?.code||"1");
+  const trEsOrigen=w=>{const c=trCodigo(w),n=parseFloat(c)||0;return n<5&&c!=="2.3";};
+  const trEsDestino=w=>trCodigo(w)==="20";
+  // ¿Se puede trasladar este WR desde esta oficina? Devuelve el motivo si no.
+  const trValidarWR=(w,desde)=>{
+    if(!w)return "WR no encontrado.";
+    if(w.trasladoId)return `El WR ${w.id} ya va en el traslado ${w.trasladoId}.`;
+    if(!trEsOrigen(w)&&!trEsDestino(w))return `El WR ${w.id} está en ${w.status?.label||trCodigo(w)}. Solo se trasladan WR antes de la guía (hasta Consolidado) o Por Entrega en destino.`;
+    const u=w.ofiOrigen?(ubicacionWR(w)||(trEsDestino(w)?w.ofiDestino:"")):"";
+    if(u&&desde&&u!==desde)return `El WR ${w.id} está en ${trOfiNom(u)}, no en ${trOfiNom(desde)}.`;
+    return null;
+  };
+  // Carga que tiene que moverse: agrupada por oficina que envía → oficina que recibe
+  const trPorEnviar=()=>{
+    const m=new Map();
+    const add=(desde,hasta,tipo,w)=>{if(!desde||!hasta||desde===hasta||!trEnAlcance(desde))return;
+      const k=`${desde}>${hasta}`;if(!m.has(k))m.set(k,{k,desde,hasta,tipo,wrs:[]});m.get(k).wrs.push(w);};
+    wrList.forEach(w=>{
+      if(!w.ofiOrigen||w.trasladoId)return;
+      if(trEsOrigen(w)){const o=trOfi(ubicacionWR(w));if(o&&!esMatriz(o)){const mt=matrizDe(o);if(mt)add(o.id,mt.id,"origen",w);}return;}
+      if(trEsDestino(w)&&w.sucursalEntrega){const u=ubicacionWR(w)||w.ofiDestino;add(u,w.sucursalEntrega,"destino",w);}
+    });
+    return [...m.values()].sort((a,b)=>trOfiNom(a.desde).localeCompare(trOfiNom(b.desde))||trOfiNom(a.hasta).localeCompare(trOfiNom(b.hasta)));
+  };
+  const trNuevo=(desde="",hasta="",wrIds=[])=>{
+    if(!hasPerm("crear_traslado")){window.alert("Tu rol no tiene permiso para crear traslados.");return;}
+    const unica=trAlcance&&trAlcance.size===1?[...trAlcance][0]:"";
+    setTrForm({desde:desde||unica,hasta,wrIds:[...wrIds],modo:"",chofer:"",vehiculo:"",carrier:"",tracking:"",notas:"",qDesde:"",qHasta:"",scan:"",err:"",guardando:false});
+  };
+  const trAgregarWR=()=>{
+    const f=trForm;if(!f)return;
+    const val=String(f.scan||"").trim();if(!val)return;
+    if(!f.desde){setTrForm(p=>({...p,err:"Primero elige la oficina que envía."}));return;}
+    const r=buscarParcial(val,wrList,w=>[w.id,trkAll(w)]);
+    const w=r.item||(r.varios?elegirDeVarios(r.varios,x=>`${x.id} — ${x.consignee||""} (${x.status?.label||""})`):null);
+    if(!w){setTrForm(p=>({...p,err:r.varios?"Selección cancelada.":`No se encontró un WR con "${val}".`}));return;}
+    if(f.wrIds.includes(w.id)){setTrForm(p=>({...p,scan:"",err:`El WR ${w.id} ya está en la lista.`}));return;}
+    const e=trValidarWR(w,f.desde);
+    if(e){setTrForm(p=>({...p,err:e}));return;}
+    setTrForm(p=>({...p,wrIds:[...p.wrIds,w.id],scan:"",err:""}));
+  };
+  const trCrear=async()=>{
+    const f=trForm;if(!f||f.guardando)return;
+    const D=trOfi(f.desde),H=trOfi(f.hasta);
+    if(!D){window.alert("Elige la oficina que envía.");return;}
+    if(!H){window.alert("Elige la oficina que recibe.");return;}
+    if(D.id===H.id){window.alert("La oficina que envía y la que recibe deben ser distintas.");return;}
+    if(!f.wrIds.length){window.alert("Agrega al menos un WR.");return;}
+    if(!f.modo){window.alert("Elige quién transporta: chofer de la empresa o carrier externo.");return;}
+    if(f.modo==="chofer"&&!f.chofer.trim()){window.alert("Falta el nombre del chofer.");return;}
+    if(f.modo==="carrier"&&!f.carrier.trim()){window.alert("Falta el carrier.");return;}
+    const wrs=f.wrIds.map(id=>wrList.find(w=>w.id===id));
+    for(const w of wrs){const e=trValidarWR(w,D.id);if(e){window.alert(e);return;}}
+    const otraSuc=wrs.filter(w=>trEsDestino(w)&&w.sucursalEntrega&&w.sucursalEntrega!==H.id);
+    if(otraSuc.length&&!window.confirm(`Estos WR se entregan en otra oficina:\n${otraSuc.map(w=>`${w.id} → ${trOfiNom(w.sucursalEntrega)}`).join("\n")}\n\n¿Trasladarlos a ${trOfiNom(H.id)} igual?`))return;
+    setTrForm(p=>({...p,guardando:true}));
+    const d=await numeroDoc(D,"T");
+    if(!d){setTrForm(p=>p&&({...p,guardando:false}));return;}
+    const now=new Date();
+    const t={id:d.id,fecha:now,desde:D.id,hasta:H.id,wrIds:[...f.wrIds],recibidos:[],estado:"en_camino",modo:f.modo,
+      chofer:f.modo==="chofer"?f.chofer.trim():"",vehiculo:f.modo==="chofer"?f.vehiculo.trim():"",
+      carrier:f.modo==="carrier"?f.carrier.trim():"",tracking:f.modo==="carrier"?f.tracking.trim():"",
+      notas:f.notas.trim(),usuario:currentUser.id||currentUser.email||"",recibe:"",fechaRecibido:null,usuarioRecibe:"",motivoAnulacion:""};
+    if(!(await dbUpsertTraslado(t))){window.alert("No se pudo guardar el traslado.");setTrForm(p=>p&&({...p,guardando:false}));return;}
+    const st201=getStatus("20.1");
+    setWrList(p=>p.map(w=>{
+      if(!t.wrIds.includes(w.id))return w;
+      const dest=trEsDestino(w);const st=dest?st201:w.status;
+      const upd={...w,status:st,trasladoId:t.id,ofiActual:"",historial:[...(w.historial||[]),{code:st.code,label:dest?st.label:"En traslado",fecha:now,user:currentUser.id,nota:`Traslado ${t.id}: ${trOfiNom(D.id)} → ${trOfiNom(H.id)}`}]};
+      dbUpsertWR(upd);return upd;}));
+    setTraslados(p=>[t,...p]);
+    logAction("Creó traslado",`${t.id} · ${t.wrIds.length} WR · ${D.codigo} → ${H.codigo}`);
+    setTrForm(null);setTrVista("camino");setTrPrint(t);
+  };
+  const trAbrirRecibir=t=>{
+    if(!hasPerm("recibir_traslado")){window.alert("Tu rol no tiene permiso para recibir traslados.");return;}
+    if(!trEnAlcance(t.hasta)){window.alert(`Este traslado lo recibe ${trOfiNom(t.hasta)}.`);return;}
+    setTrRecibir({t,ok:[],scan:"",err:"",msg:"",guardando:false});
+  };
+  const trEscanear=()=>{
+    const r0=trRecibir;if(!r0)return;
+    const val=String(r0.scan||"").trim();if(!val)return;
+    const pend=r0.t.wrIds.filter(id=>!(r0.t.recibidos||[]).includes(id)).map(id=>wrList.find(w=>w.id===id)||{id});
+    const r=buscarParcial(val,pend,w=>[w.id,trkAll(w)]);
+    const w=r.item||(r.varios?elegirDeVarios(r.varios,x=>`${x.id} — ${x.consignee||""}`):null);
+    if(!w){const fuera=buscarParcial(val,wrList,x=>[x.id,trkAll(x)]).item;
+      setTrRecibir(p=>({...p,msg:"",err:fuera?(r0.t.recibidos||[]).includes(fuera.id)?`El WR ${fuera.id} ya se recibió antes.`:`El WR ${fuera.id} no viene en este traslado.`:`No se encontró "${val}" en este traslado.`}));return;}
+    if(r0.ok.includes(w.id)){setTrRecibir(p=>({...p,scan:"",err:"",msg:`El WR ${w.id} ya estaba escaneado.`}));return;}
+    setTrRecibir(p=>({...p,ok:[...p.ok,w.id],scan:"",err:"",msg:`WR ${w.id} recibido.`}));
+  };
+  const trConfirmarRecepcion=async()=>{
+    const r0=trRecibir;if(!r0||r0.guardando)return;
+    const t=r0.t;const ids=r0.ok;
+    if(!ids.length){window.alert("Escanea al menos un WR.");return;}
+    const faltan=t.wrIds.filter(id=>!(t.recibidos||[]).includes(id)&&!ids.includes(id));
+    if(faltan.length&&!window.confirm(`Faltan ${faltan.length} WR por recibir:\n${faltan.join("\n")}\n\nEl traslado queda como recibido parcial y esos WR siguen en camino. ¿Confirmar?`))return;
+    setTrRecibir(p=>({...p,guardando:true}));
+    const now=new Date();const quien=fullName(currentUser);
+    const recibidos=[...new Set([...(t.recibidos||[]),...ids])];
+    const nt={...t,recibidos,estado:recibidos.length>=t.wrIds.length?"recibido":"parcial",recibe:quien,fechaRecibido:now,usuarioRecibe:currentUser.id||currentUser.email||""};
+    if(!(await dbUpsertTraslado(nt))){window.alert("No se pudo guardar la recepción.");setTrRecibir(p=>p&&({...p,guardando:false}));return;}
+    const st202=getStatus("20.2");
+    setWrList(p=>p.map(w=>{
+      if(!ids.includes(w.id))return w;
+      const dest=trCodigo(w)==="20.1";const st=dest?st202:w.status;
+      const upd={...w,status:st,trasladoId:"",ofiActual:t.hasta,historial:[...(w.historial||[]),{code:st.code,label:dest?st.label:`Recibido en ${trOfi(t.hasta)?.nombre||"oficina"}`,fecha:now,user:currentUser.id,nota:`Traslado ${t.id} · recibe ${quien}`}]};
+      dbUpsertWR(upd);return upd;}));
+    setTraslados(p=>p.map(x=>x.id===nt.id?nt:x));
+    logAction("Recibió traslado",`${t.id} · ${ids.length} de ${t.wrIds.length} WR`);
+    setTrRecibir(null);
+  };
+  const trAnular=async t=>{
+    if(!hasPerm("anular_traslado")){window.alert("Tu rol no tiene permiso para anular traslados.");return;}
+    if((t.recibidos||[]).length){window.alert("No se puede anular: ya se recibieron WR de este traslado.");return;}
+    const motivo=window.prompt(`Motivo para anular el traslado ${t.id}:`);
+    if(motivo===null)return;
+    if(!motivo.trim()){window.alert("Escribe el motivo.");return;}
+    const nt={...t,estado:"anulado",motivoAnulacion:motivo.trim().toUpperCase()};
+    if(!(await dbUpsertTraslado(nt))){window.alert("No se pudo anular el traslado.");return;}
+    const now=new Date();const st20=getStatus("20");
+    setWrList(p=>p.map(w=>{
+      if(w.trasladoId!==t.id)return w;
+      const dest=trCodigo(w)==="20.1";const st=dest?st20:w.status;
+      const upd={...w,status:st,trasladoId:"",ofiActual:t.desde,historial:[...(w.historial||[]),{code:st.code,label:dest?st.label:"Traslado anulado",fecha:now,user:currentUser.id,nota:`Traslado ${t.id} anulado · ${nt.motivoAnulacion}`}]};
+      dbUpsertWR(upd);return upd;}));
+    setTraslados(p=>p.map(x=>x.id===nt.id?nt:x));
+    logAction("Anuló traslado",`${t.id} · ${nt.motivoAnulacion}`);
+  };
+  const htmlTraslado=t=>{
+    if(!t)return "";
+    const D=trOfi(t.desde),H=trOfi(t.hasta);
+    const wrs=(t.wrIds||[]).map(id=>wrList.find(w=>w.id===id)||{id});
+    const rec=new Set(t.recibidos||[]);
+    const cli=w=>{const c=cliDeWR(w);return c?fullName(c):(w.consignee||"—");};
+    const lbW=w=>parseFloat(w.pesoLb)||0;
+    const transp=t.modo==="carrier"?pBox("Carrier",`<b>${prnE(t.carrier||"—")}</b>`,t.tracking?`Tracking ${prnE(t.tracking)}`:""):pBox("Chofer",`<b>${prnE(t.chofer||"—")}</b>`,t.vehiculo?`Vehículo ${prnE(t.vehiculo)}`:"");
+    const ofiTxt=o=>o?`<b>${prnE(o.nombre)}</b>`:"—";
+    const ofiSub=o=>o?prnE([o.codigo,o.dir,o.ciudad].filter(Boolean).join(" · ")):"";
+    const cuerpo=pGrid(3,[pBox("Envía",ofiTxt(D),ofiSub(D)),pBox("Recibe",ofiTxt(H),ofiSub(H)),transp])+
+      (t.notas?`<div class="nota"><b>Notas:</b> ${prnE(t.notas)}</div>`:"")+
+      pSec("Detalle de la carga")+
+      pTabla([{l:"#"},{l:"N° WR"},{l:"Cliente"},{l:"Casillero"},{l:"Descripción"},{l:"Cajas",c:1},{l:"Peso lb",r:1},{l:"Recibido",c:1}],
+        wrs.map((w,i)=>`<tr><td>${i+1}</td><td class="mono"><b>${prnE(w.id)}</b></td><td>${prnE(cli(w))}</td><td class="mono">${prnE(cliDeWR(w)?.casillero||w.casillero||"—")}</td><td>${prnE(cleanReempaqueDesc(w.descripcion)||"—")}</td><td class="c">${w.cajas||0}</td><td class="r">${nm(lbW(w),2)}</td><td class="c">${rec.has(w.id)?"✓":""}</td></tr>`).join(""),
+        wrs.length?`<tr class="tot"><td colspan="5">Totales · ${wrs.length} WR</td><td class="c">${wrs.reduce((s,w)=>s+(parseInt(w.cajas,10)||0),0)}</td><td class="r">${nm(wrs.reduce((s,w)=>s+lbW(w),0),2)}</td><td class="c">${rec.size||""}</td></tr>`:"")+
+      (t.fechaRecibido?`<div class="nota"><b>Recepción:</b> ${prnE(t.recibe||nombreUsuario(t.usuarioRecibe))} · ${fmtDate(t.fechaRecibido)} ${fmtTime(t.fechaRecibido)} · ${rec.size} de ${wrs.length} WR</div>`:"")+
+      `<div class="decl">La oficina que recibe confirma, con su firma, haber recibido conforme los WR marcados. Cualquier faltante o daño visible debe anotarse al momento de la recepción.</div>`+
+      pFirmas([["Entrega",D?.nombre||""],["Transporta",t.modo==="carrier"?[t.carrier,t.tracking].filter(Boolean).join(" · "):[t.chofer,t.vehiculo].filter(Boolean).join(" · ")],["Recibe conforme",H?.nombre||""]]);
+    return prnHTML({titulo:"Traslado entre oficinas",numero:t.id,barcode:true,pais:D?.pais||"",
+      meta:[["Fecha",`${fmtDate(t.fecha)} ${fmtTime(t.fecha)}`],["Estado",(TR_ESTADO[t.estado]||{}).l],["Usuario",nombreUsuario(t.usuario)]],
+      anulado:t.estado==="anulado"?{texto:"ANULADO",motivo:t.motivoAnulacion}:null,cuerpo});
+  };
+  // Buscador de oficina (sin listas largas): escribe y elige
+  const trPicker=(campo,qCampo,opciones,bloqueado)=>{
+    const f=trForm;const sel=trOfi(f[campo]);
+    if(sel)return <div className="fi" style={{display:"flex",alignItems:"center",gap:8,background:"var(--bg4)"}}>
+      <b style={{flex:1}}>{sel.codigo} — {sel.nombre}{sel.ciudad?` · ${sel.ciudad}`:""}</b>
+      {!bloqueado&&<span style={{cursor:"pointer",color:"var(--t3)"}} title="Cambiar" onClick={()=>setTrForm(p=>({...p,[campo]:"",[qCampo]:"",...(campo==="desde"?{wrIds:[],hasta:""}:{})}))}>✕</span>}</div>;
+    const Q=sinAcentos(f[qCampo]||"").trim();
+    const res=Q?opciones.filter(o=>[o.codigo,o.nombre,o.ciudad].some(v=>sinAcentos(v).includes(Q))).slice(0,8):[];
+    return <div style={{position:"relative"}}>
+      <input className="fi" value={f[qCampo]||""} onChange={e=>setTrForm(p=>({...p,[qCampo]:e.target.value.toUpperCase()}))} placeholder="Buscar oficina por código, nombre o ciudad"/>
+      {res.length>0&&<div style={{position:"absolute",zIndex:20,left:0,right:0,top:"100%",background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:6,boxShadow:"var(--shadow2)",maxHeight:260,overflow:"auto"}}>
+        {res.map(o=><div key={o.id} style={{padding:"8px 10px",cursor:"pointer",borderBottom:"1px solid var(--b2)",fontSize:14}}
+          onClick={()=>setTrForm(p=>({...p,[campo]:o.id,[qCampo]:""}))}><b>{o.codigo}</b> — {o.nombre}{o.ciudad?` · ${o.ciudad}`:""} <span style={{fontSize:12,color:"var(--t3)"}}>{tipoOfi(o)}</span></div>)}
+      </div>}
+      {Q&&res.length===0&&<div style={{fontSize:13,color:"var(--t3)",marginTop:4}}>Sin coincidencias.</div>}
+    </div>;
+  };
+  const renderTrasladoModal=()=>{
+    const f=trForm;if(!f)return null;
+    const D=trOfi(f.desde);
+    const ofisDesde=oficinas.filter(o=>ofiActiva(o)&&trEnAlcance(o.id));
+    const ofisHasta=oficinas.filter(o=>ofiActiva(o)&&o.id!==f.desde&&(!D||paisDeOfi(o)===paisDeOfi(D)));
+    const wrs=f.wrIds.map(id=>wrList.find(w=>w.id===id)).filter(Boolean);
+    const up=k=>e=>setTrForm(p=>({...p,[k]:e.target.value.toUpperCase()}));
+    return (
+      <div className="ov">
+        <div className="modal mlg" onClick={e=>e.stopPropagation()}>
+          <div className="mhd"><div className="mt"><Ico e="🚚" sp/>Nuevo traslado</div><button className="mcl" onClick={()=>setTrForm(null)}>✕</button></div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:14}}>
+            <div className="fg"><div className="fl">Envía *</div>{trPicker("desde","qDesde",ofisDesde,!!trAlcance&&trAlcance.size===1)}</div>
+            <div className="fg"><div className="fl">Recibe *</div>{D?trPicker("hasta","qHasta",ofisHasta,false):<div className="fi" style={{background:"var(--bg4)",color:"var(--t3)"}}>Primero elige la oficina que envía</div>}</div>
+          </div>
+          <div className="sdiv">TRANSPORTE</div>
+          <div style={{display:"flex",gap:8,marginBottom:10}}>
+            {[["chofer","Chofer de la empresa"],["carrier","Carrier externo"]].map(([v,l])=>
+              <button key={v} className={`btn-${f.modo===v?"p":"s"}`} onClick={()=>setTrForm(p=>({...p,modo:v}))}>{l}</button>)}
+          </div>
+          {f.modo==="chofer"&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:14}}>
+            <div className="fg"><div className="fl">Chofer *</div><input className="fi" value={f.chofer} onChange={up("chofer")}/></div>
+            <div className="fg"><div className="fl">Vehículo / placa</div><input className="fi" value={f.vehiculo} onChange={up("vehiculo")}/></div></div>}
+          {f.modo==="carrier"&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:14}}>
+            <div className="fg"><div className="fl">Carrier *</div><input className="fi" value={f.carrier} onChange={up("carrier")}/></div>
+            <div className="fg"><div className="fl">N° de tracking</div><input className="fi" value={f.tracking} onChange={up("tracking")}/></div></div>}
+          <div className="sdiv">WR DEL TRASLADO</div>
+          <div style={{display:"flex",gap:8,marginBottom:6}}>
+            <input className="fi" style={{flex:1,fontSize:15}} value={f.scan} disabled={!D} onChange={up("scan")} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();trAgregarWR();}}}
+              placeholder={D?"Escanea o escribe el WR o el tracking y pulsa Enter":"Primero elige la oficina que envía"}/>
+            <button className="btn-s" disabled={!D} onClick={trAgregarWR}>Agregar</button>
+          </div>
+          {f.err&&<div style={{color:"var(--red)",fontSize:13,fontWeight:600,marginBottom:6}}>{f.err}</div>}
+          <div className="ct-scroll" style={{maxHeight:"34vh",border:"1px solid var(--b1)",borderRadius:8}}>
+            <table className="ct"><thead><tr><th>#</th><th>N° WR</th><th>Cliente</th><th>Estado</th><th style={{textAlign:"right"}}>Cajas</th><th style={{textAlign:"right"}}>Peso lb</th><th></th></tr></thead>
+              <tbody>{wrs.length===0?<tr><td colSpan={7} style={{textAlign:"center",padding:24,color:"var(--t3)"}}>Sin WR.</td></tr>
+                :wrs.map((w,i)=><tr key={w.id}><td>{i+1}</td><td><Num t="wr" id={w.id}/></td><td>{cliDeWR(w)?fullName(cliDeWR(w)):(w.consignee||"—")}</td><td><StBadge st={w.status}/></td>
+                  <td style={{textAlign:"right"}}>{w.cajas||0}</td><td style={{textAlign:"right"}}>{fmtDec(w.pesoLb,2)}</td>
+                  <td style={{textAlign:"center"}}><span style={{cursor:"pointer",color:"var(--red)"}} title="Quitar" onClick={()=>setTrForm(p=>({...p,wrIds:p.wrIds.filter(x=>x!==w.id)}))}>✕</span></td></tr>)}</tbody>
+            </table>
+          </div>
+          <div style={{fontSize:13,color:"var(--t2)",margin:"6px 0 12px"}}><b>{wrs.length}</b> WR · <b>{wrs.reduce((s,w)=>s+(parseInt(w.cajas,10)||0),0)}</b> cajas · <b>{fmtDec(wrs.reduce((s,w)=>s+(parseFloat(w.pesoLb)||0),0),2)}</b> lb</div>
+          <div className="fg"><div className="fl">Notas</div><input className="fi" value={f.notas} onChange={up("notas")}/></div>
+          <div className="mft">
+            <button className="btn-s" onClick={()=>setTrForm(null)}>Cancelar</button>
+            <button className="btn-p" disabled={f.guardando} style={{opacity:f.guardando?.6:1}} onClick={trCrear}><Ico e="🚚" sp/>{f.guardando?"Guardando…":"Crear traslado"}</button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+  const renderRecibirModal=()=>{
+    const r=trRecibir;if(!r)return null;
+    const t=r.t;const antes=new Set(t.recibidos||[]);
+    const wrs=t.wrIds.map(id=>wrList.find(w=>w.id===id)||{id});
+    const pend=wrs.filter(w=>!antes.has(w.id));
+    return (
+      <div className="ov">
+        <div className="modal mlg" onClick={e=>e.stopPropagation()}>
+          <div className="mhd"><div className="mt"><Ico e="📥" sp/>Recibir traslado <Num t="traslado" id={t.id} nolink style={{marginLeft:8}}/></div><button className="mcl" onClick={()=>setTrRecibir(null)}>✕</button></div>
+          <div style={{fontSize:15,marginBottom:10}}><b>{trOfiNom(t.desde)}</b> → <b>{trOfiNom(t.hasta)}</b> · {t.modo==="carrier"?`${t.carrier}${t.tracking?` · ${t.tracking}`:""}`:`${t.chofer}${t.vehiculo?` · ${t.vehiculo}`:""}`}</div>
+          <div style={{display:"flex",gap:8,marginBottom:6}}>
+            <input className="fi" autoFocus style={{flex:1,fontSize:16,padding:"10px 12px"}} value={r.scan} onChange={e=>setTrRecibir(p=>({...p,scan:e.target.value.toUpperCase()}))}
+              onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();trEscanear();}}} placeholder="Escanea o escribe el WR o el tracking y pulsa Enter"/>
+            <button className="btn-s" onClick={trEscanear}>Recibir</button>
+            {hasPerm("saltar_bloqueos")&&<button className="btn-s" onClick={()=>setTrRecibir(p=>({...p,ok:pend.map(w=>w.id),err:"",msg:"Todos marcados como recibidos."}))}>Marcar todos</button>}
+          </div>
+          {r.err&&<div style={{color:"var(--red)",fontSize:14,fontWeight:700,marginBottom:6}}>{r.err}</div>}
+          {!r.err&&r.msg&&<div style={{color:"var(--green)",fontSize:14,fontWeight:700,marginBottom:6}}>{r.msg}</div>}
+          <div style={{height:8,background:"var(--bg4)",borderRadius:4,overflow:"hidden",margin:"6px 0 10px"}}>
+            <div style={{width:`${pend.length?Math.round(r.ok.length*100/pend.length):100}%`,height:"100%",background:"var(--green)"}}/></div>
+          <div className="ct-scroll" style={{maxHeight:"44vh",border:"1px solid var(--b1)",borderRadius:8}}>
+            <table className="ct"><thead><tr><th>#</th><th>N° WR</th><th>Cliente</th><th style={{textAlign:"right"}}>Cajas</th><th>Recepción</th></tr></thead>
+              <tbody>{wrs.map((w,i)=>{const ya=antes.has(w.id),ok=r.ok.includes(w.id);
+                return <tr key={w.id} style={{background:ya||ok?"#F1F8E9":""}}><td>{i+1}</td><td><Num t="wr" id={w.id}/></td><td>{cliDeWR(w)?fullName(cliDeWR(w)):(w.consignee||"—")}</td><td style={{textAlign:"right"}}>{w.cajas||0}</td>
+                  <td style={{fontWeight:700,color:ya||ok?"var(--green)":"var(--t3)"}}>{ya?"Recibido antes":ok?"Recibido":"Pendiente"}</td></tr>;})}</tbody>
+            </table>
+          </div>
+          <div className="mft">
+            <div style={{fontSize:14,color:"var(--t2)",marginRight:"auto"}}><b>{r.ok.length}</b> de <b>{pend.length}</b> escaneados</div>
+            <button className="btn-s" onClick={()=>setTrRecibir(null)}>Cancelar</button>
+            <button className="btn-p" disabled={!r.ok.length||r.guardando} style={{opacity:!r.ok.length||r.guardando?.5:1}} onClick={trConfirmarRecepcion}>{r.guardando?"Guardando…":`Confirmar recepción (${r.ok.length})`}</button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+  const renderTraslados=()=>{
+    const grupos=trPorEnviar();
+    const enCamino=trVisibles.filter(t=>["en_camino","parcial"].includes(t.estado));
+    const porRecibir=enCamino.filter(t=>trEnAlcance(t.hasta));
+    const enviados=enCamino.filter(t=>!porRecibir.includes(t));
+    const transp=t=>t.modo==="carrier"?`${t.carrier}${t.tracking?` · ${t.tracking}`:""}`:`${t.chofer}${t.vehiculo?` · ${t.vehiculo}`:""}`;
+    const acciones=t=><div style={{display:"flex",gap:6,justifyContent:"flex-end",flexWrap:"wrap"}}>
+      {["en_camino","parcial"].includes(t.estado)&&trEnAlcance(t.hasta)&&hasPerm("recibir_traslado")&&<button className="btn-p" style={{fontSize:13,padding:"4px 10px"}} onClick={()=>trAbrirRecibir(t)}><Ico e="📥" sp/>Recibir</button>}
+      {hasPerm("imp_traslado")&&<button className="btn-s" style={{fontSize:13,padding:"4px 10px"}} onClick={()=>setTrPrint(t)}><Ico e="🖨️" sp/>Ver</button>}
+      {t.estado==="en_camino"&&hasPerm("anular_traslado")&&<button className="btn-s" style={{fontSize:13,padding:"4px 10px",color:"var(--red)"}} onClick={()=>trAnular(t)}>Anular</button>}
+    </div>;
+    const tabla=(lista,key)=><><div className="ct-scroll"><table className="ct">
+      <thead><tr><th>N° traslado</th><th>Fecha</th><th>Envía</th><th>Recibe</th><th style={{textAlign:"center"}}>WR</th><th>Transporte</th><th>Estado</th><th style={{textAlign:"right"}}>Acciones</th></tr></thead>
+      <tbody>{lista.length===0?<tr><td colSpan={8} style={{textAlign:"center",padding:30,color:"var(--t3)"}}>No hay traslados.</td></tr>
+        :pagSlice(key,lista).map(t=><tr key={t.id}>
+          <td><Num t="traslado" id={t.id}/></td><td><span className="c-dt">{fmtDate(t.fecha)} {fmtTime(t.fecha)}</span></td>
+          <td>{trOfiNom(t.desde)}</td><td>{trOfiNom(t.hasta)}</td>
+          <td style={{textAlign:"center",fontWeight:700}}>{t.estado==="parcial"?`${(t.recibidos||[]).length} / ${t.wrIds.length}`:t.wrIds.length}</td>
+          <td>{transp(t)}</td><td>{trChip(t.estado)}</td><td>{acciones(t)}</td></tr>)}</tbody>
+    </table></div>{pagPie(key,lista.length)}</>;
+    const tabs=[{k:"enviar",l:"Por enviar",n:grupos.reduce((s,g)=>s+g.wrs.length,0)},{k:"camino",l:"En camino",n:enCamino.length},{k:"historial",l:"Historial"}];
+    let cuerpo=null;
+    if(trVista==="enviar")cuerpo=grupos.length===0
+      ?<div className="card" style={{textAlign:"center",padding:50,color:"var(--t3)",fontSize:15}}>No hay carga pendiente de trasladar.</div>
+      :<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(420px,1fr))",gap:12}}>
+        {grupos.map(g=>{const cajas=g.wrs.reduce((s,w)=>s+(parseInt(w.cajas,10)||0),0),lb=g.wrs.reduce((s,w)=>s+(parseFloat(w.pesoLb)||0),0);
+          return <div key={g.k} className="card" style={{padding:14,borderLeft:`4px solid ${g.tipo==="origen"?"var(--navy)":"#E65100"}`}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6,flexWrap:"wrap"}}>
+              <span style={{fontSize:11,fontWeight:700,letterSpacing:.4,padding:"2px 8px",borderRadius:8,background:g.tipo==="origen"?"#E3F2FD":"#FFF3E0",color:g.tipo==="origen"?"var(--navy)":"#E65100"}}>{g.tipo==="origen"?"ORIGEN · A MATRIZ":"DESTINO · A SUCURSAL"}</span>
+              <span style={{marginLeft:"auto",fontSize:13,color:"var(--t2)"}}><b>{g.wrs.length}</b> WR · <b>{cajas}</b> cajas · <b>{fmtDec(lb,2)}</b> lb</span>
+            </div>
+            <div style={{fontSize:16,fontWeight:800,color:"var(--navy)",marginBottom:10}}>{trOfiNom(g.desde)} <span style={{color:"var(--t3)"}}>→</span> {trOfiNom(g.hasta)}</div>
+            <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:12,maxHeight:120,overflow:"auto"}}>{g.wrs.map(w=><Num key={w.id} t="wr" id={w.id}/>)}</div>
+            {hasPerm("crear_traslado")&&<button className="btn-p" onClick={()=>trNuevo(g.desde,g.hasta,g.wrs.map(w=>w.id))}><Ico e="🚚" sp/>Crear traslado ({g.wrs.length})</button>}
+          </div>;})}
+      </div>;
+    if(trVista==="camino")cuerpo=<>
+      <div className="card" style={{marginBottom:12}}><div style={{fontSize:16,fontWeight:700,color:"var(--navy)",marginBottom:8}}><Ico e="📥" sp/>Por recibir ({porRecibir.length})</div>{tabla(porRecibir,"tr_recibir")}</div>
+      <div className="card"><div style={{fontSize:16,fontWeight:700,color:"var(--navy)",marginBottom:8}}><Ico e="🚚" sp/>Enviados ({enviados.length})</div>{tabla(enviados,"tr_enviados")}</div></>;
+    if(trVista==="historial"){
+      const Q=sinAcentos(trBusca).trim();
+      const lista=trVisibles.filter(t=>(!trEstado||t.estado===trEstado)&&(!Q||[t.id,trOfiNom(t.desde),trOfiNom(t.hasta),t.chofer,t.vehiculo,t.carrier,t.tracking,(t.wrIds||[]).join(" "),nombreUsuario(t.usuario)].some(v=>sinAcentos(v).includes(Q))));
+      cuerpo=<div className="card">
+        <div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap",alignItems:"center"}}>
+          <input className="fi" style={{flex:1,minWidth:260,maxWidth:520}} value={trBusca} onChange={e=>{setTrBusca(e.target.value.toUpperCase());setPags(p=>({...p,tr_hist:1}));}} placeholder="Buscar traslado, WR, oficina, chofer, carrier o tracking"/>
+          <select className="fs" style={{width:200}} value={trEstado} onChange={e=>{setTrEstado(e.target.value);setPags(p=>({...p,tr_hist:1}));}}>
+            <option value="">Todos los estados</option>{Object.entries(TR_ESTADO).map(([k,x])=><option key={k} value={k}>{x.l}</option>)}</select>
+          <span style={{fontSize:13,color:"var(--t3)"}}>{lista.length} resultado{lista.length===1?"":"s"}</span>
+        </div>{tabla(lista,"tr_hist")}</div>;
+    }
+    return (
+      <div className="page-scroll">
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,flexWrap:"wrap"}}>
+          <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:18,fontWeight:700,color:"var(--navy)",flex:1}}><Ico e="🚚" sp/>Traslados entre oficinas</div>
+          <div style={{display:"flex",gap:4,background:"var(--bg4)",borderRadius:7,padding:3,border:"1px solid var(--b1)"}}>
+            {tabs.map(t=><button key={t.k} onClick={()=>setTrVista(t.k)} style={{padding:"5px 14px",borderRadius:5,border:"none",cursor:"pointer",fontSize:14,fontWeight:600,
+              background:trVista===t.k?"var(--navy)":"transparent",color:trVista===t.k?"#fff":"var(--t2)"}}>{t.l}{t.n?` (${t.n})`:""}</button>)}
+          </div>
+          {hasPerm("crear_traslado")&&<button className="btn-p" onClick={()=>trNuevo()}>+ Nuevo traslado</button>}
+        </div>
+        {cuerpo}
+      </div>
+    );
+  };
+
   // ── ENTREGAS Y DESPACHOS — vista por guía ─────────────────────────
   const DN_DOM_ORDEN={matriz:0,oficina:1,agente:2,autonomo:3};
   const DN_DOM_IC={matriz:<Ico e="🏛️"/>,oficina:<Ico e="🏢"/>,agente:<Ico e="🤝"/>,autonomo:<Ico e="🧑‍💻"/>};
@@ -13411,6 +13787,8 @@ export default function SistemaCarga(){
           const cb=dnCuenta(todos);
           const paraDespachar=todos.filter(w=>w.status?.code==="20");
           const enCamino=todos.filter(w=>w.status?.code==="20.1");
+          const enTraslado=enCamino.filter(w=>w.trasladoId);
+          const enCaminoViejo=enCamino.filter(w=>!w.trasladoId); // despachos a sucursal anteriores a los traslados
           const esMatriz=dom.tipo==="matriz";
           // Abierto por defecto si hay carga en sucursal esperando entrega al cliente
           const porDefecto=todos.some(w=>w.status?.code==="20.2");
@@ -13428,11 +13806,19 @@ export default function SistemaCarga(){
                   <span><b style={{color:"var(--orange)"}}>{cb.pend}</b> pend.</span>
                   {cb.suc>0&&<span><b style={{color:"var(--sky)"}}>{cb.suc}</b> suc.</span>}
                   <span><b style={{color:"var(--green)"}}>{cb.ent}</b> entr.</span>
-                  {!esMatriz&&enCamino.length>0&&hasPerm("entregar")&&(
+                  {dom.tipo==="oficina"&&enCaminoViejo.length>0&&hasPerm("entregar")&&(
                     <button className="btn-s" style={{fontSize:13,padding:"5px 10px",borderColor:"var(--sky)",color:"var(--sky)",fontWeight:700}}
-                      onClick={e=>{e.stopPropagation();dnRecibirSucursal(dom,enCamino);}}><Ico e="📥" sp/>Recibido en sucursal ({enCamino.length})</button>
+                      onClick={e=>{e.stopPropagation();dnRecibirSucursal(dom,enCaminoViejo);}}><Ico e="📥" sp/>Recibido en sucursal ({enCaminoViejo.length})</button>
                   )}
-                  {!esMatriz&&paraDespachar.length>0&&hasPerm("entregar")&&(
+                  {dom.tipo==="oficina"&&enTraslado.length>0&&hasPerm("ver_traslado")&&(
+                    <button className="btn-s" style={{fontSize:13,padding:"5px 10px",borderColor:"var(--sky)",color:"var(--sky)",fontWeight:700}}
+                      onClick={e=>{e.stopPropagation();setTab("traslados");setTrVista("camino");}}><Ico e="🚚" sp/>En traslado ({enTraslado.length})</button>
+                  )}
+                  {dom.tipo==="oficina"&&paraDespachar.length>0&&hasPerm("crear_traslado")&&(
+                    <button className="btn-p" style={{fontSize:13,padding:"6px 12px",background:"#E65100",borderColor:"#E65100"}}
+                      onClick={e=>{e.stopPropagation();const u=paraDespachar.map(w=>ubicacionWR(w)||w.ofiDestino).find(Boolean)||"";trNuevo(trEnAlcance(u)?u:"",dom.id,paraDespachar.map(w=>w.id));}}><Ico e="🚚" sp/>Trasladar ({paraDespachar.length})</button>
+                  )}
+                  {!esMatriz&&dom.tipo!=="oficina"&&paraDespachar.length>0&&hasPerm("entregar")&&(
                     <button className="btn-p" style={{fontSize:13,padding:"6px 12px",background:"#E65100",borderColor:"#E65100"}}
                       onClick={e=>{e.stopPropagation();dnAbrirConfirmar("despacho",g,dom,paraDespachar);}}><Ico e="🚚" sp/>Despachar ({paraDespachar.length})</button>
                   )}
@@ -13578,6 +13964,7 @@ export default function SistemaCarga(){
     {label:"Administración",items:[
       {id:"facturacion",ic:<Ico e="🧾"/>,l:"Facturación",onClick:()=>{setTab("contabilidad");setContabTab("porguia");setFacGuiaSel(null);},activeWhen:()=>tab==="contabilidad"&&["porguia","facturas"].includes(contabTab)},
       {id:"entregasydespachos",ic:<Ico e="📝"/>,l:"Entregas y Despachos"},
+      {id:"traslados",ic:<Ico e="🚚"/>,l:"Traslados",badge:(()=>{const n=trVisibles.filter(t=>["en_camino","parcial"].includes(t.estado)&&trEnAlcance(t.hasta)).length;return n>0?String(n):null;})()},
       {id:"contabilidad",ic:<Ico e="💰"/>,l:"Contabilidad",onClick:()=>{setTab("contabilidad");setContabTab("cuentas");setCuadreSel(null);},activeWhen:()=>tab==="contabilidad"&&!["porguia","facturas"].includes(contabTab)},
       {id:"misfacturas",ic:<Ico e="🧾"/>,l:fpMiEmisor?"Mis facturas":"Facturas de agentes"},
     ]},
@@ -13606,7 +13993,7 @@ export default function SistemaCarga(){
     dashboard:["ver_wr"],estadocuenta:["ver_estado_cuenta","ver_estado_cliente","ver_estado_agente","ver_estado_oficina"],
     scan:["ver_rp"],loadingmaster:["ver_guia","ver_recepcion_dest"],alerts:["ver_alertas"],
     reempaque:["ver_reempaque","solicitar_reempaque"],cargorelease:["ver_egreso"],
-    entregasydespachos:["ver_entrega"],facturacion:["ver_factura"],misfacturas:["ver_fac_propia"],prealertas:["ver_prealerta"],contabilidad:["ver_cuentas_cobrar","ver_cierre_caja"],
+    entregasydespachos:["ver_entrega"],traslados:["ver_traslado"],facturacion:["ver_factura"],misfacturas:["ver_fac_propia"],prealertas:["ver_prealerta"],contabilidad:["ver_cuentas_cobrar","ver_cierre_caja"],
     clients:["ver_bd_clientes","ver_usuarios"],agentes:["ver_agente"],oficinas:["ver_oficina"],
     etiquetas:ALL_PERMS.filter(p=>p.startsWith("imp_")),tracking:["ver_tracking"],pickup:["ver_pickup"],
     calculadora:["calculadora"],chat:["ver_chat"],docs:["ver_documentos"],reports:["ver_reportes"],
@@ -13614,7 +14001,7 @@ export default function SistemaCarga(){
   };
   const navVisible=n=>(n.id!=="misfacturas"||!["E","E1","F","G"].includes(currentUser.rol)||!!fpMiEmisor)&&(!NAV_PERMS[n.id]||NAV_PERMS[n.id].some(p=>hasPerm(p)));
 
-  const PAGE_TITLES={prealertas:"Pre-alertas",misfacturas:fpMiEmisor?"Mis facturas":"Facturas de agentes, autónomos y oficinas",dashboard:"Dashboard General",loadingmaster:"Loading Master",scan:"Recepción en Puerta",etiquetas:"Imprimir Etiquetas",clients:"Clientes & Usuarios",estadocuenta:"Estado de Cuenta",roles:"Roles & Permisos",consolidation:"Consolidación",tracking:"Tracking",pickup:"Pick-up",contabilidad:"Contabilidad",calculadora:"Calculadora de Envío",chat:"Chat Interno",docs:"Documentos",reports:"Reportes",alerts:"Alertas",settings:"Configuración",reempaque:"Reempaque",recepciondest:"Recepción en Almacén",cargorelease:"Cargo Release (Egreso)",entregas:"Notas de Entrega",entregasydespachos:"Entregas y Despachos",facturacion:"Facturación"};
+  const PAGE_TITLES={traslados:"Traslados entre oficinas",prealertas:"Pre-alertas",misfacturas:fpMiEmisor?"Mis facturas":"Facturas de agentes, autónomos y oficinas",dashboard:"Dashboard General",loadingmaster:"Loading Master",scan:"Recepción en Puerta",etiquetas:"Imprimir Etiquetas",clients:"Clientes & Usuarios",estadocuenta:"Estado de Cuenta",roles:"Roles & Permisos",consolidation:"Consolidación",tracking:"Tracking",pickup:"Pick-up",contabilidad:"Contabilidad",calculadora:"Calculadora de Envío",chat:"Chat Interno",docs:"Documentos",reports:"Reportes",alerts:"Alertas",settings:"Configuración",reempaque:"Reempaque",recepciondest:"Recepción en Almacén",cargorelease:"Cargo Release (Egreso)",entregas:"Notas de Entrega",entregasydespachos:"Entregas y Despachos",facturacion:"Facturación"};
 
   const renderPage=()=>{
     if(!navVisible({id:tab==="contabilidad"&&["porguia","facturas"].includes(contabTab)?"facturacion":tab}))return (
@@ -13642,6 +14029,7 @@ export default function SistemaCarga(){
       case "reempaque":    return renderReempaque();
       case "cargorelease": return renderCargoRelease();
       case "entregasydespachos": return renderDeliveryNotes();
+      case "traslados":    return renderTraslados();
       case "alerts":       return renderAlertas();
       case "reports":      return renderReportes();
       // case "entregas" — Notas de Entrega también accesible desde Impresión (etqMode="entregas")
@@ -14430,6 +14818,9 @@ export default function SistemaCarga(){
 
       {/* ── Cargo Release — NOTA IMPRIMIBLE ─────────────────────────────────── */}
       {crPrint&&<PrnModal titulo={`Cargo release ${crPrint.id}`} html={htmlRelease(crPrint)} onClose={()=>setCrPrint(null)}/>}
+      {trPrint&&<PrnModal titulo={`Traslado ${trPrint.id}`} html={htmlTraslado(trPrint)} onClose={()=>setTrPrint(null)}/>}
+      {renderTrasladoModal()}
+      {renderRecibirModal()}
 
       {/* ── Delivery Note — MODAL FORMULARIO ────────────────────────────────── */}
       {pwModal&&(

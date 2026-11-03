@@ -69,6 +69,7 @@ export const wrFromDB = (r) => r ? ({
   remitenteDoc: r.remitente_doc || "", remitenteId: r.remitente_id || "",
   sucursalEntrega: r.sucursal_entrega ?? null,
   ofiOrigen: r.ofi_origen_id || '', ofiDestino: r.ofi_destino_id || '', ofiActual: r.ofi_actual_id || '',
+  trasladoId: r.traslado_id || '',
   carrier: r.carrier, tracking: r.tracking,
   cajas: r.cajas, pesoLb: r.peso_lb, pesoKg: r.peso_kg,
   volLb: r.vol_lb, volKg: r.vol_kg, ft3: r.ft3, m3: r.m3,
@@ -104,6 +105,7 @@ export const wrToDB = (w) => ({
   remitente_doc: w.remitenteDoc || "", remitente_id: w.remitenteId || "",
   sucursal_entrega: w.sucursalEntrega ?? null,
   ofi_origen_id: w.ofiOrigen || null, ofi_destino_id: w.ofiDestino || null, ofi_actual_id: w.ofiActual || null,
+  traslado_id: w.trasladoId || null,
   reempaque_de: w.reempaqueDe || null,
   reempacado_en: w.reempacadoEn || null,
   sobrante_de_guia: w.sobranteDeGuia || "",
@@ -331,6 +333,38 @@ export const dbUpsertCargoRelease = async (cr) => {
 export const dbDeleteCargoRelease = async (id) => {
   const { error } = await supabase.from('cargo_releases').delete().eq('id', id)
   if (error) console.error('deleteCargoRelease:', error)
+}
+
+// ── TRASLADOS entre oficinas ─────────────────────────────────
+const trasladoFromDB = (r) => ({
+  id: r.id, fecha: r.fecha ? new Date(r.fecha) : new Date(),
+  desde: r.ofi_desde_id || '', hasta: r.ofi_hasta_id || '',
+  wrIds: r.wr_ids || [], recibidos: r.recibidos || [],
+  estado: r.estado || 'en_camino', modo: r.modo || 'chofer',
+  chofer: r.chofer || '', vehiculo: r.vehiculo || '', carrier: r.carrier || '', tracking: r.tracking || '',
+  despacha: r.despacha || '', recibe: r.recibe || '',
+  fechaRecibido: r.fecha_recibido ? new Date(r.fecha_recibido) : null, usuarioRecibe: r.usuario_recibe || '',
+  notas: r.notas || '', usuario: r.usuario || '', motivoAnulacion: r.motivo_anulacion || '',
+})
+export const dbGetTraslados = async () => {
+  const { data, error } = await supabase.from('traslados').select('*').order('fecha', { ascending: false })
+  if (error) { console.error('getTraslados:', error); return [] }
+  return data.map(trasladoFromDB)
+}
+export const dbUpsertTraslado = async (t) => {
+  const { error } = await supabase.from('traslados').upsert({
+    id: t.id, fecha: t.fecha instanceof Date ? t.fecha.toISOString() : t.fecha,
+    ofi_desde_id: t.desde, ofi_hasta_id: t.hasta,
+    wr_ids: t.wrIds || [], recibidos: t.recibidos || [],
+    estado: t.estado || 'en_camino', modo: t.modo || 'chofer',
+    chofer: t.chofer || null, vehiculo: t.vehiculo || null, carrier: t.carrier || null, tracking: t.tracking || null,
+    despacha: t.despacha || null, recibe: t.recibe || null,
+    fecha_recibido: t.fechaRecibido ? (t.fechaRecibido instanceof Date ? t.fechaRecibido.toISOString() : t.fechaRecibido) : null,
+    usuario_recibe: t.usuarioRecibe || null,
+    notas: t.notas || null, usuario: t.usuario || null, motivo_anulacion: t.motivoAnulacion || null,
+  })
+  if (error) { console.error('upsertTraslado:', error); return false }
+  return true
 }
 
 // ── DELIVERY NOTES (Notas de Entrega) ────────────────────────
