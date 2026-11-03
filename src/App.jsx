@@ -1755,7 +1755,7 @@ const WRTable=({rows,selId,onSelect,unitL,unitW,onSort,sortCol,sortDir,dimOpen,o
               <tr><td colSpan={21} style={{textAlign:"center",padding:40,color:"var(--t3)"}}>No se encontraron registros.</td></tr>
             ):pageRows.map(w=>(
               <WRRow key={w.id} w={w} sel={selId===w.id} onClick={()=>onSelect(w)}
-                unitL={unitL} unitW={unitW} clients={clients} agentes={agentes} oficinas={oficinas} empresaNombre={empresaNombre}
+                unitL={unitL} unitW={unitW} clients={clients} agentes={agentesVis} oficinas={oficinas} empresaNombre={empresaNombre}
                 sendTypes={sendTypes} onAssignTipo={onAssignTipo} onFotoClick={onFotoClick} onTimelineClick={onTimelineClick}
                 consolList={consolList} onGuiaClick={onGuiaClick} canBypass={canBypass}
                 dimOpen={dimOpen===w.id} onDimToggle={()=>onDimToggle(w.id)}/>
@@ -1911,6 +1911,11 @@ const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomo
     if(k==="rol"&&p.tipo==="usuario"){upd.clienteTipo=ROL_TO_TIPO[v]||"matriz";if(v!==p.rol)upd.oficinaId="";}
     return upd;
   });
+  // El cliente de un agente o de un autónomo pertenece a la matriz de ese agente o autónomo
+  const matrizHeredada=(()=>{const ct=f.clienteTipo||"";
+    if(["agente","vendedor_agente"].includes(ct)){const a=agentes.find(x=>x.id===f.agenteId);return {dueno:"agente",elegido:!!a,id:a?.matriz_id||""};}
+    if(ct==="autonomo"){const a=allClients.find(x=>x.id===f.autonomoId);return {dueno:"autonomo",elegido:!!a,id:a?.matrizId||""};}
+    return {dueno:null};})();
   return (
     <div className="ov">
       <div className="modal mmd" onClick={e=>e.stopPropagation()}>
@@ -1970,7 +1975,10 @@ const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomo
           </div>
         )}
         {/* Matriz a la que pertenece el cliente (o el autónomo) */}
-        {elegirMatriz&&(f.tipo==="cliente"||(f.tipo==="usuario"&&f.rol==="F"))&&(()=>{
+        {elegirMatriz&&f.tipo==="cliente"&&matrizHeredada.dueno&&(()=>{const m=oficinas.find(o=>o.id===matrizHeredada.id);
+          return <div className="fg" style={{marginBottom:14}}><div className="fl">Matriz</div>
+            <div className="fi" style={{background:"var(--bg4)"}}>{m?<b>{m.codigo} — {m.nombre}</b>:<span style={{color:"var(--t3)"}}>{matrizHeredada.elegido?`${matrizHeredada.dueno==="agente"?"El agente":"El autónomo"} no tiene matriz`:`La de su ${matrizHeredada.dueno==="agente"?"agente":"autónomo"}`}</span>}</div></div>;})()}
+        {elegirMatriz&&((f.tipo==="cliente"&&!matrizHeredada.dueno)||(f.tipo==="usuario"&&f.rol==="F"))&&(()=>{
           const mats=oficinas.filter(o=>(o.tipo==="Asociado"?"Franquicia":(o.tipo||"Matriz"))==="Matriz"&&(o.activo!==false||o.id===f.matrizId))
             .sort((a,b)=>String(a.codigo||"").localeCompare(String(b.codigo||"")));
           return <div className="fg" style={{marginBottom:14}}><div className="fl">Matriz *</div>
@@ -2049,9 +2057,12 @@ const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomo
           // Un usuario del sistema necesita un rol de trabajo (no "Cliente")
           if(f.tipo==="usuario"&&(!f.rol||f.rol==="I")){setEmailErr("Selecciona el rol del usuario.");return;}
           if(f.tipo==="usuario"&&["C","D","D1","D2","G"].includes(f.rol)&&!f.oficinaId){setEmailErr("Selecciona la oficina del usuario.");return;}
-          if(elegirMatriz&&(f.tipo==="cliente"||(f.tipo==="usuario"&&f.rol==="F"))&&!f.matrizId){setEmailErr("Selecciona la matriz.");return;}
+          if(f.tipo==="cliente"&&matrizHeredada.dueno){
+            if(!matrizHeredada.elegido){setEmailErr(`Selecciona ${matrizHeredada.dueno==="agente"?"el agente":"el autónomo"}.`);return;}
+            if(!matrizHeredada.id){setEmailErr(`${matrizHeredada.dueno==="agente"?"El agente":"El autónomo"} no tiene matriz. Asígnasela primero.`);return;}
+          }else if(elegirMatriz&&(f.tipo==="cliente"||(f.tipo==="usuario"&&f.rol==="F"))&&!f.matrizId){setEmailErr("Selecciona la matriz.");return;}
           setEmailErr("");
-          onSave(f);
+          onSave(f.tipo==="cliente"&&matrizHeredada.dueno?{...f,matrizId:matrizHeredada.id}:f);
         }}>Guardar <Ico e="✅"/></button></div>
       </div>
     </div>
@@ -3086,6 +3097,9 @@ export default function SistemaCarga(){
       if(c.tipo==="usuario"){if(["E","E1"].includes(c.rol))return agenteEnAlcance(agentes.find(a=>a.id===c.agenteId));
         if(c.rol==="F")return enMiAlcance(c.matrizId);return enMiAlcance(c.oficinaId);}
       return enMiAlcance(c.matrizId)||enCarga.has(c.id);});})();
+  // Agentes y autónomos de mi matriz (todos si no tengo oficina)
+  const agentesVis=agentes.filter(agenteEnAlcance);
+  const autonomosVis=clients.filter(c=>c.tipo==="usuario"&&c.rol==="F"&&enMiAlcance(c.matrizId));
   // Nota legal según el país de origen del WR (o la predeterminada)
   const notaLegalWR=w=>{
     const t=docCfg(w?.origCountry,"exp").notaLegal||NOTA_LEGAL_DEFAULT;
@@ -3745,7 +3759,7 @@ export default function SistemaCarga(){
         <div className="wr-panel">
           {renderWRToolbar()}
           <WRTable rows={filteredWR} selId={selWR?.id} onSelect={setSelWR}
-            unitL={unitL} unitW={unitW} clients={clients} agentes={agentes} oficinas={oficinas} empresaNombre={empresaNombre}
+            unitL={unitL} unitW={unitW} clients={clients} agentes={agentesVis} oficinas={oficinas} empresaNombre={empresaNombre}
             sendTypes={SEND_TYPES} onAssignTipo={assignTipoEnvio}
             onSort={handleSort} sortCol={sortCol} sortDir={sortDir}
             dimOpen={dimOpen} onDimToggle={handleDimToggle}
@@ -6858,8 +6872,8 @@ export default function SistemaCarga(){
         W("Movimiento","nClientes","Clientes","num",r=>clients.filter(c=>c.tipo==="cliente"&&(r.tipo==="agente"?["agente","vendedor_agente"].includes(c.clienteTipo)&&c.agenteId===r.id:c.clienteTipo==="autonomo"&&c.autonomoId===r.id)).length),
         W("Movimiento","nWR","WR","num",r=>wrList.filter(w=>{const d=dnDominioDeCliente(cliDeWR(w));return d&&d.tipo===r.tipo&&d.id===r.id;}).length),
         ...(puedeFin?[W("Dinero","deuda","Nos debe","money",r=>mObj(deudaDe(r))),W("Dinero","favor","Le debemos","money",r=>mObj(favorDe(r)))]:[])],
-        filas:()=>[...agentes.map(a=>({tipo:"agente",id:a.id,codigo:a.codigo,nombre:a.nombre||a.codigo,ciudad:a.ciudad,pais:a.pais,tel:a.tel,email:a.email,activo:a.activo})),
-          ...clients.filter(c=>c.tipo==="usuario"&&c.rol==="F").map(c=>({tipo:"autonomo",id:c.id,codigo:c.id,nombre:fullName(c),ciudad:c.municipio,pais:c.pais,tel:c.tel1,email:c.email,activo:c.activo}))]},
+        filas:()=>[...agentesVis.map(a=>({tipo:"agente",id:a.id,codigo:a.codigo,nombre:a.nombre||a.codigo,ciudad:a.ciudad,pais:a.pais,tel:a.tel,email:a.email,activo:a.activo})),
+          ...autonomosVis.map(c=>({tipo:"autonomo",id:c.id,codigo:c.id,nombre:fullName(c),ciudad:c.municipio,pais:c.pais,tel:c.tel1,email:c.email,activo:c.activo}))]},
       oficina:{l:"Oficinas",ic:<Ico e="🏢"/>,fecha:"",campos:[
         W("Oficina","codigo","Código","txt",r=>r.codigo||""),W("Oficina","nombre","Nombre","txt",r=>r.nombre||""),W("Oficina","ciudad","Ciudad","txt",r=>r.ciudad||""),
         W("Oficina","pais","País","txt",r=>r.pais||""),W("Oficina","tel","Teléfono","txt",r=>r.tel||""),W("Oficina","email","Email","txt",r=>r.email||""),W("Oficina","contacto","Contacto","txt",r=>r.contacto||""),
@@ -8262,8 +8276,8 @@ export default function SistemaCarga(){
               const cuenta={};tarifas.forEach(t=>{const k=gKey(t);cuenta[k]=(cuenta[k]||0)+1;});
               const IC={agente:<Ico e="🤝"/>,autonomo:<Ico e="🧑‍💻"/>,cliente:<Ico e="👤"/>};
               const grupos=[{k:"",l:"Predeterminadas",ic:<Ico e="🌐"/>},
-                ...agentes.map(a=>({k:`agente:${a.id}`,l:a.nombre||a.codigo,sub:`Agente ${a.codigo||""}`,ic:IC.agente})),
-                ...clients.filter(c=>c.tipo==="usuario"&&c.rol==="F").map(c=>({k:`autonomo:${c.id}`,l:fullName(c),sub:`Autónomo ${c.id}`,ic:IC.autonomo})),
+                ...agentesVis.map(a=>({k:`agente:${a.id}`,l:a.nombre||a.codigo,sub:`Agente ${a.codigo||""}`,ic:IC.agente})),
+                ...autonomosVis.map(c=>({k:`autonomo:${c.id}`,l:fullName(c),sub:`Autónomo ${c.id}`,ic:IC.autonomo})),
                 ...Object.keys(cuenta).filter(k=>k.startsWith("cliente:")).map(k=>{const c=clients.find(x=>x.id===k.split(":")[1]);return {k,l:c?fullName(c):"?",sub:`Cliente ${c?.casillero||""}`,ic:IC.cliente};}),
               ];
               const GQ=sinAcentos(tafGrupoQ.trim());
@@ -8347,9 +8361,9 @@ export default function SistemaCarga(){
                     {tafForm.aplicaTipo&&<div className="fg"><div className="fl">¿Cuál?</div>
                       <select className="fs" value={tafForm.aplicaId||""} onChange={e=>setTafForm(p=>({...p,aplicaId:e.target.value}))}>
                         <option value="">— Selecciona —</option>
-                        {(tafForm.aplicaTipo==="agente"?agentes.map(a=>({id:a.id,l:`${a.codigo||""} — ${a.nombre||""}`}))
-                          :tafForm.aplicaTipo==="autonomo"?clients.filter(c=>c.tipo==="usuario"&&c.rol==="F").map(c=>({id:c.id,l:`${c.id} — ${fullName(c)}`}))
-                          :clients.filter(c=>c.tipo==="cliente").map(c=>({id:c.id,l:`${c.casillero||c.id} — ${fullName(c)}`}))
+                        {(tafForm.aplicaTipo==="agente"?agentesVis.map(a=>({id:a.id,l:`${a.codigo||""} — ${a.nombre||""}`}))
+                          :tafForm.aplicaTipo==="autonomo"?autonomosVis.map(c=>({id:c.id,l:`${c.id} — ${fullName(c)}`}))
+                          :clientesMiOficina.filter(c=>c.tipo==="cliente").map(c=>({id:c.id,l:`${c.casillero||c.id} — ${fullName(c)}`}))
                         ).map(o=><option key={o.id} value={o.id}>{o.l}</option>)}
                       </select>
                     </div>}
@@ -9185,9 +9199,9 @@ export default function SistemaCarga(){
                   :<div className="fi-search" style={{position:"relative"}}>
                     <input className="fi" placeholder="Público general · o busca agente, autónomo o cliente…" value={f.paraQ||""} onChange={e=>setCalc({paraQ:e.target.value})}/>
                     {(()=>{const Q=sinAcentos((f.paraQ||"").trim());if(Q.length<2)return null;
-                      const ops=[...agentes.map(a=>({tipo:"agente",id:a.id,nombre:a.nombre||a.codigo,sub:"Agente"})),
-                        ...clients.filter(c=>c.tipo==="usuario"&&c.rol==="F").map(c=>({tipo:"autonomo",id:c.id,nombre:fullName(c),sub:"Autónomo"})),
-                        ...clients.filter(c=>c.tipo==="cliente").map(c=>({tipo:"cliente",id:c.id,nombre:fullName(c),sub:`Cliente #${c.casillero||""}`}))]
+                      const ops=[...agentesVis.map(a=>({tipo:"agente",id:a.id,nombre:a.nombre||a.codigo,sub:"Agente"})),
+                        ...autonomosVis.map(c=>({tipo:"autonomo",id:c.id,nombre:fullName(c),sub:"Autónomo"})),
+                        ...clientesMiOficina.filter(c=>c.tipo==="cliente").map(c=>({tipo:"cliente",id:c.id,nombre:fullName(c),sub:`Cliente #${c.casillero||""}`}))]
                         .filter(o=>sinAcentos(`${o.nombre} ${o.sub}`).includes(Q)).slice(0,20);
                       return ops.length>0&&<div className="fi-search-res">{ops.map(o=>(
                         <div key={o.tipo+o.id} className="fi-search-item" onMouseDown={e=>{e.preventDefault();setCalc({para:o,paraQ:""});}}>
@@ -9946,9 +9960,9 @@ export default function SistemaCarga(){
   const resumenCuentas=(conClientes=false)=>{
     const m=new Map();
     const tocar=(pg)=>{const k=pagKey(pg);if(!m.has(k))m.set(k,{pg,debe:{},favor:{}});return m.get(k);};
-    if(conClientes)clients.filter(c=>c.tipo==="cliente").forEach(c=>tocar({tipo:"cliente",id:c.id,nombre:fullName(c)}));
-    agentes.forEach(a=>tocar({tipo:"agente",id:a.id,nombre:a.nombre||a.codigo||"Agente"}));
-    clients.filter(c=>c.tipo==="usuario"&&c.rol==="F").forEach(c=>tocar({tipo:"autonomo",id:c.id,nombre:fullName(c)||"Autónomo"}));
+    if(conClientes)clientesMiOficina.filter(c=>c.tipo==="cliente").forEach(c=>tocar({tipo:"cliente",id:c.id,nombre:fullName(c)}));
+    agentesVis.forEach(a=>tocar({tipo:"agente",id:a.id,nombre:a.nombre||a.codigo||"Agente"}));
+    autonomosVis.forEach(c=>tocar({tipo:"autonomo",id:c.id,nombre:fullName(c)||"Autónomo"}));
     facturas.forEach(f=>{if(["anulada","borrador"].includes(f.status))return;const r=tocar(pagadorDeFactura(f));
       if(f.tipo==="factura"&&(f.saldo||0)>0.001){const mn=f.moneda||"USD";r.debe[mn]=r2((r.debe[mn]||0)+f.saldo);}});
     pagos.forEach(p=>{if(p.anulado)return;const pg=pagadorDePago(p);if(!pg)return;const r=tocar(pg);const mn=p.moneda||"USD";
@@ -14719,8 +14733,8 @@ export default function SistemaCarga(){
         );
       })()}
 
-      {showNewCl&&<ClientModal esAdmin={currentUser.rol==="A"} elegirMatriz={!["E","E1","F","G","I"].includes(currentUser.rol)} acceso={hasPerm("dar_acceso")} tiposOk={Array.isArray(showNewCl)?showNewCl:tiposCrear} rolesOk={rolesAsignables} agentes={agentes} oficinas={oficinas} autonomos={clients.filter(c=>c.tipo==="usuario"&&c.rol==="F")} allClients={clients} title="Nuevo Registro" initial={{tipo:(Array.isArray(showNewCl)?showNewCl:tiposCrear)[0]||"cliente",clienteTipo:"matriz",primerNombre:"",segundoNombre:"",primerApellido:"",segundoApellido:"",cedula:"",dir:"",municipio:"",estado:"",pais:"",cp:"",tel1:"",tel2:"",email:"",casillero:"",rol:"I",password:"",...presetDominio()}} onClose={()=>setShowNewCl(false)} onSave={async f=>{const _sec=await refrescarSec();const esUser=f.tipo==="usuario";const newId=sigIdRegistro(esUser,clients,_sec);const casillero=(!esUser&&!f.casillero)?nextCasillero(clients,_sec):f.casillero;const newRec={...f,id:newId,casillero,clienteTipo:f.clienteTipo||"matriz",password:""};setClients(p=>[...p,newRec]);setShowNewCl(false);logAction("Creó registro",`${newId} — ${f.primerNombre} ${f.primerApellido}`);(async()=>{await dbUpsertCliente(newRec);await sincronizarCuenta(newRec,f.password);})();}}/>}
-      {showEditCl&&<ClientModal esAdmin={currentUser.rol==="A"} elegirMatriz={!["E","E1","F","G","I"].includes(currentUser.rol)} ocultar={!verDatos} acceso={hasPerm("dar_acceso")} tiposOk={[showEditCl.tipo]} rolesOk={rolesAsignables} agentes={agentes} oficinas={oficinas} autonomos={clients.filter(c=>c.tipo==="usuario"&&c.rol==="F")} allClients={clients} title={`Editar — ${fullName(showEditCl)}`} initial={showEditCl} onClose={()=>setShowEditCl(null)} onSave={f=>{const ant=showEditCl;const rec={...f,clienteTipo:f.clienteTipo||"matriz",password:""};setClients(p=>p.map(c=>c.id===f.id?rec:c));logAction("Editó registro",`${f.id} — ${f.primerNombre} ${f.primerApellido}`);setShowEditCl(null);(async()=>{await dbUpsertCliente(rec);await sincronizarCuenta(rec,f.password,ant);})();}}/>}
+      {showNewCl&&<ClientModal esAdmin={currentUser.rol==="A"} elegirMatriz={!["E","E1","F","G","I"].includes(currentUser.rol)} acceso={hasPerm("dar_acceso")} tiposOk={Array.isArray(showNewCl)?showNewCl:tiposCrear} rolesOk={rolesAsignables} agentes={agentesVis} oficinas={oficinas} autonomos={autonomosVis} allClients={clients} title="Nuevo Registro" initial={{tipo:(Array.isArray(showNewCl)?showNewCl:tiposCrear)[0]||"cliente",clienteTipo:"matriz",primerNombre:"",segundoNombre:"",primerApellido:"",segundoApellido:"",cedula:"",dir:"",municipio:"",estado:"",pais:"",cp:"",tel1:"",tel2:"",email:"",casillero:"",rol:"I",password:"",...presetDominio()}} onClose={()=>setShowNewCl(false)} onSave={async f=>{const _sec=await refrescarSec();const esUser=f.tipo==="usuario";const newId=sigIdRegistro(esUser,clients,_sec);const casillero=(!esUser&&!f.casillero)?nextCasillero(clients,_sec):f.casillero;const newRec={...f,id:newId,casillero,clienteTipo:f.clienteTipo||"matriz",password:""};setClients(p=>[...p,newRec]);setShowNewCl(false);logAction("Creó registro",`${newId} — ${f.primerNombre} ${f.primerApellido}`);(async()=>{await dbUpsertCliente(newRec);await sincronizarCuenta(newRec,f.password);})();}}/>}
+      {showEditCl&&<ClientModal esAdmin={currentUser.rol==="A"} elegirMatriz={!["E","E1","F","G","I"].includes(currentUser.rol)} ocultar={!verDatos} acceso={hasPerm("dar_acceso")} tiposOk={[showEditCl.tipo]} rolesOk={rolesAsignables} agentes={agentesVis} oficinas={oficinas} autonomos={autonomosVis} allClients={clients} title={`Editar — ${fullName(showEditCl)}`} initial={showEditCl} onClose={()=>setShowEditCl(null)} onSave={f=>{const ant=showEditCl;const rec={...f,clienteTipo:f.clienteTipo||"matriz",password:""};setClients(p=>p.map(c=>c.id===f.id?rec:c));logAction("Editó registro",`${f.id} — ${f.primerNombre} ${f.primerApellido}`);setShowEditCl(null);(async()=>{await dbUpsertCliente(rec);await sincronizarCuenta(rec,f.password,ant);})();}}/>}
 
       {/* ── Cargo Release — MODAL FORMULARIO ───────────────────────────────── */}
       {crModal&&(()=>{
