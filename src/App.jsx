@@ -8181,7 +8181,7 @@ export default function SistemaCarga(){
             <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,overflow:"hidden"}}>
               <><div className="ct-scroll"><table className="ct">
                 <thead><tr>
-                  <th>Código</th><th>Nombre</th><th>Ciudad</th><th>País</th><th>Teléfono</th><th>Email</th><th>Contacto</th><th>Estado</th><th>Acc.</th>
+                  <th>Código</th><th>Nombre</th><th>País</th><th>Matriz</th><th>Ciudad</th><th>Teléfono</th><th>Email</th><th>Contacto</th><th>Estado</th><th>Acc.</th>
                 </tr></thead>
                 <tbody>
                   {agentes.length===0&&<tr><td colSpan={9} style={{textAlign:"center",padding:30,color:"var(--t3)"}}>No hay agentes registrados.</td></tr>}
@@ -8189,8 +8189,10 @@ export default function SistemaCarga(){
                     <tr key={a.id} style={{cursor:"pointer"}} onClick={()=>setVerAgente(a0)}>
                       <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",background:"#EEF3FF",padding:"2px 8px",borderRadius:4,border:"1px solid #B8C8F0"}}>{a.codigo}</span></td>
                       <td style={{fontWeight:600}}>{a.nombre}</td>
+                      {(()=>{const m=oficinas.find(o=>o.id===a0.matriz_id);const co=paisDeOfi(m);return <>
+                        <td style={{fontSize:13,fontWeight:700,color:m?"var(--navy)":"var(--red)"}}>{co?.name||m?.pais||"Sin matriz"}</td>
+                        <td style={{fontSize:13}}>{m?`${m.codigo} — ${m.nombre}`:"—"}</td></>;})()}
                       <td style={{fontSize:13}}>{a.ciudad||"—"}</td>
-                      <td style={{fontSize:13}}>{a.pais||"—"}</td>
                       <td style={{fontSize:13,fontFamily:"'DM Mono',monospace"}}>{a.tel||"—"}</td>
                       <td style={{fontSize:13,color:"var(--cyan)"}}>{a.email||"—"}</td>
                       <td style={{fontSize:13}}>{a.contacto||"—"}</td>
@@ -8214,7 +8216,7 @@ export default function SistemaCarga(){
                 <div className="modal mmd" onClick={e=>e.stopPropagation()}>
                   <div className="mhd"><div className="mt"><Ico e="🤝" sp/>{a.codigo} — {a.nombre}</div><button className="mcl" onClick={()=>setVerAgente(null)}>✕</button></div>
                   <div className="fgrid g2" style={{gap:12,marginBottom:14}}>
-                    {D("Ciudad",a.ciudad)}{D("País",a.pais)}{D("Teléfono",a.tel)}{D("Email",a.email)}{D("Contacto",a.contacto)}{D("Estado",a.activo!==false?"Activo":"Inactivo")}
+                    {(()=>{const m=oficinas.find(o=>o.id===verAgente.matriz_id);return <>{D("País",paisDeOfi(m)?.name||m?.pais||"Sin matriz")}{D("Matriz",m?`${m.codigo} — ${m.nombre}`:"")}</>;})()}{D("Ciudad",a.ciudad)}{D("Teléfono",a.tel)}{D("Email",a.email)}{D("Contacto",a.contacto)}{D("Estado",a.activo!==false?"Activo":"Inactivo")}
                     {a.notas&&<div className="full">{D("Notas",a.notas)}</div>}
                   </div>
                   <div className="sdiv">USUARIOS ({us.length})</div>
@@ -8245,7 +8247,7 @@ export default function SistemaCarga(){
                     <div className="fg"><div className="fl">Email</div><input className="fi" type="email" value={agForm.email} onChange={e=>setAgForm(p=>({...p,email:e.target.value}))}/></div>
                     {currentUser.rol==="A"&&<div className="fg full"><label style={{display:"flex",alignItems:"center",gap:8,fontSize:14,cursor:"pointer"}}><input type="checkbox" checked={!!agForm.fp_activo} onChange={e=>setAgForm(p=>({...p,fp_activo:e.target.checked}))}/>Puede emitir sus propias facturas (Mis facturas)</label></div>}
                     <div className="fg full"><div className="fl">Matriz *</div><select className="fs" value={agForm.matriz_id||""} onChange={e=>setAgForm(p=>({...p,matriz_id:e.target.value}))}>
-                      <option value="">—</option>{oficinas.filter(o=>esMatriz(o)&&(ofiActiva(o)||o.id===agForm.matriz_id)).sort((a,b)=>String(a.codigo||"").localeCompare(String(b.codigo||""))).map(o=><option key={o.id} value={o.id}>{o.codigo} — {o.nombre}{o.ciudad?` (${o.ciudad})`:""}</option>)}</select></div>
+                      <option value="">—</option>{oficinas.filter(o=>esMatriz(o)&&(ofiActiva(o)||o.id===agForm.matriz_id)).sort((a,b)=>String(a.codigo||"").localeCompare(String(b.codigo||""))).map(o=><option key={o.id} value={o.id}>{o.codigo} — {o.nombre} · {paisDeOfi(o)?.name||o.pais||""}</option>)}</select></div>
                     <div className="fg full"><div className="fl">Dirección en los WR de sus clientes</div><select className="fs" value={agForm.wr_dir||"matriz"} onChange={e=>setAgForm(p=>({...p,wr_dir:e.target.value}))}><option value="matriz">Dirección de la casa matriz</option><option value="origen">Dirección de la oficina de origen del WR</option></select></div>
                     <div className="fg full"><div className="fl">Persona de Contacto</div><input className="fi" value={agForm.contacto} onChange={e=>setAgForm(p=>({...p,contacto:e.target.value.toUpperCase()}))}/></div>
                     <div className="fg full"><div className="fl">Notas</div><input className="fi" value={agForm.notas} onChange={e=>setAgForm(p=>({...p,notas:e.target.value.toUpperCase()}))}/></div>
