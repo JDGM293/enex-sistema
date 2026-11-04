@@ -9985,20 +9985,23 @@ export default function SistemaCarga(){
   const pagadorDeFactura=f=>({tipo:f.receptorTipo||"cliente",id:f.receptorId||"",nombre:f.receptorNombre||""});
   const pagadorDePago=p=>p.pagadorTipo?{tipo:p.pagadorTipo,id:p.pagadorId,nombre:p.pagadorNombre}
     :(()=>{const f=facturas.find(x=>x.id===p.facturaId);return f?pagadorDeFactura(f):null;})();
+  // Contabilidad: solo el dinero de la matriz en la que se trabaja
+  const facMat=()=>misOficinas?facturas.filter(f=>!f.matrizId||misOficinas.has(f.matrizId)):facturas;
+  const pagMat=()=>misOficinas?pagos.filter(p=>!p.matrizId||misOficinas.has(p.matrizId)):pagos;
   const facAbiertasDe=pg=>{const k=pagKey(pg);
-    return facturas.filter(f=>["emitida","pagada_parcial"].includes(f.status)&&f.tipo!=="nota_credito"&&(f.saldo||0)>0.001&&pagKey(pagadorDeFactura(f))===k)
+    return facMat().filter(f=>["emitida","pagada_parcial"].includes(f.status)&&f.tipo!=="nota_credito"&&(f.saldo||0)>0.001&&pagKey(pagadorDeFactura(f))===k)
       .sort((a,b)=>new Date(a.fechaEmision||a.fecha)-new Date(b.fechaEmision||b.fecha));};
-  const saldoFavorDe=(pg,mon,lista=pagos)=>{const k=pagKey(pg);let t=0;
+  const saldoFavorDe=(pg,mon,lista=pagMat())=>{const k=pagKey(pg);let t=0;
     lista.forEach(p=>{if(p.anulado||(p.moneda||"USD")!==mon)return;const pp=pagadorDePago(p);if(!pp||pagKey(pp)!==k)return;
       if(!p.facturaId)t+=p.monto||0; else if(p.tipoPago==="saldo_favor")t-=p.monto||0;});
     return Math.max(0,Math.round(t*100)/100);};
   const monedasDe=pg=>{const k=pagKey(pg);const m=new Set(facAbiertasDe(pg).map(f=>f.moneda||"USD"));
-    pagos.forEach(p=>{if(!p.anulado&&!p.facturaId){const pp=pagadorDePago(p);if(pp&&pagKey(pp)===k)m.add(p.moneda||"USD");}});
+    pagMat().forEach(p=>{if(!p.anulado&&!p.facturaId){const pp=pagadorDePago(p);if(pp&&pagKey(pp)===k)m.add(p.moneda||"USD");}});
     return [...m];};
   // Pagadores con deuda o saldo a favor (para elegir al recibir un pago)
   const pagadoresConMovimiento=()=>{const m=new Map();
-    facturas.filter(f=>["emitida","pagada_parcial"].includes(f.status)&&f.tipo!=="nota_credito"&&(f.saldo||0)>0.001).forEach(f=>{const pg=pagadorDeFactura(f);m.set(pagKey(pg),pg);});
-    pagos.filter(p=>!p.anulado&&!p.facturaId).forEach(p=>{const pg=pagadorDePago(p);if(pg)m.set(pagKey(pg),pg);});
+    facMat().filter(f=>["emitida","pagada_parcial"].includes(f.status)&&f.tipo!=="nota_credito"&&(f.saldo||0)>0.001).forEach(f=>{const pg=pagadorDeFactura(f);m.set(pagKey(pg),pg);});
+    pagMat().filter(p=>!p.anulado&&!p.facturaId).forEach(p=>{const pg=pagadorDePago(p);if(pg)m.set(pagKey(pg),pg);});
     return [...m.values()].sort((a,b)=>String(a.nombre).localeCompare(String(b.nombre)));};
   const cobroAbrir=(pg,preSel=null,recien=null)=>{
     // Con "cobrar_prepaid" solo se cobra la factura PREPAID indicada, sin ver las demás del pagador
@@ -10115,7 +10118,7 @@ export default function SistemaCarga(){
   // ── Cuadre con agentes y autónomos ──────────────────────────────────────────
   // Comisión de un WR PREPAID de un cliente de agente/autónomo que la empresa cobró:
   // flete cobrado − flete a la tarifa del agente/autónomo (con su mínimo).
-  const comisionesPrepaid=(facs=facturas,pgs=pagos)=>{
+  const comisionesPrepaid=(facs=facMat(),pgs=pagMat())=>{
     const acreditadas=new Set(pgs.filter(p=>!p.anulado&&p.tipoPago==="comision").map(p=>p.referencia));
     const quitadas=new Set(pgs.filter(p=>!p.anulado&&p.tipoPago==="comision_quitada").map(p=>p.referencia));
     const out=[];
@@ -10180,13 +10183,13 @@ export default function SistemaCarga(){
   // Movimientos de una cuenta en una moneda: debe (nos debe) / haber (a su favor); saldo>0 nos debe, <0 le debemos
   const movimientosCuenta=(pg,mon)=>{
     const k=pagKey(pg);const out=[];
-    facturas.forEach(f=>{
+    facMat().forEach(f=>{
       if(["anulada","borrador"].includes(f.status)||(f.moneda||"USD")!==mon||pagKey(pagadorDeFactura(f))!==k)return;
       if(f.tipo==="factura")out.push({fecha:new Date(f.fechaEmision||f.fecha),doc:`Factura ${f.id}`,det:(f.wrIds||[]).length?`WR ${(f.wrIds||[]).join(", ")}`:"",debe:f.total||0,haber:0,factura:f});
       else if(f.tipo==="nota_credito")out.push({fecha:new Date(f.fechaEmision||f.fecha),doc:`Nota de crédito ${f.id}`,det:`a factura ${f.ncFacturaOrigen}`,debe:0,haber:Math.abs(f.total||0),nc:f});
     });
     const grupos=new Map();
-    pagos.forEach(p=>{
+    pagMat().forEach(p=>{
       if(p.anulado||(p.moneda||"USD")!==mon)return;
       const pp=pagadorDePago(p);if(!pp||pagKey(pp)!==k)return;
       if(["saldo_favor","nota_credito","comision_quitada"].includes(p.tipoPago))return;
@@ -10198,7 +10201,7 @@ export default function SistemaCarga(){
     });
     grupos.forEach(x=>{x.det=[x.metodo,x.ref,x.facs.size?`fact. ${[...x.facs].join(", ")}`:"a favor"].filter(Boolean).join(" · ");out.push(x);});
     // Lo aplicado desde el saldo a favor no mueve el saldo, pero se muestra en el cobro
-    pagos.forEach(p=>{if(p.anulado||p.tipoPago!=="saldo_favor"||(p.moneda||"USD")!==mon)return;const pp=pagadorDePago(p);if(!pp||pagKey(pp)!==k)return;
+    pagMat().forEach(p=>{if(p.anulado||p.tipoPago!=="saldo_favor"||(p.moneda||"USD")!==mon)return;const pp=pagadorDePago(p);if(!pp||pagKey(pp)!==k)return;
       const g=grupos.get(p.reciboId);if(g){g.pagos.push(p);g.usoFavor=(g.usoFavor||0)+p.monto;}});
     out.sort((a,b)=>a.fecha-b.fecha);
     return out;
@@ -10210,9 +10213,9 @@ export default function SistemaCarga(){
     if(conClientes)clientesMiOficina.filter(c=>c.tipo==="cliente").forEach(c=>tocar({tipo:"cliente",id:c.id,nombre:fullName(c)}));
     agentesVis.forEach(a=>tocar({tipo:"agente",id:a.id,nombre:a.nombre||a.codigo||"Agente"}));
     autonomosVis.forEach(c=>tocar({tipo:"autonomo",id:c.id,nombre:fullName(c)||"Autónomo"}));
-    facturas.forEach(f=>{if(["anulada","borrador"].includes(f.status))return;const r=tocar(pagadorDeFactura(f));
+    facMat().forEach(f=>{if(["anulada","borrador"].includes(f.status))return;const r=tocar(pagadorDeFactura(f));
       if(f.tipo==="factura"&&(f.saldo||0)>0.001){const mn=f.moneda||"USD";r.debe[mn]=r2((r.debe[mn]||0)+f.saldo);}});
-    pagos.forEach(p=>{if(p.anulado)return;const pg=pagadorDePago(p);if(!pg)return;const r=tocar(pg);const mn=p.moneda||"USD";
+    pagMat().forEach(p=>{if(p.anulado)return;const pg=pagadorDePago(p);if(!pg)return;const r=tocar(pg);const mn=p.moneda||"USD";
       if(!p.facturaId)r.favor[mn]=r2((r.favor[mn]||0)+(p.monto||0));else if(p.tipoPago==="saldo_favor")r.favor[mn]=r2((r.favor[mn]||0)-(p.monto||0));});
     return [...m.values()].map(r=>{Object.keys(r.favor).forEach(mn=>{if(r.favor[mn]<0.005)delete r.favor[mn];});
       if(r.pg.tipo==="agente"){const a=agentes.find(x=>x.id===r.pg.id);if(a)r.pg={...r.pg,nombre:a.nombre||a.codigo};}
@@ -10631,9 +10634,9 @@ export default function SistemaCarga(){
     const idsVis=new Set(wrList.map(w=>w.id));
     const facturas=alcanceUsr
       ?facturasAll.filter(f=>(f.wrIds||[]).some(id=>idsVis.has(id))||(f.receptorId&&[currentUser.id,currentUser.agenteId].includes(f.receptorId)))
-      :facturasAll;
+      :facMat();
     const facIds=new Set(facturas.map(f=>f.id));
-    const pagos=alcanceUsr?pagosAll.filter(p=>facIds.has(p.facturaId)):pagosAll;
+    const pagos=alcanceUsr?pagosAll.filter(p=>facIds.has(p.facturaId)):pagMat();
     // Facturación: Por guía / Facturas · Contabilidad: Por Cobrar / Pagos / Reporte
     const enFacturacion=["porguia","facturas"].includes(contabTab);
     const CTABS=enFacturacion
