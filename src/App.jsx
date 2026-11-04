@@ -4077,10 +4077,9 @@ export default function SistemaCarga(){
         <div className="ct-wrap">
           <><div className="ct-scroll"><table className="ct">
             <thead><tr>
-              <th>ID</th><th>Tipo</th><th>Nombre Completo</th><th>ID Identificación</th>
-              <th>Casillero</th><th>Matriz</th><th>Oficina</th><th>Dirección</th><th>Municipio</th><th>Estado</th>
+              <th>ID</th><th>Tipo</th><th>Nombre Completo</th><th>Casillero</th><th>Matriz</th><th>Pertenece a</th><th>Designación</th>
+              <th>ID Identificación</th><th>Dirección</th><th>Municipio</th><th>Estado</th>
               <th>País</th><th>CP</th><th>Teléfono 1</th><th>Teléfono 2</th><th>Email</th><th>Rol</th>
-              <th>Designación</th><th>Pertenece a</th>
               {(hasPerm("editar_cliente")||hasPerm("editar_usuario")||hasPerm("borrar_cliente"))&&<th>Acc.</th>}
             </tr></thead>
             <tbody>
@@ -4095,8 +4094,8 @@ export default function SistemaCarga(){
                 const parentName=ofiUsr?`${ofiUsr.codigo} — ${ofiUsr.nombre}`:
                   c.tipo==="usuario"&&["A","B"].includes(c.rol)?"Todas las oficinas":
                   c.tipo==="usuario"&&["E","E1"].includes(c.rol)?(agentes.find(a=>a.id===c.agenteId)?.nombre||"Sin agente asignado"):
-                  c.tipo==="usuario"&&c.rol==="F"?(()=>{const m=oficinas.find(o=>o.id===c.matrizId);return m?`${m.codigo} — ${m.nombre}`:"Sin matriz";})():
-                  ct==="matriz"?(()=>{const m=oficinas.find(o=>o.id===c.matrizId);return m?`${m.codigo} — ${m.nombre}`:"Sin matriz";})():
+                  c.tipo==="usuario"&&c.rol==="F"?"—":
+                  ct==="matriz"?(()=>{const o=oficinas.find(x=>x.id===c.oficinaId);return o?`${o.codigo} — ${o.nombre}`:"Sin oficina asignada";})():
                   ct==="agente"||ct==="vendedor_agente"?(agentes.find(a=>a.id===c.agenteId)?.nombre||"Sin agente asignado"):
                   ct==="autonomo"?(parentAut?`${parentAut.primerNombre} ${parentAut.primerApellido}`:"Sin autónomo asignado"):
                   ct==="oficina"||ct==="vendedor_oficina"?(oficinas.find(o=>o.id===c.oficinaId)?.nombre||"Sin oficina asignada"):
@@ -4106,13 +4105,12 @@ export default function SistemaCarga(){
                   <td><span className="cid">{c.id}</span></td>
                   <td><span style={{fontSize:11,padding:"2px 6px",borderRadius:4,fontWeight:700,background:c.tipo==="usuario"?"#F0EAFE":"#E8F8EE",color:c.tipo==="usuario"?"var(--purple)":"var(--green)",border:"1px solid",borderColor:c.tipo==="usuario"?"#C0A0F0":"#80D0A0"}}>{c.tipo==="usuario"?"Sistema":"Cliente"}</span></td>
                   <td><span className="cn">{fullName(c)}</span></td>
-                  <td style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--gold2)",fontWeight:600}}>{oc(c.cedula)}</td>
                   <td style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--gold2)",fontWeight:700}}>{c.casillero||"—"}</td>
                   {(()=>{const mid=c.tipo==="usuario"?matrizDeUsuario(c):c.matrizId;const m=oficinas.find(o=>o.id===mid);
-                    const of=oficinas.find(o=>o.id===c.oficinaId);
-                    return <>
-                    <td style={{fontSize:12,fontWeight:700,whiteSpace:"nowrap",color:m?"var(--navy)":"var(--t3)"}} title={m?`${m.nombre} · ${m.pais||""}`:""}>{m?m.codigo:(c.tipo==="usuario"&&["A","B"].includes(c.rol)?"Todas":"—")}</td>
-                    <td style={{fontSize:12,whiteSpace:"nowrap"}} title={of?.ciudad||""}>{of?<><b>{of.codigo}</b> {of.nombre}</>:"—"}</td></>;})()}
+                    return <td style={{fontSize:12,fontWeight:700,whiteSpace:"nowrap",color:m?"var(--navy)":"var(--t3)"}} title={m?`${m.nombre} · ${m.pais||""}`:""}>{m?m.codigo:(c.tipo==="usuario"&&["A","B"].includes(c.rol)?"Todas":"—")}</td>;})()}
+                  <td style={{fontSize:12,color:parentName&&parentName.startsWith("Sin ")?"var(--red)":"var(--t1)",fontWeight:600,whiteSpace:"nowrap"}}>{parentName}</td>
+                  <td>{ct?<span style={{fontSize:11,padding:"2px 7px",borderRadius:4,fontWeight:700,background:CT_COLOR[ct]||"var(--bg4)",color:CT_TEXT[ct]||"var(--t2)",border:"1px solid currentColor",whiteSpace:"nowrap"}}>{ctLabel}</span>:<span style={{color:"var(--t4)",fontSize:12}}>—</span>}</td>
+                  <td style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--gold2)",fontWeight:600}}>{oc(c.cedula)}</td>
                   <td style={{fontSize:12,maxWidth:180,overflow:"hidden",textOverflow:"ellipsis"}}>{c.dir}</td>
                   <td style={{fontSize:12}}>{c.municipio}</td>
                   <td style={{fontSize:12}}>{c.estado}</td>
@@ -4122,8 +4120,6 @@ export default function SistemaCarga(){
                   <td style={{fontSize:12,color:"var(--t3)",whiteSpace:"nowrap"}}>{oc(c.tel2)||"—"}</td>
                   <td style={{fontSize:12,color:"var(--cyan)"}}>{oc(c.email,"mail")}</td>
                   <td><RoleBadge code={c.rol}/></td>
-                  <td>{ct?<span style={{fontSize:11,padding:"2px 7px",borderRadius:4,fontWeight:700,background:CT_COLOR[ct]||"var(--bg4)",color:CT_TEXT[ct]||"var(--t2)",border:"1px solid currentColor",whiteSpace:"nowrap"}}>{ctLabel}</span>:<span style={{color:"var(--t4)",fontSize:12}}>—</span>}</td>
-                  <td style={{fontSize:12,color:parentName&&parentName.startsWith("Sin ")?"var(--red)":ct==="matriz"?"var(--t3)":"var(--t1)",fontWeight:ct==="matriz"?400:600,whiteSpace:"nowrap"}}>{parentName}</td>
                   {(hasPerm("editar_cliente")||hasPerm("editar_usuario")||hasPerm("borrar_cliente"))&&<td><div style={{display:"flex",gap:3}}>
                     {puedeEditarReg(c)&&<span className="ic-b" onClick={()=>setShowEditCl(c)}><Ico e="✏️" solo/></span>}
                     {hasPerm("borrar_cliente")&&<span className="ic-b" style={{color:"var(--red)"}} onClick={()=>{if(window.confirm(`¿Borrar "${fullName(c)}"? Esta acción no se puede deshacer.`)){setClients(p=>p.filter(x=>x.id!==c.id));(async()=>{if(c.authId)await cuentaEliminar(c.id);await dbDeleteCliente(c.id);})();logAction("Borró registro",`${c.id} — ${fullName(c)}`);}}}><Ico e="🗑" solo/></span>}
