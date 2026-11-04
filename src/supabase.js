@@ -44,7 +44,14 @@ export const clienteFromDB = (r) => r ? ({
   autonomoId: r.autonomo_id, vendedorId: r.vendedor_id || '', activo: r.activo,
   authId: r.auth_id || null, password: '', wrDir: r.wr_dir || '',
   matrizId: r.matriz_id || '', ofiRegistro: r.ofi_registro_id || '', fpActivo: !!r.fp_activo,
+  matrizTrabajo: r.matriz_trabajo || '',
 }) : null
+// Matriz de trabajo del usuario (Administrador o interno sin oficina). '' = todas
+export const dbSetMatrizTrabajo = async (id) => {
+  const { error } = await supabase.rpc('set_matriz_trabajo', { p: id || null })
+  if (error) { console.error('setMatrizTrabajo:', error); return false }
+  return true
+}
 
 export const clienteToDB = (c) => ({
   id: c.id, tipo: c.tipo,
@@ -179,7 +186,7 @@ export const dbGetOficinas = async () => {
   return data
 }
 
-const OFICINA_COLS = ['id','codigo','nombre','ciudad','pais','activo','tel','email','contacto','notas','dir','estado','cp','tipo','matriz_id','moneda','principal','com_prepaid_pct','com_entrega_monto','com_entrega_por','fp_activo']
+const OFICINA_COLS = ['id','codigo','nombre','ciudad','pais','activo','tel','email','contacto','notas','dir','estado','cp','tipo','matriz_id','moneda','principal','com_prepaid_pct','com_entrega_monto','com_entrega_por','fp_activo','recibe_puerta']
 export const dbUpsertOficina = async (of) => {
   const fila = Object.fromEntries(OFICINA_COLS.filter(k => of[k] !== undefined).map(k => [k, of[k]]))
   const { error } = await supabase.from('oficinas').upsert(fila)
@@ -200,7 +207,7 @@ export const dbGetTarifas = async () => {
     paisDest: r.pais_dest, ciudadDest: r.ciudad_dest,
     tipoEnvio: r.tipo_envio, porLb: r.por_lb, porFt3: r.por_ft3,
     min: r.min, moneda: r.moneda, activo: r.activo,
-    aplicaTipo: r.aplica_tipo || '', aplicaId: r.aplica_id || '', unidad: r.unidad || '',
+    aplicaTipo: r.aplica_tipo || '', aplicaId: r.aplica_id || '', unidad: r.unidad || '', matrizId: r.matriz_id || '',
   }))
 }
 
@@ -210,7 +217,7 @@ export const dbUpsertTarifa = async (t) => {
     pais_dest: t.paisDest, ciudad_dest: t.ciudadDest,
     tipo_envio: t.tipoEnvio, por_lb: t.porLb, por_ft3: t.porFt3,
     min: t.min, moneda: t.moneda, activo: t.activo,
-    aplica_tipo: t.aplicaTipo || null, aplica_id: t.aplicaId || null, unidad: t.unidad || null,
+    aplica_tipo: t.aplicaTipo || null, aplica_id: t.aplicaId || null, unidad: t.unidad || null, matriz_id: t.matrizId || null,
   })
   if (error) console.error('upsertTarifa:', error)
 }
@@ -595,6 +602,7 @@ const pickupFromDB = (r) => ({
   status: r.status || 'solicitado', fechaProgramada: r.fecha_programada || '', chofer: r.chofer || '', transportista: r.transportista || '',
   monto: parseFloat(r.monto) || 0, moneda: r.moneda || 'USD', wrId: r.wr_id || '',
   historial: r.historial || [], motivoCancelacion: r.motivo_cancelacion || '',
+  pais: r.pais || '', ciudad: r.ciudad || '', matrizId: r.matriz_id || '',
 })
 export const dbGetPickups = async () => {
   const { data, error } = await supabase.from('pickup').select('*').order('fecha', { ascending: false })
@@ -611,6 +619,7 @@ export const dbUpsertPickup = async (p) => {
     status: p.status || 'solicitado', fecha_programada: p.fechaProgramada || null, chofer: p.chofer || '', transportista: p.transportista || '',
     monto: p.monto || 0, moneda: p.moneda || 'USD', wr_id: p.wrId || '',
     historial: p.historial || [], motivo_cancelacion: p.motivoCancelacion || '',
+    pais: p.pais || null, ciudad: p.ciudad || null, matriz_id: p.matrizId || null,
   })
   if (error) { console.error('upsertPickup:', error); return false }
   return true
@@ -637,7 +646,7 @@ export const dbGetScanLog = async () => {
   if (error) { console.error('getScanLog:', error); return [] }
   return data.map(r => ({
     id: r.id, tracking: r.tracking, carrier: r.carrier || '—',
-    ts: new Date(r.ts), registered: r.registered ?? false,
+    ts: new Date(r.ts), registered: r.registered ?? false, oficinaId: r.oficina_id || '',
   }))
 }
 
@@ -645,7 +654,7 @@ export const dbInsertScan = async (entry) => {
   const { error } = await supabase.from('scan_log').insert({
     id: entry.id, tracking: entry.tracking, carrier: entry.carrier || '—',
     ts: entry.ts instanceof Date ? entry.ts.toISOString() : entry.ts,
-    registered: entry.registered ?? false,
+    registered: entry.registered ?? false, oficina_id: entry.oficinaId || null,
   })
   if (error) console.error('insertScan:', error)
 }
@@ -906,6 +915,7 @@ export const paFromDB = (r) => r ? ({
   tienda: r.tienda || '', descripcion: r.descripcion || '', valor: r.valor == null ? '' : Number(r.valor), moneda: r.moneda || 'USD',
   archivos: r.archivos || [], notas: r.notas || '', status: r.status || 'pendiente', wrId: r.wr_id || '',
   recibida: r.recibida ? new Date(r.recibida) : null, creado: new Date(r.creado), creadoPor: r.creado_por || '', creadoPorNombre: r.creado_por_nombre || '',
+  matrizId: r.matriz_id || '',
 }) : null
 export const dbGetPrealertas = async () => {
   const { data, error } = await supabase.from('prealertas').select('*').order('creado', { ascending: false }).limit(5000)
@@ -920,7 +930,7 @@ export const dbUpsertPrealerta = async (p, nuevo = false) => {
     tienda: p.tienda || null, descripcion: p.descripcion || null, valor: p.valor === '' || p.valor == null ? null : Number(p.valor), moneda: p.moneda || 'USD',
     archivos: p.archivos || [], notas: p.notas || null, status: p.status, wr_id: p.wrId || null,
     recibida: p.recibida ? new Date(p.recibida).toISOString() : null, creado: new Date(p.creado).toISOString(),
-    creado_por: p.creadoPor || null, creado_por_nombre: p.creadoPorNombre || null,
+    creado_por: p.creadoPor || null, creado_por_nombre: p.creadoPorNombre || null, matriz_id: p.matrizId || null,
   })
   if (error) { if (nuevo && error.code === '23505') return 'dup'; console.error('upsertPrealerta:', error); return false }
   return true

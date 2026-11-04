@@ -6,7 +6,7 @@ import { descargarXlsx } from './xlsx'
 import { dbGetActividadReporte } from './supabase'
 import { dbGetFacturasPropias, dbUpsertFacturaPropia, dbGetPrealertas, dbUpsertPrealerta, paSubirArchivo, paUrlArchivo } from './supabase'
 import { chatFromDB, dbChatMensajes, dbChatEnviar, dbChatEditar, dbChatNoLeidos, dbChatMarcarLeido, chatSubirAdjunto, chatUrlAdjunto } from './supabase'
-import { supabase, resolverLogin, cuentaGuardar, cuentaEliminar, dbGetClientes, dbUpsertCliente, dbDeleteCliente, dbGetWR, dbUpsertWR as dbUpsertWRBase, dbDeleteWR, dbGetAgentes, dbUpsertAgente, dbDeleteAgente, dbGetOficinas, dbUpsertOficina, dbDeleteOficina, dbGetTarifas, dbUpsertTarifa, dbDeleteTarifa, dbGetConsolidaciones, dbUpsertConsolidacion, dbDeleteConsolidacion, dbGetCargoReleases, dbUpsertCargoRelease, dbDeleteCargoRelease, dbGetDeliveryNotes, dbUpsertDeliveryNote, dbGetTraslados, dbUpsertTraslado, dbDeleteDeliveryNote, dbGetFacturas, dbUpsertFactura, dbDeleteFactura, dbGetPagos, dbUpsertPago as dbUpsertPagoBase, dbDeletePago, dbSigDocumento, dbRenombrarFactura, storageUploadComprobante, dbLogActividad, dbGetActividad, dbGetConfig, dbSetConfig, dbGetScanLog, dbInsertScan, dbSetScanRegistered, dbDeleteScanIds, storageUploadFoto, storageDeleteFoto, dbGetFotosByWR, dbInsertFoto, dbDeleteFoto, storageUploadFotoConsol, storageDeleteFotoConsol, dbGetFotosByConsol, dbInsertFotoConsol, dbDeleteFotoConsol } from "./supabase";
+import { supabase, resolverLogin, cuentaGuardar, cuentaEliminar, dbGetClientes, dbUpsertCliente, dbDeleteCliente, dbGetWR, dbUpsertWR as dbUpsertWRBase, dbDeleteWR, dbGetAgentes, dbUpsertAgente, dbDeleteAgente, dbGetOficinas, dbUpsertOficina, dbDeleteOficina, dbGetTarifas, dbUpsertTarifa, dbDeleteTarifa, dbGetConsolidaciones, dbUpsertConsolidacion, dbDeleteConsolidacion, dbGetCargoReleases, dbUpsertCargoRelease, dbDeleteCargoRelease, dbGetDeliveryNotes, dbUpsertDeliveryNote, dbGetTraslados, dbUpsertTraslado, dbDeleteDeliveryNote, dbGetFacturas, dbUpsertFactura, dbDeleteFactura, dbGetPagos, dbUpsertPago as dbUpsertPagoBase, dbDeletePago, dbSigDocumento, dbRenombrarFactura, dbSetMatrizTrabajo, storageUploadComprobante, dbLogActividad, dbGetActividad, dbGetConfig, dbSetConfig, dbGetScanLog, dbInsertScan, dbSetScanRegistered, dbDeleteScanIds, storageUploadFoto, storageDeleteFoto, dbGetFotosByWR, dbInsertFoto, dbDeleteFoto, storageUploadFotoConsol, storageDeleteFotoConsol, dbGetFotosByConsol, dbInsertFotoConsol, dbDeleteFotoConsol } from "./supabase";
 
 // ─── TEMA CLARO PROFESIONAL ───────────────────────────────────────────────────
 const S = `
@@ -2503,7 +2503,6 @@ export default function SistemaCarga(){
   const [clFilter,setClFilter]=useState("");
   const [clBusca,setClBusca]=useState("");
   const [clUsrGrupo,setClUsrGrupo]=useState("todos");
-  const [matrizSel,setMatrizSel]=useState("");
   const [dimOpen,setDimOpen]=useState(null);
   // Atajo a Reempaque / Cargo Release en ventana, sin abandonar la pantalla actual
   const [quickTab,setQuickTab]=useState(null);
@@ -2919,7 +2918,9 @@ export default function SistemaCarga(){
       supabase.from('configuracion').select('clave,valor').like('clave','fp_datos:%').then(({data})=>{if(data)setFpDatos(Object.fromEntries(data.map(r=>[r.clave.slice(9),r.valor])));});
       // Usuario de la sesión: el registro enlazado a la cuenta
       {const u=cls.find(c=>c.authId===authUid&&c.activo!==false);
-       if(u)setCurrentUser(u);
+       // Oficina efectiva: la propia; el Administrador y los internos sin oficina trabajan en la matriz que eligen arriba
+       if(u){const interno=!["E","E1","F","G","I"].includes(u.rol);const libre=interno&&(u.rol==="A"||!u.oficinaId);
+         setCurrentUser({...u,oficinaPropia:u.oficinaId||"",eligeMatriz:libre,oficinaId:libre?(u.matrizTrabajo||(u.rol==="A"?"":u.oficinaId||"")):u.oficinaId});}
        else{await supabase.auth.signOut();setLoginErr("Esta cuenta no tiene acceso al sistema.");setAuthUid(null);}}
       if(wrs.length>0){
         // Mapeo de códigos viejos → nuevos (migración automática al cargar)
@@ -3100,7 +3101,11 @@ export default function SistemaCarga(){
   };
 
   // El Administrador (A) siempre tiene todo, para que nadie quede fuera del sistema.
-  const hasPerm=p=>currentUser.rol==="A"||(!PERMS_SOLO_ADMIN.has(p)&&(rolePerms[currentUser.rol]||[]).includes(p));
+  // Recepción en puerta: en una sucursal o franquicia solo si la oficina tiene "Recibe en puerta"
+  const RP_PERMS=["ver_rp","hacer_rp","editar_rp"];
+  const hasPerm=p=>{if(currentUser.rol==="A")return true;
+    if(currentUser.rol==="G"&&RP_PERMS.includes(p))return !!oficinas.find(o=>o.id===currentUser.oficinaId)?.recibe_puerta;
+    return !PERMS_SOLO_ADMIN.has(p)&&(rolePerms[currentUser.rol]||[]).includes(p);};
   // Jerarquía: cada quien gestiona usuarios de roles por debajo del suyo (el Administrador, todos)
   const verDatos=hasPerm("ver_datos_completos");
   const oc=(v,tipo)=>verDatos?(v||""):ocultarDato(v,tipo);
@@ -3133,7 +3138,7 @@ export default function SistemaCarga(){
     return clients.filter(c=>c.id===currentUser.id||alcanceUsr.clienteOk(c)||enCarga.has(c.id));
   })();
   // Internos con oficina: solo lo de su matriz (clientes, usuarios, agentes, oficinas) y los clientes de su carga
-  const misOficinas=(()=>{const u=currentUser;if(!u||u.rol==="A"||["E","E1","F","G","I"].includes(u.rol)||!u.oficinaId)return null;
+  const misOficinas=(()=>{const u=currentUser;if(!u||(u.rol==="A"&&!u.oficinaId)||["E","E1","F","G","I"].includes(u.rol)||!u.oficinaId)return null;
     const yo=oficinas.find(o=>o.id===u.oficinaId);const m=matrizDe(yo);
     return new Set([yo?.id,m?.id,...oficinas.filter(o=>m&&o.matriz_id===m.id).map(o=>o.id)].filter(Boolean));})();
   const enMiAlcance=id=>!misOficinas||!id||misOficinas.has(id);
@@ -3147,12 +3152,9 @@ export default function SistemaCarga(){
   // Agentes y autónomos de mi matriz (todos si no tengo oficina)
   const agentesVis=agentes.filter(agenteEnAlcance);
   // Matriz de trabajo: la del usuario si tiene oficina; si no, la elegida en el filtro de matriz
-  const matrizTrabajo=(()=>{if(misOficinas){const o=oficinas.find(x=>x.id===currentUser.oficinaId);return matrizDe(o)?.id||"";}return matrizSel||"";})();
+  const matrizTrabajo=(()=>{const o=oficinas.find(x=>x.id===currentUser?.oficinaId);return matrizDe(o)?.id||"";})();
   const ofisDeMatriz=mid=>!mid?null:oficinas.filter(o=>o.id===mid||o.matriz_id===mid);
-  const selMatrizJSX=(onCh)=>{const mats=oficinas.filter(o=>esMatriz(o)&&enMiAlcance(o.id)).sort((a,b)=>String(a.codigo).localeCompare(String(b.codigo)));
-    if(misOficinas||mats.length<2)return null;
-    return <select className="fs" style={{width:"auto",minWidth:240}} value={matrizSel} onChange={e=>{setMatrizSel(e.target.value);onCh&&onCh();}}>
-      <option value="">Todas las matrices</option>{mats.map(m=><option key={m.id} value={m.id}>{m.codigo} — {m.nombre}{m.pais?` · ${m.pais}`:""}</option>)}</select>;};
+
   const autonomosVis=clients.filter(c=>c.tipo==="usuario"&&c.rol==="F"&&enMiAlcance(c.matrizId));
   // Nota legal según el país de origen del WR (o la predeterminada)
   const notaLegalWR=w=>{
@@ -3228,7 +3230,7 @@ export default function SistemaCarga(){
     const pa=paDeTracking(trk);
     if(!already){
       const esPU=pickupList.some(x=>normTrk(x.id)===trk);
-      const entry={id:crypto.randomUUID(),tracking:trk,carrier:esPU?"PICK-UP":(scanCarrier||pa?.carrier||"—"),ts:new Date(),registered:false};
+      const entry={id:crypto.randomUUID(),tracking:trk,carrier:esPU?"PICK-UP":(scanCarrier||pa?.carrier||"—"),ts:new Date(),registered:false,oficinaId:currentUser.oficinaId||""};
       setScanLog(p=>[entry,...p]);
       dbInsertScan(entry);
     }
@@ -3253,9 +3255,12 @@ export default function SistemaCarga(){
     setClientSearch(q);
     const t=q.trim(), bq=crearBuscador(t);
     if(!bq||(t.length<2&&!/^\d$/.test(t))){setClientResults([]);return;}
-    const res=clientesVisibles.filter(c=>c.tipo==="cliente"&&(
+    const coD=COUNTRIES.find(co=>nomPaisCo(co)===wrf.destPais)||null;
+    const mEnt=matrizDe(oficinas.find(o=>o.id===wrf.sucursalEntrega))?.id||"";
+    const paisCli=c=>{const m=oficinas.find(o=>o.id===c.matrizId);return m?paisDeOfi(m):paisPorNombre(c.pais);};
+    const res=clientesVisibles.filter(c=>c.tipo==="cliente"&&(!coD||paisCli(c)===coD)&&(
       bq.casillero(c.casillero)||bq.nombre(fullName(c))||(t.length>=2&&fullName(c).toLowerCase().includes(t.toLowerCase()))
-    )).sort((a,b)=>(bq.casillero(b.casillero)?1:0)-(bq.casillero(a.casillero)?1:0));
+    )).sort((a,b)=>(bq.casillero(b.casillero)?1:0)-(bq.casillero(a.casillero)?1:0)||((mEnt&&b.matrizId===mEnt)?1:0)-((mEnt&&a.matrizId===mEnt)?1:0));
     setClientResults(res);
   };
   const selectClient=(c)=>{
@@ -3263,8 +3268,11 @@ export default function SistemaCarga(){
     sw("casillero",c.casillero);
     sw("clienteId",c.id);
     sw("casilleroSearch",c.casillero);
-    {const co=paisPorNombre(c.pais);const suc=oficinas.find(o=>o.id===c.oficinaId&&ofiActiva(o));
-      sw("destPais",co?nomPaisCo(co):"");sw("sucursalEntrega",co&&suc&&paisDeOfi(suc)===co?suc.id:"");}
+    {const elegido=COUNTRIES.find(co=>nomPaisCo(co)===wrf.destPais)||null;
+      const co=elegido||paisDeOfi(oficinas.find(o=>o.id===c.matrizId))||paisPorNombre(c.pais);
+      const suc=oficinas.find(o=>o.id===c.oficinaId&&ofiActiva(o));
+      sw("destPais",co?nomPaisCo(co):"");
+      if(co&&suc&&paisDeOfi(suc)===co)sw("sucursalEntrega",suc.id);else if(!elegido)sw("sucursalEntrega","");}
     setClientSearch(fullName(c));
     setClientResults([]);
   };
@@ -4135,7 +4143,7 @@ export default function SistemaCarga(){
     const base=filteredCl.filter(c=>c.tipo==="usuario");
     const roles=g=>(USR_GRUPOS.find(x=>x[0]===g)||[])[2];
     const enGrupo=(c,g)=>!roles(g)||roles(g).includes(c.rol);
-    const enMatriz=c=>!matrizSel||matrizDeUsuario(c)===matrizSel;
+    const enMatriz=()=>true; // la matriz de trabajo ya filtra
     const lista=base.filter(c=>enGrupo(c,clUsrGrupo)&&enMatriz(c)).sort((a,b)=>{const O=["A","B","C","D","D1","D2","G","E","E1","F"];return O.indexOf(a.rol)-O.indexOf(b.rol)||fullName(a).localeCompare(fullName(b));});
     const mats=oficinas.filter(o=>esMatriz(o)&&enMiAlcance(o.id)).sort((a,b)=>String(a.codigo).localeCompare(String(b.codigo)));
     const perteneceA=c=>{
@@ -4151,7 +4159,6 @@ export default function SistemaCarga(){
           {USR_GRUPOS.map(([k,l])=>{const n=base.filter(c=>enGrupo(c,k)&&enMatriz(c)).length;return <button key={k} onClick={()=>{setClUsrGrupo(k);setPags(p=>({...p,usuarios:1}));}}
             style={{padding:"6px 14px",borderRadius:6,border:"none",cursor:"pointer",fontSize:14,fontWeight:600,background:clUsrGrupo===k?"var(--navy)":"transparent",color:clUsrGrupo===k?"#fff":"var(--t2)"}}>{l} <span style={{opacity:.75}}>({n})</span></button>;})}
         </div>
-        {selMatrizJSX(()=>setPags(p=>({...p,usuarios:1})))}
       </div>
       <div className="card" style={{padding:0}}>
         <div className="ct-scroll"><table className="ct">
@@ -4427,9 +4434,22 @@ export default function SistemaCarga(){
           <div>
             <div className="sdiv">INFORMACIÓN DEL CONSIGNATARIO</div>
             <div className="fgrid" style={{gap:8}}>
+              <div className="fg"><div className="fl">País destino *</div>
+                <select className="fs" value={_destPaisCo?nomPaisCo(_destPaisCo):""} onChange={e=>{sw("destPais",e.target.value);sw("sucursalEntrega","");setClientResults([]);}}>
+                  <option value="">—</option>
+                  {COUNTRIES.filter(co=>matricesDePais(co).length>0).map(co=><option key={nomPaisCo(co)} value={nomPaisCo(co)}>{co.name}</option>)}
+                </select>
+              </div>
+              <div className="fg"><div className="fl">Entregar en *</div>
+                {(()=>{const otras=_destPaisCo?oficinas.filter(o=>(ofiActiva(o)||o.id===wrf.sucursalEntrega)&&paisDeOfi(o)===_destPaisCo).sort((a,b)=>String(a.codigo||"").localeCompare(String(b.codigo||""))):[];
+                  return <select className="fs" value={wrf.sucursalEntrega||""} onChange={e=>sw("sucursalEntrega",e.target.value)}>
+                    <option value="">—</option>
+                    {otras.map(o=><option key={o.id} value={o.id}>{o.codigo} — {o.nombre}{o.ciudad?` (${o.ciudad})`:""}</option>)}
+                  </select>;})()}
+              </div>
               <div className="fg fi-search">
                 <div className="fl">Buscar por Nombre o N° Casillero</div>
-                <input className="fi" value={clientSearch} onChange={e=>handleClientSearch(e.target.value)} placeholder="Nombre o casillero"/>
+                <input className="fi" value={clientSearch} disabled={!_destPaisCo&&!editWR} onChange={e=>handleClientSearch(e.target.value)} placeholder={_destPaisCo||editWR?"Nombre o casillero":"Primero elige el país destino"}/>
                 {clientResults.length>0&&(
                   <div className="fi-search-res">
                     {clientResults.map(c=>(
@@ -4444,19 +4464,6 @@ export default function SistemaCarga(){
               </div>
               <div className="fg"><div className="fl">Nombre (si no está registrado)</div><input className="fi" value={wrf.consignee} onChange={e=>sw("consignee",e.target.value)} placeholder="Nombre completo"/></div>
               <div className="fg"><div className="fl">N° Casillero</div><input className="fi" value={wrf.casillero} onChange={e=>sw("casillero",e.target.value)} style={{fontFamily:"'DM Mono',monospace",fontWeight:800,fontSize:16,color:"var(--navy)",letterSpacing:1,background:"#EEF3FF",border:"2px solid #B8C8F0"}}/></div>
-              <div className="fg"><div className="fl">País destino *</div>
-                <select className="fs" value={_destPaisCo?nomPaisCo(_destPaisCo):""} onChange={e=>{sw("destPais",e.target.value);sw("sucursalEntrega","");}}>
-                  <option value="">—</option>
-                  {COUNTRIES.filter(co=>matricesDePais(co).length>0).map(co=><option key={nomPaisCo(co)} value={nomPaisCo(co)}>{co.name}</option>)}
-                </select>
-              </div>
-              <div className="fg"><div className="fl">Entregar en *</div>
-                {(()=>{const otras=_destPaisCo?oficinas.filter(o=>(ofiActiva(o)||o.id===wrf.sucursalEntrega)&&paisDeOfi(o)===_destPaisCo).sort((a,b)=>String(a.codigo||"").localeCompare(String(b.codigo||""))):[];
-                  return <select className="fs" value={wrf.sucursalEntrega||""} onChange={e=>sw("sucursalEntrega",e.target.value)}>
-                    <option value="">—</option>
-                    {otras.map(o=><option key={o.id} value={o.id}>{o.codigo} — {o.nombre}{o.ciudad?` (${o.ciudad})`:""}</option>)}
-                  </select>;})()}
-              </div>
             </div>
           </div>
         </div>
@@ -7361,7 +7368,8 @@ export default function SistemaCarga(){
   const PA_ST={pendiente:{l:"Por llegar",cls:"s4"},recibida:{l:"Recibida en puerta",cls:"s2"},registrada:{l:"Con WR",cls:"s3"},cancelada:{l:"Cancelada",cls:"s6"}};
   const paActiva=p=>p.status==="pendiente"||p.status==="recibida";
   const paDeTracking=trk=>{const t=normTrk(trk);return t?paList.find(p=>paActiva(p)&&normTrk(p.tracking)===t):null;};
-  const paVisibles=()=>esEmpleadoPU?paList:paList.filter(p=>p.creadoPor===currentUser.id||alcanceUsr?.clienteOk(clients.find(c=>c.id===p.clienteId)));
+  // Pre-alertas: van a la matriz del cliente; cada matriz ve las suyas (Recepción en Puerta las reconoce todas)
+  const paVisibles=()=>esEmpleadoPU?paList.filter(p=>enMiAlcance(p.matrizId)):paList.filter(p=>p.creadoPor===currentUser.id||alcanceUsr?.clienteOk(clients.find(c=>c.id===p.clienteId)));
   const paPuedeEditar=p=>paActiva(p)&&p.status==="pendiente"&&(hasPerm("editar_prealerta")||p.creadoPor===currentUser.id);
   const paNueva=()=>{
     if(!hasPerm("pre_tracking")){window.alert("Tu rol no tiene permiso para crear pre-alertas.");return;}
@@ -7381,7 +7389,7 @@ export default function SistemaCarga(){
     const c=clients.find(x=>x.id===m.clienteId)||{};
     const armar=(id,prev,archivos)=>({...(prev||{}),id,tracking:trk,carrier:(m.carrier||"").toUpperCase(),clienteId:c.id,cliente:{nombre:fullName(c),casillero:c.casillero||""},
       tienda:(m.tienda||"").toUpperCase(),descripcion:(m.descripcion||"").toUpperCase(),valor:m.valor,moneda:m.moneda,archivos,notas:m.notas,
-      status:prev?.status||"pendiente",wrId:prev?.wrId||"",recibida:prev?.recibida||null,creado:prev?.creado||new Date(),
+      status:prev?.status||"pendiente",wrId:prev?.wrId||"",recibida:prev?.recibida||null,creado:prev?.creado||new Date(),matrizId:c.matrizId||"",
       creadoPor:prev?.creadoPor||currentUser.id,creadoPorNombre:prev?.creadoPorNombre||fullName(currentUser)});
     const subir=async id=>{const out=[...m.archivos];for(const f of m.nuevos){if(f.size>15*1024*1024){window.alert(`"${f.name}" pasa de 15 MB.`);continue;}const a=await paSubirArchivo(f,id);if(a)out.push(a);}return out;};
     const prev=m.id?paList.find(p=>p.id===m.id):null;
@@ -7456,7 +7464,7 @@ export default function SistemaCarga(){
 
       {paModal&&(()=>{const m=paModal;const set=x=>setPaModal(p=>({...p,...x}));
         const c=clients.find(x=>x.id===m.clienteId);const fijo=currentUser.rol==="I";
-        const q=sinAcentos(m.cliQ.trim());const res=q.length>=2||/^\d+$/.test(q)?puClientesPosibles().filter(x=>sinAcentos(`${fullName(x)} ${x.casillero||""}`).includes(q)).slice(0,20):[];
+        const q=sinAcentos(m.cliQ.trim());const res=q.length>=2||/^\d+$/.test(q)?(currentUser.rol==="I"?puClientesPosibles():clientesMiOficina.filter(x=>x.tipo==="cliente"&&x.activo!==false)).filter(x=>sinAcentos(`${fullName(x)} ${x.casillero||""}`).includes(q)).slice(0,20):[];
         return(
         <div className="ov"><div className="modal mmd" onClick={e=>e.stopPropagation()}>
           <div className="mhd"><div className="mt"><Ico e="📨" sp/>{m.id?`Pre-alerta ${m.id}`:"Nueva pre-alerta"}</div><button className="mcl" onClick={()=>setPaModal(null)}>✕</button></div>
@@ -8175,7 +8183,6 @@ export default function SistemaCarga(){
           <div>
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
               <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:17,fontWeight:700,color:"var(--navy)",flex:1}}><Ico e="🤝" sp/>Agentes registrados</div>
-              {selMatrizJSX(()=>setPags(p=>({...p,agentes:1})))}
               {hasPerm("crear_agente")&&<button className="btn-p" style={{fontSize:13}} onClick={()=>{setAgForm({nombre:"",ciudad:"",pais:"",tel:"",email:"",contacto:"",notas:"",matriz_id:matrizTrabajo||""});setShowNewAgente(true);}}>+ Nuevo Agente</button>}
             </div>
             <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,overflow:"hidden"}}>
@@ -8185,7 +8192,7 @@ export default function SistemaCarga(){
                 </tr></thead>
                 <tbody>
                   {agentes.length===0&&<tr><td colSpan={9} style={{textAlign:"center",padding:30,color:"var(--t3)"}}>No hay agentes registrados.</td></tr>}
-                  {pagSlice("agentes",agentes.filter(a=>agenteEnAlcance(a)&&(!matrizSel||a.matriz_id===matrizSel))).map(a0=>{const a=conDatos(a0);return(
+                  {pagSlice("agentes",agentes.filter(a=>agenteEnAlcance(a))).map(a0=>{const a=conDatos(a0);return(
                     <tr key={a.id} style={{cursor:"pointer"}} onClick={()=>setVerAgente(a0)}>
                       <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)",background:"#EEF3FF",padding:"2px 8px",borderRadius:4,border:"1px solid #B8C8F0"}}>{a.codigo}</span></td>
                       <td style={{fontWeight:600}}>{a.nombre}</td>
@@ -8205,7 +8212,7 @@ export default function SistemaCarga(){
                     </tr>
                   );})}
                 </tbody>
-              </table></div>{pagPie("agentes",agentes.filter(a=>agenteEnAlcance(a)&&(!matrizSel||a.matriz_id===matrizSel)).length)}</>
+              </table></div>{pagPie("agentes",agentes.filter(a=>agenteEnAlcance(a)).length)}</>
             </div>
             {verAgente&&(()=>{const a=conDatos(verAgente);const us=usuariosDe(verAgente);
               const cls=clients.filter(c=>c.tipo==="cliente"&&["agente","vendedor_agente"].includes(c.clienteTipo)&&c.agenteId===verAgente.id);
@@ -8285,7 +8292,6 @@ export default function SistemaCarga(){
           <div>
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
               <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:17,fontWeight:700,color:"var(--navy)",flex:1}}><Ico e="🏢" sp/>Oficinas / Sucursales</div>
-              {selMatrizJSX(()=>setPags(p=>({...p,oficinas:1})))}
               {hasPerm("crear_oficina")&&<button className="btn-p" style={{fontSize:13}} onClick={()=>{const mt=oficinas.find(o=>o.id===matrizTrabajo);setEditOficina(null);setOfForm({nombre:"",ciudad:"",pais:mt?.pais||"",tel:"",email:"",contacto:"",notas:"",tipo:"",matriz_id:mt?.id||"",moneda:"",principal:false,com_prepaid_pct:"",com_entrega_monto:"",com_entrega_por:"",activo:true});setShowNewOficina(true);}}>+ Nueva Oficina</button>}
             </div>
             <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,overflow:"hidden"}}>
@@ -8295,7 +8301,7 @@ export default function SistemaCarga(){
                 </tr></thead>
                 <tbody>
                   {oficinas.length===0&&<tr><td colSpan={11} style={{textAlign:"center",padding:30,color:"var(--t3)"}}>No hay oficinas registradas aún.</td></tr>}
-                  {pagSlice("oficinas",oficinas.filter(o=>enMiAlcance(o.id)&&(!matrizSel||o.id===matrizSel||o.matriz_id===matrizSel)).sort((x,y)=>String(x.codigo||"").localeCompare(String(y.codigo||"")))).map(o=>(
+                  {pagSlice("oficinas",oficinas.filter(o=>enMiAlcance(o.id)).sort((x,y)=>String(x.codigo||"").localeCompare(String(y.codigo||"")))).map(o=>(
                     <tr key={o.id}>
                       <td><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--purple)",background:"#F3EFFE",padding:"2px 8px",borderRadius:4,border:"1px solid #C0A0F0"}}>{o.codigo}</span></td>
                       <td style={{fontWeight:600}}>{o.nombre}</td>
@@ -8317,7 +8323,7 @@ export default function SistemaCarga(){
                     </tr>
                   ))}
                 </tbody>
-              </table></div>{pagPie("oficinas",oficinas.filter(o=>enMiAlcance(o.id)&&(!matrizSel||o.id===matrizSel||o.matriz_id===matrizSel)).length)}</>
+              </table></div>{pagPie("oficinas",oficinas.filter(o=>enMiAlcance(o.id)).length)}</>
             </div>
             {showNewOficina&&(
               <div className="ov">
@@ -8346,6 +8352,7 @@ export default function SistemaCarga(){
                       <option value="">—</option>{mats.map(m=><option key={m.id} value={m.id}>{m.codigo} — {m.nombre}{m.ciudad?` (${m.ciudad})`:""}</option>)}</select></div>}
                     {ofForm.tipo==="Matriz"&&<div className="fg full"><label style={{display:"flex",alignItems:"center",gap:8,fontSize:14,cursor:"pointer"}}><input type="checkbox" checked={!!ofForm.principal} disabled={currentUser.rol!=="A"} onChange={e=>setOfForm(p=>({...p,principal:e.target.checked}))}/>Matriz principal del país</label></div>}
                     <div className="fg"><div className="fl">Moneda</div><MonedaPicker value={ofForm.moneda||""} onChange={v=>setOfForm(p=>({...p,moneda:v}))}/></div>
+                    {ofForm.tipo&&ofForm.tipo!=="Matriz"&&<div className="fg full"><label style={{display:"flex",alignItems:"center",gap:8,fontSize:14,cursor:"pointer"}}><input type="checkbox" checked={!!ofForm.recibe_puerta} onChange={e=>setOfForm(p=>({...p,recibe_puerta:e.target.checked}))}/>Recibe en puerta (la oficina puede registrar paquetes en Recepción en Puerta)</label></div>}
                     {currentUser.rol==="A"&&ofForm.tipo!=="Matriz"&&<div className="fg full"><label style={{display:"flex",alignItems:"center",gap:8,fontSize:14,cursor:"pointer"}}><input type="checkbox" checked={!!ofForm.fp_activo} onChange={e=>setOfForm(p=>({...p,fp_activo:e.target.checked}))}/>Puede emitir sus propias facturas (Mis facturas)</label></div>}
                     {editOficina&&<div className="fg"><div className="fl">Estado</div><select className="fs" value={ofForm.activo===false?"0":"1"} onChange={e=>setOfForm(p=>({...p,activo:e.target.value==="1"}))}><option value="1">Activa</option><option value="0">Inactiva</option></select></div>}
                     {ofForm.tipo!=="Matriz"&&<>
@@ -8396,7 +8403,7 @@ export default function SistemaCarga(){
                         matriz_id:esM?null:ofForm.matriz_id,moneda:ofForm.moneda,
                         com_prepaid_pct:esM||ofForm.com_prepaid_pct===""?null:parseFloat(ofForm.com_prepaid_pct)||0,
                         com_entrega_monto:esM||ofForm.com_entrega_monto===""?null:parseFloat(ofForm.com_entrega_monto)||0,
-                        com_entrega_por:esM?null:(ofForm.com_entrega_por||null),activo:ofForm.activo!==false,fp_activo:!esM&&!!ofForm.fp_activo};
+                        com_entrega_por:esM?null:(ofForm.com_entrega_por||null),activo:ofForm.activo!==false,fp_activo:!esM&&!!ofForm.fp_activo,recibe_puerta:!esM&&!!ofForm.recibe_puerta};
                       const reg=antes?{...antes,...limpio}:{...limpio,id:crypto.randomUUID()};
                       // Solo una matriz principal por país
                       const quitar=principal?otrasM.filter(x=>x.principal).map(x=>({...x,principal:false})):[];
@@ -8416,8 +8423,8 @@ export default function SistemaCarga(){
         {cfgTab==="tarifas"&&(()=>{
           const tipoEsAereo=tipoEsAereoG, tipoEsMaritimo=tipoEsMaritimoG;
           const filaNueva=te=>({tipoEnvio:te||"",unidad:"",precio:"",min:"",moneda:"USD"});
-          const tafNuevo=()=>({aplicaTipo:"",aplicaId:"",orig:[],dest:[],filas:[filaNueva(SEND_TYPES.find(tipoEsAereo)),filaNueva(SEND_TYPES.find(tipoEsMaritimo))].filter(f=>f.tipoEnvio)});
-          const tafDeTarifa=t=>({aplicaTipo:t.aplicaTipo||"",aplicaId:t.aplicaId||"",
+          const tafNuevo=()=>({matrizId:matrizTrabajo||"",aplicaTipo:"",aplicaId:"",orig:[],dest:[],filas:[filaNueva(SEND_TYPES.find(tipoEsAereo)),filaNueva(SEND_TYPES.find(tipoEsMaritimo))].filter(f=>f.tipoEnvio)});
+          const tafDeTarifa=t=>({matrizId:t.matrizId||"",aplicaTipo:t.aplicaTipo||"",aplicaId:t.aplicaId||"",
             orig:(t.paisOrig||t.ciudadOrig)?[{pais:t.paisOrig||"",ciudad:t.ciudadOrig||""}]:[],
             dest:(t.paisDest||t.ciudadDest)?[{pais:t.paisDest||"",ciudad:t.ciudadDest||""}]:[],
             filas:[{tipoEnvio:t.tipoEnvio||"",unidad:t.unidad||"",precio:String(precioTarifa(t,!tipoEsMaritimo(t.tipoEnvio))||""),min:String(t.min??""),moneda:t.moneda||"USD"}]});
@@ -8473,10 +8480,10 @@ export default function SistemaCarga(){
                 </div>
               <><div className="ct-scroll"><table className="ct">
                 <thead><tr>
-                  <th>Origen</th><th>Destino</th><th>Tipo Envío</th><th>Monto</th><th>Mínimo</th><th>Moneda</th><th>Estado</th><th>Acc.</th>
+                  <th>Matriz de salida</th><th>Origen</th><th>Destino</th><th>Tipo Envío</th><th>Monto</th><th>Mínimo</th><th>Moneda</th><th>Estado</th><th>Acc.</th>
                 </tr></thead>
                 <tbody>
-                  {lista.length===0&&<tr><td colSpan={8} style={{textAlign:"center",padding:30,color:"var(--t3)"}}>{Q||tafTipoFil?"Sin coincidencias.":"Sin tarifas."}</td></tr>}
+                  {lista.length===0&&<tr><td colSpan={9} style={{textAlign:"center",padding:30,color:"var(--t3)"}}>{Q||tafTipoFil?"Sin coincidencias.":"Sin tarifas."}</td></tr>}
                   {pagSlice("tarifas",lista).map(t=>{
                     const esAereo=tipoEsAereo(t.tipoEnvio);
                     const esMaritimo=tipoEsMaritimo(t.tipoEnvio);
@@ -8484,6 +8491,7 @@ export default function SistemaCarga(){
                     const monto=esAereo?`${sy}${t.porLb}/${t.unidad==="kg"?"kg":"lb"}`:esMaritimo?`${sy}${t.porFt3}/${t.unidad==="m3"?"m³":"ft³"}`:`${sy}${t.porLb}/lb`;
                     return(
                     <tr key={t.id}>
+                      <td style={{fontWeight:700,fontSize:13,color:t.matrizId?"var(--navy)":"var(--red)"}}>{oficinas.find(o=>o.id===t.matrizId)?.codigo||"Sin matriz"}</td>
                       <td style={{fontWeight:600,fontSize:13}}>{[t.paisOrig,t.ciudadOrig].filter(Boolean).join("-")||"Cualquiera"}</td>
                       <td style={{fontWeight:600,fontSize:13}}>{[t.paisDest,t.ciudadDest].filter(Boolean).join("-")||"Cualquiera"}</td>
                       <td><TypeBadge t={t.tipoEnvio}/></td>
@@ -8508,6 +8516,11 @@ export default function SistemaCarga(){
               <div className="ov">
                 <div className="modal mmd" onClick={e=>e.stopPropagation()}>
                   <div className="mhd"><div className="mt">{editTarifa?"Editar Tarifa":"Nuevas Tarifas"}</div><button className="mcl" onClick={()=>setShowNewTarifa(false)}>✕</button></div>
+                  <div className="sdiv">MATRIZ DE SALIDA</div>
+                  <div className="fg" style={{marginBottom:10}}>{(()=>{const fija=matrizTrabajo&&(!editTarifa||tafForm.matrizId===matrizTrabajo);const m=oficinas.find(o=>o.id===tafForm.matrizId);
+                    return fija?<div className="fi" style={{background:"var(--bg4)"}}><b>{m?`${m.codigo} — ${m.nombre}`:"—"}</b></div>
+                      :<select className="fs" value={tafForm.matrizId||""} onChange={e=>setTafForm(p=>({...p,matrizId:e.target.value}))}><option value="">—</option>
+                        {oficinas.filter(o=>esMatriz(o)&&(ofiActiva(o)||o.id===tafForm.matrizId)).sort((a,b)=>String(a.codigo).localeCompare(String(b.codigo))).map(o=><option key={o.id} value={o.id}>{o.codigo} — {o.nombre} · {paisDeOfi(o)?.name||o.pais||""}</option>)}</select>;})()}</div>
                   <div className="sdiv">APLICA A</div>
                   <div className="fgrid g2" style={{marginBottom:10}}>
                     <div className="fg"><div className="fl">Tipo</div>
@@ -8535,24 +8548,26 @@ export default function SistemaCarga(){
                     const setFila=(i,x)=>set({filas:F.filas.map((f,j)=>j===i?{...f,...x}:f)});
                     const combos=(lugares("orig").length?lugares("orig"):[{pais:"",ciudad:""}]).flatMap(o=>(lugares("dest").length?lugares("dest"):[{pais:"",ciudad:""}]).flatMap(d=>(F.filas||[]).map(f=>({o,d,f}))));
                     const guardar=()=>{
+                      const MZ=oficinas.find(o=>o.id===F.matrizId);
+                      if(!MZ){window.alert("Elige la matriz de salida.");return;}
                       if(F.aplicaTipo&&!F.aplicaId){window.alert("Elige a quién aplica la tarifa especial.");return;}
                       if(!F.aplicaTipo&&(!lugares("orig").length||!lugares("dest").length)){window.alert("Elige al menos un origen y un destino.");return;}
                       const filas=(F.filas||[]).filter(f=>f.tipoEnvio);
                       if(!filas.length){window.alert("Agrega al menos una tarifa con su tipo de envío.");return;}
                       if(filas.some(f=>!(parseFloat(f.precio)>0))){window.alert("Cada tarifa necesita su precio.");return;}
                       if(new Set(filas.map(f=>f.tipoEnvio)).size<filas.length){window.alert("Hay dos filas con el mismo tipo de envío.");return;}
-                      let lista=[...tarifas];let maxN=Math.max(0,...lista.map(t=>parseInt(String(t.id).replace(/\D/g,""))||0));
+                      let lista=[...tarifas];const pre=`${MZ.codigo}-T-`;let maxN=Math.max(0,...lista.filter(t=>String(t.id).startsWith(pre)).map(t=>parseInt(String(t.id).slice(pre.length))||0));
                       const cambios=[];
                       const items=combos.filter(c=>c.f.tipoEnvio);
                       items.forEach((c,idx)=>{
                         const mar=tipoEsMaritimo(c.f.tipoEnvio),aer=tipoEsAereo(c.f.tipoEnvio);
-                        const datos={aplicaTipo:F.aplicaTipo||"",aplicaId:F.aplicaId||"",paisOrig:c.o.pais,ciudadOrig:c.o.ciudad,paisDest:c.d.pais,ciudadDest:c.d.ciudad,
+                        const datos={matrizId:MZ.id,aplicaTipo:F.aplicaTipo||"",aplicaId:F.aplicaId||"",paisOrig:c.o.pais,ciudadOrig:c.o.ciudad,paisDest:c.d.pais,ciudadDest:c.d.ciudad,
                           tipoEnvio:c.f.tipoEnvio,unidad:aer?(c.f.unidad==="kg"?"kg":"lb"):mar?(c.f.unidad==="m3"?"m3":"ft3"):"lb",
                           porLb:mar?0:parseFloat(c.f.precio)||0,porFt3:mar?parseFloat(c.f.precio)||0:0,min:parseFloat(c.f.min)||0,moneda:c.f.moneda||"USD",activo:true};
-                        const key=t=>[t.aplicaTipo||"",t.aplicaId||"",sinAcentos(t.paisOrig||""),sinAcentos(t.ciudadOrig||""),sinAcentos(t.paisDest||""),sinAcentos(t.ciudadDest||""),sinAcentos(t.tipoEnvio||"")].join("|");
+                        const key=t=>[t.matrizId||"",t.aplicaTipo||"",t.aplicaId||"",sinAcentos(t.paisOrig||""),sinAcentos(t.ciudadOrig||""),sinAcentos(t.paisDest||""),sinAcentos(t.ciudadDest||""),sinAcentos(t.tipoEnvio||"")].join("|");
                         let ex=lista.find(t=>key(t)===key(datos));
                         if(!ex&&editTarifa&&items.length===1)ex=lista.find(t=>t.id===editTarifa.id);
-                        const rec=ex?{...ex,...datos,activo:ex.activo!==false}:{...datos,id:`T-${String(++maxN).padStart(3,"0")}`};
+                        const rec=ex?{...ex,...datos,activo:ex.activo!==false}:{...datos,id:`${pre}${String(++maxN).padStart(3,"0")}`};
                         lista=ex?lista.map(t=>t.id===ex.id?rec:t):[...lista,rec];
                         cambios.push(rec);
                       });
@@ -9096,11 +9111,17 @@ export default function SistemaCarga(){
   };
   const puLog=(p,status,nota)=>({...p,status,historial:[...(p.historial||[]),{status,fecha:new Date(),user:currentUser.id,nota:nota||""}]});
   const puGuardar=async(p)=>{setPickupList(l=>l.some(x=>x.id===p.id)?l.map(x=>x.id===p.id?p:x):[p,...l]);const ok=await dbUpsertPickup(p);if(!ok)window.alert("No se pudo guardar el pick-up. Inténtalo de nuevo.");return ok;};
+  // Matriz que atiende la zona de una ciudad (Países y Ciudades) o la principal del país
+  const puMatrizZona=(pais,ciudad)=>{const co=COUNTRIES.find(c=>nomPaisCo(c)===sinAcentos(pais||""));if(!co)return null;
+    const ci=(co.cities||[]).find(x=>x.code===ciudad);const mats=matricesDePais(co);
+    return mats.find(m=>m.id===ci?.matriz)||mats.find(m=>m.principal)||mats[0]||null;};
   const submitPickup=async()=>{
-    const f=puf;
+    let f=puf;
     if(!hasPerm(f.id?"editar_pickup":"solicitar_pickup")){window.alert("Tu rol no tiene permiso para esta acción.");return;}
     if(!f.clienteNombre.trim()){window.alert("Indica para quién es el pick-up.");return;}
+    if(!f.pais||!f.ciudad){window.alert("Elige el país y la ciudad de recogida.");return;}
     if(!f.direccion.trim()){window.alert("Escribe la dirección de recogida.");return;}
+    {const mz=puMatrizZona(f.pais,f.ciudad);if(!mz){window.alert("Ese país no tiene ninguna matriz que atienda pick-ups.");return;}f={...f,matrizId:mz.id};}
     if(!f.telefono.trim()){window.alert("Escribe un teléfono de contacto.");return;}
     if(puBultos(f)<1){window.alert("Indica cuántos bultos son.");return;}
     if(f.id){const ant=pickupList.find(x=>x.id===f.id);await puGuardar({...ant,...f});logAction("Editó pick-up",f.id);setShowNewPickup(false);return;}
@@ -9116,7 +9137,7 @@ export default function SistemaCarga(){
     await puCambiar(p,"recogido",{},"Recogido · pasa a Recepción en Puerta");
     const trk=normTrk(p.id);
     if(!scanLog.some(x=>normTrk(x.tracking)===trk)){
-      const entry={id:crypto.randomUUID(),tracking:trk,carrier:"PICK-UP",ts:new Date(),registered:false};
+      const entry={id:crypto.randomUUID(),tracking:trk,carrier:"PICK-UP",ts:new Date(),registered:false,oficinaId:p.matrizId||currentUser.oficinaId||""};
       setScanLog(x=>[entry,...x]);dbInsertScan(entry);
     }
   };
@@ -9129,14 +9150,15 @@ export default function SistemaCarga(){
       pesoLb:x.pesoLb||"",largo:x.largo||"",ancho:x.ancho||"",alto:x.alto||""})));
     const cj=cajas.length?cajas:[emptyCaja()];cj[0]={...cj[0],carrier:"PICK-UP",tracking:p.id};
     setWrf({...emptyWRF(""),consignee:c?fullName(c):p.clienteNombre,casillero:c?.casillero||p.casillero||"",casilleroSearch:c?.casillero||p.casillero||"",
-      clienteId:c?.id||"",sucursalEntrega:c?.oficinaId||"",cajas:cj,notas:`PICK-UP ${p.id}`,pickupId:p.id});
+      clienteId:c?.id||"",sucursalEntrega:c?.oficinaId||"",cajas:cj,notas:`PICK-UP ${p.id}`,pickupId:p.id,
+      destPais:(()=>{const co=c?(paisDeOfi(oficinas.find(o=>o.id===c.matrizId))||paisPorNombre(c.pais)):null;return co?nomPaisCo(co):"";})()});
     setClientSearch(c?fullName(c):p.clienteNombre);
     setPickupSel(null);setEditWR(null);setShowNewWR(true);
   };
 
   const renderPickup=()=>{
     const Q=sinAcentos(pickupQ.trim());
-    const visibles=pickupList.filter(p=>esEmpleadoPU||p.solicitanteId===currentUser.id||alcanceUsr?.clienteOk(clients.find(c=>c.id===p.clienteId)));
+    const visibles=pickupList.filter(p=>(esEmpleadoPU&&enMiAlcance(p.matrizId))||p.solicitanteId===currentUser.id||alcanceUsr?.clienteOk(clients.find(c=>c.id===p.clienteId)));
     const grupoDe=p=>["recibido","cancelado"].includes(p.status)?p.status:"activos";
     const cuenta={activos:0,recibido:0,cancelado:0};visibles.forEach(p=>{cuenta[grupoDe(p)]++;});
     const lista=visibles.filter(p=>pickupFil==="todos"||grupoDe(p)===pickupFil)
@@ -9182,7 +9204,8 @@ export default function SistemaCarga(){
             <div className="mbd" style={{maxHeight:"74vh",overflow:"auto"}}>
               <div className="fgrid g2" style={{gap:12,marginBottom:12}}>
                 {[["Para",`${sel.clienteNombre}${sel.casillero?` · #${sel.casillero}`:""}`],["Contacto",`${sel.contacto||"—"} · ${sel.telefono||"—"}`],
-                  ["Dirección de recogida",sel.direccion],["Fecha preferida",`${sel.fechaDeseada||"—"}${sel.franja?` · ${sel.franja}`:""}`],
+                  ["Dirección de recogida",[sel.direccion,sel.ciudad,sel.pais].filter(Boolean).join(", ")],
+                  ...(esEmpleadoPU?[["Lo atiende",(()=>{const m=oficinas.find(o=>o.id===sel.matrizId);return m?`${m.codigo} — ${m.nombre}`:"—";})()]]:[]),["Fecha preferida",`${sel.fechaDeseada||"—"}${sel.franja?` · ${sel.franja}`:""}`],
                   ...(sel.status!=="solicitado"&&sel.status!=="cancelado"?[["Fecha programada",sel.fechaProgramada||"—"],["Empresa / carrier",sel.transportista||"—"],["Chofer",sel.chofer||"—"]]:[]),
                   ...(esEmpleadoPU?[["Pidió",sel.solicitanteNombre||"—"],["Cargo pick-up",sel.monto?fmtMoney(sel.monto,sel.moneda):"—"]]:[]),
                   ...(sel.wrId?[["WR",sel.wrId]]:[]),...(sel.notas?[["Notas",sel.notas]]:[]),...(sel.motivoCancelacion?[["Motivo de cancelación",sel.motivoCancelacion]]:[])
@@ -9243,6 +9266,11 @@ export default function SistemaCarga(){
                       {fullName(c)} <span className="fi-search-cas">#{c.casillero}</span></div>))}</div>}
                 </div>)}
                 <div className="fgrid g2" style={{gap:8}}>
+                  {(()=>{const co=paisesActivos.find(c=>nomPaisCo(c)===sinAcentos(puf.pais||""));return <>
+                    <div className="fg"><div className="fl">País de recogida *</div><select className="fs" value={co?nomPaisCo(co):""} onChange={e=>setPuf(p=>({...p,pais:e.target.value,ciudad:""}))}>
+                      <option value="">—</option>{paisesActivos.map(c=><option key={nomPaisCo(c)} value={nomPaisCo(c)}>{c.name}</option>)}</select></div>
+                    <div className="fg"><div className="fl">Ciudad de recogida *</div><select className="fs" value={puf.ciudad||""} disabled={!co} onChange={e=>spuf("ciudad",e.target.value)}>
+                      <option value="">—</option>{(co?.cities||[]).map(ci=><option key={ci.code} value={ci.code}>{ci.code} — {ci.name}</option>)}</select></div></>;})()}
                   <div className="fg full"><div className="fl">Dirección de recogida *</div><input className="fi" value={puf.direccion} onChange={e=>spuf("direccion",e.target.value.toUpperCase())}/></div>
                   <div className="fg"><div className="fl">Persona de contacto</div><input className="fi" value={puf.contacto} onChange={e=>spuf("contacto",e.target.value.toUpperCase())}/></div>
                   <div className="fg"><div className="fl">Teléfono *</div><input className="fi" value={puf.telefono} onChange={e=>spuf("telefono",e.target.value)}/></div>
@@ -9694,7 +9722,10 @@ export default function SistemaCarga(){
     const oc=ciudadCanon(w?.origCity,w?.origCountry), dc=ciudadCanon(w?.destCity,w?.destCountry);
     const op=paisCanon(w?.origCountry), dp=paisCanon(w?.destCountry);
     const mismoPais=(a,b)=>!!paisCanon(a)&&paisCanon(a)===b;
-    const cands=tarifas.filter(t=>t.activo!==false&&sinAcentos(t.tipoEnvio).replace(/[^A-Z]/g,"")===te);
+    // Tarifas de la matriz de salida del WR (las que no tienen matriz valen para todas)
+    const mOrig=w?.ofiOrigen?matrizDe(oficinas.find(o=>o.id===w.ofiOrigen))?.id||"":"";
+    const cands0=tarifas.filter(t=>t.activo!==false&&sinAcentos(t.tipoEnvio).replace(/[^A-Z]/g,"")===te);
+    const cands=mOrig&&cands0.some(t=>t.matrizId===mOrig)?cands0.filter(t=>t.matrizId===mOrig):cands0.filter(t=>!t.matrizId||!mOrig||t.matrizId===mOrig);
     const campo=(v,ok)=>!String(v||"").trim()?1:(ok?4:-100);   // vacío = comodín
     const ptsEsp=t=>campo(t.ciudadOrig,ciudadCanon(t.ciudadOrig,t.paisOrig)===oc)+campo(t.ciudadDest,ciudadCanon(t.ciudadDest,t.paisDest)===dc)+campo(t.paisOrig,mismoPais(t.paisOrig,op))+campo(t.paisDest,mismoPais(t.paisDest,dp));
     if(receptor?.tipo&&receptor?.id){
@@ -14257,6 +14288,12 @@ export default function SistemaCarga(){
             <span style={{color:"var(--t3)"}}><Ico e="🔍" solo/></span>
             <input placeholder="Buscar en el sistema…" value={search} onChange={e=>{setSearch(e.target.value);setPage(1);}}/>
           </div>
+          {currentUser.eligeMatriz&&(()=>{const mats=oficinas.filter(o=>esMatriz(o)&&ofiActiva(o)).sort((a,b)=>String(a.codigo).localeCompare(String(b.codigo)));
+            return <select className="fs" title="Matriz de trabajo" value={currentUser.oficinaId||""} style={{width:"auto",maxWidth:260,fontSize:13,padding:"5px 8px",fontWeight:700,
+              background:currentUser.oficinaId?"#FFF3E0":"var(--bg2)",borderColor:currentUser.oficinaId?"#E65100":"var(--b1)",color:currentUser.oficinaId?"#E65100":"var(--navy)"}}
+              onChange={async e=>{const v=e.target.value;if(!(await dbSetMatrizTrabajo(v))){window.alert("No se pudo cambiar la matriz de trabajo.");return;}
+                logAction("Cambió matriz de trabajo",v?(oficinas.find(o=>o.id===v)?.codigo||v):"Todas");window.location.reload();}}>
+              <option value="">Todas las matrices</option>{mats.map(m=><option key={m.id} value={m.id}>{m.codigo} — {m.nombre}{m.pais?` · ${m.pais}`:""}</option>)}</select>;})()}
           <div style={{position:"relative"}}>
             <button className="tb-sig" onClick={()=>setTbMenu(v=>!v)} title={`${fullName(currentUser)} · ${ROLE_DEFS[currentUser.rol]?.name||""}`}>{siglaUsuario(currentUser,clients,agentes,oficinas)}</button>
             {tbMenu&&<>
