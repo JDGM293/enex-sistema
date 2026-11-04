@@ -4078,7 +4078,7 @@ export default function SistemaCarga(){
           <><div className="ct-scroll"><table className="ct">
             <thead><tr>
               <th>ID</th><th>Tipo</th><th>Nombre Completo</th><th>ID Identificación</th>
-              <th>Casillero</th><th>Dirección</th><th>Municipio</th><th>Estado</th>
+              <th>Casillero</th><th>Matriz</th><th>Oficina</th><th>Dirección</th><th>Municipio</th><th>Estado</th>
               <th>País</th><th>CP</th><th>Teléfono 1</th><th>Teléfono 2</th><th>Email</th><th>Rol</th>
               <th>Designación</th><th>Pertenece a</th>
               {(hasPerm("editar_cliente")||hasPerm("editar_usuario")||hasPerm("borrar_cliente"))&&<th>Acc.</th>}
@@ -4108,6 +4108,11 @@ export default function SistemaCarga(){
                   <td><span className="cn">{fullName(c)}</span></td>
                   <td style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--gold2)",fontWeight:600}}>{oc(c.cedula)}</td>
                   <td style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--gold2)",fontWeight:700}}>{c.casillero||"—"}</td>
+                  {(()=>{const mid=c.tipo==="usuario"?matrizDeUsuario(c):c.matrizId;const m=oficinas.find(o=>o.id===mid);
+                    const of=oficinas.find(o=>o.id===c.oficinaId);
+                    return <>
+                    <td style={{fontSize:12,fontWeight:700,whiteSpace:"nowrap",color:m?"var(--navy)":"var(--t3)"}} title={m?`${m.nombre} · ${m.pais||""}`:""}>{m?m.codigo:(c.tipo==="usuario"&&["A","B"].includes(c.rol)?"Todas":"—")}</td>
+                    <td style={{fontSize:12,whiteSpace:"nowrap"}} title={of?.ciudad||""}>{of?<><b>{of.codigo}</b> {of.nombre}</>:"—"}</td></>;})()}
                   <td style={{fontSize:12,maxWidth:180,overflow:"hidden",textOverflow:"ellipsis"}}>{c.dir}</td>
                   <td style={{fontSize:12}}>{c.municipio}</td>
                   <td style={{fontSize:12}}>{c.estado}</td>
@@ -4162,13 +4167,14 @@ export default function SistemaCarga(){
       </div>
       <div className="card" style={{padding:0}}>
         <div className="ct-scroll"><table className="ct">
-          <thead><tr><th>ID</th><th>Nombre</th><th>Usuario</th><th>Rol</th><th>{colPert}</th><th>Email</th><th>Teléfono</th><th>Acceso</th>{acc&&<th>Acc.</th>}</tr></thead>
-          <tbody>{lista.length===0?<tr><td colSpan={acc?9:8} style={{textAlign:"center",padding:30,color:"var(--t3)"}}>No hay usuarios.</td></tr>
+          <thead><tr><th>ID</th><th>Nombre</th><th>Usuario</th><th>Rol</th><th>Matriz</th><th>{colPert}</th><th>Email</th><th>Teléfono</th><th>Acceso</th>{acc&&<th>Acc.</th>}</tr></thead>
+          <tbody>{lista.length===0?<tr><td colSpan={acc?10:9} style={{textAlign:"center",padding:30,color:"var(--t3)"}}>No hay usuarios.</td></tr>
             :pagSlice("usuarios",lista).map(c=><tr key={c.id}>
               <td><span className="cid">{c.id}</span></td>
               <td><span className="cn">{fullName(c)}</span></td>
               <td style={{fontFamily:"'DM Mono',monospace",fontSize:13}}>{c.login||"—"}</td>
               <td><RoleBadge code={c.rol}/></td>
+              <td style={{fontSize:13,fontWeight:700,color:"var(--navy)",whiteSpace:"nowrap"}}>{oficinas.find(o=>o.id===matrizDeUsuario(c))?.codigo||(["A","B"].includes(c.rol)?"Todas":"—")}</td>
               <td style={{fontSize:13,fontWeight:600,whiteSpace:"nowrap",color:perteneceA(c).startsWith("Sin ")?"var(--red)":"var(--t1)"}}>{perteneceA(c)}</td>
               <td style={{fontSize:13,color:"var(--cyan)"}}>{oc(c.email,"mail")||"—"}</td>
               <td style={{fontSize:13,whiteSpace:"nowrap"}}>{oc(c.tel1)||"—"}</td>
