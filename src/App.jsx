@@ -2026,7 +2026,7 @@ const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomo
               {mats.map(o=><option key={o.id} value={o.id}>{o.codigo} — {o.nombre}{o.ciudad?` (${o.ciudad})`:""}</option>)}
             </select>
           </div>;})()}
-        {esAdmin&&f.tipo==="usuario"&&f.rol==="F"&&<div className="fg" style={{marginBottom:14}}><label style={{display:"flex",alignItems:"center",gap:8,fontSize:14,cursor:"pointer"}}><input type="checkbox" checked={!!f.fpActivo} onChange={e=>setF(p=>({...p,fpActivo:e.target.checked}))}/>Puede emitir sus propias facturas (Mis facturas)</label></div>}
+        {esAdmin&&f.tipo==="usuario"&&f.rol==="F"&&<div className="fg" style={{marginBottom:14}}><label style={{display:"flex",alignItems:"center",gap:8,fontSize:14,cursor:"pointer"}}><input type="checkbox" checked={!!f.fpActivo} onChange={e=>setF(p=>({...p,fpActivo:e.target.checked}))}/>Facturas propias</label></div>}
         {/* Usuario de agente: su agente */}
         {f.tipo==="usuario"&&["E","E1"].includes(f.rol)&&(
           <div className="fg" style={{marginBottom:14}}><div className="fl">Agente *</div>
@@ -2118,11 +2118,11 @@ const PriceListEditor=({title,items,onSave,placeholder})=>{
       <div style={{fontSize:15,fontWeight:700,color:"var(--navy)",marginBottom:10}}>{title}</div>
       <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap"}}>
         <input className="fi" style={{flex:2,minWidth:200}} value={nombre} onChange={e=>setNombre(e.target.value.toUpperCase())} placeholder={placeholder} onKeyDown={e=>e.key==="Enter"&&add()}/>
-        <input className="fi" type="number" step="0.01" style={{width:120}} value={precio} onChange={e=>setPrecio(e.target.value)} placeholder="Precio" onKeyDown={e=>e.key==="Enter"&&add()}/>
+        <input className="fi" type="number" step="0.01" style={{width:120}} value={precio} onChange={e=>setPrecio(e.target.value)} placeholder="Precio USD" onKeyDown={e=>e.key==="Enter"&&add()}/>
         <button className="btn-p" onClick={add}>+ Agregar</button>
       </div>
       {items.length===0?<div style={{color:"var(--t3)",fontSize:14}}>Sin conceptos.</div>:
-        <div className="ct-scroll"><table className="ct"><thead><tr><th>Concepto</th><th style={{width:140,textAlign:"right"}}>Precio</th><th style={{width:50}}></th></tr></thead>
+        <div className="ct-scroll"><table className="ct"><thead><tr><th>Concepto</th><th style={{width:140,textAlign:"right"}}>Precio USD</th><th style={{width:50}}></th></tr></thead>
           <tbody>{items.map((it,i)=>(
             <tr key={it.nombre}>
               <td style={{fontWeight:600}}>{it.nombre}</td>
@@ -2546,6 +2546,8 @@ export default function SistemaCarga(){
   // Catálogo con precio: servicios y gastos adicionales
   const [SERVICIOS_CAT,setServiciosCat]=useState([]);
   const [GASTOS_CAT,setGastosCat]=useState([]);
+  const [TASAS,setTasas]=useState({USD:1}); // 1 USD = X moneda
+  const [tasasDraft,setTasasDraft]=useState(null);
   const [catCargado,setCatCargado]=useState(false);
   const [CONTAINER_TYPES,setContainerTypes]=useState([]);
   const [COUNTRIES,setCountries]=useState([]);
@@ -2970,6 +2972,7 @@ export default function SistemaCarga(){
        const norm=a=>Array.isArray(a)?a.map(x=>typeof x==="string"?{nombre:x,precio:0}:{nombre:String(x.nombre||""),precio:parseFloat(x.precio)||0}).filter(x=>x.nombre):[];
        setServiciosCat(norm(sv));
        setGastosCat(Array.isArray(gs)?norm(gs):norm(chargesT));
+       {const tc=await dbGetConfig('tasas_cambio');if(tc&&typeof tc==="object")setTasas({...tc,USD:1});}
        setCatCargado(true);}
       if(contT&&contT.length>0)setContainerTypes(contT);
       if(countriesT&&countriesT.length>0)setCountries(countriesT);
@@ -4680,7 +4683,7 @@ export default function SistemaCarga(){
                 <div className="fl">{g.t}</div>
                 <div style={{display:"flex",flexWrap:"wrap",gap:5,marginTop:4}}>
                   {g.l.length===0&&<span style={{fontSize:12,color:"var(--t3)"}}>—</span>}
-                  {g.l.map(({nombre:c,precio})=><button key={c} className={`btn-${wrf.cargos.includes(c)?"p":"s"}`} style={{fontSize:12,padding:"4px 9px"}} onClick={()=>sw("cargos",wrf.cargos.includes(c)?wrf.cargos.filter(x=>x!==c):[...wrf.cargos,c])}>{c} <span style={{opacity:.7}}>${precio}</span></button>)}
+                  {g.l.map(({nombre:c,precio})=><button key={c} className={`btn-${wrf.cargos.includes(c)?"p":"s"}`} style={{fontSize:12,padding:"4px 9px"}} onClick={()=>sw("cargos",wrf.cargos.includes(c)?wrf.cargos.filter(x=>x!==c):[...wrf.cargos,c])}>{c} <span style={{opacity:.7}}>{(()=>{const mn=matrizDe(oficinas.find(o=>o.id===currentUser.oficinaId))?.moneda||"USD";return fmtMoney(precioCat(precio,mn),mn);})()}</span></button>)}
                 </div>
               </div>
             ))}
@@ -4785,7 +4788,7 @@ export default function SistemaCarga(){
                   :facsRel.map(f=>(
                       <span key={f.id} style={{display:"inline-flex",alignItems:"center",gap:6}}>
                         <Num t="factura" id={f.id}/> <span style={{fontSize:11,color:statusFacColor(f.status),fontWeight:700}}>{statusFacLabel[f.status]||f.status}</span>
-                        <span style={{fontSize:11,color:"var(--t2)"}}>· {f.moneda} {(parseFloat(f.total)||0).toFixed(2)}{(parseFloat(f.saldo)||0)>0?` (saldo ${f.moneda} ${(parseFloat(f.saldo)||0).toFixed(2)})`:""}</span>
+                        <span style={{fontSize:11,color:"var(--t2)"}}>· {fmtMoney(f.total,f.moneda)}{(parseFloat(f.saldo)||0)>0?` · saldo ${fmtMoney(f.saldo,f.moneda)}`:""}</span>
                       </span>
                     ))}
               </div>
@@ -7339,7 +7342,7 @@ export default function SistemaCarga(){
                 {c.t==="txt"&&!f.preguntar&&seg([[false,"Valores elegidos"],[true,"Solo con valor"]],!!f.conValor,v=>setF({conValor:v,vals:[]}))}
                 <span className="ic-b" style={{marginLeft:"auto",color:"var(--red)"}} onClick={()=>setD({filtros:d.filtros.filter((_,j)=>j!==i)})}>✕</span>
               </div>
-              {f.preguntar?<div style={{fontSize:13,color:"var(--t3)"}}>Se elige al abrir el reporte.</div>:!f.conValor&&editorFiltro(F,f,setF,repFQ["d"+i],v=>setRepFQ({...repFQ,["d"+i]:v}))}
+              {f.preguntar?null:!f.conValor&&editorFiltro(F,f,setF,repFQ["d"+i],v=>setRepFQ({...repFQ,["d"+i]:v}))}
             </div>);})}
           {repPick?.modo==="filtro"?<div className="fi-search" style={{position:"relative",maxWidth:320}}>
               <input className="fi" autoFocus style={{fontSize:13}} placeholder="Buscar dato para filtrar…" value={repPick.fq||""} onChange={e=>setRepPick({...repPick,fq:e.target.value})} onBlur={()=>setTimeout(()=>setRepPick(p=>p?.modo==="filtro"?{q:p.q}:p),150)}/>
@@ -7482,7 +7485,7 @@ export default function SistemaCarga(){
             <div className="fg"><div className="fl">Tienda</div><input className="fi" value={m.tienda} onChange={e=>set({tienda:e.target.value.toUpperCase()})}/></div>
             <div className="fg" style={{gridColumn:"1/-1"}}><div className="fl">Contenido</div><input className="fi" value={m.descripcion} onChange={e=>set({descripcion:e.target.value.toUpperCase()})}/></div>
             <div className="fg"><div className="fl">Valor de la compra</div><div style={{display:"flex",gap:6}}><input className="fi" type="number" value={m.valor} onChange={e=>set({valor:e.target.value})}/>
-              <select className="fs" style={{width:90}} value={m.moneda} onChange={e=>set({moneda:e.target.value})}>{["USD","EUR"].map(x=><option key={x}>{x}</option>)}</select></div></div>
+              <select className="fs" style={{width:90}} value={m.moneda} onChange={e=>set({moneda:e.target.value})}>{monedasUso().map(x=><option key={x}>{x}</option>)}</select></div></div>
             <div className="fg"><div className="fl">Factura (PDF o foto)</div>
               {hasPerm("pre_factura")?<label className="btn-s" style={{cursor:"pointer",display:"inline-block"}}><Ico e="📎" sp/>Adjuntar
                 <input type="file" multiple accept="application/pdf,image/*" style={{display:"none"}} onChange={e=>{const fs=[...e.target.files];e.target.value="";set({nuevos:[...m.nuevos,...fs]});}}/></label>:<span style={{color:"var(--t3)"}}>—</span>}
@@ -7636,7 +7639,7 @@ export default function SistemaCarga(){
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 140px",gap:10,marginBottom:12}}>
             <div className="fg"><div className="fl">Guía</div><select className="fs" value={m.guiaId} onChange={e=>set({guiaId:e.target.value,clienteId:"",lineas:[]})}><option value="">— Escoge la guía —</option>{guias.map(x=><option key={x.id} value={x.id}>{x.id} · {x.tipoEnvio||""} · {fmtDate(x.fecha)}</option>)}</select></div>
             <div className="fg"><div className="fl">Cliente</div><select className="fs" value={m.clienteId} disabled={!g} onChange={e=>set({clienteId:e.target.value,lineas:fpCargarLineas(m.guiaId,e.target.value)})}><option value="">— Escoge el cliente —</option>{cliG.map(c=><option key={c.id} value={c.id}>{fullName(c)}{c.casillero?` · #${c.casillero}`:""}</option>)}</select></div>
-            <div className="fg"><div className="fl">Moneda</div><select className="fs" value={m.moneda} onChange={e=>set({moneda:e.target.value})}>{["USD","EUR","VES","COP"].map(x=><option key={x}>{x}</option>)}</select></div>
+            <div className="fg"><div className="fl">Moneda</div><select className="fs" value={m.moneda} onChange={e=>set({moneda:e.target.value})}>{[...new Set([...monedasUso(),"VES"])].map(x=><option key={x}>{x}</option>)}</select></div>
           </div>
           {m.clienteId&&<>
             {m.lineas.filter(l=>l.tipo==="flete").length===0&&<div style={{padding:14,textAlign:"center",color:"var(--t3)"}}>Los WR de este cliente en la guía ya están facturados.</div>}
@@ -7706,12 +7709,13 @@ export default function SistemaCarga(){
       {k:"tipoenvio",l:"Tipo de Envío",ic:<Ico e="✈️"/>},
       {k:"contenedores",l:"Tipos de Contenedor",ic:<Ico e="📦"/>},
       {k:"pagos",l:"Tipos de Pago",ic:<Ico e="💳"/>},
+      {k:"monedas",l:"Monedas y tasas",ic:<Ico e="🔄"/>},
       {k:"chat",l:"Chat",ic:<Ico e="💬"/>},
       ...(hasPerm("registro_actividad")?[{k:"actividad",l:"Registro de Actividad",ic:<Ico e="📋"/>}]:[]),
     ];
 
-    const cfgVer=k=>({actividad:"registro_actividad"})[k]||`cfg_${k}_ver`;
-    const cfgEdita=k=>["agentes","oficinas","tarifas","actividad"].includes(k)||hasPerm(`cfg_${k}_editar`);
+    const cfgVer=k=>({actividad:"registro_actividad",monedas:"cfg_pagos_ver"})[k]||`cfg_${k}_ver`;
+    const cfgEdita=k=>["agentes","oficinas","tarifas","actividad"].includes(k)||hasPerm(k==="monedas"?"cfg_pagos_editar":`cfg_${k}_editar`);
     const TABS_OK=hasPerm("configuracion")?CFG_TABS.filter(t=>hasPerm(cfgVer(t.k))):[];
     const tabMenu=porMenu[cfgTab]&&hasPerm(porMenu[cfgTab]);
     if(!TABS_OK.length&&!tabMenu)return <div className="page-scroll"><div className="card" style={{textAlign:"center",padding:60,color:"var(--t3)"}}>Sin acceso.</div></div>;
@@ -7762,8 +7766,7 @@ export default function SistemaCarga(){
                 </div>
               </div>
               <div className="fg" style={{marginTop:6,maxWidth:360}}><div className="fl">Sitio web</div><input className="fi" style={{textTransform:"none"}} value={m.web||""} onChange={e=>set({web:e.target.value.toLowerCase()})}/></div>
-              <div style={{fontSize:13,color:"var(--t3)",marginTop:8}}>Razón social, número fiscal, dirección, teléfono y correo: Configuración → Países y Ciudades → Datos fiscales de cada país.</div>
-              <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:10}}>
+                            <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:10}}>
                 {marcaDraft&&<button className="btn-s" onClick={()=>setMarcaDraft(null)}>Descartar</button>}
                 <button className="btn-p" disabled={!marcaDraft} onClick={guardar}><Ico e="💾" sp/>Guardar</button>
               </div>
@@ -7934,6 +7937,43 @@ export default function SistemaCarga(){
           <PriceListEditor title="Gastos Adicionales" items={GASTOS_CAT}
             onSave={n=>{setGastosCat(n);dbSetConfig('gastos_cat',n);}}/>
         )}
+
+        {/* ── MONEDAS Y TASAS DE CAMBIO ── */}
+        {cfgTab==="monedas"&&(()=>{
+          const D=tasasDraft||TASAS;const edita=cfgEdita("monedas");
+          const mons=[...new Set([...monedasUso(),...Object.keys(D).filter(k=>/^[A-Z]{3}$/.test(k))])].filter(m=>m!=="USD").sort((a,b)=>monOrden(a)-monOrden(b)||a.localeCompare(b));
+          const usoDe=m=>oficinas.filter(o=>esMatriz(o)&&o.moneda===m).map(o=>o.codigo).sort().join(", ");
+          const guardar=async()=>{const n={USD:1};for(const m of mons){const v=parseFloat(D[m]);if(!(v>0)){window.alert(`Falta la tasa de ${m}.`);return;}n[m]=v;}
+            n.actualizado=new Date().toISOString();
+            if(!(await dbSetConfig("tasas_cambio",n))){window.alert("No se pudo guardar.");return;}
+            setTasas(n);setTasasDraft(null);logAction("Actualizó tasas de cambio",mons.map(m=>`${m} ${n[m]}`).join(" · "));};
+          return(
+          <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,padding:"14px 16px",marginBottom:14,maxWidth:720}}>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
+              <div style={{fontSize:15,fontWeight:700,color:"var(--navy)"}}><Ico e="🔄" sp/>Monedas y tasas de cambio</div>
+              {TASAS.actualizado&&<span style={{marginLeft:"auto",fontSize:13,color:"var(--t2)"}}>Actualizado {fmtDate(TASAS.actualizado)} {fmtTime(TASAS.actualizado)}</span>}
+            </div>
+            <div className="ct-scroll"><table className="ct">
+              <thead><tr><th>Moneda</th><th>Matrices</th><th style={{textAlign:"right"}}>1 USD =</th></tr></thead>
+              <tbody>
+                <tr><td style={{fontWeight:700}}>{monedaTxt("USD")}</td><td style={{fontSize:13}}>{usoDe("USD")||"—"}</td><td style={{textAlign:"right",fontFamily:"'DM Mono',monospace"}}>1</td></tr>
+                {mons.map(m=>(
+                  <tr key={m}>
+                    <td style={{fontWeight:700}}>{monedaTxt(m)}</td>
+                    <td style={{fontSize:13}}>{usoDe(m)||"—"}</td>
+                    <td style={{textAlign:"right"}}>{edita?<input className="fi" type="number" step="any" min="0" style={{width:150,textAlign:"right",fontFamily:"'DM Mono',monospace"}}
+                      value={D[m]??""} onChange={e=>setTasasDraft({...D,[m]:e.target.value})}/>
+                      :<span style={{fontFamily:"'DM Mono',monospace"}}>{D[m]||"—"}</span>}</td>
+                  </tr>))}
+              </tbody>
+            </table></div>
+            {edita&&<div style={{display:"flex",gap:8,alignItems:"center",marginTop:12}}>
+              <div style={{width:260}}><MonedaPicker value="" onChange={v=>{if(v&&v!=="USD"&&!(v in D))setTasasDraft({...D,[v]:""});}}/></div>
+              <span style={{flex:1}}/>
+              {tasasDraft&&<button className="btn-s" onClick={()=>setTasasDraft(null)}>Descartar</button>}
+              <button className="btn-p" disabled={!tasasDraft} onClick={guardar}><Ico e="💾" sp/>Guardar</button>
+            </div>}
+          </div>);})()}
 
         {/* ── TIPOS DE PAGO ── */}
         {cfgTab==="pagos"&&(
@@ -8254,7 +8294,7 @@ export default function SistemaCarga(){
                     <div className="fg"><div className="fl">Código postal</div><input className="fi" value={agForm.cp||""} onChange={e=>setAgForm(p=>({...p,cp:e.target.value.toUpperCase()}))}/></div>
                     <div className="fg"><div className="fl">Teléfono</div><input className="fi" value={agForm.tel} onChange={e=>setAgForm(p=>({...p,tel:e.target.value.toUpperCase()}))}/></div>
                     <div className="fg"><div className="fl">Email</div><input className="fi" type="email" value={agForm.email} onChange={e=>setAgForm(p=>({...p,email:e.target.value}))}/></div>
-                    {currentUser.rol==="A"&&<div className="fg full"><label style={{display:"flex",alignItems:"center",gap:8,fontSize:14,cursor:"pointer"}}><input type="checkbox" checked={!!agForm.fp_activo} onChange={e=>setAgForm(p=>({...p,fp_activo:e.target.checked}))}/>Puede emitir sus propias facturas (Mis facturas)</label></div>}
+                    {currentUser.rol==="A"&&<div className="fg full"><label style={{display:"flex",alignItems:"center",gap:8,fontSize:14,cursor:"pointer"}}><input type="checkbox" checked={!!agForm.fp_activo} onChange={e=>setAgForm(p=>({...p,fp_activo:e.target.checked}))}/>Facturas propias</label></div>}
                     <div className="fg full"><div className="fl">Matriz *</div><select className="fs" value={agForm.matriz_id||""} onChange={e=>setAgForm(p=>({...p,matriz_id:e.target.value}))}>
                       <option value="">—</option>{oficinas.filter(o=>esMatriz(o)&&(ofiActiva(o)||o.id===agForm.matriz_id)).sort((a,b)=>String(a.codigo||"").localeCompare(String(b.codigo||""))).map(o=><option key={o.id} value={o.id}>{o.codigo} — {o.nombre} · {paisDeOfi(o)?.name||o.pais||""}</option>)}</select></div>
                     <div className="fg full"><div className="fl">Dirección en los WR de sus clientes</div><select className="fs" value={agForm.wr_dir||"matriz"} onChange={e=>setAgForm(p=>({...p,wr_dir:e.target.value}))}><option value="matriz">Dirección de la casa matriz</option><option value="origen">Dirección de la oficina de origen del WR</option></select></div>
@@ -8354,8 +8394,8 @@ export default function SistemaCarga(){
                       <option value="">—</option>{mats.map(m=><option key={m.id} value={m.id}>{m.codigo} — {m.nombre}{m.ciudad?` (${m.ciudad})`:""}</option>)}</select></div>}
                     {ofForm.tipo==="Matriz"&&<div className="fg full"><label style={{display:"flex",alignItems:"center",gap:8,fontSize:14,cursor:"pointer"}}><input type="checkbox" checked={!!ofForm.principal} disabled={currentUser.rol!=="A"} onChange={e=>setOfForm(p=>({...p,principal:e.target.checked}))}/>Matriz principal del país</label></div>}
                     <div className="fg"><div className="fl">Moneda</div><MonedaPicker value={ofForm.moneda||""} onChange={v=>setOfForm(p=>({...p,moneda:v}))}/></div>
-                    {ofForm.tipo&&ofForm.tipo!=="Matriz"&&<div className="fg full"><label style={{display:"flex",alignItems:"center",gap:8,fontSize:14,cursor:"pointer"}}><input type="checkbox" checked={!!ofForm.recibe_puerta} onChange={e=>setOfForm(p=>({...p,recibe_puerta:e.target.checked}))}/>Recibe en puerta (la oficina puede registrar paquetes en Recepción en Puerta)</label></div>}
-                    {currentUser.rol==="A"&&ofForm.tipo!=="Matriz"&&<div className="fg full"><label style={{display:"flex",alignItems:"center",gap:8,fontSize:14,cursor:"pointer"}}><input type="checkbox" checked={!!ofForm.fp_activo} onChange={e=>setOfForm(p=>({...p,fp_activo:e.target.checked}))}/>Puede emitir sus propias facturas (Mis facturas)</label></div>}
+                    {ofForm.tipo&&ofForm.tipo!=="Matriz"&&<div className="fg full"><label style={{display:"flex",alignItems:"center",gap:8,fontSize:14,cursor:"pointer"}}><input type="checkbox" checked={!!ofForm.recibe_puerta} onChange={e=>setOfForm(p=>({...p,recibe_puerta:e.target.checked}))}/>Recibe en puerta</label></div>}
+                    {currentUser.rol==="A"&&ofForm.tipo!=="Matriz"&&<div className="fg full"><label style={{display:"flex",alignItems:"center",gap:8,fontSize:14,cursor:"pointer"}}><input type="checkbox" checked={!!ofForm.fp_activo} onChange={e=>setOfForm(p=>({...p,fp_activo:e.target.checked}))}/>Facturas propias</label></div>}
                     {editOficina&&<div className="fg"><div className="fl">Estado</div><select className="fs" value={ofForm.activo===false?"0":"1"} onChange={e=>setOfForm(p=>({...p,activo:e.target.value==="1"}))}><option value="1">Activa</option><option value="0">Inactiva</option></select></div>}
                     {ofForm.tipo!=="Matriz"&&<>
                       <div className="fg"><div className="fl">Comisión PREPAID (% del flete)</div><input className="fi" type="number" min="0" step="0.01" value={ofForm.com_prepaid_pct??""} onChange={e=>setOfForm(p=>({...p,com_prepaid_pct:e.target.value}))}/></div>
@@ -9185,7 +9225,7 @@ export default function SistemaCarga(){
         <><div className="ct-scroll"><table className="ct">
           <thead><tr><th>N°</th><th>Para</th><th>Dirección</th><th>Fecha</th><th>Bultos</th><th>Recoge</th>{esEmpleadoPU&&<th>Pidió</th>}<th>Estado</th></tr></thead>
           <tbody>{pagSlice("pickups",lista).map(p=>(
-            <tr key={p.id} style={{cursor:"pointer"}} onClick={()=>{setPickupSel(p);setPuConf({fecha:p.fechaProgramada||p.fechaDeseada||"",transportista:p.transportista||"",chofer:p.chofer||"",monto:p.monto?String(p.monto):"",moneda:p.moneda||"USD"});}}>
+            <tr key={p.id} style={{cursor:"pointer"}} onClick={()=>{setPickupSel(p);setPuConf({fecha:p.fechaProgramada||p.fechaDeseada||"",transportista:p.transportista||"",chofer:p.chofer||"",monto:p.monto?String(p.monto):"",moneda:p.monto&&p.moneda?p.moneda:(oficinas.find(o=>o.id===p.matrizId)?.moneda||p.moneda||"USD")});}}>
               <td style={{...mono,fontWeight:700,color:"var(--navy)"}}><Num t="pickup" id={p.id}/></td>
               <td style={{fontWeight:600}}>{p.clienteNombre||"—"}{p.casillero&&<span style={{...mono,color:"var(--gold2)",marginLeft:6,fontSize:12}}>#{p.casillero}</span>}</td>
               <td style={{fontSize:13,color:"var(--t2)",maxWidth:260,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{p.direccion||"—"}</td>
@@ -9227,7 +9267,7 @@ export default function SistemaCarga(){
                     <div className="fg"><div className="fl">Empresa / carrier</div><input className="fi" value={puConf.transportista} onChange={e=>setPuConf(x=>({...x,transportista:e.target.value.toUpperCase()}))}/></div>
                     <div className="fg"><div className="fl">Chofer</div><input className="fi" value={puConf.chofer} onChange={e=>setPuConf(x=>({...x,chofer:e.target.value.toUpperCase()}))}/></div>
                     <div className="fg"><div className="fl">Cargo pick-up</div><input className="fi" type="number" step="0.01" min="0" value={puConf.monto} onChange={e=>setPuConf(x=>({...x,monto:e.target.value}))}/></div>
-                    <div className="fg"><div className="fl">Moneda</div><select className="fs" value={puConf.moneda} onChange={e=>setPuConf(x=>({...x,moneda:e.target.value}))}><option>USD</option><option>EUR</option></select></div>
+                    <div className="fg"><div className="fl">Moneda</div><select className="fs" value={puConf.moneda} onChange={e=>setPuConf(x=>({...x,moneda:e.target.value}))}>{[...new Set([...monedasUso(),puConf.moneda].filter(Boolean))].map(m=><option key={m}>{m}</option>)}</select></div>
                   </div>
                   <button className="btn-p" style={{marginTop:10}} onClick={()=>{if(!puConf.fecha){window.alert("Pon la fecha programada.");return;}
                     puCambiar(sel,"confirmado",{fechaProgramada:puConf.fecha,transportista:puConf.transportista,chofer:puConf.chofer,monto:parseFloat(puConf.monto)||0,moneda:puConf.moneda},`Programado ${puConf.fecha}${puRecoge(puConf)?` · ${puRecoge(puConf)}`:""}`);}}><Ico e="✅" sp/>Confirmar pick-up</button>
@@ -9450,13 +9490,13 @@ export default function SistemaCarga(){
   // Estados: borrador | emitida | pagada_parcial | pagada | anulada.
   // Pagos parciales permitidos; "Bs" solo va como nota referencial.
 
-  const CUR_SYMBOL={USD:"$",EUR:"€"};
+  const CUR_SYMBOL={USD:"$",EUR:"€",COP:"COL$",VES:"Bs.",MXN:"MX$",ARS:"AR$",CLP:"CL$",PEN:"S/",BRL:"R$",GBP:"£",DOP:"RD$",PAB:"B/."};
   const PAY_METHODS=[
     {k:"efectivo",l:"Efectivo"},
-    {k:"zelle",l:"Zelle"},
+    {k:"zelle",l:"Zelle",mon:["USD"]},
     {k:"transferencia",l:"Transferencia"},
-    {k:"pos_usd",l:"POS (USD)"},
-    {k:"pos_eur",l:"POS (EUR)"},
+    {k:"pos_usd",l:"POS (USD)",mon:["USD"]},
+    {k:"pos_eur",l:"POS (EUR)",mon:["EUR"]},
     {k:"otro",l:"Otro"},
     {k:"saldo_favor",l:"Saldo a favor",interno:true},
     {k:"nota_credito",l:"Nota de crédito",interno:true},
@@ -9472,7 +9512,16 @@ export default function SistemaCarga(){
   const FAC_STATUS_LABEL={borrador:"Borrador",emitida:"Emitida",pagada_parcial:"Pago parcial",pagada:"Pagada",anulada:"✕ Anulada"};
   const FAC_STATUS_CLS={borrador:"s5",emitida:"s2",pagada_parcial:"s4",pagada:"s3",anulada:"s1"};
 
-  const fmtMoney=(v,mon="USD")=>`${CUR_SYMBOL[mon]||"$"}${(parseFloat(v)||0).toFixed(2)}`;
+  const fmtMoney=(v,mon="USD")=>{const n=Math.round((parseFloat(v)||0)*100)/100;const m=mon||"USD";
+    return `${n<0?"-":""}${CUR_SYMBOL[m]??`${m} `}${Math.abs(n).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}`;};
+  // Monedas en uso (las de las matrices y las que ya tienen movimientos)
+  const monOrden=m=>{const i=["USD","EUR","COP"].indexOf(m);return i<0?9:i;};
+  const monedasUso=()=>[...new Set(["USD",...oficinas.filter(o=>esMatriz(o)&&o.moneda).map(o=>o.moneda),...facturas.map(f=>f.moneda),...pagos.map(p=>p.moneda)].filter(Boolean))]
+    .sort((a,b)=>monOrden(a)-monOrden(b)||a.localeCompare(b));
+  // Tasas de cambio (Configuración › Monedas): 1 USD = X moneda
+  const tasaDe=m=>!m||m==="USD"?1:(parseFloat(TASAS?.[m])||0);
+  const convertir=(v,de,a)=>{const x=parseFloat(v)||0;if(!de||!a||de===a)return x;const td=tasaDe(de),ta=tasaDe(a);if(!td||!ta)return null;return x/td*ta;};
+  const pagoMetodos=mon=>PAY_METHODS.filter(x=>!x.interno&&(!x.mon||x.mon.includes(mon||"USD")));
   const buildFacturaId=(num)=>String(num).padStart(7,"0");
   // Numeración legal por país: VE-F-0000001 (factura), NC (nota de crédito), L (liquidación), PF (proforma), RC (recibo), CM (nota de comisión)
   const esDocNumerado=id=>/^[A-Z]{2,3}-(F|NC|L|PF)-\d+$/.test(String(id||""));
@@ -9674,7 +9723,7 @@ export default function SistemaCarga(){
     const rt=f.receptorTipo==="agente"?"Agente":f.receptorTipo==="autonomo"?"Autónomo":"Cliente";
     let cuerpo=pGrid(2,[pBox(rt,`<b>${e(f.receptorNombre||"—")}</b>${f.receptorCasillero?` · #${e(f.receptorCasillero)}`:""}`,e([f.receptorDoc&&`ID ${f.receptorDoc}`,f.receptorTel,f.receptorEmail].filter(Boolean).join(" · "))),
       pBox("Dirección",e(f.receptorDir||"—"),e([(f.guiaIds||[]).length&&`Guía ${f.guiaIds.join(", ")}`,f.tipoEnvio].filter(Boolean).join(" · ")))]);
-    if(fl.length)cuerpo+=pSec(`WR y flete <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#5a6b85">· ${aereo?"aéreo: el mayor entre peso real y volumétrico":"marítimo: "+(uniC==="m3"?"metros cúbicos":"pies cúbicos")}</span>`)+
+    if(fl.length)cuerpo+=pSec("WR y flete")+
       pTabla([{l:"N° WR"},...(conCli?[{l:"Cliente"}]:[]),{l:"Cajas",r:1},...cm.map(([,t])=>({l:t,r:1})),{l:`A cobrar (${uni})`,r:1},{l:"Tarifa",r:1},{l:"Importe",r:1}],
         fl.map(l=>`<tr><td class="mono"><b>${e(l.wrId)}</b></td>${conCli?`<td>${e(l.cliente)}<div class="sub">${e(l.casillero)}</div></td>`:""}<td class="r">${l.cajas||0}</td>${cm.map(([k])=>`<td class="r">${nm(l[k])}</td>`).join("")}<td class="r"><b>${nm(l.cantidad)}</b></td><td class="r">${$(l.precio)}</td><td class="r"><b>${$(l.total)}</b></td></tr>`).join(""),
         fl.length>1?`<tr class="tot"><td>Totales · ${fl.length} WR</td>${conCli?"<td></td>":""}<td class="r">${S(fl,"cajas")}</td>${cm.map(([k])=>`<td class="r">${nm(S(fl,k))}</td>`).join("")}<td class="r">${nm(S(fl,"cantidad"))} ${uni}</td><td></td><td class="r">${$(S(fl,"total"))}</td></tr>`:"");
@@ -9688,7 +9737,8 @@ export default function SistemaCarga(){
       pagosAplic.map(p=>`<tr><td class="mono">${e(p.reciboId||p.id)}</td><td>${fmtDate(p.fecha)}</td><td>${e(metodoLbl(p.tipoPago))}</td><td>${e([p.referencia,p.notaReferencial].filter(Boolean).join(" · "))}</td><td class="r">${fmtMoney(p.monto,p.moneda||f.moneda)}</td></tr>`).join(""));
     if(f.notas)cuerpo+=`<div class="nota"><b>Notas:</b> ${e(f.notas)}</div>`;
     if(f.condiciones)cuerpo+=`<div class="nota"><b>Condiciones:</b> ${e(f.condiciones)}</div>`;
-    return prnHTML({titulo,numero:f.id,meta:[["Fecha",fmtDate(f.fecha)],f.fechaEmision&&["Emisión",fmtDate(f.fechaEmision)],["Moneda",f.moneda],f.ncFacturaOrigen&&["Factura de origen",f.ncFacturaOrigen]],
+    return prnHTML({titulo,numero:f.id,meta:[["Fecha",fmtDate(f.fecha)],f.fechaEmision&&["Emisión",fmtDate(f.fechaEmision)],["Moneda",f.moneda],
+      f.tarifa?.monedaTarifa&&f.tarifa?.tasa&&["Tasa de cambio",`1 ${f.tarifa.monedaTarifa} = ${Number(f.tarifa.tasa).toLocaleString("en-US",{maximumFractionDigits:6})} ${f.moneda}`],f.ncFacturaOrigen&&["Factura de origen",f.ncFacturaOrigen]],
       anulado:f.status==="anulada"?{texto:"ANULADA",motivo:f.motivoAnulacion}:null,cuerpo});
   };
   const printFactura=(f,listaPagos=pagos)=>prnImprimir(facturaHTML(f,listaPagos));
@@ -9739,13 +9789,14 @@ export default function SistemaCarga(){
     return best&&pts(best)>=2?best:null;
   };
   // Precio de un servicio o gasto adicional del catálogo
-  const adicionalDeCatalogo=nombre=>{
-    const s=SERVICIOS_CAT.find(x=>x.nombre===nombre);if(s)return {tipo:"Servicio",precio:s.precio};
-    const g=GASTOS_CAT.find(x=>x.nombre===nombre);if(g)return {tipo:"Gasto",precio:g.precio};
+  const precioCat=(usd,mon)=>Math.round((convertir(usd,"USD",mon)??0)*100)/100;
+  const adicionalDeCatalogo=(nombre,mon="USD")=>{
+    const s=SERVICIOS_CAT.find(x=>x.nombre===nombre);if(s)return {tipo:"Servicio",precio:precioCat(s.precio,mon)};
+    const g=GASTOS_CAT.find(x=>x.nombre===nombre);if(g)return {tipo:"Gasto",precio:precioCat(g.precio,mon)};
     return null;
   };
   // Líneas de flete y adicionales para un grupo de WR
-  const lineasDeWRs=(wrs,isAereo,precioUnidad,conCliente,unidad="")=>{
+  const lineasDeWRs=(wrs,isAereo,precioUnidad,conCliente,unidad="",mon="USD")=>{
     const out=[];
     wrs.forEach(w=>{
       const pf=wrPesoFacturable(w,isAereo,unidad);
@@ -9755,11 +9806,11 @@ export default function SistemaCarga(){
         ft3:parseFloat(w.ft3)||0,m3:parseFloat(w.m3)||0,unidad:pf.unidad,
         descripcion:`Flete WR ${w.id}`,cantidad:r2(pf.valor),precio:precioUnidad,total:0});
       {const pu=pickupList.find(x=>x.status!=="cancelado"&&((w._pickupId&&x.id===w._pickupId)||(x.wrId&&x.wrId===w.id)));
-       if(pu&&pu.monto>0)out.push({tipo:"adicional",wrId:w.id,descripcion:`Pick-up ${pu.id}`,cantidad:1,precio:pu.monto,total:0});}
+       if(pu&&pu.monto>0)out.push({tipo:"adicional",wrId:w.id,descripcion:`Pick-up ${pu.id}`,cantidad:1,precio:Math.round((convertir(pu.monto,pu.moneda||"USD",mon)??0)*100)/100,total:0});}
       (Array.isArray(w.cargos)?w.cargos:[]).forEach(c=>{
         const nombre=typeof c==="string"?c:(c?.concepto||c?.nombre||"");
         if(!nombre)return;
-        const cat=adicionalDeCatalogo(nombre);
+        const cat=adicionalDeCatalogo(nombre,mon);
         out.push({tipo:"adicional",wrId:w.id,descripcion:nombre,cantidad:1,precio:cat?.precio||0,total:0});
       });
     });
@@ -9989,7 +10040,8 @@ export default function SistemaCarga(){
     return `${prefix}-${String(n+1).padStart(3,"0")}`;
   };
   const cobroSubmit=async()=>{
-    const m=cobroModal; if(!m)return;
+    let m=cobroModal; if(!m)return;
+    if(!pagoMetodos(m.moneda).some(x=>x.k===m.tipoPago))m={...m,tipoPago:"efectivo"};
     if(!(puedeCobrarGeneral()||(hasPerm("cobrar_prepaid")&&m.soloIds))){window.alert("Tu rol no tiene permiso para esta acción.");return;}
     if(!m.pagador){window.alert("Elige quién paga.");return;}
     const c=cobroCalc(m);
@@ -10091,8 +10143,10 @@ export default function SistemaCarga(){
         const cobrado=r2(f.subtotal>0?lin*f.total/f.subtotal:lin);
         const tf=tarifaParaWR(w,te,{tipo:dom.tipo,id:dom.id});
         const pf=wrPesoFacturable(w,isAereo,unidadTarifa(tf,isAereo));
-        const costo=tf?Math.max(r2(pf.valor*precioTarifa(tf,isAereo)),parseFloat(tf.min)||0):0;
-        const monedaOk=!!tf&&(tf.moneda||"USD")===(f.moneda||"USD");
+        const costo0=tf?Math.max(r2(pf.valor*precioTarifa(tf,isAereo)),parseFloat(tf.min)||0):0;
+        const costoCv=tf?convertir(costo0,tf.moneda||"USD",f.moneda||"USD"):null;
+        const costo=costoCv===null?0:costoCv;
+        const monedaOk=!!tf&&costoCv!==null;
         const ref=`${f.id}/${w.id}`;
         out.push({ref,f,w,dom,cobrado,costo:r2(costo),comision:monedaOk?Math.max(0,r2(cobrado-costo)):0,tf,monedaOk,moneda:f.moneda||"USD",acreditada:acreditadas.has(ref),
           faltante:["18","18.1"].includes(w.status?.code||""),perdido:["18.2","18.3"].includes(w.status?.code||"")});
@@ -10365,22 +10419,28 @@ export default function SistemaCarga(){
   const facConstruir=(guia,r,wrs,seq=0)=>{
     const isAereo=dnGuiaEsAerea(guia);
     const tf=tarifaParaWR(wrs[0],guia.tipoEnvio,{tipo:r.tipo,id:r.id});
-    const precioUnidad=tf?precioTarifa(tf,isAereo):0;
+    // Se factura en la moneda de la matriz que emite: PREPAID la de salida, COD la de destino
+    const w0=wrs[0];const mEm=w0?(esPrepaidWR(w0)?matrizDe(oficinas.find(o=>o.id===w0.ofiOrigen)):oficinas.find(o=>o.id===w0.ofiDestino)):null;
+    const monT=tf?.moneda||"USD";let mon=mEm?.moneda||monT;
+    let k=convertir(1,monT,mon);if(k===null){mon=monT;k=1;}
+    const cv=v=>Math.round((parseFloat(v)||0)*k*100)/100;
+    const precioUnidad=tf?cv(precioTarifa(tf,isAereo)):0;
     const unidad=unidadTarifa(tf,isAereo);
     return recalcFactura({
       ...emptyFactura(),
       id:seq?nuevoIdBorrador():"",numero:0,
-      tipo:"factura",status:"borrador",moneda:tf?.moneda||"USD",
+      tipo:"factura",status:"borrador",moneda:mon,
       fecha:new Date(),fechaEmision:null,
       receptorTipo:r.tipo,receptorId:r.id||"",
       receptorNombre:r.snapshot?.nombre||"",receptorDoc:r.snapshot?.doc||"",
       receptorDir:r.snapshot?.dir||"",receptorTel:r.snapshot?.tel||"",
       receptorEmail:r.snapshot?.email||"",receptorCasillero:r.snapshot?.casillero||"",
       tipoEnvio:guia.tipoEnvio||"",
-      tarifa:tf?{porLb:parseFloat(tf.porLb)||0,porFt3:parseFloat(tf.porFt3)||0,min:parseFloat(tf.min)||0,moneda:tf.moneda||"USD",unidad,
-        ruta:`${tf.ciudadOrig||tf.paisOrig||"Cualquiera"} → ${tf.ciudadDest||tf.paisDest||"Cualquiera"}`,especial:!!tf._especial,tarifaId:tf.id}
+      tarifa:tf?{porLb:cv(tf.porLb),porFt3:cv(tf.porFt3),min:cv(tf.min),moneda:mon,unidad,
+        ruta:`${tf.ciudadOrig||tf.paisOrig||"Cualquiera"} → ${tf.ciudadDest||tf.paisDest||"Cualquiera"}`,especial:!!tf._especial,tarifaId:tf.id,
+        ...(mon!==monT?{monedaTarifa:monT,tasa:Math.round(tasaDe(mon)/tasaDe(monT)*1e6)/1e6}:{})}
         :{porLb:0,porFt3:0,min:0,moneda:"USD",unidad,ruta:"Sin tarifa"},
-      lineas:lineasDeWRs(wrs,isAereo,precioUnidad,r.tipo!=="cliente",unidad),
+      lineas:lineasDeWRs(wrs,isAereo,precioUnidad,r.tipo!=="cliente",unidad,mon),
       wrIds:wrs.map(w=>w.id),
       guiaIds:[guia.id],
       notas:"",
@@ -10452,7 +10512,7 @@ export default function SistemaCarga(){
           const coms=[...comisionesPrepaid(),...(pg.tipo==="oficina"?comisionesEntrega():[])];
           const mono={fontFamily:"'DM Mono',monospace"};
           const k=pagKey(pg);
-          const monsCon=["USD","EUR"].filter(mn=>movimientosCuenta(pg,mn).length>0);
+          const monsCon=monedasUso().filter(mn=>movimientosCuenta(pg,mn).length>0);
           const mon=monsCon.includes(ctaMon)?ctaMon:(monsCon[0]||"USD");
           const movs=movimientosCuenta(pg,mon);
           const d0=ctaDesde?new Date(ctaDesde+"T00:00:00"):null, d1=ctaHasta?new Date(ctaHasta+"T23:59:59.999"):null;
@@ -10492,8 +10552,8 @@ export default function SistemaCarga(){
                 <div className="card" style={{marginBottom:10,display:"flex",gap:8,alignItems:"flex-end",flexWrap:"wrap"}}>
                   <b style={{alignSelf:"center",marginRight:8}}><Ico e="💸" sp/>Pagar a {pg.nombre}</b>
                   <div><label className="fl">Monto</label><input className="fi" type="number" step="0.01" style={{width:130}} value={cuadrePago.monto} onChange={e=>setCuadrePago(x=>({...x,monto:e.target.value}))}/></div>
-                  <div><label className="fl">Moneda</label><select className="fi" value={cuadrePago.moneda} onChange={e=>setCuadrePago(x=>({...x,moneda:e.target.value,monto:String(saldoFavorDe(pg,e.target.value)||"")}))}>{["USD","EUR"].map(m=><option key={m}>{m}</option>)}</select></div>
-                  <div><label className="fl">Forma de pago</label><select className="fi" value={cuadrePago.tipoPago} onChange={e=>setCuadrePago(x=>({...x,tipoPago:e.target.value}))}>{PAY_METHODS.filter(x=>!x.interno).map(x=><option key={x.k} value={x.k}>{x.l}</option>)}</select></div>
+                  <div><label className="fl">Moneda</label><select className="fi" value={cuadrePago.moneda} onChange={e=>setCuadrePago(x=>({...x,moneda:e.target.value,monto:String(saldoFavorDe(pg,e.target.value)||"")}))}>{(monsCon.length?monsCon:monedasUso()).map(m=><option key={m}>{m}</option>)}</select></div>
+                  <div><label className="fl">Forma de pago</label><select className="fi" value={pagoMetodos(cuadrePago.moneda).some(x=>x.k===cuadrePago.tipoPago)?cuadrePago.tipoPago:"efectivo"} onChange={e=>setCuadrePago(x=>({...x,tipoPago:e.target.value}))}>{pagoMetodos(cuadrePago.moneda).map(x=><option key={x.k} value={x.k}>{x.l}</option>)}</select></div>
                   <div><label className="fl">Referencia</label><input className="fi" style={{width:160}} value={cuadrePago.referencia} onChange={e=>setCuadrePago(x=>({...x,referencia:e.target.value}))}/></div>
                   <button className="btn-p" style={{fontSize:13}} onClick={()=>cuadrePagar(pg)}><Ico e="💸" sp/>Registrar pago</button>
                   <button className="btn-s" style={{fontSize:13}} onClick={()=>setCuadrePago(null)}>Cancelar</button>
@@ -10550,7 +10610,7 @@ export default function SistemaCarga(){
                       <td style={{fontSize:13}}>{cl?fullName(cl):(x.w.consignee||"—")}</td>
                       <td style={{...mono,textAlign:"right"}}>{fmtMoney(x.cobrado,x.moneda)}</td>
                       <td style={{...mono,fontSize:12}}>{x.tf?`${x.tf.id}${x.tf._especial?" (especial)":""}`:"Sin tarifa"}{x.tf&&!x.monedaOk?<span style={{color:"var(--red)",marginLeft:6}}>{x.tf.moneda}</span>:""}</td>
-                      <td style={{...mono,textAlign:"right"}}>{x.tf?fmtMoney(x.costo,x.tf.moneda||x.moneda):"—"}</td>
+                      <td style={{...mono,textAlign:"right"}}>{x.tf?fmtMoney(x.costo,x.moneda):"—"}</td>
                       <td style={{...mono,textAlign:"right",fontWeight:800,color:"var(--cyan)"}}>{fmtMoney(x.comision,x.moneda)}</td>
                       <td style={{whiteSpace:"nowrap"}}>
                         {x.acreditada?<span className="st s3"><span className="st-dot"/>Acreditada</span>
@@ -10583,18 +10643,17 @@ export default function SistemaCarga(){
     const facsActivas=facturas.filter(f=>f.status!=="anulada");
     // Stats por moneda (no se mezclan)
     const sumByMon=(arr,field)=>{
-      const r={USD:0,EUR:0};
+      const r={};
       arr.forEach(f=>{const m=f.moneda||"USD";r[m]=(r[m]||0)+(parseFloat(f[field])||0);});
       return r;
     };
     const totalPorCobrar=sumByMon(facsActivas.filter(f=>f.status==="emitida"||f.status==="pagada_parcial"),"saldo");
     const totalPagado=sumByMon(facsActivas,"pagado");
     const totalFacturado=sumByMon(facsActivas.filter(f=>f.status!=="borrador"&&f.tipo!=="nota_credito"),"total");
+    // Montos por moneda, una línea por moneda (nunca se suman monedas distintas)
     const fmtMonyBoth=(obj)=>{
-      const parts=[];
-      if(obj.USD)parts.push(`$${obj.USD.toFixed(2)}`);
-      if(obj.EUR)parts.push(`€${obj.EUR.toFixed(2)}`);
-      return parts.length?parts.join(" / "):"$0.00";
+      const parts=Object.entries(obj||{}).filter(([,v])=>Math.abs(v)>0.004).sort((a,b)=>monOrden(a[0])-monOrden(b[0])).map(([m,v])=>fmtMoney(v,m));
+      return parts.length?parts:["—"];
     };
 
     // Filtros para tab Facturas
@@ -10625,9 +10684,9 @@ export default function SistemaCarga(){
           ]:(()=>{
             const kv=alcanceUsr?new Set(facturas.map(f=>pagKey(pagadorDeFactura(f)))):null;
             const rs=resumenCuentas().filter(r=>!kv||kv.has(pagKey(r.pg)));
-            const suma=c=>{const o={USD:0,EUR:0};rs.forEach(r=>Object.entries(r[c]).forEach(([m,v])=>{o[m]=(o[m]||0)+v;}));return o;};
+            const suma=c=>{const o={};rs.forEach(r=>Object.entries(r[c]).forEach(([m,v])=>{o[m]=(o[m]||0)+v;}));return o;};
             const h0=new Date();h0.setHours(0,0,0,0);
-            const hoyE={USD:0,EUR:0};pagos.forEach(p=>{if(!p.anulado&&esDinero(p)&&p.monto>0&&new Date(p.fecha)>=h0){const m=p.moneda||"USD";hoyE[m]=(hoyE[m]||0)+p.monto;}});
+            const hoyE={};pagos.forEach(p=>{if(!p.anulado&&esDinero(p)&&p.monto>0&&new Date(p.fecha)>=h0){const m=p.moneda||"USD";hoyE[m]=(hoyE[m]||0)+p.monto;}});
             const sinAcred=comisionesPrepaid().filter(x=>!x.acreditada&&x.comision>0&&(!kv||kv.has(pagKey(x.dom)))).length;
             return [
               [<Ico e="💰"/>,"Nos deben",fmtMonyBoth(suma("debe")),"var(--orange)"],
@@ -10637,7 +10696,7 @@ export default function SistemaCarga(){
             ];})()).map(([ic,l,v,c])=>(
             <div key={l} style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,padding:"14px",boxShadow:"var(--shadow)"}}>
               <div style={{fontSize:20,marginBottom:6}}>{ic}</div>
-              <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:22,fontWeight:800,color:c}}>{v}</div>
+              <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:Array.isArray(v)&&v.length>1?17:22,fontWeight:800,color:c,lineHeight:1.25}}>{Array.isArray(v)?v.map(x=><div key={x}>{x}</div>):v}</div>
               <div style={{fontSize:14,color:"var(--t2)",marginTop:2}}>{l}</div>
             </div>
           ))}
@@ -10669,8 +10728,7 @@ export default function SistemaCarga(){
               </select>
               <select className="fi" value={facFilter.moneda} onChange={e=>setFacFilter(p=>({...p,moneda:e.target.value}))} style={{fontSize:14,padding:"6px 10px"}}>
                 <option value="">Todas las monedas</option>
-                <option value="USD">USD</option>
-                <option value="EUR">EUR</option>
+                {monedasUso().map(m=><option key={m} value={m}>{m}</option>)}
               </select>
               <select className="fi" value={facFilter.receptorTipo} onChange={e=>setFacFilter(p=>({...p,receptorTipo:e.target.value,receptorKey:"",receptorNom:"",recQ:""}))} style={{fontSize:14,padding:"6px 10px"}}>
                 <option value="">Todos los receptores</option>
@@ -11076,7 +11134,7 @@ export default function SistemaCarga(){
           return (
             <div style={{display:"flex",flexDirection:"column",gap:14}}>
               <div className="card" style={{padding:0}}>
-                <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",fontFamily:"Arial,Helvetica,sans-serif",fontSize:16,fontWeight:700,color:"var(--navy)"}}><Ico e="📊" sp/>Ingresos por Período (separado por moneda)</div>
+                <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",fontFamily:"Arial,Helvetica,sans-serif",fontSize:16,fontWeight:700,color:"var(--navy)"}}><Ico e="📊" sp/>Ingresos por período</div>
                 {meses.length===0?<div style={{textAlign:"center",padding:30,color:"var(--t3)"}}>No hay datos para reportar aún.</div>:(
                   <div className="ct-scroll"><table className="ct">
                     <thead><tr><th>Período</th><th>Mon</th><th>Facturas</th><th>Total Facturado</th><th>Pagado</th><th>Saldo</th><th>% Cobrado</th></tr></thead>
@@ -12805,7 +12863,7 @@ export default function SistemaCarga(){
         <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
           <div style={{flex:1}}>
             <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:18,fontWeight:700,color:"var(--navy)"}}>{vista==="archivadas"?"Guías Cerradas":"Recepción en Almacén"}</div>
-            <div style={{fontSize:13,color:"var(--t3)",marginTop:2}}>{vista==="archivadas"?"Guías cuya recepción ya se cerró (archivadas). Se pueden ver, imprimir o desarchivar.":"Guías desde Tránsito 2 en adelante. Recibe guías completas o WR individuales; al cerrar la recepción la guía pasa a Archivadas."}</div>
+            
           </div>
           {!modo&&(
           <div style={{display:"flex",gap:4,background:"#EEF2F7",border:"1px solid #DCE2EC",borderRadius:8,padding:3}}>
@@ -13206,7 +13264,9 @@ export default function SistemaCarga(){
     const cliDeWR=(w)=>clients.find(c=>c.id===w.clienteId)||clients.find(c=>c.casillero&&c.casillero===w.casillero);
     const userName=(id)=>{const u=clients.find(c=>c.id===id);return u?fullName(u):(id||"—");};
     const dias=(f)=>f?Math.max(0,Math.floor((Date.now()-new Date(f).getTime())/864e5)):0;
-    const money=(n)=>`$${(n||0).toFixed(2)}`;
+    const monAl=w=>oficinas.find(o=>o.id===w?.ofiDestino)?.moneda||"USD";
+    const money=(n,m="USD")=>fmtMoney(n||0,m);
+    const moneyMon=(arr,campo)=>{const o={};arr.forEach(k=>{if(k[campo]){const m=monAl(k.w);o[m]=(o[m]||0)+k[campo];}});const t=Object.entries(o).map(([m,v])=>money(v,m)).join(" + ");return t||money(0);};
     const caso=(w)=>{
       const h=w.historial||[];
       const inicio=[...h].reverse().find(e=>["18","19"].includes(String(e.code)));
@@ -13230,7 +13290,7 @@ export default function SistemaCarga(){
     const hoy=new Date();
     const cerradosMes=cerrados.filter(k=>{const f=k.cierre?.fecha&&new Date(k.cierre.fecha);return f&&f.getMonth()===hoy.getMonth()&&f.getFullYear()===hoy.getFullYear();}).length;
     const delAnio=cerrados.filter(k=>{const f=k.cierre?.fecha&&new Date(k.cierre.fecha);return f&&f.getFullYear()===hoy.getFullYear();});
-    const pagadoAnio=delAnio.reduce((t,k)=>t+k.mC,0), recupAnio=delAnio.reduce((t,k)=>t+k.mT,0);
+    const pagadoAnio=moneyMon(delAnio,"mC"), recupAnio=moneyMon(delAnio,"mT");
     const puede=hasPerm("editar_alerta");
     const abrir=(w,accion)=>{setAlForm({montoCliente:"",montoTransportista:"",referencia:"",nota:""});setAlModal({w,accion});};
     const btn=(label,onClick,col)=><button className="btn-s" style={{fontSize:11,padding:"3px 7px",...(col?{color:col,borderColor:col}:{})}} onClick={onClick}>{label}</button>;
@@ -13269,11 +13329,6 @@ export default function SistemaCarga(){
       const notaObl=["investigar","perdida"].includes(accion);
       const titulo={investigar:"Abrir investigación",aparecio:"El paquete apareció",indemnizado:"Cerrar como indemnizado",perdida:"Cerrar como pérdida",
         recobro:"Registrar recobro al transportista",entregar:"Entregar sobrante al cliente",devolver:"Devolver sobrante a origen",otraguia:"Recibir en su guía correcta"}[accion];
-      const explica={investigar:"El caso queda abierto en investigación con tu nota.",aparecio:"El WR pasa a 17 Almacén y el caso se cierra.",
-        indemnizado:"El WR pasa a 18.2 Indemnizado. Registra lo pagado al cliente y, si ya lo hay, lo recuperado del transportista.",
-        perdida:"El WR pasa a 18.3 Pérdida cerrada, sin pago al cliente.",recobro:"Suma lo recuperado del transportista a este caso cerrado.",
-        entregar:"El WR pasa a 20 Por Entrega y sigue como uno más.",devolver:"El WR vuelve a 3 Confirmado para poder meterlo en una guía nueva.",
-        otraguia:`El WR pertenece a la guía ${k.gCorrecta?.id||""}: pasa a 17 Almacén en esa guía.`}[accion];
       const ok=()=>{
         if(notaObl&&!alForm.nota.trim()){window.alert("Escribe una nota.");return;}
         if(pideCli&&!(parseFloat(alForm.montoCliente)>0)){window.alert("Indica el monto pagado al cliente.");return;}
@@ -13286,9 +13341,8 @@ export default function SistemaCarga(){
             <div className="mhd"><div className="mt">{titulo} — {w.id}</div><button className="mcl" onClick={()=>setAlModal(null)}>✕</button></div>
             <div style={{padding:"14px 16px",display:"flex",flexDirection:"column",gap:10}}>
               <div style={{fontSize:13,color:"var(--t2)"}}>{k.cli?fullName(k.cli):(w.consignee||"—")} · {w.casillero||""} · {w.cajas||0} caja{w.cajas===1?"":"s"} · valor declarado ${(w.valor||0).toFixed(2)}</div>
-              <div style={{fontSize:13,background:"var(--bg4)",border:"1px solid var(--b1)",borderRadius:6,padding:"8px 10px"}}>{explica}</div>
-              {pideCli&&<div className="fg"><div className="fl">Pagado al cliente (USD) *</div><input className="fi" type="number" min="0" step="0.01" value={alForm.montoCliente} onChange={e=>setAlForm(p=>({...p,montoCliente:e.target.value}))}/></div>}
-              {pideTr&&<div className="fg"><div className="fl">Recuperado del transportista (USD){accion==="recobro"?" *":""}</div><input className="fi" type="number" min="0" step="0.01" value={alForm.montoTransportista} onChange={e=>setAlForm(p=>({...p,montoTransportista:e.target.value}))}/></div>}
+              {pideCli&&<div className="fg"><div className="fl">Pagado al cliente ({monAl(w)}) *</div><input className="fi" type="number" min="0" step="0.01" value={alForm.montoCliente} onChange={e=>setAlForm(p=>({...p,montoCliente:e.target.value}))}/></div>}
+              {pideTr&&<div className="fg"><div className="fl">Recuperado del transportista ({monAl(w)}){accion==="recobro"?" *":""}</div><input className="fi" type="number" min="0" step="0.01" value={alForm.montoTransportista} onChange={e=>setAlForm(p=>({...p,montoTransportista:e.target.value}))}/></div>}
               {pideTr&&<div className="fg"><div className="fl">Transportista / N° de reclamo</div><input className="fi" value={alForm.referencia} onChange={e=>setAlForm(p=>({...p,referencia:e.target.value}))}/></div>}
               <div className="fg"><div className="fl">Nota{notaObl?" *":""}</div><textarea className="fi" rows={3} value={alForm.nota} onChange={e=>setAlForm(p=>({...p,nota:e.target.value}))} /></div>
             </div>
@@ -13317,7 +13371,7 @@ export default function SistemaCarga(){
         <Card ic={<Ico e="🔍"/>} v={abiertos.filter(k=>k.w.status?.code==="18.1").length} l="En investigación" d="Faltantes en curso" c="#E65100"/>
         <Card ic={<Ico e="➕"/>} v={abiertos.filter(k=>k.tipo==="sobrante").length} l="Sobrantes" d="Por decidir" c="#7B1FA2"/>
         <Card ic={<Ico e="⏳"/>} v={abiertos.length?Math.max(...abiertos.map(k=>dias(k.inicio?.fecha))):0} l="Días del más antiguo" d="Caso abierto más viejo" c="#C05800"/>
-        <Card ic={<Ico e="✅"/>} v={cerradosMes} l="Cerrados este mes" d={`${hoy.getFullYear()}: pagado ${money(pagadoAnio)} · recuperado ${money(recupAnio)}`} c="#1A8A4A"/>
+        <Card ic={<Ico e="✅"/>} v={cerradosMes} l="Cerrados este mes" d={`${hoy.getFullYear()}: pagado ${pagadoAnio} · recuperado ${recupAnio}`} c="#1A8A4A"/>
       </div>
 
       <div className="card" style={{padding:0}}>
@@ -13358,8 +13412,8 @@ export default function SistemaCarga(){
                       ? <span style={{fontWeight:700,color:d>14?"var(--red)":d>7?"#E65100":"var(--t2)"}}>{d===0?"hoy":`hace ${d} día${d===1?"":"s"}`}</span>
                       : <>{fmtDate(k.cierre?.fecha)}<div style={{fontSize:11,color:"var(--t3)"}}>{userName(k.cierre?.user)}</div></>}
                   </td>
-                  {alTab==="historial"&&<td style={{textAlign:"right",fontFamily:"'DM Mono',monospace"}}>{k.mC?money(k.mC):"—"}</td>}
-                  {alTab==="historial"&&<td style={{textAlign:"right",fontFamily:"'DM Mono',monospace",color:"var(--green)"}}>{k.mT?money(k.mT):"—"}</td>}
+                  {alTab==="historial"&&<td style={{textAlign:"right",fontFamily:"'DM Mono',monospace"}}>{k.mC?money(k.mC,monAl(k.w)):"—"}</td>}
+                  {alTab==="historial"&&<td style={{textAlign:"right",fontFamily:"'DM Mono',monospace",color:"var(--green)"}}>{k.mT?money(k.mT,monAl(k.w)):"—"}</td>}
                   <td style={{fontSize:12,color:"var(--t2)",maxWidth:280,whiteSpace:"normal"}}>{k.ultNota||"—"}</td>
                   <td>{acciones(k)}</td>
                 </tr>);
@@ -15526,8 +15580,7 @@ export default function SistemaCarga(){
                   <div>
                     <label className="fl">Moneda</label>
                     <select className="fi" value={f.moneda} onChange={e=>setFacModal(p=>({...p,moneda:e.target.value}))}>
-                      <option value="USD">USD ($)</option>
-                      <option value="EUR">EUR (€)</option>
+                      {[...new Set([...monedasUso(),f.moneda].filter(Boolean))].map(m=><option key={m} value={m}>{m}</option>)}
                     </select>
                   </div>
                   <div>
@@ -15630,10 +15683,10 @@ export default function SistemaCarga(){
                 <div style={secT}><Ico e="⚡" sp/>Servicios y gastos adicionales
                   <select className="fs" value="" style={{fontSize:13,padding:"3px 6px",width:"auto"}} onChange={e=>{
                     const c=catalogo.find(x=>x.nombre===e.target.value);
-                    if(c)addL({tipo:"adicional",wrId:(f.wrIds||[])[0]||"",descripcion:c.nombre,precio:c.precio});
+                    if(c)addL({tipo:"adicional",wrId:(f.wrIds||[])[0]||"",descripcion:c.nombre,precio:precioCat(c.precio,f.moneda)});
                   }}>
                     <option value="">+ Agregar del catálogo…</option>
-                    {catalogo.map(c=><option key={c.g+c.nombre} value={c.nombre}>{c.g}: {c.nombre} — {fmtMoney(c.precio,f.moneda)}</option>)}
+                    {catalogo.map(c=><option key={c.g+c.nombre} value={c.nombre}>{c.g}: {c.nombre} — {fmtMoney(precioCat(c.precio,f.moneda),f.moneda)}</option>)}
                   </select>
                 </div>
                 {ad.length===0?<div style={{fontSize:13,color:"var(--t3)"}}>—</div>:
@@ -15748,7 +15801,7 @@ export default function SistemaCarga(){
                     <div className="card" style={{padding:10}}><div style={{fontSize:12,color:"var(--t3)"}}>Marcado</div><div style={{fontSize:18,fontWeight:800,color:"var(--navy)",fontFamily:"'DM Mono',monospace"}}>{fmtMoney(c.deudaSel,m.moneda)}</div></div>
                   </div>
                   {mons.length>1&&<div style={{display:"flex",gap:6,marginBottom:10}}>{mons.map(k=><button key={k} className={m.moneda===k?"btn-p":"btn-s"} style={{fontSize:13,padding:"4px 12px"}} onClick={()=>{const sel={};facAbiertasDe(m.pagador).filter(f=>(f.moneda||"USD")===k).forEach(f=>{sel[f.id]=true;});set({moneda:k,sel,usarSaldo:saldoFavorDe(m.pagador,k)>0});}}>{k}</button>)}</div>}
-                  {c.facs.length===0?<div style={{padding:14,textAlign:"center",color:"var(--t3)",border:"1px dashed var(--b1)",borderRadius:8,marginBottom:12}}>Sin facturas pendientes: el pago queda como saldo a favor.</div>:
+                  {c.facs.length===0?null:
                   <div className="ct-scroll"><table className="ct" style={{width:"100%",fontSize:14,marginBottom:12}}>
                     <thead><tr><th style={{width:30}}><input type="checkbox" checked={c.facs.every(f=>m.sel[f.id])} onChange={e=>{const sel={};if(e.target.checked)c.facs.forEach(f=>{sel[f.id]=true;});set({sel});}}/></th><th>Factura</th><th>Emisión</th><th style={{textAlign:"right"}}>Saldo</th><th style={{textAlign:"right"}}>Se abona</th><th style={{textAlign:"right"}}>Queda</th></tr></thead>
                     <tbody>{c.facs.map(f=>{const a=aplicDe(f.id);return(
@@ -15767,7 +15820,7 @@ export default function SistemaCarga(){
                     <div><label className="fl">Fecha</label>
                       <input className="fi" type="date" value={new Date(m.fecha).toISOString().slice(0,10)} onChange={e=>set({fecha:new Date(e.target.value+"T12:00:00")})}/></div>
                     <div><label className="fl">Forma de pago</label>
-                      <select className="fi" value={m.tipoPago} onChange={e=>set({tipoPago:e.target.value})}>{PAY_METHODS.filter(x=>!x.interno).map(x=><option key={x.k} value={x.k}>{x.l}</option>)}</select></div>
+                      <select className="fi" value={pagoMetodos(m.moneda).some(x=>x.k===m.tipoPago)?m.tipoPago:"efectivo"} onChange={e=>set({tipoPago:e.target.value})}>{pagoMetodos(m.moneda).map(x=><option key={x.k} value={x.k}>{x.l}</option>)}</select></div>
                     <div><label className="fl">Referencia</label>
                       <input className="fi" value={m.referencia} onChange={e=>set({referencia:e.target.value})}/></div>
                     <div><label className="fl">Comprobante</label>
@@ -15823,7 +15876,7 @@ export default function SistemaCarga(){
                 <div style={{marginBottom:10}}>
                   <label className="fl">Tipo de pago</label>
                   <select className="fi" value={p.tipoPago} onChange={e=>setPagoModal(x=>({...x,tipoPago:e.target.value}))}>
-                    {PAY_METHODS.filter(m=>!m.interno).map(m=><option key={m.k} value={m.k}>{m.l}</option>)}
+                    {pagoMetodos(fact.moneda).map(m=><option key={m.k} value={m.k}>{m.l}</option>)}
                   </select>
                 </div>
                 <div style={{marginBottom:10}}>
@@ -15868,7 +15921,7 @@ export default function SistemaCarga(){
                     <label className="fl">Ya pagado: {fmtMoney(exc,orig.moneda)}</label>
                     <div style={{display:"flex",gap:6}}>
                       {[["favor","Saldo a favor"],["reembolso","Reembolsado"]].map(([k,l])=><button key={k} className={ncModal.destino===k?"btn-p":"btn-s"} style={{fontSize:13,padding:"5px 12px"}} onClick={()=>setNcModal(x=>({...x,destino:k}))}>{l}</button>)}
-                      {ncModal.destino==="reembolso"&&<select className="fs" style={{width:170}} value={ncModal.metodoReemb||"efectivo"} onChange={e=>setNcModal(x=>({...x,metodoReemb:e.target.value}))}>{PAY_METHODS.filter(x=>!x.interno).map(x=><option key={x.k} value={x.k}>{x.l}</option>)}</select>}
+                      {ncModal.destino==="reembolso"&&<select className="fs" style={{width:170}} value={ncModal.metodoReemb||"efectivo"} onChange={e=>setNcModal(x=>({...x,metodoReemb:e.target.value}))}>{pagoMetodos(orig.moneda).map(x=><option key={x.k} value={x.k}>{x.l}</option>)}</select>}
                     </div>
                   </div>);})()}
                 <div style={{marginBottom:10}}>
@@ -15913,7 +15966,7 @@ export default function SistemaCarga(){
                 <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end",marginBottom:10}}>
                   <div className="fg" style={{minWidth:220}}><div className="fl">Motivo</div><select className="fs" value={ed.motivo} onChange={e=>set({motivo:e.target.value})}>{MOTIVOS_FC.map(m=><option key={m}>{m}</option>)}</select></div>
                   <div className="fg"><div className="fl">Incoterm</div><select className="fs" value={ed.incoterm||""} onChange={e=>set({incoterm:e.target.value})}><option value="">Sin incoterm</option>{INCOTERMS.map(x=><option key={x}>{x}</option>)}</select></div>
-                  <div className="fg"><div className="fl">Moneda</div><select className="fs" value={ed.moneda} onChange={e=>set({moneda:e.target.value})}><option>USD</option><option>EUR</option></select></div>
+                  <div className="fg"><div className="fl">Moneda</div><select className="fs" value={ed.moneda} onChange={e=>set({moneda:e.target.value})}>{[...new Set([...monedasUso(),ed.moneda].filter(Boolean))].map(m=><option key={m}>{m}</option>)}</select></div>
                   <span style={{fontSize:13,fontWeight:700,color:"var(--navy)",marginLeft:"auto"}}>{ed.motivo==="Venta"?fmt.tituloCom:fmt.tituloPro} · formato {fmt._pais||"predeterminado"}</span>
                 </div>)}
               {conLineas&&(<>
