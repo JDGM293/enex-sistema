@@ -4119,7 +4119,6 @@ export default function SistemaCarga(){
                 onMouseLeave={e=>{e.currentTarget.style.borderColor="var(--b1)";e.currentTarget.style.transform="";e.currentTarget.style.boxShadow="";}}>
                 <div style={{fontSize:42,marginBottom:6}}>{card.ic}</div>
                 <div style={{fontSize:18,fontWeight:700,color:"var(--navy)"}}>{card.l}</div>
-                <div style={{fontSize:13,color:"var(--t3)",marginTop:6,minHeight:36}}>{card.d}</div>
                 <div style={{marginTop:14,display:"inline-block",background:card.c1,color:card.c2,fontWeight:700,fontSize:14,padding:"6px 14px",borderRadius:20,border:`1px solid ${card.c2}`}}>
                   {card.n} {card.v==="todos"?"registros":card.v==="clientes"?"clientes":"usuarios"}
                 </div>
@@ -4149,6 +4148,7 @@ export default function SistemaCarga(){
           placeholder={verDatos?"Buscar por nombre, casillero, ID, cédula, email o teléfono…":"Buscar por nombre, casillero o ID…"}/>
         {clBusca&&<button className="btn-s" style={{fontSize:13}} onClick={()=>setClBusca("")}>✕</button>}
         <span style={{fontSize:13,color:"var(--t3)"}}>{filteredCl.length} resultado{filteredCl.length===1?"":"s"}</span>
+        <span style={{marginLeft:"auto",display:"flex",gap:6}}>{clFilter!=="usuarios"&&expBotones(expTabla(clFilter==="clientes"?"Clientes":"Clientes y usuarios",colsCliente(),filteredCl),hasPerm("imp_listado_clientes"))}</span>
       </div>
       {clFilter==="usuarios"?renderUsuariosLista():
       <div className="card" style={{padding:0}}>
@@ -4238,6 +4238,9 @@ export default function SistemaCarga(){
           {USR_GRUPOS.map(([k,l])=>{const n=base.filter(c=>enGrupo(c,k)&&enMatriz(c)).length;return <button key={k} onClick={()=>{setClUsrGrupo(k);setPags(p=>({...p,usuarios:1}));}}
             style={{padding:"6px 14px",borderRadius:6,border:"none",cursor:"pointer",fontSize:14,fontWeight:600,background:clUsrGrupo===k?"var(--navy)":"transparent",color:clUsrGrupo===k?"#fff":"var(--t2)"}}>{l} <span style={{opacity:.75}}>({n})</span></button>;})}
         </div>
+        <span style={{marginLeft:"auto",display:"flex",gap:6}}>{expBotones(expTabla(`Usuarios · ${(USR_GRUPOS.find(x=>x[0]===clUsrGrupo)||[0,"Todos"])[1]}`,
+          [{l:"ID",v:c=>c.id,m:1},{l:"Nombre",v:c=>fullName(c)},{l:"Rol",v:c=>ROLE_DEFS[c.rol]?.name||c.rol},{l:"Matriz",v:c=>oficinas.find(o=>o.id===matrizDeUsuario(c))?.codigo||(["A","B"].includes(c.rol)?"Todas":"")},
+           {l:colPert,v:c=>perteneceA(c)},{l:"Login",v:c=>c.login||c.email||""},{l:"Email",v:c=>oc(c.email,"mail")||""},{l:"Teléfono",v:c=>oc(c.tel1)||""},{l:"Acceso",v:c=>c.authId?"Sí":"No"},{l:"Estado",v:c=>c.activo===false?"Inactivo":"Activo"}],lista),hasPerm("imp_listado_clientes"))}</span>
       </div>
       <div className="card" style={{padding:0}}>
         <div className="ct-scroll"><table className="ct">
@@ -6635,6 +6638,15 @@ export default function SistemaCarga(){
     {l:"Descripción",v:w=>cleanReempaqueDesc(w.descripcion)||""},{l:"Cajas",v:w=>w.cajas||0,c:1},{l:"Peso lb",v:w=>parseFloat(w.pesoLb)||0,f:v=>nm(v),r:1},
     {l:"Vol. lb",v:w=>parseFloat(w.volLb)||0,f:v=>nm(v),r:1},{l:"Ft³",v:w=>parseFloat(w.ft3)||0,f:v=>nm(v),r:1},{l:"Valor USD",v:w=>parseFloat(w.valor)||0,f:v=>fmtMoney(v,"USD"),r:1},
     {l:"Envío",v:w=>w.tipoEnvio||""},{l:"Pago",v:w=>w.tipoPago||""},{l:"Estado",v:w=>w.status?.label||""}];
+  const perteneceA=c=>{const ct=c.clienteTipo||"";const ofiUsr=c.tipo==="usuario"&&c.oficinaId?oficinas.find(o=>o.id===c.oficinaId):null;const aut=c.autonomoId?clients.find(x=>x.id===c.autonomoId):null;
+    return ofiUsr?`${ofiUsr.codigo} — ${ofiUsr.nombre}`:c.tipo==="usuario"&&["A","B"].includes(c.rol)?"Todas las oficinas":c.tipo==="usuario"&&["E","E1"].includes(c.rol)?(agentes.find(a=>a.id===c.agenteId)?.nombre||"")
+      :c.tipo==="usuario"?"":ct==="matriz"?(()=>{const o=oficinas.find(x=>x.id===c.oficinaId);return o?`${o.codigo} — ${o.nombre}`:"";})():ct==="agente"||ct==="vendedor_agente"?(agentes.find(a=>a.id===c.agenteId)?.nombre||"")
+      :ct==="autonomo"?(aut?fullName(aut):""):ct==="oficina"||ct==="vendedor_oficina"?(oficinas.find(o=>o.id===c.oficinaId)?.nombre||""):"";};
+  const colsCliente=()=>[{l:"ID",v:c=>c.id,m:1},{l:"Tipo",v:c=>c.tipo==="usuario"?"Usuario":"Cliente"},{l:"Nombre completo",v:c=>fullName(c)},{l:"Casillero",v:c=>c.casillero||""},
+    {l:"Matriz",v:c=>{const mid=c.tipo==="usuario"?matrizDeUsuario(c):c.matrizId;return oficinas.find(o=>o.id===mid)?.codigo||(c.tipo==="usuario"&&["A","B"].includes(c.rol)?"Todas":"");}},
+    {l:"Pertenece a",v:c=>perteneceA(c)},{l:"Designación",v:c=>({agente:"Agente",vendedor_agente:"Vend. Agente",autonomo:"Autónomo",oficina:"Oficina",vendedor_oficina:"Vend. Oficina",matriz:"Matriz"})[c.clienteTipo||""]||""},
+    {l:"ID identificación",v:c=>oc(c.cedula)||""},{l:"Dirección",v:c=>c.dir||""},{l:"Municipio",v:c=>c.municipio||""},{l:"Estado",v:c=>c.estado||""},{l:"País",v:c=>c.pais||""},{l:"CP",v:c=>c.cp||""},
+    {l:"Teléfono 1",v:c=>oc(c.tel1)||""},{l:"Teléfono 2",v:c=>oc(c.tel2)||""},{l:"Email",v:c=>oc(c.email,"mail")||""},{l:"Rol",v:c=>ROLE_DEFS[c.rol]?.name||c.rol||""}];
   const colsFactura=()=>[{l:"N° documento",v:f=>f.id,m:1},{l:"Tipo",v:f=>f.tipo==="nota_credito"?"Nota de crédito":f.tipo==="proforma"?"Proforma":docNombre(f)},
     {l:"Emisión",v:f=>f.fechaEmision||f.fecha?new Date(f.fechaEmision||f.fecha):""},{l:"Receptor",v:f=>f.receptorNombre||""},
     {l:"Tipo receptor",v:f=>({cliente:"Cliente",agente:"Agente",autonomo:"Autónomo",oficina:"Oficina"})[f.receptorTipo]||f.receptorTipo||""},
@@ -7548,6 +7560,8 @@ export default function SistemaCarga(){
             <button key={k} onClick={()=>setPaFil(p=>({...p,status:k}))} style={{padding:"6px 12px",borderRadius:5,border:"none",cursor:"pointer",fontSize:13,fontWeight:600,background:paFil.status===k?"var(--navy)":"transparent",color:paFil.status===k?"#fff":"var(--t2)"}}>{l} <span style={{opacity:.7}}>{n}</span></button>))}
         </div>
         <input className="fi" style={{flex:1,minWidth:220}} value={paFil.q} onChange={e=>setPaFil(p=>({...p,q:e.target.value}))} placeholder="Buscar tracking, cliente, casillero, tienda o WR…"/>
+        {expBotones(expTabla("Pre-alertas",[{l:"N°",v:p=>p.id,m:1},{l:"Fecha",v:p=>p.creado?new Date(p.creado):""},{l:"Cliente",v:p=>p.cliente?.nombre||""},{l:"Casillero",v:p=>p.cliente?.casillero||""},{l:"Tracking",v:p=>p.tracking||"",m:1},{l:"Carrier",v:p=>p.carrier||""},
+          {l:"Tienda",v:p=>p.tienda||""},{l:"Contenido",v:p=>p.descripcion||""},{l:"Moneda",v:p=>p.moneda||"USD"},{l:"Valor",v:p=>parseFloat(p.valor)||0,f:(v,p)=>fmtMoney(v,p.moneda||"USD"),r:1},{l:"Estado",v:p=>PA_ST[p.status]?.l||p.status},{l:"WR",v:p=>p.wrId||""},{l:"Creado por",v:p=>p.creadoPorNombre||""}],lista),hasPerm("ver_prealerta"))}
         {hasPerm("pre_tracking")&&<button className="btn-p" onClick={paNueva}><Ico e="➕" sp/>Nueva pre-alerta</button>}
       </div>
       <div className="card" style={{padding:0}}>
@@ -8333,6 +8347,9 @@ export default function SistemaCarga(){
           <div>
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
               <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:17,fontWeight:700,color:"var(--navy)",flex:1}}><Ico e="🤝" sp/>Agentes registrados</div>
+              {expBotones(expTabla("Agentes",[{l:"Código",v:a=>a.codigo||"",m:1},{l:"Nombre",v:a=>a.nombre||""},{l:"País",v:a=>a.pais||""},{l:"Matriz",v:a=>oficinas.find(o=>o.id===a.matriz_id)?.codigo||""},{l:"Ciudad",v:a=>a.ciudad||""},
+                {l:"Teléfono",v:a=>oc(a.tel)||""},{l:"Email",v:a=>oc(a.email,"mail")||""},{l:"Contacto",v:a=>a.contacto||""},{l:"Clientes",v:a=>clients.filter(c=>c.tipo==="cliente"&&c.agenteId===a.id).length,c:1},{l:"Estado",v:a=>a.activo===false?"Inactivo":"Activo"}],
+                agentes.filter(a=>agenteEnAlcance(a)).map(conDatos)),hasPerm("imp_listado_clientes"))}
               {hasPerm("crear_agente")&&<button className="btn-p" style={{fontSize:13}} onClick={()=>{setAgForm({nombre:"",ciudad:"",pais:"",tel:"",email:"",contacto:"",notas:"",matriz_id:matrizTrabajo||""});setShowNewAgente(true);}}>+ Nuevo Agente</button>}
             </div>
             <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,overflow:"hidden"}}>
@@ -8442,6 +8459,10 @@ export default function SistemaCarga(){
           <div>
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
               <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:17,fontWeight:700,color:"var(--navy)",flex:1}}><Ico e="🏢" sp/>Oficinas / Sucursales</div>
+              {expBotones(expTabla("Oficinas",[{l:"Código",v:o=>o.codigo||"",m:1},{l:"Nombre",v:o=>o.nombre||""},{l:"Tipo",v:o=>tipoOfi(o)},{l:"Matriz",v:o=>esMatriz(o)?"":(matrizDe(o)?.codigo||"")},{l:"Ciudad",v:o=>o.ciudad||""},{l:"País",v:o=>o.pais||""},
+                {l:"Moneda",v:o=>o.moneda||""},{l:"Dirección",v:o=>o.dir||""},{l:"Teléfono",v:o=>o.tel||""},{l:"Email",v:o=>o.email||""},{l:"Contacto",v:o=>o.contacto||""},{l:"Recibe en puerta",v:o=>esMatriz(o)||o.recibe_puerta?"Sí":"No"},
+                {l:"Comisión salida %",v:o=>esMatriz(o)?"":(o.com_prepaid_pct??""),r:1},{l:"Comisión entrega",v:o=>esMatriz(o)?"":(o.com_entrega_monto??""),r:1},{l:"Entrega por",v:o=>esMatriz(o)?"":(o.com_entrega_por==="paquete"?"Paquete":o.com_entrega_por==="wr"?"WR":"")},{l:"Estado",v:o=>o.activo===false?"Inactiva":"Activa"}],
+                oficinas.filter(o=>enMiAlcance(o.id)).sort((x,y)=>String(x.codigo||"").localeCompare(String(y.codigo||"")))),hasPerm("imp_listado_clientes"))}
               {hasPerm("crear_oficina")&&<button className="btn-p" style={{fontSize:13}} onClick={()=>{const mt=oficinas.find(o=>o.id===matrizTrabajo);setEditOficina(null);setOfForm({nombre:"",ciudad:"",pais:mt?.pais||"",tel:"",email:"",contacto:"",notas:"",tipo:"",matriz_id:mt?.id||"",moneda:"",principal:false,com_prepaid_pct:"",com_entrega_monto:"",com_entrega_por:"",activo:true});setShowNewOficina(true);}}>+ Nueva Oficina</button>}
             </div>
             <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,overflow:"hidden"}}>
@@ -9325,6 +9346,9 @@ export default function SistemaCarga(){
               {l}{k!=="todos"&&<span style={{marginLeft:6,fontSize:11,fontWeight:800,opacity:.8}}>{cuenta[k]}</span>}</button>)}
         </div>
         <input className="fi" style={{flex:1,minWidth:220,fontSize:14,padding:"7px 10px"}} placeholder="Buscar pick-up, cliente, dirección, chofer…" value={pickupQ} onChange={e=>setPickupQ(e.target.value)}/>
+        {expBotones(expTabla("Pick-up",[{l:"N°",v:p=>p.id,m:1},{l:"Fecha",v:p=>p.fecha?new Date(p.fecha):""},{l:"Para",v:p=>p.clienteNombre||""},{l:"Casillero",v:p=>p.casillero||""},{l:"Dirección",v:p=>p.direccion||""},{l:"Ciudad",v:p=>p.ciudad||""},
+          {l:"Contacto",v:p=>p.contacto||""},{l:"Teléfono",v:p=>oc(p.telefono)||""},{l:"Fecha programada",v:p=>p.fechaProgramada||""},{l:"Bultos",v:p=>puBultos(p),c:1},{l:"Recoge",v:p=>puRecoge(p)},{l:"Moneda",v:p=>p.moneda||"USD"},{l:"Cargo",v:p=>parseFloat(p.monto)||0,f:(v,p)=>fmtMoney(v,p.moneda||"USD"),r:1},
+          {l:"Pidió",v:p=>p.solicitanteNombre||""},{l:"Estado",v:p=>PU_ST[p.status]?.l||p.status},{l:"WR",v:p=>p.wrId||""}],lista),hasPerm("imp_pickup"))}
         {(hasPerm("solicitar_pickup")||puGestiona)&&<button className="btn-p" onClick={puNuevo}>+ Solicitar Pick-up</button>}
       </div>
 
@@ -11848,6 +11872,8 @@ export default function SistemaCarga(){
                 <input type="date" className="fi" value={rpqHistHasta} onChange={e=>setRpqHistHasta(e.target.value)} style={{fontSize:13,padding:"5px 8px"}}/>
                 {(rpqHistCliente||rpqHistDesde||rpqHistHasta)&&
                   <button className="btn-s" style={{fontSize:12,padding:"4px 8px"}} onClick={()=>{setRpqHistCliente("");setRpqHistDesde("");setRpqHistHasta("");}}>✕ Limpiar</button>}
+                {expBotones(expTabla("Reempaques",[{l:"N° WR",v:w=>w.id,m:1},{l:"Consignatario",v:w=>w.consignee||""},{l:"Casillero",v:w=>w.casillero||""},{l:"Fecha",v:w=>w.fecha?new Date(w.fecha):""},
+                  {l:"Reempacado en",v:w=>w.reempacadoEn||""},{l:"Cajas",v:w=>w.cajas||0,c:1},{l:"Peso lb",v:w=>parseFloat(w.pesoLb)||0,f:v=>nm(v),r:1},{l:"Estado",v:w=>w.status?.label||""}],yaReempacados),hasPerm("imp_reempaque"),true)}
               </div>
             )}
           </div>
@@ -13689,6 +13715,8 @@ export default function SistemaCarga(){
                 <input type="date" className="fi" value={crHistHasta} onChange={e=>setCrHistHasta(e.target.value)} style={{fontSize:13,padding:"5px 8px"}}/>
                 {(crHistCliente||crHistDesde||crHistHasta)&&
                   <button className="btn-s" style={{fontSize:12,padding:"4px 8px"}} onClick={()=>{setCrHistCliente("");setCrHistDesde("");setCrHistHasta("");}}>✕ Limpiar</button>}
+                {expBotones(expTabla("Cargo Release",[{l:"N° egreso",v:c=>c.id,m:1},{l:"Fecha",v:c=>c.fecha?new Date(c.fecha):""},{l:"Agente de carga",v:c=>c.agenteCarga||""},{l:"Contacto",v:c=>c.contacto||""},{l:"Documento",v:c=>oc(c.documento)||""},
+                  {l:"Vehículo",v:c=>c.vehiculo||""},{l:"WR",v:c=>(c.wrIds||[]).join(", ")},{l:"Cajas",v:c=>(c.wrIds||[]).reduce((t,id)=>t+(parseInt(wrList.find(w=>w.id===id)?.cajas,10)||0),0),c:1},{l:"Usuario",v:c=>nombreUsuario(c.usuario)},{l:"Estado",v:c=>c.anulado?"Anulado":"Activo"}],historico),hasPerm("imp_release"),true)}
               </div>
             )}
           </div>
