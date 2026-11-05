@@ -585,7 +585,7 @@ const ALL_PERMS=[
   "crear_reporte","editar_reporte","borrar_reporte",
   // Permiso especial: salta los bloqueos del proceso por estado
   "saltar_bloqueos",
-  // Traslados entre oficinas
+  // Traslados internos
   "ver_traslado","crear_traslado","recibir_traslado","anular_traslado","imp_traslado",
   // Límites de edición, facturación PREPAID en origen
   "editar_wr_destino","editar_guia_destino","fac_prepaid","cobrar_prepaid","ver_estado_contable","ver_estado_autonomo","ver_estado_vendedor","ver_datos_completos","alerta_investigar","exportar_excel","ver_cierre_caja","ver_comisiones","alerta_aparecio","alerta_sobrante","registrar_remitente","imp_estado_cuenta","imp_listado_clientes","editar_wr_lib3","editar_guia_lib3","dar_acceso","imp_release","imp_pickup","imp_recibo_cobro","cfg_agentes_ver","cfg_oficinas_ver","cfg_tarifas_ver",
@@ -651,7 +651,7 @@ const PERM_MODULES=[
   {m:"Confirmación",ic:"✅",ver:"ver_confirmacion",crear:"confirmar",editar:"editar_confirmacion",borrar:"desconfirmar"},
   {m:"Cargo Release (Egreso)",ic:"🚀",ver:"ver_egreso",crear:"hacer_egreso",editar:"editar_egreso",borrar:"borrar_egreso"},
   {m:"Recepción en Almacén",ic:"📥",ver:"ver_recepcion_dest",crear:"hacer_recepcion_dest",editar:"editar_recepcion_dest",borrar:"borrar_recepcion_dest"},
-  {m:"Traslados entre oficinas",ic:"🚚",ver:"ver_traslado",crear:"crear_traslado",editar:"recibir_traslado",borrar:"anular_traslado"},
+  {m:"Traslados internos",ic:"🚚",ver:"ver_traslado",crear:"crear_traslado",editar:"recibir_traslado",borrar:"anular_traslado"},
   {m:"Entregas",ic:"📝",ver:"ver_entrega",crear:"entregar",editar:"editar_entrega",borrar:"borrar_entrega"},
   {m:"Alertas",ic:"🔔",ver:"ver_alertas",crear:"crear_alerta",editar:"editar_alerta",borrar:"borrar_alerta"},
   {m:"Facturas",ic:"🧾",ver:"ver_factura",crear:"crear_factura",editar:"editar_factura",borrar:"borrar_factura"},
@@ -839,7 +839,8 @@ const PRN_CSS=`
 @page{size:letter portrait;margin:0}
 *{box-sizing:border-box}
 html,body{background:#fff}
-body{font-family:Arial,Helvetica,sans-serif;color:#1b1f24;margin:0;padding:28px 32px;font-size:12px;line-height:1.4}
+body{font-family:Arial,Helvetica,sans-serif;color:#1b1f24;margin:0;padding:28px 13mm;font-size:12px;line-height:1.4}
+@media screen{body{width:8.5in;margin:0 auto}}
 @media print{body{padding:0 13mm}}
 table.pg{width:100%;border-collapse:collapse}table.pg>thead>tr>td,table.pg>tfoot>tr>td{height:12mm;padding:0}table.pg>tbody>tr>td{padding:0}
 @media screen{table.pg>thead,table.pg>tfoot{display:none}}
@@ -866,9 +867,12 @@ table.pg{width:100%;border-collapse:collapse}table.pg>thead>tr>td,table.pg>tfoot
 .box .v .s{display:block;font-size:11px;color:#4a5566}
 .lst{display:grid;grid-template-columns:auto 1fr;gap:3px 14px;font-size:12px}
 .lst .k{color:#5a6b85;font-weight:700}
-table.t{width:100%;border-collapse:collapse;margin-bottom:10px;font-size:11.5px}
-table.t th{background:#1A2B4A;color:#fff;padding:5px 7px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.5px;font-weight:700}
-table.t td{padding:5px 7px;border-bottom:1px solid #dde3ea;vertical-align:top}
+table.t{width:100%;max-width:100%;border-collapse:collapse;margin-bottom:10px;font-size:11.5px;table-layout:auto}
+table.t th{background:#1A2B4A;color:#fff;padding:5px 7px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.3px;font-weight:700;overflow-wrap:anywhere;word-break:normal}
+table.t td{padding:5px 7px;border-bottom:1px solid #dde3ea;vertical-align:top;overflow-wrap:anywhere;word-break:break-word}
+table.t.d1{font-size:10px}table.t.d1 th{font-size:8.5px;padding:4px 4px}table.t.d1 td{padding:4px 4px}
+table.t.d2{font-size:9px}table.t.d2 th{font-size:7.5px;padding:3px 3px;letter-spacing:0}table.t.d2 td{padding:3px 3px}
+table.t.d3{font-size:8px}table.t.d3 th{font-size:7px;padding:2px 2px;letter-spacing:0}table.t.d3 td{padding:2px 2px}
 table.t tbody tr:nth-child(even) td{background:#f7f9fc}
 table.t thead{display:table-header-group}
 table.t tr{page-break-inside:avoid}
@@ -898,7 +902,8 @@ const PrnModal=({titulo,html,onClose})=>{
     <div className="mhd"><div className="mt"><Ico e="🖨️" sp/>{titulo}</div>
       <button className="btn-p" style={{fontSize:13,padding:"5px 12px"}} onClick={()=>{try{ref.current.contentWindow.focus();ref.current.contentWindow.print();}catch(err){console.error(err);}}}><Ico e="🖨️" sp/>Imprimir</button>
       <button className="mcl" onClick={onClose}>✕</button></div>
-    <iframe ref={ref} title={titulo} srcDoc={html} style={{width:"100%",height:"76vh",border:"1px solid var(--b1)",borderRadius:6,background:"#fff",display:"block"}}/>
+    <iframe ref={ref} title={titulo} srcDoc={html} style={{width:"100%",height:"76vh",border:"1px solid var(--b1)",borderRadius:6,background:"#fff",display:"block"}}
+      onLoad={()=>{try{const f=ref.current,d=f.contentDocument;const w=d.body.scrollWidth,fw=f.clientWidth-24;if(w>fw)d.body.style.zoom=String(fw/w);}catch(err){console.error(err);}}}/>
   </div></div>);
 };
 
@@ -971,7 +976,7 @@ const ROLE_DEFS={
 ROLE_DEFS.G.perms.push("ver_documentos","crear_factura"); // la oficina de origen factura los PREPAID
 // Quien ya podía crear/editar clientes sigue viendo el menú Clientes
 ["E","E1","F"].forEach(r=>ROLE_DEFS[r].perms.push("ver_bd_clientes"));
-// Traslados entre oficinas: operaciones y sucursales los hacen y los reciben
+// Traslados internos: operaciones y sucursales los hacen y los reciben
 ["C","D","D1","D2","G"].forEach(r=>ROLE_DEFS[r].perms.push("ver_traslado","crear_traslado","recibir_traslado","imp_traslado"));
 const ALL_ROLES=Object.values(ROLE_DEFS);
 // Permisos por defecto de cada rol (los del código). Lo guardado en Configuración los reemplaza.
@@ -2711,6 +2716,7 @@ export default function SistemaCarga(){
   const [deliveryNotes,setDeliveryNotes]=useState([]);
   const [traslados,setTraslados]=useState([]);
   const [trVista,setTrVista]=useState("enviar");
+  const [trGrupoSel,setTrGrupoSel]=useState(null);
   const [trForm,setTrForm]=useState(null);     // nuevo traslado
   const [trRecibir,setTrRecibir]=useState(null); // recepción con escaneo
   const [trPrint,setTrPrint]=useState(null);
@@ -5063,7 +5069,9 @@ export default function SistemaCarga(){
         <div className="mhd">
           <div className="mt">{showStatModal.ic} {showStatModal.label} — {showStatModal.rows.length} registros</div>
           <div style={{display:"flex",gap:6}}>
-            {expBotones(expTabla(showStatModal.label,colsWR(),showStatModal.rows),true,true)}
+            {expBotones(["confirmed","consolidados"].includes(showStatModal.key)
+              ?expTablaGrupos(showStatModal.label,colsWRConsolidar(showStatModal.key==="consolidados"),[...showStatModal.rows].sort((a,b)=>String(a.tipoEnvio||"").localeCompare(String(b.tipoEnvio||""))||String(a.id).localeCompare(String(b.id))),w=>w.tipoEnvio)
+              :expTabla(showStatModal.label,colsWRCorto(),showStatModal.rows),true,true)}
             <button className="mcl" onClick={()=>setShowStatModal(null)}>✕</button>
           </div>
         </div>
@@ -5074,19 +5082,23 @@ export default function SistemaCarga(){
               <th>Carrier</th><th>Tracking</th><th>Valor</th><th>Peso</th><th>Estado</th><th>Tipo Envío</th>
             </tr></thead>
             <tbody>
-              {showStatModal.rows.map(w=>(
-                <tr key={w.id}>
+              {(["confirmed","consolidados"].includes(showStatModal.key)
+                ?[...showStatModal.rows].sort((a,b)=>String(a.tipoEnvio||"").localeCompare(String(b.tipoEnvio||""))||String(a.id).localeCompare(String(b.id)))
+                :showStatModal.rows).map((w,i,arr)=>(<Fragment key={w.id}>
+                {["confirmed","consolidados"].includes(showStatModal.key)&&(i===0||(arr[i-1].tipoEnvio||"")!==(w.tipoEnvio||""))&&
+                  <tr><td colSpan={10} style={{background:"var(--bg3)",fontWeight:800,color:"var(--navy)"}}>{w.tipoEnvio||"Sin tipo de envío"} · {arr.filter(x=>(x.tipoEnvio||"")===(w.tipoEnvio||"")).length} WR</td></tr>}
+                <tr>
                   <td><Num t="wr" id={w.id}/></td>
                   <td><div className="c-dt">{fmtDate(w.fecha)}</div></td>
                   <td><div className="c-name">{w.consignee}</div></td>
                   <td><span className="c-cas">{w.casillero}</span></td>
                   <td><CarBadge c={w.carrier}/></td>
                   <td><span className="c-trk">{w.tracking}</span></td>
-                  <td><span className="c-val">${w.valor.toFixed(2)}</span></td>
+                  <td><span className="c-val">{fmtMoney(w.valor,"USD")}</span></td>
                   <td><span className="c-wt">{fmtDec(w.pesoKg,2)}kg</span></td>
                   <td><StBadge st={w.status}/></td>
                   <td><TypeBadge t={w.tipoEnvio}/></td>
-                </tr>
+                </tr></Fragment>
               ))}
             </tbody>
           </table>
@@ -6598,7 +6610,7 @@ export default function SistemaCarga(){
   const prnBarcode=v=>renderToStaticMarkup(<WRBarcode value={String(v)} height={40} width={1.6}/>);
   const prnHTML=({titulo,numero="",meta=[],pais="",emisor=null,cuerpo="",barcode=false,anulado=null,horizontal=false})=>{
     const em=prnEmisor(pais,emisor);const ahora=new Date();
-    const css=PRN_CSS+(horizontal?"@page{size:letter landscape;margin:0}":"");
+    const css=PRN_CSS+(horizontal?"@page{size:letter landscape;margin:0}@media screen{body{width:11in}}":"");
     return `<!doctype html><html><head><meta charset="utf-8"><title>${prnE(titulo)}${numero?` ${prnE(numero)}`:""}</title><style>${css}</style></head><body><table class="pg"><thead><tr><td></td></tr></thead><tfoot><tr><td></td></tr></tfoot><tbody><tr><td>
       ${anulado?`<div class="anul">${anulado.texto||"ANULADO"}${anulado.motivo?`<small>${prnE(anulado.motivo)}</small>`:""}</div>`:""}
       <div class="hd">
@@ -6614,7 +6626,7 @@ export default function SistemaCarga(){
   const pSec=t=>`<div class="sec">${t}</div>`;
   const pBox=(k,v,sub="")=>`<div class="box"><span class="k">${prnE(k)}</span><div class="v">${v}${sub?`<span class="s">${sub}</span>`:""}</div></div>`;
   const pGrid=(n,boxes)=>`<div class="g${n}">${boxes.filter(Boolean).join("")}</div>`;
-  const pTabla=(cols,filas,pie="")=>`<table class="t"><thead><tr>${cols.map(c=>`<th class="${c.r?"r":c.c?"c":""}">${prnE(c.l)}</th>`).join("")}</tr></thead><tbody>${filas||`<tr><td class="vacio" colspan="${cols.length}">Sin registros</td></tr>`}${pie}</tbody></table>`;
+  const pTabla=(cols,filas,pie="")=>`<table class="t${cols.length>=17?" d3":cols.length>=13?" d2":cols.length>=9?" d1":""}"><thead><tr>${cols.map(c=>`<th class="${c.r?"r":c.c?"c":""}">${prnE(c.l)}</th>`).join("")}</tr></thead><tbody>${filas||`<tr><td class="vacio" colspan="${cols.length}">Sin registros</td></tr>`}${pie}</tbody></table>`;
   const pFirmas=lista=>`<div class="firmas" style="grid-template-columns:repeat(${lista.length},1fr)">${lista.map(([t,s])=>`<div>${prnE(t)}${s?`<small>${prnE(s)}</small>`:""}</div>`).join("")}</div>`;
   const pTotales=filas=>`<div class="totales">${filas.filter(Boolean).map(([k,v,cls])=>`<div class="f ${cls||""}"><span>${k}</span><span>${v}</span></div>`).join("")}</div>`;
   const nombreUsuario=id=>{const c=clients.find(x=>x.id===id||x.email===id);return c?fullName(c):(id||"");};
@@ -6633,12 +6645,25 @@ export default function SistemaCarga(){
         `${titulo} ${hoyISO()}`.replace(/[\\/:*?"<>|]/g,"-"),titulo.slice(0,31));
       logAction("Exportó a Excel",titulo);},
   });
-  const colsWR=()=>[{l:"N° WR",v:w=>w.id,m:1},{l:"Fecha",v:w=>w.fecha?new Date(w.fecha):""},{l:"Origen",v:w=>w.origCity||""},{l:"Destino",v:w=>w.destCity||""},
-    {l:"Consignatario",v:w=>w.consignee||""},{l:"Casillero",v:w=>w.casillero||""},{l:"Remitente",v:w=>w.shipper||""},{l:"Guía",v:w=>getNumGuia(w)||""},
-    {l:"Factura",v:w=>facEmpresaDeWRs([w.id]).map(f=>f.id).join(", ")},{l:"Carrier",v:w=>w.carrier||""},{l:"Tracking",v:w=>[...new Set((w.dims||[]).map(d=>d.tracking).filter(Boolean))].join(", ")||w.tracking||"",m:1},
+  // Listado agrupado: una sección por grupo en la impresión; en Excel la columna del grupo va primero
+  const expTablaGrupos=(titulo,cols,filas,grupoDe,meta=[])=>{
+    const grupos=new Map();filas.forEach(r=>{const g=grupoDe(r)||"Sin tipo de envío";if(!grupos.has(g))grupos.set(g,[]);grupos.get(g).push(r);});
+    const celdas=r=>`<tr>${cols.map(c=>{const v=c.v(r);const t=c.f?c.f(v,r):(v instanceof Date?fmtDate(v):v);
+      return `<td class="${[c.r?"r":c.c?"c":"",c.m?"mono":""].filter(Boolean).join(" ")}">${prnE(t??"")}</td>`;}).join("")}</tr>`;
+    return {
+      imprimir:()=>prnVer(titulo,prnHTML({titulo,meta:[["Fecha",fmtDate(new Date())],["Registros",String(filas.length)],...[...grupos].map(([g,l])=>[g,String(l.length)]),...meta.filter(Boolean)],horizontal:cols.length>6,
+        cuerpo:[...grupos].map(([g,l])=>pSec(`${prnE(g)} · ${l.length} WR`)+pTabla(cols.map(c=>({l:c.l,r:c.r,c:c.c})),l.map(celdas).join(""))).join("")})),
+      excel:expTabla(titulo,[{l:"Grupo",v:r=>grupoDe(r)||"Sin tipo de envío"},...cols],[...grupos.values()].flat(),meta).excel,
+    };
+  };
+  const colsWRCorto=()=>[{l:"N° WR",v:w=>w.id,m:1},{l:"Fecha",v:w=>w.fecha?new Date(w.fecha):""},{l:"Origen",v:w=>w.origCity||""},{l:"Destino",v:w=>w.destCity||""},
+    {l:"Consignatario",v:w=>w.consignee||""},{l:"Casillero",v:w=>w.casillero||""},{l:"Carrier",v:w=>w.carrier||""},
+    {l:"Tracking",v:w=>[...new Set((w.dims||[]).map(d=>d.tracking).filter(Boolean))].join(", ")||w.tracking||"",m:1},
     {l:"Descripción",v:w=>cleanReempaqueDesc(w.descripcion)||""},{l:"Cajas",v:w=>w.cajas||0,c:1},{l:"Peso lb",v:w=>parseFloat(w.pesoLb)||0,f:v=>nm(v),r:1},
-    {l:"Vol. lb",v:w=>parseFloat(w.volLb)||0,f:v=>nm(v),r:1},{l:"Ft³",v:w=>parseFloat(w.ft3)||0,f:v=>nm(v),r:1},{l:"Valor USD",v:w=>parseFloat(w.valor)||0,f:v=>fmtMoney(v,"USD"),r:1},
-    {l:"Envío",v:w=>w.tipoEnvio||""},{l:"Pago",v:w=>w.tipoPago||""},{l:"Estado",v:w=>w.status?.label||""}];
+    {l:"Ft³",v:w=>parseFloat(w.ft3)||0,f:v=>nm(v),r:1},{l:"Envío",v:w=>w.tipoEnvio||""},{l:"Pago",v:w=>w.tipoPago||""},{l:"Estado",v:w=>w.status?.label||""}];
+  const colsWRConsolidar=(conGuia=false)=>[{l:"N° WR",v:w=>w.id,m:1},{l:"Fecha",v:w=>w.fecha?new Date(w.fecha):""},{l:"Consignatario",v:w=>w.consignee||""},
+    {l:"Carrier",v:w=>w.carrier||""},{l:"Tracking",v:w=>[...new Set((w.dims||[]).map(d=>d.tracking).filter(Boolean))].join(", ")||w.tracking||"",m:1},
+    ...(conGuia?[{l:"Guía",v:w=>getNumGuia(w)||"",m:1}]:[]),{l:"Tipo de envío",v:w=>w.tipoEnvio||""}];
   const perteneceA=c=>{const ct=c.clienteTipo||"";const ofiUsr=c.tipo==="usuario"&&c.oficinaId?oficinas.find(o=>o.id===c.oficinaId):null;const aut=c.autonomoId?clients.find(x=>x.id===c.autonomoId):null;
     return ofiUsr?`${ofiUsr.codigo} — ${ofiUsr.nombre}`:c.tipo==="usuario"&&["A","B"].includes(c.rol)?"Todas las oficinas":c.tipo==="usuario"&&["E","E1"].includes(c.rol)?(agentes.find(a=>a.id===c.agenteId)?.nombre||"")
       :c.tipo==="usuario"?"":ct==="matriz"?(()=>{const o=oficinas.find(x=>x.id===c.oficinaId);return o?`${o.codigo} — ${o.nombre}`:"";})():ct==="agente"||ct==="vendedor_agente"?(agentes.find(a=>a.id===c.agenteId)?.nombre||"")
@@ -7226,7 +7251,7 @@ export default function SistemaCarga(){
         W("Reempaque","atendidoPor","Atendido por","txt",r=>r.atendidoPor||""),W("Reempaque","atendido","Fecha de atención","fecha",r=>r.atendido||null),W("Reempaque","motivo","Motivo de rechazo","txt",r=>r.motivo||"")],
         filas:()=>srList.filter(x=>!ext||(x.wrIds||[]).some(id=>visIds.has(id)))},
       ...(ext?{}:{
-      traslado:{l:"Traslados entre oficinas",ic:<Ico e="🚚"/>,fecha:"fecha",campos:[
+      traslado:{l:"Traslados internos",ic:<Ico e="🚚"/>,fecha:"fecha",campos:[
         W("Traslado","id","N° traslado","txt",r=>r.id),W("Traslado","fecha","Fecha","fecha",r=>r.fecha),W("Traslado","hora","Hora","txt",r=>fmtTime(r.fecha)),
         W("Traslado","estado","Estado","txt",r=>(TR_ESTADO[r.estado]||{l:r.estado}).l),
         W("Traslado","envia","Envía","txt",r=>trOfiNom(r.desde)),W("Traslado","recibe","Recibe","txt",r=>trOfiNom(r.hasta)),
@@ -7342,7 +7367,7 @@ export default function SistemaCarga(){
     const filt=repTextoFiltros(rep,par,R.C);
     cuerpo=cuerpo.replace(/<tr class="t">/g,'<tr class="tot">').replace(/<tr class="g">/g,'<tr class="grp">');
     prnVer(rep.nombre,prnHTML({titulo:rep.nombre,meta:[["Fecha",`${fmtDate(new Date())} ${fmtTime(new Date())}`],filt&&["Filtros",filt],["Registros",String(R.filas.length)]],horizontal:R.cols.length>7,
-      cuerpo:`<table class="t"><thead><tr>${head}</tr></thead><tbody>${cuerpo}</tbody></table>`}));};
+      cuerpo:`<table class="t${R.cols.length>=17?" d3":R.cols.length>=13?" d2":R.cols.length>=9?" d1":""}"><thead><tr>${head}</tr></thead><tbody>${cuerpo}</tbody></table>`}));};
   const repGuardarLista=async n=>{if(!(hasPerm("crear_reporte")||hasPerm("editar_reporte")||hasPerm("borrar_reporte"))){window.alert("Tu rol no tiene permiso para esta acción.");return false;}const ok=await dbSetConfig('reportes_guardados',n);if(ok===false){window.alert("No se pudo guardar.");return false;}setRepGuardados(n);return true;};
   const repPuedeEditar=r=>(hasPerm("editar_reporte")||hasPerm("crear_reporte")||currentUser.rol==="A")&&(!r.owner||r.owner===currentUser.id||currentUser.rol==="A");
   const repAbrir=r=>{setRepSel(r.id);setRepPar({desde:"",hasta:"",q:"",f:{}});setRepModo("ver");if(r.fuente==="actividad"&&repAct==null)dbGetActividadReporte().then(setRepAct);};
@@ -13003,10 +13028,20 @@ export default function SistemaCarga(){
     return(
     <div className="cnt">
       <div style={{padding:"12px 18px 0"}}>
-        <div className="tabs" style={{marginBottom:0}}>
+        <div style={{display:"flex",alignItems:"flex-end",gap:8}}>
+        <div className="tabs" style={{marginBottom:0,flex:1}}>
           {[["master","Master",consolList.length],["status","Status",nAbiertas],["recepcion","Recepción",nRecep]].filter(([v])=>v!=="recepcion"||hasPerm("ver_recepcion_dest")).map(([v,l,n])=>(
             <div key={v} className={`tab ${lmTab===v?"on":""}`} onClick={()=>setLmTab(v)}>{l}<span className="t-cnt">{n}</span></div>
           ))}
+        </div>
+        <div style={{display:"flex",gap:6,paddingBottom:6}}>{expBotones(expTabla(lmTab==="master"?"Guías":lmTab==="status"?"Guías abiertas":"Guías en recepción",
+          [{l:"Guía",v:c=>c.id,m:1},{l:"Fecha",v:c=>c.fecha?new Date(c.fecha):""},{l:"Envío",v:c=>c.tipoEnvio||""},
+           {l:"Sale de",v:c=>oficinas.find(o=>o.id===c.ofiOrigen)?.codigo||""},{l:"Destino",v:c=>oficinas.find(o=>o.id===c.ofiDestino)?.codigo||c.destino||""},
+           {l:"Estado",v:c=>c.status||""},{l:"Cont.",v:c=>(c.containers||[]).length,c:1},{l:"WR",v:c=>parseFloat(c.totalWR)||0,c:1},{l:"Cajas",v:c=>parseFloat(c.totalCajas)||0,c:1},
+           {l:"Peso lb",v:c=>parseFloat(c.totalLb)||0,f:v=>nm(v),r:1},{l:"Ft³",v:c=>parseFloat(c.totalFt3)||0,f:v=>nm(v),r:1},
+           {l:"AWB / BL",v:c=>c.awb||c.bl||""},{l:"Vuelo / viaje",v:c=>c.numVuelo||""},{l:"Salida",v:c=>c.fechaSalida||""},{l:"Llegada",v:c=>c.fechaLlegada||""}],
+          (lmTab==="master"?consolList:lmTab==="status"?consolList.filter(c=>!c.archivada):consolList.filter(c=>guiaGrupo(c)==="recepcion")).slice().sort((a,b)=>new Date(b.fecha||0)-new Date(a.fecha||0))),
+          hasPerm("imp_guia")||hasPerm("ver_guia"),true)}</div>
         </div>
       </div>
       {lmTab==="master"?renderConsolidacion():lmTab==="status"||!hasPerm("ver_recepcion_dest")?renderGuiaEstatus():renderRecepcionDest()}
@@ -13633,8 +13668,12 @@ export default function SistemaCarga(){
                   <td style={{whiteSpace:"nowrap",fontWeight:700,color:k.tipo==="faltante"?"#C62828":"#7B1FA2"}}>{k.tipo==="faltante"?"Faltante":"Sobrante"}</td>
                   <td><Num t="wr" id={k.w.id}/></td>
                   <td><div style={{fontWeight:600}}>{k.cli?fullName(k.cli):(k.w.consignee||"—")}</div><div style={{fontSize:11,color:"var(--t3)"}}>{k.w.casillero||""}</div></td>
-                  <td style={{whiteSpace:"nowrap"}}>{k.g?<Num t="guia" id={k.g.id}/>:"—"}
-                    {k.gCorrecta&&<div style={{fontSize:11,color:"#2E7D32"}}>es de <Num t="guia" id={k.gCorrecta.id}/></div>}</td>
+                  <td style={{whiteSpace:"nowrap"}}>{k.gCorrecta
+                    ?<div style={{display:"flex",flexDirection:"column",gap:6}}>
+                      <div><div style={{fontSize:11,color:"var(--t3)",fontWeight:700,marginBottom:2}}>Llegó en</div>{k.g?<Num t="guia" id={k.g.id}/>:"—"}</div>
+                      <div><div style={{fontSize:11,color:"#2E7D32",fontWeight:700,marginBottom:2}}>Pertenece a</div><Num t="guia" id={k.gCorrecta.id}/></div>
+                    </div>
+                    :(k.g?<Num t="guia" id={k.g.id}/>:"—")}</td>
                   <td><StBadge st={k.w.status}/></td>
                   <td style={{whiteSpace:"nowrap",fontSize:12}}>
                     {alTab==="abiertas"
@@ -13974,7 +14013,7 @@ export default function SistemaCarga(){
       (t.fechaRecibido?`<div class="nota"><b>Recepción:</b> ${prnE(t.recibe||nombreUsuario(t.usuarioRecibe))} · ${fmtDate(t.fechaRecibido)} ${fmtTime(t.fechaRecibido)} · ${rec.size} de ${wrs.length} WR</div>`:"")+
       `<div class="decl">La oficina que recibe confirma, con su firma, haber recibido conforme los WR marcados. Cualquier faltante o daño visible debe anotarse al momento de la recepción.</div>`+
       pFirmas([["Entrega",D?.nombre||""],["Transporta",t.modo==="carrier"?[t.carrier,t.tracking].filter(Boolean).join(" · "):[t.chofer,t.vehiculo].filter(Boolean).join(" · ")],["Recibe conforme",H?.nombre||""]]);
-    return prnHTML({titulo:"Traslado entre oficinas",numero:t.id,barcode:true,pais:D?.pais||"",
+    return prnHTML({titulo:"Traslado interno",numero:t.id,barcode:true,pais:D?.pais||"",
       meta:[["Fecha",`${fmtDate(t.fecha)} ${fmtTime(t.fecha)}`],["Estado",(TR_ESTADO[t.estado]||{}).l],["Usuario",nombreUsuario(t.usuario)]],
       anulado:t.estado==="anulado"?{texto:"ANULADO",motivo:t.motivoAnulacion}:null,cuerpo});
   };
@@ -14104,21 +14143,40 @@ export default function SistemaCarga(){
     </table></div>{pagPie(key,lista.length)}</>;
     const tabs=[{k:"enviar",l:"Por enviar",n:grupos.reduce((s,g)=>s+g.wrs.length,0)},{k:"camino",l:"En camino",n:enCamino.length},{k:"historial",l:"Historial"}];
     let cuerpo=null;
-    if(trVista==="enviar")cuerpo=grupos.length===0
-      ?<div className="card" style={{textAlign:"center",padding:50,color:"var(--t3)",fontSize:15}}>No hay carga pendiente de trasladar.</div>
-      :<div>{grupos.map(g=>{const cajas=g.wrs.reduce((s,w)=>s+(parseInt(w.cajas,10)||0),0),lb=g.wrs.reduce((s,w)=>s+(parseFloat(w.pesoLb)||0),0);const ori=g.tipo==="origen";
-          return <div key={g.k} className="card" style={{padding:0,marginBottom:12,overflow:"hidden",borderLeft:`4px solid ${ori?"var(--navy)":"#E65100"}`}}>
-            <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",background:"var(--bg3)",flexWrap:"wrap"}}>
-              <span style={{fontSize:20}}><Ico e="🏢"/></span>
-              <div>
-                <div style={{fontWeight:800,fontSize:16,color:"var(--navy)"}}>{trOfiNom(g.desde)} <span style={{color:"var(--t3)"}}>→</span> {trOfiNom(g.hasta)}</div>
-                <div style={{fontSize:12,color:"var(--t3)"}}>{ori?"Origen · a la matriz":"Destino · a la sucursal"} · {g.wrs.length} WR · {cajas} cajas · {fmtDec(lb,2)} lb</div>
-              </div>
-              {hasPerm("crear_traslado")&&<button className="btn-p" style={{fontSize:13,padding:"6px 12px",marginLeft:"auto"}} onClick={()=>trNuevo(g.desde,g.hasta,g.wrs.map(w=>w.id))}><Ico e="🚚" sp/>Crear traslado ({g.wrs.length})</button>}
+    if(trVista==="enviar"){
+      const sel=trGrupoSel?grupos.find(g=>g.k===trGrupoSel):null;
+      const tot=ws=>({cajas:ws.reduce((s,w)=>s+(parseInt(w.cajas,10)||0),0),lb:ws.reduce((s,w)=>s+(parseFloat(w.pesoLb)||0),0)});
+      const cod=id=>trOfi(id)?.codigo||"";
+      const chipTipo=t=><span style={{fontSize:12,fontWeight:800,padding:"2px 8px",borderRadius:4,border:"1.5px solid var(--navy)",color:"var(--navy)",whiteSpace:"nowrap"}}>{t==="origen"?"ORIGEN":"DESTINO"}</span>;
+      if(sel){const T=tot(sel.wrs);
+        cuerpo=<div>
+          <div className="card" style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",marginBottom:12}}>
+            <button className="btn-s" onClick={()=>setTrGrupoSel(null)}>← Rutas</button>
+            <b style={{fontSize:16,color:"var(--navy)"}}>{trOfiNom(sel.desde)} → {trOfiNom(sel.hasta)}</b>{chipTipo(sel.tipo)}
+            <span style={{fontSize:14,color:"var(--t2)"}}>{sel.wrs.length} WR · {T.cajas} cajas · {fmtDec(T.lb,2)} lb</span>
+            {hasPerm("crear_traslado")&&<button className="btn-p" style={{marginLeft:"auto"}} onClick={()=>trNuevo(sel.desde,sel.hasta,sel.wrs.map(w=>w.id))}><Ico e="🚚" sp/>Crear traslado</button>}
+          </div>
+          <div className="card" style={{padding:0}}><div className="ct-scroll"><table className="ct">
+            <thead><tr><th>N° WR</th><th>Fecha</th><th>Consignatario</th><th>Casillero</th><th style={{textAlign:"right"}}>Cajas</th><th style={{textAlign:"right"}}>Peso lb</th><th>Envío</th><th>Estado</th></tr></thead>
+            <tbody>{sel.wrs.map(w=><tr key={w.id}><td><Num t="wr" id={w.id}/></td><td><span className="c-dt">{fmtDate(w.fecha)}</span></td><td>{w.consignee||"—"}</td>
+              <td><span className="c-cas">{w.casillero||""}</span></td><td style={{textAlign:"right"}}>{w.cajas||0}</td><td style={{textAlign:"right"}}>{fmtDec(w.pesoLb,2)}</td>
+              <td><TypeBadge t={w.tipoEnvio}/></td><td><StBadge st={w.status}/></td></tr>)}</tbody>
+          </table></div></div>
+        </div>;
+      }else cuerpo=grupos.length===0
+        ?<div className="card" style={{textAlign:"center",padding:50,color:"var(--t3)",fontSize:15}}>No hay carga pendiente de trasladar.</div>
+        :<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(290px,1fr))",gap:12}}>{grupos.map(g=>{const T=tot(g.wrs);
+          return <div key={g.k} className="card" onClick={()=>setTrGrupoSel(g.k)} style={{cursor:"pointer",padding:14,border:"1px solid var(--b1)"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+              <span className="c-wr">{cod(g.desde)} → {cod(g.hasta)}</span>{chipTipo(g.tipo)}
             </div>
-            <div style={{display:"flex",gap:6,flexWrap:"wrap",padding:"10px 12px"}}>{g.wrs.map(w=><Num key={w.id} t="wr" id={w.id}/>)}</div>
+            <div style={{fontSize:14,color:"var(--t2)",marginBottom:8}}><Ico e="📍" sp/>{trOfi(g.desde)?.nombre||""} → {trOfi(g.hasta)?.nombre||""}</div>
+            <div style={{display:"flex",gap:12,fontSize:13,flexWrap:"wrap"}}>
+              <span><b style={{color:"var(--orange)"}}>{g.wrs.length}</b> WR por trasladar</span><span>{T.cajas} cajas</span><span>{fmtDec(T.lb,2)} lb</span>
+            </div>
           </div>;})}
-      </div>;
+        </div>;
+    }
     if(trVista==="camino")cuerpo=<>
       <div className="card" style={{marginBottom:12}}><div style={{fontSize:16,fontWeight:700,color:"var(--navy)",marginBottom:8}}><Ico e="📥" sp/>Por recibir ({porRecibir.length})</div>{tabla(porRecibir,"tr_recibir")}</div>
       <div className="card"><div style={{fontSize:16,fontWeight:700,color:"var(--navy)",marginBottom:8}}><Ico e="🚚" sp/>Enviados ({enviados.length})</div>{tabla(enviados,"tr_enviados")}</div></>;
@@ -14136,9 +14194,9 @@ export default function SistemaCarga(){
     return (
       <div className="page-scroll">
         <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,flexWrap:"wrap"}}>
-          <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:18,fontWeight:700,color:"var(--navy)",flex:1}}><Ico e="🚚" sp/>Traslados entre oficinas</div>
+          <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:18,fontWeight:700,color:"var(--navy)",flex:1}}><Ico e="🚚" sp/>Traslados internos</div>
           <div style={{display:"flex",gap:4,background:"var(--bg4)",borderRadius:7,padding:3,border:"1px solid var(--b1)"}}>
-            {tabs.map(t=><button key={t.k} onClick={()=>setTrVista(t.k)} style={{padding:"5px 14px",borderRadius:5,border:"none",cursor:"pointer",fontSize:14,fontWeight:600,
+            {tabs.map(t=><button key={t.k} onClick={()=>{setTrVista(t.k);setTrGrupoSel(null);}} style={{padding:"5px 14px",borderRadius:5,border:"none",cursor:"pointer",fontSize:14,fontWeight:600,
               background:trVista===t.k?"var(--navy)":"transparent",color:trVista===t.k?"#fff":"var(--t2)"}}>{t.l}{t.n?` (${t.n})`:""}</button>)}
           </div>
           {hasPerm("crear_traslado")&&<button className="btn-p" onClick={()=>trNuevo()}>+ Nuevo traslado</button>}
@@ -14457,7 +14515,7 @@ export default function SistemaCarga(){
     {label:"Administración",items:[
       {id:"facturacion",ic:<Ico e="🧾"/>,l:"Facturación",onClick:()=>{setTab("contabilidad");setContabTab("porguia");setFacGuiaSel(null);},activeWhen:()=>tab==="contabilidad"&&["porguia","facturas"].includes(contabTab)},
       {id:"entregasydespachos",ic:<Ico e="📝"/>,l:"Entregas y Despachos"},
-      {id:"traslados",ic:<Ico e="🚚"/>,l:"Traslados",badge:(()=>{const n=trVisibles.filter(t=>["en_camino","parcial"].includes(t.estado)&&trEnAlcance(t.hasta)).length;return n>0?String(n):null;})()},
+      {id:"traslados",ic:<Ico e="🚚"/>,l:"Traslados internos",badge:(()=>{const n=trVisibles.filter(t=>["en_camino","parcial"].includes(t.estado)&&trEnAlcance(t.hasta)).length;return n>0?String(n):null;})()},
       {id:"contabilidad",ic:<Ico e="💰"/>,l:"Contabilidad",onClick:()=>{setTab("contabilidad");setContabTab("cuentas");setCuadreSel(null);},activeWhen:()=>tab==="contabilidad"&&!["porguia","facturas"].includes(contabTab)},
       {id:"misfacturas",ic:<Ico e="🧾"/>,l:fpMiEmisor?"Mis facturas":"Facturas de agentes"},
     ]},
@@ -14494,7 +14552,7 @@ export default function SistemaCarga(){
   };
   const navVisible=n=>(n.id!=="misfacturas"||!["E","E1","F","G"].includes(currentUser.rol)||!!fpMiEmisor)&&(!NAV_PERMS[n.id]||NAV_PERMS[n.id].some(p=>hasPerm(p)));
 
-  const PAGE_TITLES={traslados:"Traslados entre oficinas",prealertas:"Pre-alertas",misfacturas:fpMiEmisor?"Mis facturas":"Facturas de agentes, autónomos y oficinas",dashboard:"Dashboard General",loadingmaster:"Loading Master",scan:"Recepción en Puerta",etiquetas:"Imprimir Etiquetas",clients:"Clientes & Usuarios",estadocuenta:"Estado de Cuenta",roles:"Roles & Permisos",consolidation:"Consolidación",tracking:"Tracking",pickup:"Pick-up",contabilidad:"Contabilidad",calculadora:"Calculadora de Envío",chat:"Chat Interno",docs:"Documentos",reports:"Reportes",alerts:"Alertas",settings:"Configuración",reempaque:"Reempaque",recepciondest:"Recepción en Almacén",cargorelease:"Cargo Release (Egreso)",entregas:"Notas de Entrega",entregasydespachos:"Entregas y Despachos",facturacion:"Facturación"};
+  const PAGE_TITLES={traslados:"Traslados internos",prealertas:"Pre-alertas",misfacturas:fpMiEmisor?"Mis facturas":"Facturas de agentes, autónomos y oficinas",dashboard:"Dashboard General",loadingmaster:"Loading Master",scan:"Recepción en Puerta",etiquetas:"Imprimir Etiquetas",clients:"Clientes & Usuarios",estadocuenta:"Estado de Cuenta",roles:"Roles & Permisos",consolidation:"Consolidación",tracking:"Tracking",pickup:"Pick-up",contabilidad:"Contabilidad",calculadora:"Calculadora de Envío",chat:"Chat Interno",docs:"Documentos",reports:"Reportes",alerts:"Alertas",settings:"Configuración",reempaque:"Reempaque",recepciondest:"Recepción en Almacén",cargorelease:"Cargo Release (Egreso)",entregas:"Notas de Entrega",entregasydespachos:"Entregas y Despachos",facturacion:"Facturación"};
 
   const renderPage=()=>{
     if(!navVisible({id:tab==="contabilidad"&&["porguia","facturas"].includes(contabTab)?"facturacion":tab}))return (
