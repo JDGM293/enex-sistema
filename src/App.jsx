@@ -6635,6 +6635,13 @@ export default function SistemaCarga(){
     {l:"Descripción",v:w=>cleanReempaqueDesc(w.descripcion)||""},{l:"Cajas",v:w=>w.cajas||0,c:1},{l:"Peso lb",v:w=>parseFloat(w.pesoLb)||0,f:v=>nm(v),r:1},
     {l:"Vol. lb",v:w=>parseFloat(w.volLb)||0,f:v=>nm(v),r:1},{l:"Ft³",v:w=>parseFloat(w.ft3)||0,f:v=>nm(v),r:1},{l:"Valor USD",v:w=>parseFloat(w.valor)||0,f:v=>fmtMoney(v,"USD"),r:1},
     {l:"Envío",v:w=>w.tipoEnvio||""},{l:"Pago",v:w=>w.tipoPago||""},{l:"Estado",v:w=>w.status?.label||""}];
+  const colsFactura=()=>[{l:"N° documento",v:f=>f.id,m:1},{l:"Tipo",v:f=>f.tipo==="nota_credito"?"Nota de crédito":f.tipo==="proforma"?"Proforma":docNombre(f)},
+    {l:"Emisión",v:f=>f.fechaEmision||f.fecha?new Date(f.fechaEmision||f.fecha):""},{l:"Receptor",v:f=>f.receptorNombre||""},
+    {l:"Tipo receptor",v:f=>({cliente:"Cliente",agente:"Agente",autonomo:"Autónomo",oficina:"Oficina"})[f.receptorTipo]||f.receptorTipo||""},
+    {l:"Casillero / ID",v:f=>f.receptorCasillero||f.receptorDoc||""},{l:"Matriz",v:f=>oficinas.find(o=>o.id===f.matrizId)?.codigo||""},
+    {l:"Envío",v:f=>f.tipoEnvio||""},{l:"WR",v:f=>(f.wrIds||[]).join(", ")},{l:"Guía",v:f=>(f.guiaIds||[]).join(", ")},{l:"Moneda",v:f=>f.moneda||"USD"},
+    {l:"Total",v:f=>parseFloat(f.total)||0,f:(v,f)=>fmtMoney(v,f.moneda),r:1},{l:"Pagado",v:f=>parseFloat(f.pagado)||0,f:(v,f)=>fmtMoney(v,f.moneda),r:1},
+    {l:"Saldo",v:f=>parseFloat(f.saldo)||0,f:(v,f)=>fmtMoney(v,f.moneda),r:1},{l:"Estado",v:f=>FAC_STATUS_LABEL[f.status]||f.status}];
   const expBotones=(e,puedeImp=true,chico=false)=><>
     {puedeImp&&<button className="btn-s" style={{fontSize:chico?12:13,padding:chico?"3px 10px":"5px 12px"}} onClick={e.imprimir}><Ico e="🖨️" sp/>Imprimir</button>}
     {puedeImp&&hasPerm("exportar_excel")&&<button className="btn-s" style={{fontSize:chico?12:13,padding:chico?"3px 10px":"5px 12px"}} onClick={e.excel}><Ico e="📊" sp/>Excel</button>}
@@ -10681,6 +10688,7 @@ export default function SistemaCarga(){
                   {puede&&<button className="btn-p" style={{fontSize:13}} onClick={()=>cobroAbrir(pg)}><Ico e="💵" sp/>Cobrar</button>}
                   {puede&&favor>0&&!cuadrePago&&<button className="btn-s" style={{fontSize:13}} onClick={()=>setCuadrePago({monto:String(favor),moneda:mon,tipoPago:"efectivo",referencia:""})}><Ico e="💸" sp/>Pagarle</button>}
                   {hasPerm("imp_estado_cuenta")&&<button className="btn-s" style={{fontSize:13}} onClick={imprimir}><Ico e="🖨️" sp/>Imprimir</button>}
+                  {hasPerm("imp_estado_cuenta")&&hasPerm("exportar_excel")&&<button className="btn-s" style={{fontSize:13}} onClick={expTabla(`Cuenta ${pg.nombre}`,[{l:"Fecha",v:x=>x.fecha},{l:"Documento",v:x=>x.doc},{l:"Detalle",v:x=>x.det||""},{l:"Moneda",v:()=>mon},{l:"Debe",v:x=>x.debe||0,r:1},{l:"Haber",v:x=>x.haber||0,r:1},{l:"Saldo",v:x=>x.saldo,r:1}],vis).excel}><Ico e="📊" sp/>Excel</button>}
                 </div>
               </div>
               {cuadrePago&&(
@@ -10888,6 +10896,7 @@ export default function SistemaCarga(){
                       </div>))}</div>}
                   </div>;
               })()}
+              {expBotones(expTabla("Facturas",colsFactura(),facFilt),hasPerm("imp_factura")||hasPerm("ver_factura"))}
               {(hasPerm("crear_factura")||hasPerm("facturar"))&&<button className="btn-p" onClick={()=>facOpenNew()}>+ Nueva Factura</button>}
             </div>
             <div className="card" style={{padding:0}}>
@@ -10977,7 +10986,10 @@ export default function SistemaCarga(){
                       {ops.map(([k,l])=><button key={k||"t"} onClick={()=>set(k)} style={{padding:"4px 11px",borderRadius:5,border:"none",cursor:"pointer",fontSize:13,fontWeight:600,background:val===k?"var(--navy)":"transparent",color:val===k?"#fff":"var(--t2)"}}>{l}</button>)}</div>;
                     return <>{seg([["","Todos"],["cliente","Clientes"],["agente","Agentes"],["autonomo","Autónomos"],["oficina","Oficinas"]],ctaFil,setCtaFil)}
                       {seg([["con","Con saldo"],["sin","Sin saldo"],["todas","Con y sin saldo"]],ctaSoloSaldo,setCtaSoloSaldo)}</>;})()}
-                  {puede&&<button className="btn-p" style={{fontSize:13,padding:"6px 12px",marginLeft:"auto"}} onClick={()=>cobroAbrir(null)}><Ico e="💵" sp/>Recibir pago</button>}
+                  <span style={{marginLeft:"auto",display:"flex",gap:6}}>{expBotones(expTabla("Cuentas",[{l:"Cuenta",v:x=>x.r.pg.nombre||""},{l:"Tipo",v:x=>TL[x.r.pg.tipo]||"Cliente"},{l:"Casillero",v:x=>x.r.pg.casillero||""},{l:"Moneda",v:x=>x.mn},
+                    {l:"Nos debe",v:x=>r2(x.r.debe[x.mn]||0),f:(v,x)=>v?fmtMoney(v,x.mn):"",r:1},{l:"Le debemos",v:x=>r2(x.r.favor[x.mn]||0),f:(v,x)=>v?fmtMoney(v,x.mn):"",r:1},{l:"Comisiones sin acreditar",v:x=>x.r.pc.length,c:1}],
+                    filas.flatMap(r=>{const ms=[...new Set([...Object.keys(r.debe),...Object.keys(r.favor)])].filter(mn=>Math.abs(r.debe[mn]||0)>0.004||Math.abs(r.favor[mn]||0)>0.004);return (ms.length?ms:[""]).map(mn=>({r,mn}));})),hasPerm("imp_estado_cuenta"))}
+                  {puede&&<button className="btn-p" style={{fontSize:13,padding:"6px 12px"}} onClick={()=>cobroAbrir(null)}><Ico e="💵" sp/>Recibir pago</button>}</span>
                 </div>
                 {filas.length===0?<div style={{textAlign:"center",padding:40,color:"var(--t3)"}}>{Q?"Sin coincidencias.":ctaSoloSaldo==="con"?"No hay cuentas con saldo. ":"No hay cuentas."}</div>:(
                 <><div className="ct-scroll"><table className="ct">
@@ -11049,6 +11061,7 @@ export default function SistemaCarga(){
                 <select className="fs" style={{width:200,fontSize:13}} value={cajaUsr} onChange={e=>setCajaUsr(e.target.value)}>
                   <option value="">Todos los usuarios</option>{usuarios.map(u=><option key={u} value={u}>{nombreUsr(u)}</option>)}</select>
                 <button className="btn-s" style={{fontSize:13,marginLeft:"auto"}} onClick={imprimir}><Ico e="🖨️" sp/>Cierre de caja</button>
+                {hasPerm("exportar_excel")&&<button className="btn-s" style={{fontSize:13}} onClick={expTabla("Caja",[{l:"Fecha",v:g=>g.fecha},{l:"Documento",v:g=>g.id},{l:"Quién",v:g=>g.quien},{l:"Forma de pago",v:g=>ml(g.metodo)},{l:"Referencia",v:g=>g.ref||""},{l:"Moneda",v:g=>g.moneda},{l:"Monto",v:g=>g.monto,r:1},{l:"Usuario",v:g=>nombreUsr(g.usuario)}],grupos).excel}><Ico e="📊" sp/>Excel</button>}
               </div>
               <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:10,marginBottom:10}}>
                 {Object.keys(porMon).length===0&&<div className="card" style={{textAlign:"center",color:"var(--t3)"}}>Sin movimientos en este periodo.</div>}
@@ -11123,6 +11136,9 @@ export default function SistemaCarga(){
                     ))}
                   </div>
                   <input className="fi" placeholder="Buscar guía o cliente…" value={facGuiaBuscar} onChange={e=>setFacGuiaBuscar(e.target.value)} style={{fontSize:15,padding:"9px 12px",flex:1,minWidth:220}}/>
+                  {expBotones(expTabla(facGuiaVista==="historial"?"Guías facturadas":"Guías por facturar",[{l:"Guía",v:x=>x.g.id,m:1},{l:"Envío",v:x=>x.g.tipoEnvio||""},{l:"Destino",v:x=>x.g.destino||""},{l:"Fecha",v:x=>x.g.fecha?new Date(x.g.fecha):""},
+                    {l:"WR",v:x=>x.grupos.reduce((t,y)=>t+y.wrs.length,0)+x.prepaid.length,c:1},{l:"WR sin facturar",v:x=>x.grupos.reduce((t,y)=>t+y.pendientes.length,0)+x.prepaidSin.length,c:1},
+                    {l:"Facturado",v:x=>{const facs=[...new Map([...x.grupos.flatMap(y=>y.facturas),...x.facPrepaid].map(f=>[f.id,f])).values()];const pm={};facs.forEach(f=>{pm[f.moneda||"USD"]=(pm[f.moneda||"USD"]||0)+(f.total||0);});return Object.entries(pm).map(([m,v])=>fmtMoney(v,m)).join(" · ");}}],visibles),hasPerm("imp_factura")||hasPerm("ver_factura"))}
                 </div>
                 {visibles.length===0?<div className="card" style={{textAlign:"center",padding:50,color:"var(--t3)"}}>{facGuiaVista==="historial"?"No hay guías completamente facturadas.":"No hay guías con carga por facturar."}</div>:
                 <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(290px,1fr))",gap:12}}>
@@ -11269,7 +11285,7 @@ export default function SistemaCarga(){
           return (
             <div style={{display:"flex",flexDirection:"column",gap:14}}>
               <div className="card" style={{padding:0}}>
-                <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",fontFamily:"Arial,Helvetica,sans-serif",fontSize:16,fontWeight:700,color:"var(--navy)"}}><Ico e="📊" sp/>Ingresos por período</div>
+                <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",fontFamily:"Arial,Helvetica,sans-serif",fontSize:16,fontWeight:700,color:"var(--navy)"}}><Ico e="📊" sp/>Ingresos por período<span style={{float:"right",display:"inline-flex",gap:6}}>{expBotones(expTabla("Ingresos por período",[{l:"Período",v:m=>m.mes},{l:"Moneda",v:m=>m.moneda},{l:"Facturas",v:m=>m.facturas,c:1},{l:"Total facturado",v:m=>r2(m.total),f:(v,m)=>fmtMoney(v,m.moneda),r:1},{l:"Pagado",v:m=>r2(m.pagado),f:(v,m)=>fmtMoney(v,m.moneda),r:1},{l:"Saldo",v:m=>r2(m.saldo),f:(v,m)=>fmtMoney(v,m.moneda),r:1},{l:"% cobrado",v:m=>m.total>0?Math.round(m.pagado/m.total*100):0,f:v=>`${v}%`,r:1}],meses),true,true)}</span></div>
                 {meses.length===0?<div style={{textAlign:"center",padding:30,color:"var(--t3)"}}>No hay datos para reportar aún.</div>:(
                   <div className="ct-scroll"><table className="ct">
                     <thead><tr><th>Período</th><th>Mon</th><th>Facturas</th><th>Total Facturado</th><th>Pagado</th><th>Saldo</th><th>% Cobrado</th></tr></thead>
@@ -11300,7 +11316,7 @@ export default function SistemaCarga(){
                 )}
               </div>
               <div className="card" style={{padding:0}}>
-                <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",fontFamily:"Arial,Helvetica,sans-serif",fontSize:16,fontWeight:700,color:"var(--navy)"}}><Ico e="👥" sp/>Quién debe cuánto</div>
+                <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",fontFamily:"Arial,Helvetica,sans-serif",fontSize:16,fontWeight:700,color:"var(--navy)"}}><Ico e="👥" sp/>Quién debe cuánto<span style={{float:"right",display:"inline-flex",gap:6}}>{expBotones(expTabla("Quién debe cuánto",[{l:"Tipo",v:d=>(REC_TYPES.find(r=>r.k===d.tipo)||{l:d.tipo}).l},{l:"Receptor",v:d=>d.nombre},{l:"Casillero",v:d=>d.casillero||""},{l:"Moneda",v:d=>d.moneda},{l:"Facturas",v:d=>d.facturas,c:1},{l:"Total",v:d=>r2(d.total),f:(v,d)=>fmtMoney(v,d.moneda),r:1},{l:"Pagado",v:d=>r2(d.pagado),f:(v,d)=>fmtMoney(v,d.moneda),r:1},{l:"Saldo",v:d=>r2(d.saldo),f:(v,d)=>fmtMoney(v,d.moneda),r:1}],deudores),true,true)}</span></div>
                 {deudores.length===0?<div style={{textAlign:"center",padding:30,color:"var(--t3)"}}>No hay deudores. <Ico e="✅"/></div>:(
                   <><div className="ct-scroll"><table className="ct">
                     <thead><tr><th>Tipo</th><th>Receptor</th><th>Mon</th><th>Facturas</th><th>Total</th><th>Pagado</th><th>Saldo</th></tr></thead>
