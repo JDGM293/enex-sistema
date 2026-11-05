@@ -651,7 +651,7 @@ const PERM_MODULES=[
   {m:"Confirmación",ic:"✅",ver:"ver_confirmacion",crear:"confirmar",editar:"editar_confirmacion",borrar:"desconfirmar"},
   {m:"Cargo Release (Egreso)",ic:"🚀",ver:"ver_egreso",crear:"hacer_egreso",editar:"editar_egreso",borrar:"borrar_egreso"},
   {m:"Recepción en Almacén",ic:"📥",ver:"ver_recepcion_dest",crear:"hacer_recepcion_dest",editar:"editar_recepcion_dest",borrar:"borrar_recepcion_dest"},
-  {m:"Traslados internos",ic:"🚚",ver:"ver_traslado",crear:"crear_traslado",editar:"recibir_traslado",borrar:"anular_traslado"},
+  {m:"Traslados",ic:"🚚",ver:"ver_traslado",crear:"crear_traslado",editar:"recibir_traslado",borrar:"anular_traslado"},
   {m:"Entregas",ic:"📝",ver:"ver_entrega",crear:"entregar",editar:"editar_entrega",borrar:"borrar_entrega"},
   {m:"Alertas",ic:"🔔",ver:"ver_alertas",crear:"crear_alerta",editar:"editar_alerta",borrar:"borrar_alerta"},
   {m:"Facturas",ic:"🧾",ver:"ver_factura",crear:"crear_factura",editar:"editar_factura",borrar:"borrar_factura"},
@@ -5063,30 +5063,38 @@ export default function SistemaCarga(){
   );};
 
   // ── STAT MODAL (clickable stats) ────────────────────────────────────────────
-  const renderStatModal=()=>showStatModal&&(
+  const renderStatModal=()=>{if(!showStatModal)return null;
+    const agr=["confirmed","consolidados"].includes(showStatModal.key);
+    const tiposSM=agr?[...new Set(showStatModal.rows.map(w=>w.tipoEnvio||"Sin tipo de envío"))].sort():[];
+    const tSel=agr&&showStatModal.tipo&&tiposSM.includes(showStatModal.tipo)?showStatModal.tipo:"";
+    const filasSM=(agr?[...showStatModal.rows].sort((a,b)=>String(a.tipoEnvio||"").localeCompare(String(b.tipoEnvio||""))||String(a.id).localeCompare(String(b.id))):showStatModal.rows)
+      .filter(w=>!tSel||(w.tipoEnvio||"Sin tipo de envío")===tSel);
+    return (
     <div className="ov">
       <div className="modal mlg" onClick={e=>e.stopPropagation()}>
         <div className="mhd">
-          <div className="mt">{showStatModal.ic} {showStatModal.label} — {showStatModal.rows.length} registros</div>
+          <div className="mt">{showStatModal.ic} {showStatModal.label}{tSel?` · ${tSel}`:""} — {filasSM.length} registros</div>
           <div style={{display:"flex",gap:6}}>
-            {expBotones(["confirmed","consolidados"].includes(showStatModal.key)
-              ?expTablaGrupos(showStatModal.label,colsWRConsolidar(showStatModal.key==="consolidados"),[...showStatModal.rows].sort((a,b)=>String(a.tipoEnvio||"").localeCompare(String(b.tipoEnvio||""))||String(a.id).localeCompare(String(b.id))),w=>w.tipoEnvio)
-              :expTabla(showStatModal.label,colsWRCorto(),showStatModal.rows),true,true)}
+            {expBotones(agr
+              ?expTablaGrupos(showStatModal.label+(tSel?` · ${tSel}`:""),colsWRConsolidar(showStatModal.key==="consolidados"),filasSM,w=>w.tipoEnvio,[],true)
+              :expTabla(showStatModal.label,colsWRCorto(),filasSM),true,true)}
             <button className="mcl" onClick={()=>setShowStatModal(null)}>✕</button>
           </div>
         </div>
+        {agr&&tiposSM.length>1&&<div className="tabs" style={{margin:"0 16px"}}>
+          {[["","Todos",showStatModal.rows.length],...tiposSM.map(t=>[t,t,showStatModal.rows.filter(w=>(w.tipoEnvio||"Sin tipo de envío")===t).length])].map(([v,l,n])=>(
+            <div key={v||"_"} className={`tab ${tSel===v?"on":""}`} onClick={()=>setShowStatModal({...showStatModal,tipo:v})}>{l}<span className="t-cnt">{n}</span></div>))}
+        </div>}
         <div style={{overflowX:"auto",maxHeight:"70vh",overflowY:"auto"}}>
           <table className="wt" style={{minWidth:900}}>
             <thead><tr>
               <th>N° WR</th><th>Fecha</th><th>Consignatario</th><th>Casillero</th>
-              <th>Carrier</th><th>Tracking</th><th>Valor</th><th>Peso</th><th>Estado</th><th>Tipo Envío</th>
+              <th>Carrier</th><th>Tracking</th><th>Cajas</th><th>Valor</th><th>Peso</th><th>Estado</th><th>Tipo Envío</th>
             </tr></thead>
             <tbody>
-              {(["confirmed","consolidados"].includes(showStatModal.key)
-                ?[...showStatModal.rows].sort((a,b)=>String(a.tipoEnvio||"").localeCompare(String(b.tipoEnvio||""))||String(a.id).localeCompare(String(b.id)))
-                :showStatModal.rows).map((w,i,arr)=>(<Fragment key={w.id}>
-                {["confirmed","consolidados"].includes(showStatModal.key)&&(i===0||(arr[i-1].tipoEnvio||"")!==(w.tipoEnvio||""))&&
-                  <tr><td colSpan={10} style={{background:"var(--bg3)",fontWeight:800,color:"var(--navy)"}}>{w.tipoEnvio||"Sin tipo de envío"} · {arr.filter(x=>(x.tipoEnvio||"")===(w.tipoEnvio||"")).length} WR</td></tr>}
+              {filasSM.map((w,i,arr)=>(<Fragment key={w.id}>
+                {agr&&!tSel&&(i===0||(arr[i-1].tipoEnvio||"")!==(w.tipoEnvio||""))&&
+                  <tr><td colSpan={11} style={{background:"var(--bg3)",fontWeight:800,color:"var(--navy)"}}>{w.tipoEnvio||"Sin tipo de envío"} · {arr.filter(x=>(x.tipoEnvio||"")===(w.tipoEnvio||"")).length} WR</td></tr>}
                 <tr>
                   <td><Num t="wr" id={w.id}/></td>
                   <td><div className="c-dt">{fmtDate(w.fecha)}</div></td>
@@ -5094,6 +5102,7 @@ export default function SistemaCarga(){
                   <td><span className="c-cas">{w.casillero}</span></td>
                   <td><CarBadge c={w.carrier}/></td>
                   <td><span className="c-trk">{w.tracking}</span></td>
+                  <td style={{textAlign:"center"}}>{w.cajas||0}</td>
                   <td><span className="c-val">{fmtMoney(w.valor,"USD")}</span></td>
                   <td><span className="c-wt">{fmtDec(w.pesoKg,2)}kg</span></td>
                   <td><StBadge st={w.status}/></td>
@@ -5106,7 +5115,7 @@ export default function SistemaCarga(){
         <div className="mft"><button className="btn-s" onClick={()=>setShowStatModal(null)}>Cerrar</button></div>
       </div>
     </div>
-  );
+  );};
 
   // ── ESTADO DE CUENTA ────────────────────────────────────────────────────────
 
@@ -6646,12 +6655,12 @@ export default function SistemaCarga(){
       logAction("Exportó a Excel",titulo);},
   });
   // Listado agrupado: una sección por grupo en la impresión; en Excel la columna del grupo va primero
-  const expTablaGrupos=(titulo,cols,filas,grupoDe,meta=[])=>{
+  const expTablaGrupos=(titulo,cols,filas,grupoDe,meta=[],horiz=null)=>{
     const grupos=new Map();filas.forEach(r=>{const g=grupoDe(r)||"Sin tipo de envío";if(!grupos.has(g))grupos.set(g,[]);grupos.get(g).push(r);});
     const celdas=r=>`<tr>${cols.map(c=>{const v=c.v(r);const t=c.f?c.f(v,r):(v instanceof Date?fmtDate(v):v);
       return `<td class="${[c.r?"r":c.c?"c":"",c.m?"mono":""].filter(Boolean).join(" ")}">${prnE(t??"")}</td>`;}).join("")}</tr>`;
     return {
-      imprimir:()=>prnVer(titulo,prnHTML({titulo,meta:[["Fecha",fmtDate(new Date())],["Registros",String(filas.length)],...[...grupos].map(([g,l])=>[g,String(l.length)]),...meta.filter(Boolean)],horizontal:cols.length>6,
+      imprimir:()=>prnVer(titulo,prnHTML({titulo,meta:[["Fecha",fmtDate(new Date())],["Registros",String(filas.length)],...[...grupos].map(([g,l])=>[g,String(l.length)]),...meta.filter(Boolean)],horizontal:horiz??cols.length>6,
         cuerpo:[...grupos].map(([g,l])=>pSec(`${prnE(g)} · ${l.length} WR`)+pTabla(cols.map(c=>({l:c.l,r:c.r,c:c.c})),l.map(celdas).join(""))).join("")})),
       excel:expTabla(titulo,[{l:"Grupo",v:r=>grupoDe(r)||"Sin tipo de envío"},...cols],[...grupos.values()].flat(),meta).excel,
     };
@@ -6663,7 +6672,7 @@ export default function SistemaCarga(){
     {l:"Ft³",v:w=>parseFloat(w.ft3)||0,f:v=>nm(v),r:1},{l:"Envío",v:w=>w.tipoEnvio||""},{l:"Pago",v:w=>w.tipoPago||""},{l:"Estado",v:w=>w.status?.label||""}];
   const colsWRConsolidar=(conGuia=false)=>[{l:"N° WR",v:w=>w.id,m:1},{l:"Fecha",v:w=>w.fecha?new Date(w.fecha):""},{l:"Consignatario",v:w=>w.consignee||""},
     {l:"Carrier",v:w=>w.carrier||""},{l:"Tracking",v:w=>[...new Set((w.dims||[]).map(d=>d.tracking).filter(Boolean))].join(", ")||w.tracking||"",m:1},
-    ...(conGuia?[{l:"Guía",v:w=>getNumGuia(w)||"",m:1}]:[]),{l:"Tipo de envío",v:w=>w.tipoEnvio||""}];
+    ...(conGuia?[{l:"Guía",v:w=>getNumGuia(w)||"",m:1}]:[]),{l:"Cajas",v:w=>parseInt(w.cajas)||0,c:1},{l:"Tipo de envío",v:w=>w.tipoEnvio||""}];
   const perteneceA=c=>{const ct=c.clienteTipo||"";const ofiUsr=c.tipo==="usuario"&&c.oficinaId?oficinas.find(o=>o.id===c.oficinaId):null;const aut=c.autonomoId?clients.find(x=>x.id===c.autonomoId):null;
     return ofiUsr?`${ofiUsr.codigo} — ${ofiUsr.nombre}`:c.tipo==="usuario"&&["A","B"].includes(c.rol)?"Todas las oficinas":c.tipo==="usuario"&&["E","E1"].includes(c.rol)?(agentes.find(a=>a.id===c.agenteId)?.nombre||"")
       :c.tipo==="usuario"?"":ct==="matriz"?(()=>{const o=oficinas.find(x=>x.id===c.oficinaId);return o?`${o.codigo} — ${o.nombre}`:"";})():ct==="agente"||ct==="vendedor_agente"?(agentes.find(a=>a.id===c.agenteId)?.nombre||"")
@@ -7251,7 +7260,7 @@ export default function SistemaCarga(){
         W("Reempaque","atendidoPor","Atendido por","txt",r=>r.atendidoPor||""),W("Reempaque","atendido","Fecha de atención","fecha",r=>r.atendido||null),W("Reempaque","motivo","Motivo de rechazo","txt",r=>r.motivo||"")],
         filas:()=>srList.filter(x=>!ext||(x.wrIds||[]).some(id=>visIds.has(id)))},
       ...(ext?{}:{
-      traslado:{l:"Traslados internos",ic:<Ico e="🚚"/>,fecha:"fecha",campos:[
+      traslado:{l:"Traslados",ic:<Ico e="🚚"/>,fecha:"fecha",campos:[
         W("Traslado","id","N° traslado","txt",r=>r.id),W("Traslado","fecha","Fecha","fecha",r=>r.fecha),W("Traslado","hora","Hora","txt",r=>fmtTime(r.fecha)),
         W("Traslado","estado","Estado","txt",r=>(TR_ESTADO[r.estado]||{l:r.estado}).l),
         W("Traslado","envia","Envía","txt",r=>trOfiNom(r.desde)),W("Traslado","recibe","Recibe","txt",r=>trOfiNom(r.hasta)),
@@ -11417,7 +11426,7 @@ export default function SistemaCarga(){
                 )}
               </div>
               <div className="card" style={{padding:0}}>
-                <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",fontFamily:"Arial,Helvetica,sans-serif",fontSize:16,fontWeight:700,color:"var(--navy)"}}><Ico e="👥" sp/>Quién debe cuánto<span style={{float:"right",display:"inline-flex",gap:6}}>{expBotones(expTabla("Quién debe cuánto",[{l:"Tipo",v:d=>(REC_TYPES.find(r=>r.k===d.tipo)||{l:d.tipo}).l},{l:"Receptor",v:d=>d.nombre},{l:"Casillero",v:d=>d.casillero||""},{l:"Moneda",v:d=>d.moneda},{l:"Facturas",v:d=>d.facturas,c:1},{l:"Total",v:d=>r2(d.total),f:(v,d)=>fmtMoney(v,d.moneda),r:1},{l:"Pagado",v:d=>r2(d.pagado),f:(v,d)=>fmtMoney(v,d.moneda),r:1},{l:"Saldo",v:d=>r2(d.saldo),f:(v,d)=>fmtMoney(v,d.moneda),r:1}],deudores),true,true)}</span></div>
+                <div style={{padding:"10px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--b1)",fontFamily:"Arial,Helvetica,sans-serif",fontSize:16,fontWeight:700,color:"var(--navy)"}}><Ico e="👥" sp/>Por cobrar por cliente<span style={{float:"right",display:"inline-flex",gap:6}}>{expBotones(expTabla("Por cobrar por cliente",[{l:"Tipo",v:d=>(REC_TYPES.find(r=>r.k===d.tipo)||{l:d.tipo}).l},{l:"Receptor",v:d=>d.nombre},{l:"Casillero",v:d=>d.casillero||""},{l:"Moneda",v:d=>d.moneda},{l:"Facturas",v:d=>d.facturas,c:1},{l:"Total",v:d=>r2(d.total),f:(v,d)=>fmtMoney(v,d.moneda),r:1},{l:"Pagado",v:d=>r2(d.pagado),f:(v,d)=>fmtMoney(v,d.moneda),r:1},{l:"Saldo",v:d=>r2(d.saldo),f:(v,d)=>fmtMoney(v,d.moneda),r:1}],deudores),true,true)}</span></div>
                 {deudores.length===0?<div style={{textAlign:"center",padding:30,color:"var(--t3)"}}>No hay deudores. <Ico e="✅"/></div>:(
                   <><div className="ct-scroll"><table className="ct">
                     <thead><tr><th>Tipo</th><th>Receptor</th><th>Mon</th><th>Facturas</th><th>Total</th><th>Pagado</th><th>Saldo</th></tr></thead>
@@ -14194,7 +14203,7 @@ export default function SistemaCarga(){
     return (
       <div className="page-scroll">
         <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,flexWrap:"wrap"}}>
-          <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:18,fontWeight:700,color:"var(--navy)",flex:1}}><Ico e="🚚" sp/>Traslados internos</div>
+          <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:18,fontWeight:700,color:"var(--navy)",flex:1}}><Ico e="🚚" sp/>Traslados</div>
           <div style={{display:"flex",gap:4,background:"var(--bg4)",borderRadius:7,padding:3,border:"1px solid var(--b1)"}}>
             {tabs.map(t=><button key={t.k} onClick={()=>{setTrVista(t.k);setTrGrupoSel(null);}} style={{padding:"5px 14px",borderRadius:5,border:"none",cursor:"pointer",fontSize:14,fontWeight:600,
               background:trVista===t.k?"var(--navy)":"transparent",color:trVista===t.k?"#fff":"var(--t2)"}}>{t.l}{t.n?` (${t.n})`:""}</button>)}
@@ -14515,7 +14524,7 @@ export default function SistemaCarga(){
     {label:"Administración",items:[
       {id:"facturacion",ic:<Ico e="🧾"/>,l:"Facturación",onClick:()=>{setTab("contabilidad");setContabTab("porguia");setFacGuiaSel(null);},activeWhen:()=>tab==="contabilidad"&&["porguia","facturas"].includes(contabTab)},
       {id:"entregasydespachos",ic:<Ico e="📝"/>,l:"Entregas y Despachos"},
-      {id:"traslados",ic:<Ico e="🚚"/>,l:"Traslados internos",badge:(()=>{const n=trVisibles.filter(t=>["en_camino","parcial"].includes(t.estado)&&trEnAlcance(t.hasta)).length;return n>0?String(n):null;})()},
+      {id:"traslados",ic:<Ico e="🚚"/>,l:"Traslados",badge:(()=>{const n=trVisibles.filter(t=>["en_camino","parcial"].includes(t.estado)&&trEnAlcance(t.hasta)).length;return n>0?String(n):null;})()},
       {id:"contabilidad",ic:<Ico e="💰"/>,l:"Contabilidad",onClick:()=>{setTab("contabilidad");setContabTab("cuentas");setCuadreSel(null);},activeWhen:()=>tab==="contabilidad"&&!["porguia","facturas"].includes(contabTab)},
       {id:"misfacturas",ic:<Ico e="🧾"/>,l:fpMiEmisor?"Mis facturas":"Facturas de agentes"},
     ]},
@@ -14552,7 +14561,7 @@ export default function SistemaCarga(){
   };
   const navVisible=n=>(n.id!=="misfacturas"||!["E","E1","F","G"].includes(currentUser.rol)||!!fpMiEmisor)&&(!NAV_PERMS[n.id]||NAV_PERMS[n.id].some(p=>hasPerm(p)));
 
-  const PAGE_TITLES={traslados:"Traslados internos",prealertas:"Pre-alertas",misfacturas:fpMiEmisor?"Mis facturas":"Facturas de agentes, autónomos y oficinas",dashboard:"Dashboard General",loadingmaster:"Loading Master",scan:"Recepción en Puerta",etiquetas:"Imprimir Etiquetas",clients:"Clientes & Usuarios",estadocuenta:"Estado de Cuenta",roles:"Roles & Permisos",consolidation:"Consolidación",tracking:"Tracking",pickup:"Pick-up",contabilidad:"Contabilidad",calculadora:"Calculadora de Envío",chat:"Chat Interno",docs:"Documentos",reports:"Reportes",alerts:"Alertas",settings:"Configuración",reempaque:"Reempaque",recepciondest:"Recepción en Almacén",cargorelease:"Cargo Release (Egreso)",entregas:"Notas de Entrega",entregasydespachos:"Entregas y Despachos",facturacion:"Facturación"};
+  const PAGE_TITLES={traslados:"Traslados",prealertas:"Pre-alertas",misfacturas:fpMiEmisor?"Mis facturas":"Facturas de agentes, autónomos y oficinas",dashboard:"Dashboard General",loadingmaster:"Loading Master",scan:"Recepción en Puerta",etiquetas:"Imprimir Etiquetas",clients:"Clientes & Usuarios",estadocuenta:"Estado de Cuenta",roles:"Roles & Permisos",consolidation:"Consolidación",tracking:"Tracking",pickup:"Pick-up",contabilidad:"Contabilidad",calculadora:"Calculadora de Envío",chat:"Chat Interno",docs:"Documentos",reports:"Reportes",alerts:"Alertas",settings:"Configuración",reempaque:"Reempaque",recepciondest:"Recepción en Almacén",cargorelease:"Cargo Release (Egreso)",entregas:"Notas de Entrega",entregasydespachos:"Entregas y Despachos",facturacion:"Facturación"};
 
   const renderPage=()=>{
     if(!navVisible({id:tab==="contabilidad"&&["porguia","facturas"].includes(contabTab)?"facturacion":tab}))return (
