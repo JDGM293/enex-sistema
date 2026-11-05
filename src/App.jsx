@@ -874,6 +874,7 @@ table.t.d1{font-size:10px}table.t.d1 th{font-size:8.5px;padding:4px 4px}table.t.
 table.t.d2{font-size:9px}table.t.d2 th{font-size:7.5px;padding:3px 3px;letter-spacing:0}table.t.d2 td{padding:3px 3px}
 table.t.d3{font-size:8px}table.t.d3 th{font-size:7px;padding:2px 2px;letter-spacing:0}table.t.d3 td{padding:2px 2px}
 table.t tbody tr:nth-child(even) td{background:#f7f9fc}
+table.t td.nw{white-space:nowrap;overflow-wrap:normal;word-break:normal}
 table.t thead{display:table-header-group}
 table.t tr{page-break-inside:avoid}
 .r,table.t th.r,table.t td.r{text-align:right}.c,table.t th.c,table.t td.c{text-align:center}.mono{font-family:'Courier New',monospace}
@@ -5081,7 +5082,7 @@ export default function SistemaCarga(){
             <button className="mcl" onClick={()=>setShowStatModal(null)}>✕</button>
           </div>
         </div>
-        {agr&&tiposSM.length>1&&<div className="tabs" style={{margin:"0 16px"}}>
+        {agr&&tiposSM.length>0&&<div className="tabs" style={{margin:"0 16px"}}>
           {[["","Todos",showStatModal.rows.length],...tiposSM.map(t=>[t,t,showStatModal.rows.filter(w=>(w.tipoEnvio||"Sin tipo de envío")===t).length])].map(([v,l,n])=>(
             <div key={v||"_"} className={`tab ${tSel===v?"on":""}`} onClick={()=>setShowStatModal({...showStatModal,tipo:v})}>{l}<span className="t-cnt">{n}</span></div>))}
         </div>}
@@ -6648,7 +6649,7 @@ export default function SistemaCarga(){
   const expTabla=(titulo,cols,filas,meta=[])=>({
     imprimir:()=>prnVer(titulo,prnHTML({titulo,meta:[["Fecha",fmtDate(new Date())],["Registros",String(filas.length)],...meta.filter(Boolean)],horizontal:cols.length>6,
       cuerpo:pTabla(cols.map(c=>({l:c.l,r:c.r,c:c.c})),filas.map(r=>`<tr>${cols.map(c=>{const v=c.v(r);const t=c.f?c.f(v,r):(v instanceof Date?fmtDate(v):v);
-        return `<td class="${[c.r?"r":c.c?"c":"",c.m?"mono":""].filter(Boolean).join(" ")}">${prnE(t??"")}</td>`;}).join("")}</tr>`).join(""))})),
+        return `<td class="${[c.r?"r":c.c?"c":"",c.m?"mono":"",(c.m||v instanceof Date)?"nw":""].filter(Boolean).join(" ")}">${prnE(t??"")}</td>`;}).join("")}</tr>`).join(""))})),
     excel:()=>{if(!hasPerm("exportar_excel")){window.alert("Tu rol no tiene permiso para exportar a Excel.");return;}
       descargarXlsx([cols.map(c=>c.l),...filas.map(r=>cols.map(c=>{const v=c.v(r);return v instanceof Date||typeof v==="number"?v:String(v??"");}))],
         `${titulo} ${hoyISO()}`.replace(/[\\/:*?"<>|]/g,"-"),titulo.slice(0,31));
@@ -6658,7 +6659,7 @@ export default function SistemaCarga(){
   const expTablaGrupos=(titulo,cols,filas,grupoDe,meta=[],horiz=null)=>{
     const grupos=new Map();filas.forEach(r=>{const g=grupoDe(r)||"Sin tipo de envío";if(!grupos.has(g))grupos.set(g,[]);grupos.get(g).push(r);});
     const celdas=r=>`<tr>${cols.map(c=>{const v=c.v(r);const t=c.f?c.f(v,r):(v instanceof Date?fmtDate(v):v);
-      return `<td class="${[c.r?"r":c.c?"c":"",c.m?"mono":""].filter(Boolean).join(" ")}">${prnE(t??"")}</td>`;}).join("")}</tr>`;
+      return `<td class="${[c.r?"r":c.c?"c":"",c.m?"mono":"",(c.m||v instanceof Date)?"nw":""].filter(Boolean).join(" ")}">${prnE(t??"")}</td>`;}).join("")}</tr>`;
     return {
       imprimir:()=>prnVer(titulo,prnHTML({titulo,meta:[["Fecha",fmtDate(new Date())],["Registros",String(filas.length)],...[...grupos].map(([g,l])=>[g,String(l.length)]),...meta.filter(Boolean)],horizontal:horiz??cols.length>6,
         cuerpo:[...grupos].map(([g,l])=>pSec(`${prnE(g)} · ${l.length} WR`)+pTabla(cols.map(c=>({l:c.l,r:c.r,c:c.c})),l.map(celdas).join(""))).join("")})),
