@@ -9505,7 +9505,7 @@ export default function SistemaCarga(){
     {k:"pago_agente",l:"Pago a agente",interno:true},
   ];
   const REC_TYPES=[
-    {k:"cliente",l:"Cliente (consignatario)"},
+    {k:"cliente",l:"Cliente"},
     {k:"agente",l:"Agente"},
     {k:"autonomo",l:"Autónomo"},
   ];
@@ -10161,7 +10161,7 @@ export default function SistemaCarga(){
   const comisionesEntrega=(pgs=pagos)=>{
     const acreditadas=new Set(pgs.filter(p=>!p.anulado&&p.tipoPago==="comision").map(p=>p.referencia));
     const quitadas=new Set(pgs.filter(p=>!p.anulado&&p.tipoPago==="comision_quitada").map(p=>p.referencia));
-    return wrList.filter(w=>["21","22","23","25"].includes(w.status?.code||"")&&w.sucursalEntrega).map(w=>{
+    return wrList.filter(w=>["21","22","23","25"].includes(w.status?.code||"")&&w.sucursalEntrega&&enMiAlcance(w.ofiDestino)).map(w=>{
       const o=oficinas.find(x=>x.id===w.sucursalEntrega);const monto=parseFloat(o?.com_entrega_monto)||0;
       if(!o||esMatriz(o)||monto<=0||!o.com_entrega_por)return null;
       const cant=o.com_entrega_por==="paquete"?(parseInt(w.cajas,10)||1):1;const ref=`${w.id}/ENT`;
@@ -10690,7 +10690,7 @@ export default function SistemaCarga(){
             const suma=c=>{const o={};rs.forEach(r=>Object.entries(r[c]).forEach(([m,v])=>{o[m]=(o[m]||0)+v;}));return o;};
             const h0=new Date();h0.setHours(0,0,0,0);
             const hoyE={};pagos.forEach(p=>{if(!p.anulado&&esDinero(p)&&p.monto>0&&new Date(p.fecha)>=h0){const m=p.moneda||"USD";hoyE[m]=(hoyE[m]||0)+p.monto;}});
-            const sinAcred=comisionesPrepaid().filter(x=>!x.acreditada&&x.comision>0&&(!kv||kv.has(pagKey(x.dom)))).length;
+            const sinAcred=[...comisionesPrepaid(),...comisionesEntrega()].filter(x=>!x.acreditada&&x.comision>0&&(!kv||kv.has(pagKey(x.dom)))).length;
             return [
               [<Ico e="💰"/>,"Nos deben",fmtMonyBoth(suma("debe")),"var(--orange)"],
               [<Ico e="⭐"/>,"Les debemos",fmtMonyBoth(suma("favor")),"var(--green)"],
@@ -10821,9 +10821,9 @@ export default function SistemaCarga(){
         {/* ── CUENTAS ── */}
         {contabTab==="cuentas"&&(()=>{
           const puede=hasPerm("registrar_pago")||hasPerm("cobrar");
-          const IC={cliente:<Ico e="👤"/>,agente:<Ico e="🤝"/>,autonomo:<Ico e="🧑‍💻"/>},TL={cliente:"Cliente",agente:"Agente",autonomo:"Autónomo"};
+          const IC={cliente:<Ico e="👤"/>,agente:<Ico e="🤝"/>,autonomo:<Ico e="🧑‍💻"/>,oficina:<Ico e="🏢"/>},TL={cliente:"Cliente",agente:"Agente",autonomo:"Autónomo",oficina:"Oficina"};
           const keysVis=alcanceUsr?new Set(facturas.map(f=>pagKey(pagadorDeFactura(f)))):null;
-          const coms=comisionesPrepaid();
+          const coms=[...comisionesPrepaid(),...comisionesEntrega()];
           const pendCom=k=>coms.filter(x=>!x.acreditada&&x.comision>0&&pagKey(x.dom)===k);
           const fm=o=>Object.entries(o||{}).filter(([,v])=>Math.abs(v)>0.004).map(([mn,v])=>fmtMoney(v,mn));
           const mono={fontFamily:"'DM Mono',monospace"};
@@ -10843,7 +10843,7 @@ export default function SistemaCarga(){
                   <input className="fi" style={{width:280,fontSize:14,padding:"6px 10px"}} placeholder="Buscar nombre o casillero…" value={ctaQ} onChange={e=>setCtaQ(e.target.value)}/>
                   {(()=>{const seg=(ops,val,set)=><div style={{display:"flex",gap:3,background:"var(--bg4)",borderRadius:7,padding:3,border:"1px solid var(--b1)"}}>
                       {ops.map(([k,l])=><button key={k||"t"} onClick={()=>set(k)} style={{padding:"4px 11px",borderRadius:5,border:"none",cursor:"pointer",fontSize:13,fontWeight:600,background:val===k?"var(--navy)":"transparent",color:val===k?"#fff":"var(--t2)"}}>{l}</button>)}</div>;
-                    return <>{seg([["","Todos"],["cliente","Clientes"],["agente","Agentes"],["autonomo","Autónomos"]],ctaFil,setCtaFil)}
+                    return <>{seg([["","Todos"],["cliente","Clientes"],["agente","Agentes"],["autonomo","Autónomos"],["oficina","Oficinas"]],ctaFil,setCtaFil)}
                       {seg([["con","Con saldo"],["sin","Sin saldo"],["todas","Con y sin saldo"]],ctaSoloSaldo,setCtaSoloSaldo)}</>;})()}
                   {puede&&<button className="btn-p" style={{fontSize:13,padding:"6px 12px",marginLeft:"auto"}} onClick={()=>cobroAbrir(null)}><Ico e="💵" sp/>Recibir pago</button>}
                 </div>
