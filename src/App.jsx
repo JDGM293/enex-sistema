@@ -1145,6 +1145,9 @@ const SESS_KEY="enex_sess";
 const SESS_HORAS=12;
 const sessRead=()=>{try{const o=JSON.parse(localStorage.getItem(SESS_KEY)||"null");return o&&o.id&&o.exp>Date.now()?o:null;}catch{return null;}};
 const sessSave=(id)=>{try{localStorage.setItem(SESS_KEY,JSON.stringify({id,exp:Date.now()+SESS_HORAS*3600*1000}));}catch{}};
+// Pantalla abierta: se conserva al recargar por cambio de matriz
+const VOLVER_KEY="enex_volver";
+const volverLeer=k=>{try{const o=JSON.parse(sessionStorage.getItem(VOLVER_KEY)||"null");return o?.[k]||null;}catch{return null;}};
 const sessClear=()=>{try{localStorage.removeItem(SESS_KEY);}catch{}};
 const SEND_TYPES_INIT=["Aéreo Express","Aéreo Económico","Marítimo FCL","Marítimo LCL","Terrestre"];
 const PAY_TYPES_INIT=["Prepago","Crédito","Contra Entrega","Corporativo","Gobierno"];
@@ -2540,7 +2543,7 @@ export default function SistemaCarga(){
   const [loginPass,setLoginPass]=useState("");
   const [loginErr,setLoginErr]=useState("");
 
-  const [tab,setTab]=useState("dashboard");
+  const [tab,setTab]=useState(()=>volverLeer("tab")||"dashboard");
   // Dashboard: tabla de WR ampliada (oculta stats y panel derecho). Reemplaza la
   // antigua pantalla "Warehouse Receipt", que era la misma tabla a pantalla completa.
   const [dashWide,setDashWide]=useState(false);
@@ -2730,7 +2733,7 @@ export default function SistemaCarga(){
   const [labelTipo,setLabelTipo]=useState("WR");
   const [openDays,setOpenDays]=useState({});
   const [actFilter,setActFilter]=useState("");
-  const [cfgTab,setCfgTab]=useState("numeracion");
+  const [cfgTab,setCfgTab]=useState(()=>volverLeer("cfgTab")||"numeracion");
   const [cfgSelPais,setCfgSelPais]=useState(0);
   // Datos por país: {_default:{empresa,exp,imp}, "VENEZUELA":{empresa,exp,imp}}
   //  empresa = datos de la empresa en ese país · exp = sale de ese país · imp = llega a ese país
@@ -2894,7 +2897,8 @@ export default function SistemaCarga(){
   const [pickupClientResults,setPickupClientResults]=useState([]);
   const CALC_FORM_EMPTY={orig:null,dest:null,tipoEnvio:"",para:null,paraQ:"",unitDim:"in",unitPeso:"lb",cajas:[{cantidad:1,largo:"",ancho:"",alto:"",peso:""}]};
   const [calcForm,setCalcForm]=useState(CALC_FORM_EMPTY);
-  const [contabTab,setContabTab]=useState("porguia");
+  const [contabTab,setContabTab]=useState(()=>volverLeer("contabTab")||"porguia");
+  useEffect(()=>{try{sessionStorage.removeItem(VOLVER_KEY);}catch{/* sin almacenamiento */}},[]);
   const [cuadreSel,setCuadreSel]=useState(null);   // cuenta abierta {tipo,id,nombre}
   const [ctaQ,setCtaQ]=useState("");
   const [ctaFil,setCtaFil]=useState("");           // "" | cliente | agente | autonomo
@@ -4429,10 +4433,7 @@ export default function SistemaCarga(){
         {/* N° WR AUTOMÁTICO */}
         <div className="wr-builder">
           <div style={{fontSize:12,fontWeight:700,letterSpacing:2,textTransform:"uppercase",color:"var(--navy)",marginBottom:8}}>
-            NÚMERO DE WR — GENERADO AUTOMÁTICAMENTE
-            <span style={{marginLeft:10,fontWeight:400,color:"var(--t3)",textTransform:"none",letterSpacing:0}}>
-              {wrNumTipo===1?"Tipo 1: Secuencia":wrNumTipo===2?"Tipo 2: Empresa + Oficinas + Secuencia":"Tipo 3: País + Ciudad + Secuencia"}
-            </span>
+            NÚMERO DE WR
           </div>
           <div className="wr-preview">
             {wrNumTipo===1&&(
@@ -4452,9 +4453,6 @@ export default function SistemaCarga(){
               <span className="seg sn">{seqPrev}</span>
             </>)}
           </div>
-          {wrNumTipo===1&&<div className="seg-leg"><span><Ico e="🟡" sp/>Secuencia</span></div>}
-          {wrNumTipo===2&&<div className="seg-leg"><span><Ico e="🟢" sp/>Empresa</span><span><Ico e="🔵" sp/>Oficina Origen</span><span><Ico e="🔵" sp/>Oficina Destino</span><span><Ico e="🟡" sp/>Secuencia</span></div>}
-          {(wrNumTipo===3||!wrNumTipo)&&<div className="seg-leg"><span><Ico e="🔵" sp/>País Origen</span><span><Ico e="🟢" sp/>Ciudad Origen</span><span><Ico e="🔵" sp/>País Destino</span><span><Ico e="🟢" sp/>Ciudad Destino</span><span><Ico e="🟡" sp/>Secuencia</span></div>}
           <div style={{display:"flex",gap:8,justifyContent:"center",fontSize:13,color:"var(--t2)",marginTop:4}}>
             {!editWR&&!currentUser?.oficinaId
               ?<span style={{display:"flex",alignItems:"center",gap:6}}><Ico e="🏢"/><b>Oficina origen *</b>
@@ -5061,7 +5059,7 @@ export default function SistemaCarga(){
         <div className="mhd">
           <div className="mt">{showStatModal.ic} {showStatModal.label} — {showStatModal.rows.length} registros</div>
           <div style={{display:"flex",gap:6}}>
-            <button className="btn-p" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>prnVer(showStatModal.label,htmlStatLista(showStatModal.label,showStatModal.rows))}><Ico e="🖨" sp/>Imprimir lista</button>
+            {expBotones(expTabla(showStatModal.label,colsWR(),showStatModal.rows),true,true)}
             <button className="mcl" onClick={()=>setShowStatModal(null)}>✕</button>
           </div>
         </div>
@@ -5558,7 +5556,7 @@ export default function SistemaCarga(){
                   //   · N° Guía · [Tipo Envío?]
                   const baseCols = [
                     "Estado","N° WR",
-                    ...(hideMiddle?[]:["N° Guía"]),
+                    ...(hideMiddle?[]:["N° Guía","Factura"]),
                     ...(ecGrupo?["Cliente"]:[]),
                     ...(showOrigen?["Origen"]:[]),
                     "Cajas","Peso lb","P.Vol lb","Ft³","M³",
@@ -5575,7 +5573,7 @@ export default function SistemaCarga(){
                   //   hasta antes del Valor (que mostramos en su propia celda).
                   //   Aquí no hay celdas que sumar entre M³ y Valor (Contenido es texto).
                   // - tailColspan cubre Recibido..N°Guía (+Tipo Envío), todas no-sumables.
-                  const firstColspan = 2 + (hideMiddle?0:1) + (ecGrupo?1:0) + (showOrigen?1:0);
+                  const firstColspan = 2 + (hideMiddle?0:2) + (ecGrupo?1:0) + (showOrigen?1:0);
                   const tailColspan  = 1 /*Recibido*/ + (hideMiddle?0:6 /*Confirmado..Cobrado*/) + (showTipoEnvio?1:0);
                 return (
                 <table style={{width:"100%",borderCollapse:"collapse",fontSize:12.5,whiteSpace:"nowrap"}}>
@@ -5611,6 +5609,11 @@ export default function SistemaCarga(){
                               return g
                                 ? <Num t="guia" id={g.id}/>
                                 : gid;})()}
+                          </td>
+                        )}
+                        {!hideMiddle&&(
+                          <td style={{padding:"7px 8px"}}>
+                            {(()=>{const fs=facEmpresaDeWRs([w.id]);return fs.length?<div style={{display:"flex",flexDirection:"column",gap:2}}>{fs.map(f=><Num key={f.id} t="factura" id={f.id}/>)}</div>:<span style={{color:"var(--t4)"}}>—</span>;})()}
                           </td>
                         )}
                         {/* Cliente — solo en estado de cuenta de agente / oficina / autónomo.
@@ -6615,6 +6618,27 @@ export default function SistemaCarga(){
 
   // Vista previa y salida a impresora
   const prnVer=(titulo,html)=>{if(html)setPrnVista({titulo,html});};
+  // Listados: imprimir (vista previa con el formato del sistema) y exportar a Excel, con las mismas columnas.
+  // cols: [{l:título, v:fila=>valor, f?:(valor,fila)=>texto impreso, r?:derecha, c?:centro, m?:mono}]
+  const expTabla=(titulo,cols,filas,meta=[])=>({
+    imprimir:()=>prnVer(titulo,prnHTML({titulo,meta:[["Fecha",fmtDate(new Date())],["Registros",String(filas.length)],...meta.filter(Boolean)],horizontal:cols.length>6,
+      cuerpo:pTabla(cols.map(c=>({l:c.l,r:c.r,c:c.c})),filas.map(r=>`<tr>${cols.map(c=>{const v=c.v(r);const t=c.f?c.f(v,r):(v instanceof Date?fmtDate(v):v);
+        return `<td class="${[c.r?"r":c.c?"c":"",c.m?"mono":""].filter(Boolean).join(" ")}">${prnE(t??"")}</td>`;}).join("")}</tr>`).join(""))})),
+    excel:()=>{if(!hasPerm("exportar_excel")){window.alert("Tu rol no tiene permiso para exportar a Excel.");return;}
+      descargarXlsx([cols.map(c=>c.l),...filas.map(r=>cols.map(c=>{const v=c.v(r);return v instanceof Date||typeof v==="number"?v:String(v??"");}))],
+        `${titulo} ${hoyISO()}`.replace(/[\\/:*?"<>|]/g,"-"),titulo.slice(0,31));
+      logAction("Exportó a Excel",titulo);},
+  });
+  const colsWR=()=>[{l:"N° WR",v:w=>w.id,m:1},{l:"Fecha",v:w=>w.fecha?new Date(w.fecha):""},{l:"Origen",v:w=>w.origCity||""},{l:"Destino",v:w=>w.destCity||""},
+    {l:"Consignatario",v:w=>w.consignee||""},{l:"Casillero",v:w=>w.casillero||""},{l:"Remitente",v:w=>w.shipper||""},{l:"Guía",v:w=>getNumGuia(w)||""},
+    {l:"Factura",v:w=>facEmpresaDeWRs([w.id]).map(f=>f.id).join(", ")},{l:"Carrier",v:w=>w.carrier||""},{l:"Tracking",v:w=>[...new Set((w.dims||[]).map(d=>d.tracking).filter(Boolean))].join(", ")||w.tracking||"",m:1},
+    {l:"Descripción",v:w=>cleanReempaqueDesc(w.descripcion)||""},{l:"Cajas",v:w=>w.cajas||0,c:1},{l:"Peso lb",v:w=>parseFloat(w.pesoLb)||0,f:v=>nm(v),r:1},
+    {l:"Vol. lb",v:w=>parseFloat(w.volLb)||0,f:v=>nm(v),r:1},{l:"Ft³",v:w=>parseFloat(w.ft3)||0,f:v=>nm(v),r:1},{l:"Valor USD",v:w=>parseFloat(w.valor)||0,f:v=>fmtMoney(v,"USD"),r:1},
+    {l:"Envío",v:w=>w.tipoEnvio||""},{l:"Pago",v:w=>w.tipoPago||""},{l:"Estado",v:w=>w.status?.label||""}];
+  const expBotones=(e,puedeImp=true,chico=false)=><>
+    {puedeImp&&<button className="btn-s" style={{fontSize:chico?12:13,padding:chico?"3px 10px":"5px 12px"}} onClick={e.imprimir}><Ico e="🖨️" sp/>Imprimir</button>}
+    {puedeImp&&hasPerm("exportar_excel")&&<button className="btn-s" style={{fontSize:chico?12:13,padding:chico?"3px 10px":"5px 12px"}} onClick={e.excel}><Ico e="📊" sp/>Excel</button>}
+  </>;
   const prnImprimir=html=>{
     if(!html)return;
     const f=document.createElement("iframe");
@@ -6689,9 +6713,17 @@ export default function SistemaCarga(){
         pBox("Contacto",prnE([grupo.email,grupo.tel].filter(Boolean).join(" · ")||"—"),`${grupo.nClientes} cliente${grupo.nClientes===1?"":"s"}`)])
       :pGrid(2,[pBox("Cliente",`<b>${prnE(fullName(cli))}</b>${cli.casillero?` · #${prnE(cli.casillero)}`:""}`,prnE([cli.municipio,cli.estado,cli.pais].filter(Boolean).join(", "))),
         pBox("Contacto",prnE([oc(cli.email,"mail"),oc(cli.tel1)].filter(Boolean).join(" · ")||"—"),b?prnE(`${b.nombre} (${b.tipo})`):"")]);
-    const filas=wrs.map(w=>{const c=grupo?grupo.cliDe(w):null;return `<tr><td>${prnE(w.status?.label||"—")}</td><td class="mono"><b>${prnE(w.id)}</b></td><td class="mono">${prnE(getNumGuia(w)||"—")}</td>${grupo?`<td>${prnE(c?fullName(c):(w.consignee||"—"))}<div class="sub">${prnE(c?.casillero||w.casillero||"")}</div></td>`:""}<td class="c">${w.cajas||0}</td><td class="r">${fmtDec(w.pesoLb,2)}</td><td class="r">${fmtDec(w.volLb,2,"—")}</td><td class="r">${fmtDec(w.ft3,2,"—")}</td><td>${prnE(w.tipoEnvio||"—")}</td><td>${prnE((cleanReempaqueDesc(w.descripcion)||"—").slice(0,60))}</td><td class="r">${fmtMoney(w.valor||0,"USD")}</td></tr>`;}).join("");
-    const totF=wrs.length?`<tr class="tot"><td colspan="${grupo?4:3}">Totales · ${wrs.length} WR</td><td class="c">${wrs.reduce((s,w)=>s+(w.cajas||0),0)}</td><td class="r">${fmtDec(totales.pesoLb,2)}</td><td class="r">${fmtDec(totales.volLb,2)}</td><td class="r">${fmtDec(totales.ft3,2)}</td><td colspan="2"></td><td class="r">${fmtMoney(totales.valor,"USD")}</td></tr>`:"";
-    const cuerpo=cab+pSec(`Envíos · ${prnE(tabLabel)}`)+pTabla([{l:"Estado"},{l:"N° WR"},{l:"Guía"},...(grupo?[{l:"Cliente"}]:[]),{l:"Cajas",c:1},{l:"Peso lb",r:1},{l:"Vol. lb",r:1},{l:"Ft³",r:1},{l:"Envío"},{l:"Descripción"},{l:"Valor",r:1}],filas,totF);
+    const reemp=filtros.tab==="reempacados";
+    const trk=w=>{const d=[...new Set((Array.isArray(w.dims)?w.dims:[]).map(x=>String(x?.tracking??"").trim()).filter(Boolean))];return d.length?d.join(", "):(w.tracking||"");};
+    const fecs=reemp?[["recibido","Recibido"]]:[["recibido","Recibido"],["confirmado","Confirmado"],["consolidado","Consolidado"],["enviado","Enviado"],["almacen_dest","Alm. destino"],["entregado","Entregado"],["cobrado","Cobrado"]];
+    const cols=[{l:"Estado"},{l:"N° WR"},...(reemp?[{l:"Origen"}]:[{l:"Guía"},{l:"Factura"}]),...(grupo?[{l:"Cliente"}]:[]),{l:"Cajas",c:1},{l:"Peso lb",r:1},{l:"Vol. lb",r:1},{l:"Ft³",r:1},{l:"M³",r:1},{l:"Tracking"},{l:"Contenido"},{l:"Valor",r:1},...fecs.map(([,t])=>({l:t})),...(reemp?[]:[{l:"Envío"}])];
+    const filas=wrs.map(w=>{const c=grupo?grupo.cliDe(w):null;
+      const origen=w.reempacadoEn||(Array.isArray(w.reempaqueDe)?w.reempaqueDe.join(", "):"")||"—";
+      const facs=facEmpresaDeWRs([w.id]).map(f=>f.id).join(", ")||"—";
+      return `<tr><td>${prnE(w.status?.label||"—")}</td><td class="mono"><b>${prnE(w.id)}</b></td>${reemp?`<td class="mono">${prnE(origen)}</td>`:`<td class="mono">${prnE(getNumGuia(w)||"—")}</td><td class="mono">${prnE(facs)}</td>`}${grupo?`<td>${prnE(c?fullName(c):(w.consignee||"—"))}<div class="sub">${prnE(c?.casillero||w.casillero||"")}</div></td>`:""}<td class="c">${w.cajas||0}</td><td class="r">${fmtDec(w.pesoLb,2)}</td><td class="r">${fmtDec(w.volLb,2)}</td><td class="r">${fmtDec(w.ft3,2)}</td><td class="r">${fmtDec(w.m3,3)}</td><td class="mono">${prnE(trk(w))}</td><td>${prnE(cleanReempaqueDesc(w.descripcion)||"—")}</td><td class="r">${fmtMoney(w.valor||0,"USD")}</td>${fecs.map(([k])=>`<td>${prnE(getStatusDate(w,k))}</td>`).join("")}${reemp?"":`<td>${prnE(w.tipoEnvio||"—")}</td>`}</tr>`;}).join("");
+    const pre=2+(reemp?1:2)+(grupo?1:0);
+    const totF=wrs.length?`<tr class="tot"><td colspan="${pre}">Totales · ${wrs.length} WR</td><td class="c">${wrs.reduce((s,w)=>s+(w.cajas||0),0)}</td><td class="r">${fmtDec(totales.pesoLb,2)}</td><td class="r">${fmtDec(totales.volLb,2)}</td><td class="r">${fmtDec(totales.ft3,2)}</td><td class="r">${fmtDec(totales.m3,3)}</td><td colspan="2"></td><td class="r">${fmtMoney(totales.valor,"USD")}</td><td colspan="${fecs.length+(reemp?0:1)}"></td></tr>`:"";
+    const cuerpo=cab+pSec(`Envíos · ${prnE(tabLabel)}`)+pTabla(cols,filas,totF);
     return prnHTML({titulo:"Estado de cuenta",meta:[["Fecha",fmtDate(new Date())],["Período",periodo],["Filtro",tabLabel]],cuerpo,horizontal:true});
   };
 
@@ -6770,10 +6802,6 @@ export default function SistemaCarga(){
     return prnHTML({titulo:"Solicitud de pick-up",numero:p.id,barcode:true,
       meta:[["Solicitado",`${fmtDate(p.fecha)} ${fmtTime(p.fecha)}`],["Por",p.solicitanteNombre],["Estado",(PU_ST[p.status]||PU_ST.solicitado).l],["WR",p.wrId]],cuerpo});
   };
-
-  const htmlStatLista=(titulo,rows)=>prnHTML({titulo,meta:[["Fecha",fmtDate(new Date())],["Registros",String(rows.length)]],horizontal:true,
-    cuerpo:pTabla([{l:"N° WR"},{l:"Fecha"},{l:"Consignatario"},{l:"Casillero"},{l:"Carrier"},{l:"Tracking"},{l:"Valor",r:1},{l:"Peso kg",r:1},{l:"Estado"},{l:"Envío"}],
-      rows.map(w=>`<tr><td class="mono"><b>${prnE(w.id)}</b></td><td>${fmtDate(w.fecha)}</td><td>${prnE(w.consignee||"")}</td><td>${prnE(w.casillero||"")}</td><td>${prnE(w.carrier||"")}</td><td class="mono">${prnE(w.tracking||"")}</td><td class="r">${fmtMoney(w.valor||0,"USD")}</td><td class="r">${fmtDec(w.pesoKg,2)}</td><td>${prnE(w.status?.label||"")}</td><td>${prnE(w.tipoEnvio||"")}</td></tr>`).join(""))});
 
   const htmlActividad=lista=>prnHTML({titulo:"Registro de actividad",meta:[["Fecha",fmtDate(new Date())],["Eventos",String(lista.length)]],horizontal:true,
     cuerpo:pTabla([{l:"Fecha / hora"},{l:"Usuario"},{l:"Rol"},{l:"Acción"},{l:"Detalle"}],
@@ -10682,7 +10710,7 @@ export default function SistemaCarga(){
                     {pagSlice("ctaMovs",vis).map((x,i)=>{const rid=x.pagos?.[0]?.reciboId;const comp=x.pagos?.find(p=>p.comprobanteUrl)?.comprobanteUrl;return(
                       <tr key={i}>
                         <td style={{...mono,fontSize:13,whiteSpace:"nowrap"}}>{fmtDate(x.fecha)}</td>
-                        <td style={{fontWeight:700,fontSize:13,whiteSpace:"nowrap"}}>{x.doc}{x.factura&&x.factura.status==="pagada"&&<span style={{marginLeft:6,fontSize:11,color:"var(--green)"}}>✓ pagada</span>}</td>
+                        <td style={{fontWeight:700,fontSize:13,whiteSpace:"nowrap"}}>{x.factura?<>{docNombre(x.factura)} <Num t="factura" id={x.factura.id}/></>:x.nc?<>Nota de crédito <Num t="factura" id={x.nc.id}/></>:x.pagos?.[0]?.reciboId&&x.doc.startsWith("Cobro")?<>Cobro <Num t="recibo" id={x.pagos[0].reciboId}/></>:x.doc}{x.factura&&x.factura.status==="pagada"&&<span style={{marginLeft:6,fontSize:11,color:"var(--green)"}}>✓ pagada</span>}</td>
                         <td style={{fontSize:12,color:"var(--t2)",maxWidth:320,whiteSpace:"normal"}}>{x.det}{x.usoFavor>0&&<div style={{color:"var(--green)"}}><Ico e="⭐" sp/>Usó {fmtMoney(x.usoFavor,mon)} de saldo a favor</div>}</td>
                         <td style={{...mono,textAlign:"right",fontWeight:700,color:"var(--orange)"}}>{x.debe?fmtMoney(x.debe,mon):""}</td>
                         <td style={{...mono,textAlign:"right",fontWeight:700,color:"var(--green)"}}>{x.haber?fmtMoney(x.haber,mon):""}</td>
@@ -14455,7 +14483,9 @@ export default function SistemaCarga(){
             return <select className="fs" title="Matriz de trabajo" value={currentUser.oficinaId||""} style={{width:"auto",maxWidth:260,fontSize:13,padding:"5px 8px",fontWeight:700,
               background:currentUser.oficinaId?"#FFF3E0":"var(--bg2)",borderColor:currentUser.oficinaId?"#E65100":"var(--b1)",color:currentUser.oficinaId?"#E65100":"var(--navy)"}}
               onChange={async e=>{const v=e.target.value;if(!(await dbSetMatrizTrabajo(v))){window.alert("No se pudo cambiar la matriz de trabajo.");return;}
-                logAction("Cambió matriz de trabajo",v?(oficinas.find(o=>o.id===v)?.codigo||v):"Todas");window.location.reload();}}>
+                logAction("Cambió matriz de trabajo",v?(oficinas.find(o=>o.id===v)?.codigo||v):"Todas");
+                try{sessionStorage.setItem(VOLVER_KEY,JSON.stringify({tab,cfgTab,contabTab}));}catch{/* sin almacenamiento */}
+                window.location.reload();}}>
               <option value="">Todas las matrices</option>{mats.map(m=><option key={m.id} value={m.id}>{m.codigo} — {m.nombre}{m.pais?` · ${m.pais}`:""}</option>)}</select>;})()}
           <div style={{position:"relative"}}>
             <button className="tb-sig" onClick={()=>setTbMenu(v=>!v)} title={`${fullName(currentUser)} · ${ROLE_DEFS[currentUser.rol]?.name||""}`}>{siglaUsuario(currentUser,clients,agentes,oficinas)}</button>
