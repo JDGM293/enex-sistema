@@ -868,8 +868,8 @@ table.pg{width:100%;border-collapse:collapse}table.pg>thead>tr>td,table.pg>tfoot
 .lst{display:grid;grid-template-columns:auto 1fr;gap:3px 14px;font-size:12px}
 .lst .k{color:#5a6b85;font-weight:700}
 table.t{width:100%;max-width:100%;border-collapse:collapse;margin-bottom:10px;font-size:11.5px;table-layout:auto}
-table.t th{background:#1A2B4A;color:#fff;padding:5px 7px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.3px;font-weight:700;overflow-wrap:anywhere;word-break:normal}
-table.t td{padding:5px 7px;border-bottom:1px solid #dde3ea;vertical-align:top;overflow-wrap:anywhere;word-break:break-word}
+table.t th{background:#1A2B4A;color:#fff;padding:5px 7px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.3px;font-weight:700;overflow-wrap:normal;word-break:keep-all;hyphens:none}
+table.t td{padding:5px 7px;border-bottom:1px solid #dde3ea;vertical-align:top;overflow-wrap:break-word;word-break:normal}
 table.t.d1{font-size:10px}table.t.d1 th{font-size:8.5px;padding:4px 4px}table.t.d1 td{padding:4px 4px}
 table.t.d2{font-size:9px}table.t.d2 th{font-size:7.5px;padding:3px 3px;letter-spacing:0}table.t.d2 td{padding:3px 3px}
 table.t.d3{font-size:8px}table.t.d3 th{font-size:7px;padding:2px 2px;letter-spacing:0}table.t.d3 td{padding:2px 2px}
@@ -6649,7 +6649,7 @@ export default function SistemaCarga(){
   const expTabla=(titulo,cols,filas,meta=[])=>({
     imprimir:()=>prnVer(titulo,prnHTML({titulo,meta:[["Fecha",fmtDate(new Date())],["Registros",String(filas.length)],...meta.filter(Boolean)],horizontal:cols.length>6,
       cuerpo:pTabla(cols.map(c=>({l:c.l,r:c.r,c:c.c})),filas.map(r=>`<tr>${cols.map(c=>{const v=c.v(r);const t=c.f?c.f(v,r):(v instanceof Date?fmtDate(v):v);
-        return `<td class="${[c.r?"r":c.c?"c":"",c.m?"mono":"",(c.m||v instanceof Date)?"nw":""].filter(Boolean).join(" ")}">${prnE(t??"")}</td>`;}).join("")}</tr>`).join(""))})),
+        return `<td class="${[c.r?"r":c.c?"c":"",c.m?"mono":"",(c.nw||v instanceof Date)?"nw":""].filter(Boolean).join(" ")}">${prnE(t??"")}</td>`;}).join("")}</tr>`).join(""))})),
     excel:()=>{if(!hasPerm("exportar_excel")){window.alert("Tu rol no tiene permiso para exportar a Excel.");return;}
       descargarXlsx([cols.map(c=>c.l),...filas.map(r=>cols.map(c=>{const v=c.v(r);return v instanceof Date||typeof v==="number"?v:String(v??"");}))],
         `${titulo} ${hoyISO()}`.replace(/[\\/:*?"<>|]/g,"-"),titulo.slice(0,31));
@@ -6659,19 +6659,19 @@ export default function SistemaCarga(){
   const expTablaGrupos=(titulo,cols,filas,grupoDe,meta=[],horiz=null)=>{
     const grupos=new Map();filas.forEach(r=>{const g=grupoDe(r)||"Sin tipo de envío";if(!grupos.has(g))grupos.set(g,[]);grupos.get(g).push(r);});
     const celdas=r=>`<tr>${cols.map(c=>{const v=c.v(r);const t=c.f?c.f(v,r):(v instanceof Date?fmtDate(v):v);
-      return `<td class="${[c.r?"r":c.c?"c":"",c.m?"mono":"",(c.m||v instanceof Date)?"nw":""].filter(Boolean).join(" ")}">${prnE(t??"")}</td>`;}).join("")}</tr>`;
+      return `<td class="${[c.r?"r":c.c?"c":"",c.m?"mono":"",(c.nw||v instanceof Date)?"nw":""].filter(Boolean).join(" ")}">${prnE(t??"")}</td>`;}).join("")}</tr>`;
     return {
       imprimir:()=>prnVer(titulo,prnHTML({titulo,meta:[["Fecha",fmtDate(new Date())],["Registros",String(filas.length)],...[...grupos].map(([g,l])=>[g,String(l.length)]),...meta.filter(Boolean)],horizontal:horiz??cols.length>6,
         cuerpo:[...grupos].map(([g,l])=>pSec(`${prnE(g)} · ${l.length} WR`)+pTabla(cols.map(c=>({l:c.l,r:c.r,c:c.c})),l.map(celdas).join(""))).join("")})),
       excel:expTabla(titulo,[{l:"Grupo",v:r=>grupoDe(r)||"Sin tipo de envío"},...cols],[...grupos.values()].flat(),meta).excel,
     };
   };
-  const colsWRCorto=()=>[{l:"N° WR",v:w=>w.id,m:1},{l:"Fecha",v:w=>w.fecha?new Date(w.fecha):""},{l:"Origen",v:w=>w.origCity||""},{l:"Destino",v:w=>w.destCity||""},
+  const colsWRCorto=()=>[{l:"N° WR",v:w=>w.id,m:1,nw:1},{l:"Fecha",v:w=>w.fecha?new Date(w.fecha):""},{l:"Origen",v:w=>w.origCity||""},{l:"Destino",v:w=>w.destCity||""},
     {l:"Consignatario",v:w=>w.consignee||""},{l:"Casillero",v:w=>w.casillero||""},{l:"Carrier",v:w=>w.carrier||""},
     {l:"Tracking",v:w=>[...new Set((w.dims||[]).map(d=>d.tracking).filter(Boolean))].join(", ")||w.tracking||"",m:1},
     {l:"Descripción",v:w=>cleanReempaqueDesc(w.descripcion)||""},{l:"Cajas",v:w=>w.cajas||0,c:1},{l:"Peso lb",v:w=>parseFloat(w.pesoLb)||0,f:v=>nm(v),r:1},
     {l:"Ft³",v:w=>parseFloat(w.ft3)||0,f:v=>nm(v),r:1},{l:"Envío",v:w=>w.tipoEnvio||""},{l:"Pago",v:w=>w.tipoPago||""},{l:"Estado",v:w=>w.status?.label||""}];
-  const colsWRConsolidar=(conGuia=false)=>[{l:"N° WR",v:w=>w.id,m:1},{l:"Fecha",v:w=>w.fecha?new Date(w.fecha):""},{l:"Consignatario",v:w=>w.consignee||""},
+  const colsWRConsolidar=(conGuia=false)=>[{l:"N° WR",v:w=>w.id,m:1,nw:1},{l:"Fecha",v:w=>w.fecha?new Date(w.fecha):""},{l:"Consignatario",v:w=>w.consignee||""},
     {l:"Carrier",v:w=>w.carrier||""},{l:"Tracking",v:w=>[...new Set((w.dims||[]).map(d=>d.tracking).filter(Boolean))].join(", ")||w.tracking||"",m:1},
     ...(conGuia?[{l:"Guía",v:w=>getNumGuia(w)||"",m:1}]:[]),{l:"Cajas",v:w=>parseInt(w.cajas)||0,c:1},{l:"Tipo de envío",v:w=>w.tipoEnvio||""}];
   const perteneceA=c=>{const ct=c.clienteTipo||"";const ofiUsr=c.tipo==="usuario"&&c.oficinaId?oficinas.find(o=>o.id===c.oficinaId):null;const aut=c.autonomoId?clients.find(x=>x.id===c.autonomoId):null;
