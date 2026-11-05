@@ -2672,7 +2672,7 @@ export default function SistemaCarga(){
   // Modal de Reempaque scopeado a un cliente (desde Estado de Cuenta)
   const [rpqCliModal,setRpqCliModal]=useState(null); // null | {cliente, selectedIds:[]}
   // Bloque F — Histórico de Reempaques (oculto por defecto + filtros)
-  const [rpqHistOpen,setRpqHistOpen]=useState(false);
+  const [rpqHistOpen,setRpqHistOpen]=useState(true);
   const [rpqHistCliente,setRpqHistCliente]=useState("");
   const [rpqHistDesde,setRpqHistDesde]=useState("");
   const [rpqHistHasta,setRpqHistHasta]=useState("");
@@ -2696,7 +2696,7 @@ export default function SistemaCarga(){
   const [crModal,setCrModal]=useState(null); // null | {wrIds:[], agenteCarga, contacto, documento, vehiculo, notas, editId?}
   // Multi-selección y filtros del módulo Cargo Release (estilo Reempaque)
   const [crSel,setCrSel]=useState([]); // ids de WR seleccionados para egreso múltiple
-  const [crHistOpen,setCrHistOpen]=useState(false);
+  const [crHistOpen,setCrHistOpen]=useState(true);
   const [crHistCliente,setCrHistCliente]=useState("");
   const [crHistDesde,setCrHistDesde]=useState("");
   const [crHistHasta,setCrHistHasta]=useState("");
@@ -11904,7 +11904,7 @@ export default function SistemaCarga(){
           </div>
         </div>
         {soloSolicita&&renderSolicitudesRpq(true)}
-        {/* Histórico de Reempaques — oculto por defecto, filtros por cliente y fecha */}
+        {/* Histórico de Reempaques — filtros por cliente y fecha */}
         <div className="card">
           <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:rpqHistOpen?10:0}}>
             <button
