@@ -13993,9 +13993,9 @@ export default function SistemaCarga(){
     const enviados=enCamino.filter(t=>!porRecibir.includes(t));
     const transp=t=>t.modo==="carrier"?`${t.carrier}${t.tracking?` · ${t.tracking}`:""}`:`${t.chofer}${t.vehiculo?` · ${t.vehiculo}`:""}`;
     const acciones=t=><div style={{display:"flex",gap:6,justifyContent:"flex-end",flexWrap:"wrap"}}>
-      {["en_camino","parcial"].includes(t.estado)&&trEnAlcance(t.hasta)&&hasPerm("recibir_traslado")&&<button className="btn-p" style={{fontSize:13,padding:"4px 10px"}} onClick={()=>trAbrirRecibir(t)}><Ico e="📥" sp/>Recibir</button>}
-      {hasPerm("imp_traslado")&&<button className="btn-s" style={{fontSize:13,padding:"4px 10px"}} onClick={()=>setTrPrint(t)}><Ico e="🖨️" sp/>Ver</button>}
-      {t.estado==="en_camino"&&hasPerm("anular_traslado")&&<button className="btn-s" style={{fontSize:13,padding:"4px 10px",color:"var(--red)"}} onClick={()=>trAnular(t)}>Anular</button>}
+      {["en_camino","parcial"].includes(t.estado)&&trEnAlcance(t.hasta)&&hasPerm("recibir_traslado")&&<button className="btn-p" style={{fontSize:12,padding:"3px 8px"}} onClick={()=>trAbrirRecibir(t)}><Ico e="📥" sp/>Recibir</button>}
+      {hasPerm("imp_traslado")&&<button className="btn-s" style={{fontSize:12,padding:"3px 8px"}} onClick={()=>setTrPrint(t)}><Ico e="🖨️" sp/>Ver</button>}
+      {t.estado==="en_camino"&&hasPerm("anular_traslado")&&<button className="btn-s" style={{fontSize:12,padding:"3px 8px",color:"var(--red)"}} onClick={()=>trAnular(t)}>Anular</button>}
     </div>;
     const tabla=(lista,key)=><><div className="ct-scroll"><table className="ct">
       <thead><tr><th>N° traslado</th><th>Fecha</th><th>Envía</th><th>Recibe</th><th style={{textAlign:"center"}}>WR</th><th>Transporte</th><th>Estado</th><th style={{textAlign:"right"}}>Acciones</th></tr></thead>
@@ -14010,16 +14010,17 @@ export default function SistemaCarga(){
     let cuerpo=null;
     if(trVista==="enviar")cuerpo=grupos.length===0
       ?<div className="card" style={{textAlign:"center",padding:50,color:"var(--t3)",fontSize:15}}>No hay carga pendiente de trasladar.</div>
-      :<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(420px,1fr))",gap:12}}>
-        {grupos.map(g=>{const cajas=g.wrs.reduce((s,w)=>s+(parseInt(w.cajas,10)||0),0),lb=g.wrs.reduce((s,w)=>s+(parseFloat(w.pesoLb)||0),0);
-          return <div key={g.k} className="card" style={{padding:14,borderLeft:`4px solid ${g.tipo==="origen"?"var(--navy)":"#E65100"}`}}>
-            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6,flexWrap:"wrap"}}>
-              <span style={{fontSize:11,fontWeight:700,letterSpacing:.4,padding:"2px 8px",borderRadius:8,background:g.tipo==="origen"?"#E3F2FD":"#FFF3E0",color:g.tipo==="origen"?"var(--navy)":"#E65100"}}>{g.tipo==="origen"?"ORIGEN · A MATRIZ":"DESTINO · A SUCURSAL"}</span>
-              <span style={{marginLeft:"auto",fontSize:13,color:"var(--t2)"}}><b>{g.wrs.length}</b> WR · <b>{cajas}</b> cajas · <b>{fmtDec(lb,2)}</b> lb</span>
+      :<div>{grupos.map(g=>{const cajas=g.wrs.reduce((s,w)=>s+(parseInt(w.cajas,10)||0),0),lb=g.wrs.reduce((s,w)=>s+(parseFloat(w.pesoLb)||0),0);const ori=g.tipo==="origen";
+          return <div key={g.k} className="card" style={{padding:0,marginBottom:12,overflow:"hidden",borderLeft:`4px solid ${ori?"var(--navy)":"#E65100"}`}}>
+            <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",background:"var(--bg3)",flexWrap:"wrap"}}>
+              <span style={{fontSize:20}}><Ico e="🏢"/></span>
+              <div>
+                <div style={{fontWeight:800,fontSize:16,color:"var(--navy)"}}>{trOfiNom(g.desde)} <span style={{color:"var(--t3)"}}>→</span> {trOfiNom(g.hasta)}</div>
+                <div style={{fontSize:12,color:"var(--t3)"}}>{ori?"Origen · a la matriz":"Destino · a la sucursal"} · {g.wrs.length} WR · {cajas} cajas · {fmtDec(lb,2)} lb</div>
+              </div>
+              {hasPerm("crear_traslado")&&<button className="btn-p" style={{fontSize:13,padding:"6px 12px",marginLeft:"auto"}} onClick={()=>trNuevo(g.desde,g.hasta,g.wrs.map(w=>w.id))}><Ico e="🚚" sp/>Crear traslado ({g.wrs.length})</button>}
             </div>
-            <div style={{fontSize:16,fontWeight:800,color:"var(--navy)",marginBottom:10}}>{trOfiNom(g.desde)} <span style={{color:"var(--t3)"}}>→</span> {trOfiNom(g.hasta)}</div>
-            <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:12,maxHeight:120,overflow:"auto"}}>{g.wrs.map(w=><Num key={w.id} t="wr" id={w.id}/>)}</div>
-            {hasPerm("crear_traslado")&&<button className="btn-p" onClick={()=>trNuevo(g.desde,g.hasta,g.wrs.map(w=>w.id))}><Ico e="🚚" sp/>Crear traslado ({g.wrs.length})</button>}
+            <div style={{display:"flex",gap:6,flexWrap:"wrap",padding:"10px 12px"}}>{g.wrs.map(w=><Num key={w.id} t="wr" id={w.id}/>)}</div>
           </div>;})}
       </div>;
     if(trVista==="camino")cuerpo=<>
