@@ -590,12 +590,12 @@ const ALL_PERMS=[
   // Límites de edición, facturación PREPAID en origen
   "editar_wr_destino","editar_guia_destino","fac_prepaid","cobrar_prepaid","ver_estado_contable","ver_estado_autonomo","ver_estado_vendedor","ver_datos_completos","alerta_investigar","exportar_excel","ver_cierre_caja","ver_comisiones","alerta_aparecio","alerta_sobrante","registrar_remitente","imp_estado_cuenta","imp_listado_clientes","editar_wr_lib3","editar_guia_lib3","dar_acceso","imp_release","imp_pickup","imp_recibo_cobro","cfg_agentes_ver","cfg_oficinas_ver","cfg_tarifas_ver",
   // Configuración: cada pestaña con su ver / editar
-  "cfg_empresa_ver","cfg_empresa_editar", "cfg_documentos_ver","cfg_documentos_editar", "cfg_numeracion_ver","cfg_numeracion_editar", "cfg_tipoenvio_ver","cfg_tipoenvio_editar", "cfg_servicios_ver","cfg_servicios_editar", "cfg_cargos_ver","cfg_cargos_editar", "cfg_pagos_ver","cfg_pagos_editar", "cfg_contenedores_ver","cfg_contenedores_editar", "cfg_paises_ver","cfg_paises_editar", "cfg_chat_ver","cfg_chat_editar",
+  "cfg_empresa_ver","cfg_empresa_editar", "cfg_documentos_ver","cfg_documentos_editar", "cfg_numeracion_ver","cfg_numeracion_editar", "cfg_tipoenvio_ver","cfg_tipoenvio_editar", "cfg_servicios_ver","cfg_servicios_editar", "cfg_cargos_ver","cfg_cargos_editar", "cfg_pagos_ver","cfg_pagos_editar","cfg_monedas_ver","cfg_monedas_editar", "cfg_contenedores_ver","cfg_contenedores_editar", "cfg_paises_ver","cfg_paises_editar", "cfg_chat_ver","cfg_chat_editar",
 ];
 // Solo el Administrador puede borrar y ver el registro de actividad; no se asignan a otros roles
 const PERMS_SOLO_ADMIN=new Set([...ALL_PERMS.filter(p=>p.startsWith("borrar_")),"registro_actividad"]);
 
-const PERM_LBL={ver_traslado:"Ver traslados",crear_traslado:"Crear traslados",recibir_traslado:"Recibir traslados",anular_traslado:"Anular traslados",imp_traslado:"Imprimir traslados",ver_estado_vendedor:"Estado de cuenta de vendedores",ver_estado_autonomo:"Estado de cuenta de autónomos",alerta_investigar:"Alertas: abrir investigación de faltantes",ver_datos_completos:"Ver datos personales completos (ID, teléfono, email)",exportar_excel:"Exportar reportes a Excel",ver_cierre_caja:"Contabilidad: ver Caja y cierre de caja",ver_comisiones:"Ver comisiones de agentes y autónomos",imp_estado_cuenta:"Impr. Estado de cuenta",imp_listado_clientes:"Imprimir / exportar listados de clientes, usuarios, agentes, autónomos y oficinas",alerta_sobrante:"Alertas: resolver sobrantes (entregar, devolver a origen, otra guía)",registrar_remitente:"Registrar al remitente (shipper) como cliente desde el WR",editar_wr_lib3:"Editar WR de Tránsito 2 hasta Liberado 3",editar_guia_lib3:"Editar guías de Tránsito 2 hasta Liberado 3",alerta_aparecio:"Alertas: marcar «Apareció»",ver_estado_contable:"Estado de cuenta: ver parte contable (facturas, pagos, saldo)",dar_acceso:"Dar acceso al sistema (contraseña)",imp_release:"Impr. Cargo Release",imp_pickup:"Impr. Pick-up",imp_recibo_cobro:"Impr. Recibo de cobro",cfg_agentes_ver:"Config · Agentes (ver)",cfg_oficinas_ver:"Config · Oficinas (ver)",cfg_tarifas_ver:"Config · Tarifas (ver)",editar_wr_destino:"Editar WR desde Liberado 3 hasta entregado",editar_guia_destino:"Editar guías desde Liberado 3",fac_prepaid:"Facturar PREPAID en origen (desde el WR)",cobrar_prepaid:"Cobrar facturas PREPAID",cfg_empresa_ver:"Config · Empresa (ver)",cfg_empresa_editar:"Config · Empresa (editar)",cfg_documentos_ver:"Config · Documentos por país (ver)",cfg_documentos_editar:"Config · Documentos por país (editar)",cfg_numeracion_ver:"Config · Numeración (ver)",cfg_numeracion_editar:"Config · Numeración (editar)",cfg_tipoenvio_ver:"Config · Tipo de Envío (ver)",cfg_tipoenvio_editar:"Config · Tipo de Envío (editar)",cfg_servicios_ver:"Config · Servicios Adicionales (ver)",cfg_servicios_editar:"Config · Servicios Adicionales (editar)",cfg_cargos_ver:"Config · Gastos Adicionales (ver)",cfg_cargos_editar:"Config · Gastos Adicionales (editar)",cfg_pagos_ver:"Config · Tipos de Pago (ver)",cfg_pagos_editar:"Config · Tipos de Pago (editar)",cfg_contenedores_ver:"Config · Tipos de Contenedor (ver)",cfg_contenedores_editar:"Config · Tipos de Contenedor (editar)",cfg_paises_ver:"Config · Países y Ciudades (ver)",cfg_paises_editar:"Config · Países y Ciudades (editar)",cfg_chat_ver:"Config · Canales de chat (ver)",cfg_chat_editar:"Config · Canales de chat (editar)",
+const PERM_LBL={ver_traslado:"Ver traslados",crear_traslado:"Crear traslados",recibir_traslado:"Recibir traslados",anular_traslado:"Anular traslados",imp_traslado:"Imprimir traslados",ver_estado_vendedor:"Estado de cuenta de vendedores",ver_estado_autonomo:"Estado de cuenta de autónomos",alerta_investigar:"Alertas: abrir investigación de faltantes",ver_datos_completos:"Ver datos personales completos (ID, teléfono, email)",exportar_excel:"Exportar reportes a Excel",ver_cierre_caja:"Contabilidad: ver Caja y cierre de caja",ver_comisiones:"Ver comisiones de agentes y autónomos",imp_estado_cuenta:"Impr. Estado de cuenta",imp_listado_clientes:"Imprimir / exportar listados de clientes, usuarios, agentes, autónomos y oficinas",alerta_sobrante:"Alertas: resolver sobrantes (entregar, devolver a origen, otra guía)",registrar_remitente:"Registrar al remitente (shipper) como cliente desde el WR",editar_wr_lib3:"Editar WR de Tránsito 2 hasta Liberado 3",editar_guia_lib3:"Editar guías de Tránsito 2 hasta Liberado 3",alerta_aparecio:"Alertas: marcar «Apareció»",ver_estado_contable:"Estado de cuenta: ver parte contable (facturas, pagos, saldo)",dar_acceso:"Dar acceso al sistema (contraseña)",imp_release:"Impr. Cargo Release",imp_pickup:"Impr. Pick-up",imp_recibo_cobro:"Impr. Recibo de cobro",cfg_agentes_ver:"Config · Agentes (ver)",cfg_oficinas_ver:"Config · Oficinas (ver)",cfg_tarifas_ver:"Config · Tarifas (ver)",editar_wr_destino:"Editar WR desde Liberado 3 hasta entregado",editar_guia_destino:"Editar guías desde Liberado 3",fac_prepaid:"Facturar PREPAID en origen (desde el WR)",cobrar_prepaid:"Cobrar facturas PREPAID",cfg_empresa_ver:"Config · Empresa (ver)",cfg_empresa_editar:"Config · Empresa (editar)",cfg_documentos_ver:"Config · Documentos por país (ver)",cfg_documentos_editar:"Config · Documentos por país (editar)",cfg_numeracion_ver:"Config · Numeración (ver)",cfg_numeracion_editar:"Config · Numeración (editar)",cfg_tipoenvio_ver:"Config · Tipo de Envío (ver)",cfg_tipoenvio_editar:"Config · Tipo de Envío (editar)",cfg_servicios_ver:"Config · Servicios Adicionales (ver)",cfg_servicios_editar:"Config · Servicios Adicionales (editar)",cfg_cargos_ver:"Config · Gastos Adicionales (ver)",cfg_cargos_editar:"Config · Gastos Adicionales (editar)",cfg_pagos_ver:"Config · Tipos de Pago (ver)",cfg_pagos_editar:"Config · Tipos de Pago (editar)",cfg_monedas_ver:"Config · Monedas y tasas (ver)",cfg_monedas_editar:"Config · Monedas y tasas (editar)",cfg_contenedores_ver:"Config · Tipos de Contenedor (ver)",cfg_contenedores_editar:"Config · Tipos de Contenedor (editar)",cfg_paises_ver:"Config · Países y Ciudades (ver)",cfg_paises_editar:"Config · Países y Ciudades (editar)",cfg_chat_ver:"Config · Canales de chat (ver)",cfg_chat_editar:"Config · Canales de chat (editar)",
   ver_usuarios:"Ver Usuarios",crear_usuario:"Crear Usuario",editar_usuario:"Editar Usuario",borrar_usuario:"Borrar Usuario",
   crear_cliente:"Crear Cliente",editar_cliente:"Editar Cliente",borrar_cliente:"Borrar Cliente",
   ver_agente:"Ver Agente",crear_agente:"Crear Agente",editar_agente:"Editar Agente",borrar_agente:"Borrar Agente",
@@ -673,6 +673,7 @@ const PERM_MODULES=[
   {m:"Configuración · Servicios Adicionales",ic:"⚙️",ver:"cfg_servicios_ver",editar:"cfg_servicios_editar"},
   {m:"Configuración · Gastos Adicionales",ic:"⚙️",ver:"cfg_cargos_ver",editar:"cfg_cargos_editar"},
   {m:"Configuración · Tipos de Pago",ic:"⚙️",ver:"cfg_pagos_ver",editar:"cfg_pagos_editar"},
+  {m:"Configuración · Monedas y tasas",ic:"⚙️",ver:"cfg_monedas_ver",editar:"cfg_monedas_editar"},
   {m:"Configuración · Tipos de Contenedor",ic:"⚙️",ver:"cfg_contenedores_ver",editar:"cfg_contenedores_editar"},
   {m:"Configuración · Países y Ciudades",ic:"⚙️",ver:"cfg_paises_ver",editar:"cfg_paises_editar"},
   {m:"Configuración · Canales de chat",ic:"⚙️",ver:"cfg_chat_ver",editar:"cfg_chat_editar"},
@@ -929,7 +930,7 @@ const ROLE_DEFS={
 
   C:{code:"C",name:"Auxiliar",color:"rC",icon:<Ico e="🗂️"/>,
     desc:"Apoyo operativo y administrativo: WR hasta su entrega, facturación y cobro, clientes, usuarios, agentes y oficinas.",
-    perms:["ver_estado_vendedor","alerta_sobrante","editar_wr_destino","ver_chat","enviar_chat","editar_mensaje","chat_directo","chat_adjuntar","ver_usuarios","crear_usuario","editar_usuario","crear_cliente","editar_cliente","ver_bd_clientes","ver_bd_usuarios","ver_agente","crear_agente","editar_agente","ver_autonomo","crear_autonomo","editar_autonomo","ver_oficina","crear_oficina","editar_oficina","ver_rp","ver_wr","editar_wr","status_origen","status_destino","ver_confirmacion","confirmar","desconfirmar","editar_confirmacion","ver_fotos","subir_foto","editar_foto","ver_booking","ver_reempaque","ver_guia","ver_recepcion_dest","ver_egreso","ver_entrega","entregar","editar_entrega","ver_alertas","crear_alerta","editar_alerta","ver_factura","facturar","crear_factura","editar_factura","registrar_cobro","registrar_pago","cobrar","editar_pago","ver_cuentas_cobrar","ver_reportes","rep_confirmados","rep_guia_op","rep_postal","rep_packing","rep_maestro","crear_reporte","editar_reporte","imp_wr","imp_guia","imp_etiq_caja","imp_etiq_guia","imp_rp","imp_booking","imp_reempaque","imp_lista_conf","imp_guia_op","imp_postal","imp_packing","imp_recibo_entrega","imp_factura","ver_estado_cuenta","ver_estado_cliente","ver_estado_agente","ver_estado_oficina","ver_prealerta","pre_tracking","pre_factura","editar_prealerta","ver_pickup","solicitar_pickup","editar_pickup","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","paquetes_sin_reclamo","configuracion","dar_acceso","imp_recibo_cobro","imp_release","imp_pickup","ver_estado_contable","editar_wr_lib3","registrar_remitente","imp_estado_cuenta","cfg_servicios_ver","cfg_servicios_editar","cfg_cargos_ver","cfg_cargos_editar","cfg_paises_ver","cfg_paises_editar","cfg_pagos_ver","cfg_pagos_editar","cfg_agentes_ver","cfg_oficinas_ver","exportar_excel","ver_cierre_caja","ver_estado_autonomo"]},
+    perms:["ver_estado_vendedor","alerta_sobrante","editar_wr_destino","ver_chat","enviar_chat","editar_mensaje","chat_directo","chat_adjuntar","ver_usuarios","crear_usuario","editar_usuario","crear_cliente","editar_cliente","ver_bd_clientes","ver_bd_usuarios","ver_agente","crear_agente","editar_agente","ver_autonomo","crear_autonomo","editar_autonomo","ver_oficina","crear_oficina","editar_oficina","ver_rp","ver_wr","editar_wr","status_origen","status_destino","ver_confirmacion","confirmar","desconfirmar","editar_confirmacion","ver_fotos","subir_foto","editar_foto","ver_booking","ver_reempaque","ver_guia","ver_recepcion_dest","ver_egreso","ver_entrega","entregar","editar_entrega","ver_alertas","crear_alerta","editar_alerta","ver_factura","facturar","crear_factura","editar_factura","registrar_cobro","registrar_pago","cobrar","editar_pago","ver_cuentas_cobrar","ver_reportes","rep_confirmados","rep_guia_op","rep_postal","rep_packing","rep_maestro","crear_reporte","editar_reporte","imp_wr","imp_guia","imp_etiq_caja","imp_etiq_guia","imp_rp","imp_booking","imp_reempaque","imp_lista_conf","imp_guia_op","imp_postal","imp_packing","imp_recibo_entrega","imp_factura","ver_estado_cuenta","ver_estado_cliente","ver_estado_agente","ver_estado_oficina","ver_prealerta","pre_tracking","pre_factura","editar_prealerta","ver_pickup","solicitar_pickup","editar_pickup","ver_servicios","sel_servicio","ver_adicionales","sel_adicional","calculadora","paquetes_sin_reclamo","configuracion","dar_acceso","imp_recibo_cobro","imp_release","imp_pickup","ver_estado_contable","editar_wr_lib3","registrar_remitente","imp_estado_cuenta","cfg_servicios_ver","cfg_servicios_editar","cfg_cargos_ver","cfg_cargos_editar","cfg_paises_ver","cfg_paises_editar","cfg_pagos_ver","cfg_pagos_editar","cfg_monedas_ver","cfg_monedas_editar","cfg_agentes_ver","cfg_oficinas_ver","exportar_excel","ver_cierre_caja","ver_estado_autonomo"]},
 
   D:{code:"D",name:"Jefe de Operaciones",color:"rD",icon:<Ico e="⚙️"/>,
     desc:"Supervisa y ejecuta operaciones completas — origen + destino.",
@@ -7015,6 +7016,13 @@ export default function SistemaCarga(){
       W("WR","cargos","Servicios / cargos","txt",r=>(r.w.cargos||[]).map(c=>typeof c==="string"?c:c?.concepto||c?.nombre).filter(Boolean).join(", ")),
       W("WR","usuario","Registrado por","txt",r=>nomUsr(r.w.usuario||r.w.historial?.[0]?.user)),W("WR","branch","Oficina que recibió","txt",r=>r.w.branch||""),
       W("WR","notas","Notas","txt",r=>r.w.notas||""),W("WR","reempaque","Reempacado en / de","txt",r=>r.w.reempacadoEn||(r.w.reempaqueDe||[]).join(", ")||""),
+      W("WR","prealerta","Con pre-alerta","txt",r=>siNo(r.w.prealerta)),W("WR","pickup","Pick-up","txt",r=>pickupList.find(p=>p.wrId===r.w.id)?.id||""),
+      W("Oficinas","ofiOrigen","Oficina de origen","txt",r=>{const o=oficinas.find(x=>x.id===r.w.ofiOrigen);return o?`${o.codigo} — ${o.nombre}`:"";}),
+      W("Oficinas","matrizOrigen","Matriz de salida","txt",r=>matrizDe(oficinas.find(x=>x.id===r.w.ofiOrigen))?.codigo||""),
+      W("Oficinas","matrizDestino","Matriz de destino","txt",r=>oficinas.find(x=>x.id===r.w.ofiDestino)?.codigo||""),
+      W("Oficinas","ofiActual","Dónde está","txt",r=>{const id=ubicacionWR(r.w);const o=oficinas.find(x=>x.id===id);return o?`${o.codigo} — ${o.nombre}`:(r.w.trasladoId?"En traslado":"En tránsito");}),
+      W("Oficinas","traslado","Traslado","txt",r=>trVisibles.filter(t=>(t.wrIds||[]).includes(r.w.id)).map(t=>t.id).join(", ")),
+      W("Oficinas","entrega","Nota de entrega / despacho","txt",r=>deliveryNotes.filter(n=>!n.anulado&&(n.wrIds||[]).includes(r.w.id)).map(n=>n.id).join(", ")),
       W("Destinatario","consignee","Consignatario","txt",r=>r.cli?fullName(r.cli):(r.w.consignee||"")),
       W("Destinatario","casillero","Casillero","txt",r=>r.cli?.casillero||r.w.casillero||""),
       W("Destinatario","idDest","ID destinatario","txt",r=>r.cli?.cedula||""),W("Destinatario","telDest","Teléfono destinatario","txt",r=>r.cli?.tel1||""),
@@ -7040,7 +7048,9 @@ export default function SistemaCarga(){
       ...(puedeFin?[W("Facturación","factura","N° factura","txt",r=>r.f?.id||""),
         W("Facturación","facturaEstado","Estado de la factura","txt",r=>r.f?(FAC_STATUS_LABEL[r.f.status]||r.f.status).replace(/^\S+\s/,""):"Sin factura"),
         W("Facturación","facturado","Facturado","money",r=>r.f?r2((r.f.total||0)/((r.f.wrIds||[]).length||1)):null,{cur:r=>r.f?.moneda||"USD"}),
-        W("Facturación","saldoWR","Pendiente de cobro","money",r=>r.f?r2((r.f.saldo||0)/((r.f.wrIds||[]).length||1)):null,{cur:r=>r.f?.moneda||"USD"})]:[]),
+        W("Facturación","saldoWR","Pendiente de cobro","money",r=>r.f?r2((r.f.saldo||0)/((r.f.wrIds||[]).length||1)):null,{cur:r=>r.f?.moneda||"USD"}),
+        W("Facturación","fleteWR","Flete del WR","money",r=>r.f?r2((r.f.lineas||[]).filter(l=>l.tipo==="flete"&&l.wrId===r.w.id).reduce((t,l)=>t+(parseFloat(l.total)||0),0)):null,{cur:r=>r.f?.moneda||"USD"}),
+        W("Facturación","adicWR","Servicios y gastos del WR","money",r=>r.f?r2((r.f.lineas||[]).filter(l=>l.tipo==="adicional"&&l.wrId===r.w.id).reduce((t,l)=>t+(parseFloat(l.total)||0),0)):null,{cur:r=>r.f?.moneda||"USD"})]:[]),
       W("Tiempos","diasEstado","Días en estado actual","dias",r=>repDias(r.ult?.fecha||r.w.fecha)),
       W("Tiempos","diasRecepcion","Días desde recepción","dias",r=>repDias(r.w.fecha)),
       W("Tiempos","fechaConsolidado","Fecha consolidado","fecha",r=>histPrimera(r.w,["4"])),
@@ -7078,6 +7088,7 @@ export default function SistemaCarga(){
         W("Contenido","contenedores","Contenedores","num",r=>(r.containers||[]).length),W("Contenido","totalWR","WR","num",r=>parseFloat(r.totalWR)||0),
         W("Contenido","totalCajas","Cajas","num",r=>parseFloat(r.totalCajas)||0),W("Contenido","totalLb","Peso lb","num",r=>r2(r.totalLb)),
         W("Contenido","totalVolLb","Peso vol. lb","num",r=>r2(r.totalVolLb)),W("Contenido","totalFt3","Ft³","num",r=>n3(r.totalFt3)),W("Contenido","totalM3","M³","num",r=>Math.round((parseFloat(r.totalM3)||0)*10000)/10000),
+        W("Guía","matrizOrigen","Matriz de salida","txt",r=>oficinas.find(o=>o.id===r.ofiOrigen)?.codigo||""),W("Guía","matrizDestino","Matriz de destino","txt",r=>oficinas.find(o=>o.id===r.ofiDestino)?.codigo||""),
         W("Guía","usuario","Creada por","txt",r=>nomUsr(r.usuario)),W("Guía","notas","Notas","txt",r=>r.notas||"")],
         filas:()=>ext?consolList.filter(g=>(g.containers||[]).some(ct=>(ct.wr||[]).some(x=>visIds.has(x.id)))):consolList},
       cliente:{l:"Clientes",ic:<Ico e="👤"/>,fecha:"",campos:[
@@ -7109,7 +7120,12 @@ export default function SistemaCarga(){
       oficina:{l:"Oficinas",ic:<Ico e="🏢"/>,fecha:"",campos:[
         W("Oficina","codigo","Código","txt",r=>r.codigo||""),W("Oficina","nombre","Nombre","txt",r=>r.nombre||""),W("Oficina","ciudad","Ciudad","txt",r=>r.ciudad||""),
         W("Oficina","pais","País","txt",r=>r.pais||""),W("Oficina","tel","Teléfono","txt",r=>r.tel||""),W("Oficina","email","Email","txt",r=>r.email||""),W("Oficina","contacto","Contacto","txt",r=>r.contacto||""),
-        W("Oficina","activo","Activa","txt",r=>siNo(r.activo!==false))],filas:()=>oficinas},
+        W("Oficina","tipo","Tipo","txt",r=>tipoOfi(r)),W("Oficina","matriz","Matriz","txt",r=>esMatriz(r)?"":(matrizDe(r)?.codigo||"")),W("Oficina","moneda","Moneda","txt",r=>r.moneda||""),
+        W("Oficina","puerta","Recibe en puerta","txt",r=>siNo(esMatriz(r)||r.recibe_puerta)),W("Oficina","comSalida","% comisión de salida","num",r=>parseFloat(r.com_prepaid_pct)||0),
+        W("Oficina","comEntrega","Comisión de entrega","num",r=>parseFloat(r.com_entrega_monto)||0),W("Oficina","comPor","Comisión de entrega por","txt",r=>r.com_entrega_por==="paquete"?"Paquete":r.com_entrega_por==="wr"?"WR":""),
+        W("Movimiento","nWR","WR recibidos","num",r=>wrList.filter(w=>w.ofiOrigen===r.id).length),
+        ...(puedeFin?[W("Dinero","favor","Le debemos","money",r=>mObj(favorDe({tipo:"oficina",id:r.id})))]:[]),
+        W("Oficina","activo","Activa","txt",r=>siNo(r.activo!==false))],filas:()=>oficinas.filter(o=>enMiAlcance(o.id))},
       }),
       ...(puedeFin?{
       factura:{l:"Facturas",ic:<Ico e="🧾"/>,fecha:"fechaEmision",campos:[
@@ -7123,6 +7139,14 @@ export default function SistemaCarga(){
         W("Envío","destino","Destino","txt",r=>{const w=wrList.find(x=>(r.wrIds||[]).includes(x.id));return w?ciudadNombre(w.destCity):"";}),
         W("Importes","moneda","Moneda","txt",r=>r.moneda||"USD"),W("Importes","subtotal","Subtotal","money",r=>r.subtotal,{cur:r=>r.moneda}),W("Importes","descuento","Descuento","money",r=>r.descuento||0,{cur:r=>r.moneda}),
         W("Importes","total","Total","money",r=>r.total,{cur:r=>r.moneda}),W("Importes","pagado","Pagado","money",r=>r.pagado,{cur:r=>r.moneda}),W("Importes","saldo","Saldo pendiente","money",r=>r.saldo,{cur:r=>r.moneda}),
+        W("Importes","flete","Flete","money",r=>r2((r.lineas||[]).filter(l=>l.tipo==="flete").reduce((t,l)=>t+(parseFloat(l.total)||0),0)),{cur:r=>r.moneda}),
+        W("Importes","adicionales","Servicios y gastos","money",r=>r2((r.lineas||[]).filter(l=>l.tipo==="adicional").reduce((t,l)=>t+(parseFloat(l.total)||0),0)),{cur:r=>r.moneda}),
+        W("Importes","minimo","Ajuste a mínimo","money",r=>r2((r.lineas||[]).filter(l=>l.tipo==="minimo").reduce((t,l)=>t+(parseFloat(l.total)||0),0)),{cur:r=>r.moneda}),
+        W("Importes","extras","Cobros extra","money",r=>r2((r.lineas||[]).filter(l=>(l.tipo||"extra")==="extra").reduce((t,l)=>t+(parseFloat(l.total)||0),0)),{cur:r=>r.moneda}),
+        W("Tarifa","tarifaUnidad","Tarifa por unidad","money",r=>parseFloat(r.tarifa?.porLb||r.tarifa?.porFt3)||0,{cur:r=>r.moneda}),W("Tarifa","tarifaRuta","Ruta de la tarifa","txt",r=>r.tarifa?.ruta||""),
+        W("Tarifa","tarifaEspecial","Tarifa especial","txt",r=>siNo(r.tarifa?.especial)),W("Tarifa","monedaTarifa","Moneda de la tarifa","txt",r=>r.tarifa?.monedaTarifa||r.moneda||""),
+        W("Tarifa","tasa","Tasa de cambio","num",r=>parseFloat(r.tarifa?.tasa)||null),
+        W("Factura","matriz","Matriz que emite","txt",r=>oficinas.find(o=>o.id===r.matrizId)?.codigo||""),
         W("Cobro","dias","Días desde emisión","dias",r=>repDias(r.fechaEmision||r.fecha)),
         W("Cobro","antiguedad","Antigüedad de la deuda","txt",r=>{if(!["emitida","pagada_parcial"].includes(r.status))return "Sin deuda";const d=repDias(r.fechaEmision||r.fecha)||0;return d<=30?"1. 0–30 días":d<=60?"2. 31–60 días":d<=90?"3. 61–90 días":"4. Más de 90 días";}),
         W("Factura","notas","Notas","txt",r=>r.notas||"")],filas:()=>facsVis.filter(f=>f.status!=="borrador")},
@@ -7140,16 +7164,28 @@ export default function SistemaCarga(){
         W("Movimiento","monto","Monto","money",r=>r.monto,{cur:r=>r.moneda}),W("Movimiento","moneda","Moneda","txt",r=>r.moneda||"USD"),
         W("Movimiento","referencia","Referencia","txt",r=>r.referencia||""),W("Movimiento","nota","Nota","txt",r=>r.notaReferencial||""),
         W("Movimiento","usuario","Registrado por","txt",r=>nomUsr(r.usuario)),W("Movimiento","anulado","Anulado","txt",r=>siNo(r.anulado)),
-        W("Pagador","pagadorTipo","Tipo de pagador","txt",r=>({cliente:"Cliente",agente:"Agente",autonomo:"Autónomo"})[(pagadorDePago(r)||{}).tipo]||"Cliente"),
-        W("Pagador","pagador","Pagador","txt",r=>(pagadorDePago(r)||{}).nombre||r.pagadorNombre||"")],
+        W("Pagador","pagadorTipo","Tipo de pagador","txt",r=>({cliente:"Cliente",agente:"Agente",autonomo:"Autónomo",oficina:"Oficina"})[(pagadorDePago(r)||{}).tipo]||"Cliente"),
+        W("Pagador","pagador","Pagador","txt",r=>(pagadorDePago(r)||{}).nombre||r.pagadorNombre||""),
+        W("Oficina","oficina","Oficina que cobró","txt",r=>{const o=oficinas.find(x=>x.id===r.oficinaId);return o?`${o.codigo} — ${o.nombre}`:"";}),W("Oficina","matriz","Matriz","txt",r=>oficinas.find(x=>x.id===r.matrizId)?.codigo||"")],
         filas:()=>ext?pagos.filter(p=>facVisIds.has(p.facturaId)):pagos},
-      ...(ext?{}:{comision:{l:"Comisiones de agentes",ic:<Ico e="🤝"/>,fecha:"fecha",campos:[
-        W("Comisión","fecha","Fecha de la factura","fecha",r=>r.f.fechaEmision||r.f.fecha),W("Comisión","cuenta","Agente / autónomo","txt",r=>r.dom.nombre),
-        W("Comisión","tipo","Tipo","txt",r=>r.dom.tipo==="agente"?"Agente":"Autónomo"),W("Comisión","wr","WR","txt",r=>r.w.id),W("Comisión","factura","Factura","txt",r=>r.f.id),
+      ...(ext?{}:{comision:{l:"Comisiones",ic:<Ico e="🤝"/>,fecha:"fecha",campos:[
+        W("Comisión","fecha","Fecha","fecha",r=>r.f?(r.f.fechaEmision||r.f.fecha):histPrimera(r.w,["21"])),W("Comisión","cuenta","A favor de","txt",r=>r.dom.nombre),
+        W("Comisión","tipo","Tipo de cuenta","txt",r=>({agente:"Agente",autonomo:"Autónomo",oficina:"Oficina"})[r.dom.tipo]||r.dom.tipo),
+        W("Comisión","clase","Clase","txt",r=>r.entrega?"Entrega":r.dom.tipo==="oficina"?"% de salida":"Diferencia de tarifa"),
+        W("Comisión","wr","WR","txt",r=>r.w.id),W("Comisión","factura","Factura","txt",r=>r.f?.id||""),
         W("Comisión","cliente","Cliente","txt",r=>{const c=cliDeWR(r.w);return c?fullName(c):r.w.consignee||"";}),
         W("Comisión","cobrado","Cobrado","money",r=>r.cobrado,{cur:r=>r.moneda}),W("Comisión","costo","Costo (su tarifa)","money",r=>r.costo,{cur:r=>r.moneda}),
-        W("Comisión","comision","Comisión","money",r=>r.comision,{cur:r=>r.moneda}),W("Comisión","estado","Estado","txt",r=>r.acreditada?"Acreditada":"Pendiente"),
-        W("Comisión","tarifa","Tarifa usada","txt",r=>r.tf?`${r.tf.id}${r.tf._especial?" (especial)":""}`:"Sin tarifa")],filas:()=>comisionesPrepaid()}}),
+        W("Comisión","comision","Comisión","money",r=>r.comision,{cur:r=>r.moneda}),W("Comisión","moneda","Moneda","txt",r=>r.moneda||"USD"),
+        W("Comisión","estado","Estado","txt",r=>r.acreditada?"Acreditada":"Pendiente"),
+        W("Comisión","nota","Nota de comisión","txt",r=>pagos.find(p=>!p.anulado&&p.tipoPago==="comision"&&p.referencia===r.ref)?.reciboId||""),
+        W("Comisión","tarifa","Tarifa usada","txt",r=>r.tf?`${r.tf.id}${r.tf._especial?" (especial)":""}`:"")],filas:()=>[...comisionesPrepaid(),...comisionesEntrega()]},
+      cuenta:{l:"Cuentas (saldos)",ic:<Ico e="💰"/>,fecha:"",campos:[
+        W("Cuenta","cuenta","Cuenta","txt",r=>r.pg.nombre||""),W("Cuenta","tipo","Tipo","txt",r=>({cliente:"Cliente",agente:"Agente",autonomo:"Autónomo",oficina:"Oficina"})[r.pg.tipo]||"Cliente"),
+        W("Cuenta","casillero","Casillero","txt",r=>r.pg.casillero||""),W("Cuenta","moneda","Moneda","txt",r=>r.mon),
+        W("Saldo","debe","Nos debe","money",r=>r2(r.debe[r.mon]||0),{cur:r=>r.mon}),W("Saldo","favor","Le debemos","money",r=>r2(r.favor[r.mon]||0),{cur:r=>r.mon}),
+        W("Saldo","neto","Saldo neto","money",r=>r2((r.debe[r.mon]||0)-(r.favor[r.mon]||0)),{cur:r=>r.mon}),
+        W("Saldo","facturasAbiertas","Facturas abiertas","num",r=>facAbiertasDe(r.pg).filter(f=>(f.moneda||"USD")===r.mon).length)],
+        filas:()=>resumenCuentas(true).flatMap(r=>[...new Set([...Object.keys(r.debe),...Object.keys(r.favor)])].map(mon=>({...r,mon})))}}),
       }:{}),
       entrega:{l:"Entregas y despachos",ic:<Ico e="📝"/>,fecha:"fecha",campos:[
         W("Nota","id","N° nota","txt",r=>r.id),W("Nota","fecha","Fecha","fecha",r=>r.fecha),W("Nota","tipo","Tipo","txt",r=>r.tipo==="despacho"?"Despacho":"Entrega"),
@@ -7174,6 +7210,21 @@ export default function SistemaCarga(){
         W("Pick-up","bultos","Bultos","num",r=>puBultos(r)),W("Pick-up","pesoAprox","Peso aprox. lb","num",r=>puTot(r).lb),
         ...(ext?[]:[W("Pick-up","cargo","Cargo","money",r=>r.monto||0,{cur:r=>r.moneda||"USD"})]),W("Pick-up","wr","WR","txt",r=>r.wrId||"")],
         filas:()=>pickupList.filter(p=>!ext||p.solicitanteId===currentUser.id||alcanceUsr.clienteOk(clients.find(c=>c.id===p.clienteId)))},
+      prealerta:{l:"Pre-alertas",ic:<Ico e="🔔"/>,fecha:"creado",campos:[
+        W("Pre-alerta","id","N°","txt",r=>r.id),W("Pre-alerta","creado","Fecha","fecha",r=>r.creado),W("Pre-alerta","estado","Estado","txt",r=>(PA_ST[r.status]||{l:r.status}).l),
+        W("Pre-alerta","cliente","Cliente","txt",r=>r.cliente?.nombre||""),W("Pre-alerta","casillero","Casillero","txt",r=>r.cliente?.casillero||""),
+        W("Pre-alerta","tracking","Tracking","txt",r=>r.tracking||""),W("Pre-alerta","carrier","Carrier","txt",r=>r.carrier||""),W("Pre-alerta","tienda","Tienda","txt",r=>r.tienda||""),
+        W("Pre-alerta","descripcion","Contenido","txt",r=>r.descripcion||""),W("Pre-alerta","valor","Valor de la compra","money",r=>parseFloat(r.valor)||0,{cur:r=>r.moneda||"USD"}),
+        W("Pre-alerta","wr","WR","txt",r=>r.wrId||""),W("Pre-alerta","recibida","Recibida","fecha",r=>r.recibida||null),
+        W("Pre-alerta","creadoPor","Creada por","txt",r=>r.creadoPorNombre||nomUsr(r.creadoPor)),W("Pre-alerta","matriz","Matriz","txt",r=>oficinas.find(o=>o.id===r.matrizId)?.codigo||"")],
+        filas:()=>paList.filter(p=>!ext||p.creadoPor===currentUser.id||alcanceUsr.clienteOk(clients.find(c=>c.id===p.clienteId)))},
+      reempaque:{l:"Reempaques",ic:<Ico e="📦"/>,fecha:"fecha",campos:[
+        W("Reempaque","id","N° solicitud","txt",r=>r.id),W("Reempaque","fecha","Fecha","fecha",r=>r.fecha),W("Reempaque","estado","Estado","txt",r=>(SR_ST[r.status]||{l:r.status}).l),
+        W("Reempaque","cliente","Cliente","txt",r=>r.cliente?.nombre||""),W("Reempaque","casillero","Casillero","txt",r=>r.cliente?.casillero||""),
+        W("Reempaque","wrs","WR originales","txt",r=>(r.wrIds||[]).join(", ")),W("Reempaque","nWR","Cantidad de WR","num",r=>(r.wrIds||[]).length),
+        W("Reempaque","resultado","WR resultante","txt",r=>r.wrResultado||""),W("Reempaque","solicitadoPor","Solicitado por","txt",r=>r.solicitadoPorNombre||nomUsr(r.solicitadoPor)),
+        W("Reempaque","atendidoPor","Atendido por","txt",r=>r.atendidoPor||""),W("Reempaque","atendido","Fecha de atención","fecha",r=>r.atendido||null),W("Reempaque","motivo","Motivo de rechazo","txt",r=>r.motivo||"")],
+        filas:()=>srList.filter(x=>!ext||(x.wrIds||[]).some(id=>visIds.has(id)))},
       ...(ext?{}:{
       traslado:{l:"Traslados entre oficinas",ic:<Ico e="🚚"/>,fecha:"fecha",campos:[
         W("Traslado","id","N° traslado","txt",r=>r.id),W("Traslado","fecha","Fecha","fecha",r=>r.fecha),W("Traslado","hora","Hora","txt",r=>fmtTime(r.fecha)),
@@ -7209,6 +7260,7 @@ export default function SistemaCarga(){
     void R2;
     if(!hasPerm("imp_listado_clientes")){delete F.cliente;delete F.usuario;delete F.agente;delete F.oficina;}
     if(!hasPerm("ver_comisiones"))delete F.comision;if(!hasPerm("ver_traslado"))delete F.traslado;
+    if(!hasPerm("ver_prealerta"))delete F.prealerta;if(!hasPerm("ver_reempaque"))delete F.reempaque;if(!puedeFin)delete F.cuenta;
     return F;
   };
   // Reportes de ejemplo (el usuario los puede editar o borrar)
@@ -7834,8 +7886,8 @@ export default function SistemaCarga(){
       ...(hasPerm("registro_actividad")?[{k:"actividad",l:"Registro de Actividad",ic:<Ico e="📋"/>}]:[]),
     ];
 
-    const cfgVer=k=>({actividad:"registro_actividad",monedas:"cfg_pagos_ver"})[k]||`cfg_${k}_ver`;
-    const cfgEdita=k=>["agentes","oficinas","tarifas","actividad"].includes(k)||hasPerm(k==="monedas"?"cfg_pagos_editar":`cfg_${k}_editar`);
+    const cfgVer=k=>({actividad:"registro_actividad"})[k]||`cfg_${k}_ver`;
+    const cfgEdita=k=>["agentes","oficinas","tarifas","actividad"].includes(k)||hasPerm(`cfg_${k}_editar`);
     const TABS_OK=hasPerm("configuracion")?CFG_TABS.filter(t=>hasPerm(cfgVer(t.k))):[];
     const tabMenu=porMenu[cfgTab]&&hasPerm(porMenu[cfgTab]);
     if(!TABS_OK.length&&!tabMenu)return <div className="page-scroll"><div className="card" style={{textAlign:"center",padding:60,color:"var(--t3)"}}>Sin acceso.</div></div>;
