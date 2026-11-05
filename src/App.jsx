@@ -4652,7 +4652,7 @@ export default function SistemaCarga(){
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:10}}>
                   <div className="fg"><div className="fl">Proveedor</div><input className="fi" value={caja.proveedor} onChange={e=>swCaja(idx,"proveedor",e.target.value.toUpperCase())} style={{textTransform:"uppercase",fontWeight:600}}/></div>
                   <div className="fg"><div className="fl">N° Factura</div><input className="fi" value={caja.numFactura} onChange={e=>swCaja(idx,"numFactura",e.target.value.toUpperCase())}/></div>
-                  <div className="fg"><div className="fl">Monto ($)</div><input className="fi" type="number" value={caja.montoFactura} onChange={e=>swCaja(idx,"montoFactura",e.target.value)}/></div>
+                  <div className="fg"><div className="fl">Valor declarado (USD)</div><input className="fi" type="number" value={caja.montoFactura} onChange={e=>swCaja(idx,"montoFactura",e.target.value)}/></div>
                 </div>
 
                 {/* Dims + Peso + calcs */}
@@ -7494,7 +7494,7 @@ export default function SistemaCarga(){
     const c=clients.find(x=>x.id===pa.clienteId);
     setWrf({...emptyWRF(""),consignee:c?fullName(c):pa.cliente.nombre,casillero:c?.casillero||pa.cliente.casillero||"",casilleroSearch:c?.casillero||pa.cliente.casillero||"",
       clienteId:c?.id||"",sucursalEntrega:c?.oficinaId||"",notas:`PRE-ALERTA ${pa.id}`,prealertaId:pa.id,
-      cajas:[{...emptyCaja(),carrier:carrier&&carrier!=="—"?carrier:pa.carrier,tracking:pa.tracking,descripcion:pa.descripcion,proveedor:pa.tienda,montoFactura:pa.valor===""?"":String(pa.valor)}]});
+      cajas:[{...emptyCaja(),carrier:carrier&&carrier!=="—"?carrier:pa.carrier,tracking:pa.tracking,descripcion:pa.descripcion,proveedor:pa.tienda,montoFactura:pa.valor===""?"":String(Math.round((convertir(pa.valor,pa.moneda||"USD","USD")??(parseFloat(pa.valor)||0))*100)/100)}]});
     setClientSearch(c?fullName(c):pa.cliente.nombre);setEditWR(null);setShowNewWR(true);
   };
   const paArchivos=(pa,chico)=>(pa?.archivos||[]).map(a=><PaArchivo key={a.path} a={a} chico={chico}/>);
@@ -9873,14 +9873,14 @@ export default function SistemaCarga(){
     if(!it||!wrs.length)return 0;const modo=it.modo||"fijo_wr";if(modo==="variable")return 0;
     const n=v=>parseFloat(v)||0;
     const uno=w=>{
-      const mOrig=matrizDe(oficinas.find(o=>o.id===w.ofiOrigen));const P=catPrecios(it,mOrig);const monO=mOrig?.moneda||"USD";
+      const mOrig=matrizDe(oficinas.find(o=>o.id===w.ofiOrigen));const P=catPrecios(it,mOrig);
       if(it.aplica&&it.aplica!=="todos"&&w.tipoEnvio&&sinAcentos(w.tipoEnvio)!==sinAcentos(it.aplica))return 0;
       let v=0;
       if(modo==="fijo_wr"||modo==="fijo_doc")v=n(P.valor);
       else if(modo==="caja")v=n(P.valor)*(parseInt(w.cajas,10)||1);
       else if(modo==="peso")v=n(P.valor)*Math.max(n(w.pesoLb),tipoPorPeso(w.tipoEnvio)?n(w.volLb):0);
       else if(modo==="volumen")v=n(P.valor)*n(w.ft3);
-      else if(modo==="pct_valor"){const dec=convertir(n(w.valor),monO,P.mon)??0;
+      else if(modo==="pct_valor"){const dec=convertir(n(w.valor),"USD",P.mon)??0; // el valor declarado del WR siempre está en USD
         const tr=(P.tramos||[]).filter(t=>t&&String(t.valor??"").trim()!=="").sort((a,b)=>(n(a.hasta)||Infinity)-(n(b.hasta)||Infinity));
         if(tr.length){const t=tr.find(t=>!n(t.hasta)||dec<=n(t.hasta));v=t?(t.tipo==="pct"?dec*n(t.valor)/100:n(t.valor)):0;}else v=dec*n(P.valor)/100;}
       else if(modo==="pct_flete"){const f=n(fletes[w.id]);const pct=f*n(P.valor)/100;
