@@ -2109,27 +2109,98 @@ const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomo
 
 
 // Lista de conceptos con precio (servicios / gastos adicionales)
-const PriceListEditor=({title,items,onSave,placeholder})=>{
-  const [nombre,setNombre]=useState("");
-  const [precio,setPrecio]=useState("");
-  const add=()=>{const n=nombre.trim().toUpperCase();if(!n)return;if(items.some(i=>i.nombre===n)){window.alert("Ya existe.");return;}onSave([...items,{nombre:n,precio:parseFloat(precio)||0}]);setNombre("");setPrecio("");};
+// ─── SERVICIOS Y GASTOS ADICIONALES: forma de cobro, tramos y precio por matriz ───
+const CAT_MODOS=[["fijo_wr","Monto fijo por WR"],["fijo_doc","Monto fijo por factura"],["caja","Por caja"],["peso","Por lb facturable"],["volumen","Por ft³"],["pct_valor","% del valor declarado"],["pct_flete","% del flete"],["variable","Monto variable"]];
+const CAT_MODO_LBL=Object.fromEntries(CAT_MODOS);
+const CAT_PCT=m=>m==="pct_valor"||m==="pct_flete";
+const catVacio=()=>({nombre:"",modo:"",valor:"",min:"",max:"",tramos:[],aplica:"todos",cuando:"opcional",precios:{}});
+const ConceptosEditor=({title,items,onSave,matrices,edita})=>{
+  const [ed,setEd]=useState(null); // {idx|null, it}
+  const n=v=>String(v??"").trim()===""?"":v;
+  const num=v=>String(v??"").trim()===""?"":parseFloat(v);
+  const valTxt=(it,mon="USD")=>it.modo==="variable"?"—":(it.modo==="pct_valor"&&(it.tramos||[]).length)?`${(it.tramos||[]).length} tramos`:CAT_PCT(it.modo)?`${it.valor??0}%`:`${mon} ${it.valor??it.precio??0}`;
+  const guardar=()=>{
+    const it=ed.it;const nom=String(it.nombre||"").trim().toUpperCase();
+    if(!nom){window.alert("Escribe el nombre del concepto.");return;}
+    if(!it.modo){window.alert("Elige la forma de cobro.");return;}
+    if(items.some((x,i)=>x.nombre===nom&&i!==ed.idx)){window.alert("Ya existe un concepto con ese nombre.");return;}
+    const limpiaTr=tr=>(tr||[]).filter(t=>String(t.valor??"").trim()!=="").map(t=>({hasta:num(t.hasta),tipo:t.tipo||"pct",valor:num(t.valor)}));
+    const precios={};Object.entries(it.precios||{}).forEach(([k,p])=>{const q={valor:num(p.valor),min:num(p.min),max:num(p.max),tramos:limpiaTr(p.tramos)};
+      if(q.valor!==""||q.min!==""||q.max!==""||q.tramos.length)precios[k]=q;});
+    const limpio={nombre:nom,modo:it.modo,valor:it.modo==="variable"?0:num(it.valor),min:num(it.min),max:num(it.max),tramos:it.modo==="pct_valor"?limpiaTr(it.tramos):[],
+      aplica:it.aplica||"todos",cuando:it.cuando||"opcional",precios};
+    limpio.precio=CAT_PCT(limpio.modo)||limpio.modo==="variable"?0:(parseFloat(limpio.valor)||0);
+    onSave(ed.idx===null?[...items,limpio]:items.map((x,i)=>i===ed.idx?limpio:x));setEd(null);
+  };
+  const tramosEd=(tr,set)=>(<div>
+    {(tr||[]).map((t,i)=>(<div key={i} style={{display:"flex",gap:6,alignItems:"center",marginBottom:6}}>
+      <span style={{fontSize:13,color:"var(--t2)",width:70}}>Hasta</span>
+      <input className="fi" type="number" step="0.01" style={{width:110}} value={t.hasta??""} onChange={e=>set(tr.map((x,j)=>j===i?{...x,hasta:e.target.value}:x))}/>
+      <select className="fs" style={{width:110}} value={t.tipo||"pct"} onChange={e=>set(tr.map((x,j)=>j===i?{...x,tipo:e.target.value}:x))}><option value="pct">%</option><option value="fijo">Monto fijo</option></select>
+      <input className="fi" type="number" step="0.01" style={{width:110}} value={t.valor??""} onChange={e=>set(tr.map((x,j)=>j===i?{...x,valor:e.target.value}:x))}/>
+      <button className="btn-d" style={{fontSize:12,padding:"2px 8px"}} onClick={()=>set(tr.filter((_,j)=>j!==i))}>✕</button>
+    </div>))}
+    <button className="btn-s" style={{fontSize:12,padding:"3px 10px"}} onClick={()=>set([...(tr||[]),{hasta:"",tipo:"pct",valor:""}])}>+ Tramo</button>
+  </div>);
+  const it=ed?.it;const setIt=x=>setEd(e=>({...e,it:{...e.it,...x}}));
   return (
     <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,padding:"14px 16px",marginBottom:14}}>
-      <div style={{fontSize:15,fontWeight:700,color:"var(--navy)",marginBottom:10}}>{title}</div>
-      <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap"}}>
-        <input className="fi" style={{flex:2,minWidth:200}} value={nombre} onChange={e=>setNombre(e.target.value.toUpperCase())} placeholder={placeholder} onKeyDown={e=>e.key==="Enter"&&add()}/>
-        <input className="fi" type="number" step="0.01" style={{width:120}} value={precio} onChange={e=>setPrecio(e.target.value)} placeholder="Precio USD" onKeyDown={e=>e.key==="Enter"&&add()}/>
-        <button className="btn-p" onClick={add}>+ Agregar</button>
+      <div style={{display:"flex",alignItems:"center",marginBottom:10}}>
+        <div style={{fontSize:15,fontWeight:700,color:"var(--navy)"}}>{title}</div>
+        {edita&&<button className="btn-p" style={{marginLeft:"auto"}} onClick={()=>setEd({idx:null,it:catVacio()})}>+ Agregar</button>}
       </div>
       {items.length===0?<div style={{color:"var(--t3)",fontSize:14}}>Sin conceptos.</div>:
-        <div className="ct-scroll"><table className="ct"><thead><tr><th>Concepto</th><th style={{width:140,textAlign:"right"}}>Precio USD</th><th style={{width:50}}></th></tr></thead>
-          <tbody>{items.map((it,i)=>(
-            <tr key={it.nombre}>
-              <td style={{fontWeight:600}}>{it.nombre}</td>
-              <td style={{textAlign:"right"}}><input className="fi" type="number" step="0.01" style={{width:110,textAlign:"right",fontFamily:"'DM Mono',monospace"}} defaultValue={it.precio}
-                onBlur={e=>{const v=parseFloat(e.target.value)||0;if(v!==it.precio)onSave(items.map((x,j)=>j===i?{...x,precio:v}:x));}}/></td>
-              <td><button className="btn-d" style={{fontSize:12,padding:"2px 8px"}} onClick={()=>{if(window.confirm(`¿Quitar ${it.nombre}?`))onSave(items.filter((_,j)=>j!==i));}}>✕</button></td>
+        <div className="ct-scroll"><table className="ct"><thead><tr><th>Concepto</th><th>Forma de cobro</th><th style={{textAlign:"right"}}>Base</th><th style={{textAlign:"right"}}>Mín.</th><th style={{textAlign:"right"}}>Máx.</th><th>Envío</th><th>Se agrega</th><th>Precios por matriz</th><th style={{width:90}}></th></tr></thead>
+          <tbody>{items.map((x,i)=>(
+            <tr key={x.nombre}>
+              <td style={{fontWeight:700}}>{x.nombre}</td>
+              <td>{CAT_MODO_LBL[x.modo||"fijo_wr"]}</td>
+              <td style={{textAlign:"right",fontFamily:"'DM Mono',monospace"}}>{valTxt(x)}</td>
+              <td style={{textAlign:"right",fontFamily:"'DM Mono',monospace"}}>{n(x.min)!==""?`USD ${x.min}`:"—"}</td>
+              <td style={{textAlign:"right",fontFamily:"'DM Mono',monospace"}}>{n(x.max)!==""?`USD ${x.max}`:"—"}</td>
+              <td>{x.aplica&&x.aplica!=="todos"?x.aplica:"Todos"}</td>
+              <td>{x.cuando==="auto"?"Siempre":"Al marcarlo"}</td>
+              <td style={{fontSize:13}}>{Object.keys(x.precios||{}).map(k=>matrices.find(m=>m.id===k)?.codigo).filter(Boolean).join(", ")||"—"}</td>
+              <td style={{whiteSpace:"nowrap"}}>{edita&&<><button className="btn-s" style={{fontSize:12,padding:"2px 8px",marginRight:4}} onClick={()=>setEd({idx:i,it:JSON.parse(JSON.stringify({...catVacio(),...x}))})}><Ico e="✏️" solo/></button>
+                <button className="btn-d" style={{fontSize:12,padding:"2px 8px"}} onClick={()=>{if(window.confirm(`¿Quitar ${x.nombre}?`))onSave(items.filter((_,j)=>j!==i));}}>✕</button></>}</td>
             </tr>))}</tbody></table></div>}
+      {ed&&(
+        <div className="ov">
+          <div className="modal mlg" onClick={e=>e.stopPropagation()}>
+            <div className="mhd"><div className="mt">{ed.idx===null?"Nuevo concepto":it.nombre}</div><button className="mcl" onClick={()=>setEd(null)}>✕</button></div>
+            <div className="fgrid">
+              <div className="fg"><div className="fl">Nombre *</div><input className="fi" value={it.nombre} onChange={e=>setIt({nombre:e.target.value.toUpperCase()})}/></div>
+              <div className="fg"><div className="fl">Forma de cobro *</div><select className="fs" value={it.modo} onChange={e=>setIt({modo:e.target.value})}>
+                <option value="">—</option>{CAT_MODOS.map(([k,l])=><option key={k} value={k}>{l}</option>)}</select></div>
+              <div className="fg"><div className="fl">Tipo de envío</div><select className="fs" value={it.aplica||"todos"} onChange={e=>setIt({aplica:e.target.value})}>
+                <option value="todos">Todos</option><option value="AEREO">AEREO</option><option value="MARITIMO">MARITIMO</option></select></div>
+              <div className="fg"><div className="fl">Se agrega</div><select className="fs" value={it.cuando||"opcional"} onChange={e=>setIt({cuando:e.target.value})}>
+                <option value="opcional">Al marcarlo en el WR o la factura</option><option value="auto">Siempre</option></select></div>
+            </div>
+            {it.modo&&it.modo!=="variable"&&(<>
+              <div className="sdiv">PRECIO BASE (USD)</div>
+              <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+                {!(it.modo==="pct_valor"&&(it.tramos||[]).length)&&<div className="fg"><div className="fl">{CAT_PCT(it.modo)?"Porcentaje":"Monto USD"}</div><input className="fi" type="number" step="0.01" style={{width:140}} value={it.valor??""} onChange={e=>setIt({valor:e.target.value})}/></div>}
+                <div className="fg"><div className="fl">Mínimo USD</div><input className="fi" type="number" step="0.01" style={{width:140}} value={it.min??""} onChange={e=>setIt({min:e.target.value})}/></div>
+                <div className="fg"><div className="fl">Máximo USD</div><input className="fi" type="number" step="0.01" style={{width:140}} value={it.max??""} onChange={e=>setIt({max:e.target.value})}/></div>
+              </div>
+              {it.modo==="pct_valor"&&<div style={{marginTop:8}}><div className="fl">Tramos por valor declarado (USD)</div>{tramosEd(it.tramos,v=>setIt({tramos:v}))}</div>}
+              <div className="sdiv" style={{marginTop:14}}>PRECIO POR MATRIZ DE SALIDA</div>
+              <div className="ct-scroll"><table className="ct"><thead><tr><th>Matriz</th><th>Moneda</th>{!(it.modo==="pct_valor")&&<th>{CAT_PCT(it.modo)?"%":"Monto"}</th>}<th>Mínimo</th><th>Máximo</th>{it.modo==="pct_valor"&&<th>{"% o tramos"}</th>}</tr></thead>
+                <tbody>{matrices.map(m=>{const p=(it.precios||{})[m.id]||{};const setP=x=>setIt({precios:{...(it.precios||{}),[m.id]:{...p,...x}}});
+                  const inp=(k,w=110)=><input className="fi" type="number" step="0.01" style={{width:w}} value={p[k]??""} onChange={e=>setP({[k]:e.target.value})}/>;
+                  return (<tr key={m.id} style={{verticalAlign:"top"}}>
+                    <td style={{fontWeight:700,whiteSpace:"nowrap"}}>{m.codigo} — {m.nombre}</td><td>{m.moneda||"USD"}</td>
+                    {!(it.modo==="pct_valor")&&<td>{inp("valor")}</td>}<td>{inp("min")}</td><td>{inp("max")}</td>
+                    {it.modo==="pct_valor"&&<td>{(p.tramos||[]).length?null:<div style={{marginBottom:6}}>{inp("valor")}</div>}{tramosEd(p.tramos,v=>setP({tramos:v}))}</td>}
+                  </tr>);})}</tbody></table></div>
+            </>)}
+            <div className="mft">
+              <button className="btn-s" onClick={()=>setEd(null)}>Cancelar</button>
+              <button className="btn-p" onClick={guardar}><Ico e="💾" sp/>Guardar</button>
+            </div>
+          </div>
+        </div>)}
     </div>
   );
 };
@@ -2969,7 +3040,7 @@ export default function SistemaCarga(){
       if(payT&&payT.length>0)setPayTypes(payT);
       if(chargesT&&chargesT.length>0)setChargesOpt(chargesT);
       {const [sv,gs]=await Promise.all([dbGetConfig('servicios_cat'),dbGetConfig('gastos_cat')]);
-       const norm=a=>Array.isArray(a)?a.map(x=>typeof x==="string"?{nombre:x,precio:0}:{nombre:String(x.nombre||""),precio:parseFloat(x.precio)||0}).filter(x=>x.nombre):[];
+       const norm=a=>Array.isArray(a)?a.map(x=>typeof x==="string"?{nombre:x,precio:0,modo:"fijo_wr",valor:0}:{...x,nombre:String(x.nombre||""),precio:parseFloat(x.precio)||0,modo:x.modo||"fijo_wr",valor:x.valor??(parseFloat(x.precio)||0)}).filter(x=>x.nombre):[];
        setServiciosCat(norm(sv));
        setGastosCat(Array.isArray(gs)?norm(gs):norm(chargesT));
        {const tc=await dbGetConfig('tasas_cambio');if(tc&&typeof tc==="object")setTasas({...tc,USD:1});}
@@ -4683,7 +4754,7 @@ export default function SistemaCarga(){
                 <div className="fl">{g.t}</div>
                 <div style={{display:"flex",flexWrap:"wrap",gap:5,marginTop:4}}>
                   {g.l.length===0&&<span style={{fontSize:12,color:"var(--t3)"}}>—</span>}
-                  {g.l.map(({nombre:c,precio})=><button key={c} className={`btn-${wrf.cargos.includes(c)?"p":"s"}`} style={{fontSize:12,padding:"4px 9px"}} onClick={()=>sw("cargos",wrf.cargos.includes(c)?wrf.cargos.filter(x=>x!==c):[...wrf.cargos,c])}>{c} <span style={{opacity:.7}}>{(()=>{const mn=matrizDe(oficinas.find(o=>o.id===currentUser.oficinaId))?.moneda||"USD";return fmtMoney(precioCat(precio,mn),mn);})()}</span></button>)}
+                  {g.l.map(({nombre:c})=><button key={c} className={`btn-${wrf.cargos.includes(c)?"p":"s"}`} style={{fontSize:12,padding:"4px 9px"}} onClick={()=>sw("cargos",wrf.cargos.includes(c)?wrf.cargos.filter(x=>x!==c):[...wrf.cargos,c])}>{c}</button>)}
                 </div>
               </div>
             ))}
@@ -7928,13 +7999,15 @@ export default function SistemaCarga(){
 
         {/* ── SERVICIOS ADICIONALES ── */}
         {cfgTab==="servicios"&&(
-          <PriceListEditor title="Servicios Adicionales" items={SERVICIOS_CAT}
+          <ConceptosEditor title="Servicios Adicionales" items={SERVICIOS_CAT} edita={cfgEdita("servicios")}
+            matrices={oficinas.filter(o=>esMatriz(o)&&ofiActiva(o)).sort((a,b)=>String(a.codigo).localeCompare(String(b.codigo)))}
             onSave={n=>{setServiciosCat(n);dbSetConfig('servicios_cat',n);}}/>
         )}
 
         {/* ── GASTOS ADICIONALES ── */}
         {cfgTab==="cargos"&&(
-          <PriceListEditor title="Gastos Adicionales" items={GASTOS_CAT}
+          <ConceptosEditor title="Gastos Adicionales" items={GASTOS_CAT} edita={cfgEdita("cargos")}
+            matrices={oficinas.filter(o=>esMatriz(o)&&ofiActiva(o)).sort((a,b)=>String(a.codigo).localeCompare(String(b.codigo)))}
             onSave={n=>{setGastosCat(n);dbSetConfig('gastos_cat',n);}}/>
         )}
 
@@ -9790,10 +9863,37 @@ export default function SistemaCarga(){
   };
   // Precio de un servicio o gasto adicional del catálogo
   const precioCat=(usd,mon)=>Math.round((convertir(usd,"USD",mon)??0)*100)/100;
-  const adicionalDeCatalogo=(nombre,mon="USD")=>{
-    const s=SERVICIOS_CAT.find(x=>x.nombre===nombre);if(s)return {tipo:"Servicio",precio:precioCat(s.precio,mon)};
-    const g=GASTOS_CAT.find(x=>x.nombre===nombre);if(g)return {tipo:"Gasto",precio:precioCat(g.precio,mon)};
-    return null;
+  // Servicios y gastos adicionales: cada concepto tiene su forma de cobro y su precio por matriz de salida (o el base en USD)
+  const catItem=nombre=>{const a=SERVICIOS_CAT.find(x=>x.nombre===nombre);if(a)return {...a,g:"Servicio"};const b=GASTOS_CAT.find(x=>x.nombre===nombre);return b?{...b,g:"Gasto"}:null;};
+  const catPrecios=(it,mOrig)=>{const p=mOrig&&it?.precios?.[mOrig.id];
+    const tiene=p&&(String(p.valor??"").trim()!==""||(p.tramos||[]).length>0);
+    return tiene?{...p,mon:mOrig.moneda||"USD"}:{valor:it?.valor??it?.precio,min:it?.min,max:it?.max,tramos:it?.tramos,mon:"USD"};};
+  // Monto de un concepto en la moneda "mon" para un grupo de WR. fletes: {wrId: flete del WR en "mon"}
+  const catMonto=(it,wrs,mon,fletes={})=>{
+    if(!it||!wrs.length)return 0;const modo=it.modo||"fijo_wr";if(modo==="variable")return 0;
+    const n=v=>parseFloat(v)||0;
+    const uno=w=>{
+      const mOrig=matrizDe(oficinas.find(o=>o.id===w.ofiOrigen));const P=catPrecios(it,mOrig);const monO=mOrig?.moneda||"USD";
+      if(it.aplica&&it.aplica!=="todos"&&w.tipoEnvio&&sinAcentos(w.tipoEnvio)!==sinAcentos(it.aplica))return 0;
+      let v=0;
+      if(modo==="fijo_wr"||modo==="fijo_doc")v=n(P.valor);
+      else if(modo==="caja")v=n(P.valor)*(parseInt(w.cajas,10)||1);
+      else if(modo==="peso")v=n(P.valor)*Math.max(n(w.pesoLb),tipoPorPeso(w.tipoEnvio)?n(w.volLb):0);
+      else if(modo==="volumen")v=n(P.valor)*n(w.ft3);
+      else if(modo==="pct_valor"){const dec=convertir(n(w.valor),monO,P.mon)??0;
+        const tr=(P.tramos||[]).filter(t=>t&&String(t.valor??"").trim()!=="").sort((a,b)=>(n(a.hasta)||Infinity)-(n(b.hasta)||Infinity));
+        if(tr.length){const t=tr.find(t=>!n(t.hasta)||dec<=n(t.hasta));v=t?(t.tipo==="pct"?dec*n(t.valor)/100:n(t.valor)):0;}else v=dec*n(P.valor)/100;}
+      else if(modo==="pct_flete"){const f=n(fletes[w.id]);const pct=f*n(P.valor)/100;
+        const mn=P.min!==undefined&&String(P.min).trim()!==""?convertir(n(P.min),P.mon,mon)??0:0, mx=P.max!==undefined&&String(P.max).trim()!==""?convertir(n(P.max),P.mon,mon)??0:0;
+        return Math.max(mn,mx>0?Math.min(mx,pct):pct);}
+      if(String(P.min??"").trim()!=="")v=Math.max(v,n(P.min));
+      if(String(P.max??"").trim()!==""&&n(P.max)>0)v=Math.min(v,n(P.max));
+      return convertir(v,P.mon,mon)??0;};
+    const t=modo==="fijo_doc"?uno(wrs[0]):wrs.reduce((a,w)=>a+uno(w),0);
+    return Math.round(t*100)/100;};
+  const adicionalDeCatalogo=(nombre,mon="USD",w=null,fletes={})=>{
+    const it=catItem(nombre);if(!it)return null;
+    return {tipo:it.g,precio:w?catMonto(it,[w],mon,fletes):precioCat(it.valor??it.precio,mon)};
   };
   // Líneas de flete y adicionales para un grupo de WR
   const lineasDeWRs=(wrs,isAereo,precioUnidad,conCliente,unidad="",mon="USD")=>{
@@ -9805,12 +9905,16 @@ export default function SistemaCarga(){
         cajas:w.cajas||1,pesoLb:parseFloat(w.pesoLb)||0,volLb:parseFloat(w.volLb)||0,pesoKg:parseFloat(w.pesoKg)||0,volKg:parseFloat(w.volKg)||0,
         ft3:parseFloat(w.ft3)||0,m3:parseFloat(w.m3)||0,unidad:pf.unidad,
         descripcion:`Flete WR ${w.id}`,cantidad:r2(pf.valor),precio:precioUnidad,total:0});
+      const fletes={[w.id]:r2(r2(pf.valor)*(parseFloat(precioUnidad)||0))};
       {const pu=pickupList.find(x=>x.status!=="cancelado"&&((w._pickupId&&x.id===w._pickupId)||(x.wrId&&x.wrId===w.id)));
        if(pu&&pu.monto>0)out.push({tipo:"adicional",wrId:w.id,descripcion:`Pick-up ${pu.id}`,cantidad:1,precio:Math.round((convertir(pu.monto,pu.moneda||"USD",mon)??0)*100)/100,total:0});}
-      (Array.isArray(w.cargos)?w.cargos:[]).forEach(c=>{
-        const nombre=typeof c==="string"?c:(c?.concepto||c?.nombre||"");
-        if(!nombre)return;
-        const cat=adicionalDeCatalogo(nombre,mon);
+      // Marcados en el WR + los automáticos del catálogo (los "por factura" van una sola vez)
+      const marcados=(Array.isArray(w.cargos)?w.cargos:[]).map(c=>typeof c==="string"?c:(c?.concepto||c?.nombre||"")).filter(Boolean);
+      const autos=[...SERVICIOS_CAT,...GASTOS_CAT].filter(x=>x.cuando==="auto"&&(!x.aplica||x.aplica==="todos"||sinAcentos(x.aplica)===sinAcentos(w.tipoEnvio||""))).map(x=>x.nombre);
+      [...new Set([...marcados,...autos])].forEach(nombre=>{
+        const it=catItem(nombre);
+        if(it?.modo==="fijo_doc"&&out.some(l=>l.tipo==="adicional"&&l.descripcion===nombre))return;
+        const cat=adicionalDeCatalogo(nombre,mon,w,fletes);
         out.push({tipo:"adicional",wrId:w.id,descripcion:nombre,cantidad:1,precio:cat?.precio||0,total:0});
       });
     });
@@ -15686,10 +15790,12 @@ export default function SistemaCarga(){
                 <div style={secT}><Ico e="⚡" sp/>Servicios y gastos adicionales
                   <select className="fs" value="" style={{fontSize:13,padding:"3px 6px",width:"auto"}} onChange={e=>{
                     const c=catalogo.find(x=>x.nombre===e.target.value);
-                    if(c)addL({tipo:"adicional",wrId:(f.wrIds||[])[0]||"",descripcion:c.nombre,precio:precioCat(c.precio,f.moneda)});
+                    if(c){const ws=(f.wrIds||[]).map(id=>wrList.find(w=>w.id===id)).filter(Boolean);
+                      const fletes={};fl.forEach(l=>{fletes[l.wrId]=(fletes[l.wrId]||0)+(parseFloat(l.total)||0);});
+                      addL({tipo:"adicional",wrId:ws.length===1?ws[0].id:"",descripcion:c.nombre,precio:ws.length?catMonto(c,ws,f.moneda,fletes):precioCat(c.valor??c.precio,f.moneda)});}
                   }}>
                     <option value="">+ Agregar del catálogo…</option>
-                    {catalogo.map(c=><option key={c.g+c.nombre} value={c.nombre}>{c.g}: {c.nombre} — {fmtMoney(precioCat(c.precio,f.moneda),f.moneda)}</option>)}
+                    {catalogo.map(c=><option key={c.g+c.nombre} value={c.nombre}>{c.g}: {c.nombre}</option>)}
                   </select>
                 </div>
                 {ad.length===0?<div style={{fontSize:13,color:"var(--t3)"}}>—</div>:
