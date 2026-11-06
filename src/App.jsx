@@ -6715,7 +6715,7 @@ export default function SistemaCarga(){
   // ── ETIQUETAS (impresora térmica) ───────────────────────────────────────────
   // Dos tipos: PPN e ICT · dos tamaños: 4×6 y 4×2 · para WR (una por caja) y guía (una por bulto)
   const etqEmpresa=()=>(marca.nombreComercial||marca.nombre||"").toUpperCase();
-  const etqCod=t=>{const w=sinAcentos(String(t||"")).toUpperCase().split(/\s+/).filter(Boolean);return w.length>1?w.slice(0,3).map(x=>x[0]).join(""):(w[0]||"")[0]||"";};
+  const etqCod=t=>{const c=String(calcEnvio[t]?.cod||"").trim();if(c)return c;const w=sinAcentos(String(t||"")).toUpperCase().split(/\s+/).filter(Boolean);return w.length>1?w.slice(0,3).map(x=>x[0]).join(""):(w[0]||"")[0]||"";};
   const etqFecha=f=>{if(!f)return "";const d=new Date(f);if(isNaN(d))return String(f);return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`;};
   const etqN=(v,d=2)=>{const n=parseFloat(v);return isFinite(n)&&n>0?n.toFixed(d):"";};
   const etqIn=cm=>{const n=parseFloat(cm);return n>0?String(Math.round(n/2.54*10)/10):"";};
@@ -8225,11 +8225,12 @@ svg.bc{width:100%;align-self:stretch;display:block;flex-shrink:1;min-height:36px
           <div className="card" style={{marginTop:14}}>
             <div className="card-tt"><Ico e="🧮" sp/>Cálculo por tipo de envío</div>
             <div className="ct-scroll"><table className="ct">
-              <thead><tr><th>Tipo de envío</th><th>Divisor</th><th>Cálculo</th><th>Redondeo</th></tr></thead>
+              <thead><tr><th>Tipo de envío</th><th>Código</th><th>Divisor</th><th>Cálculo</th><th>Redondeo</th></tr></thead>
               <tbody>{SEND_TYPES.map(t=>{const C={...CALC_DEF,...(D[t]||{})};const porPeso=tipoPorPeso(t);
                 const otro=!!C.divOtro||!CALC_DIVS.some(o=>o.v===C.div);const otroF=!!C.divFt3Otro||C.divFt3!==1728;
                 return(<tr key={t}>
                   <td style={{fontWeight:700}}>{t}</td>
+                  <td><input className="fi" style={{width:64,textAlign:"center",fontWeight:700}} maxLength={3} value={C.cod||""} onChange={e=>set(t,{cod:e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,"")})}/></td>
                   {porPeso?<>
                     <td><div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
                       <select className="fs" value={otro?"otro":C.div} onChange={e=>set(t,e.target.value==="otro"?{divOtro:true}:{div:parseFloat(e.target.value),divOtro:false})}>
