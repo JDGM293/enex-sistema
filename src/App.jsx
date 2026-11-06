@@ -3377,6 +3377,9 @@ export default function SistemaCarga(){
     setClientResults([]);
   };
 
+  // Memoria del campo Embalaje: lo ya escrito en WR anteriores, lo más usado primero
+  const embalajesUsados=(()=>{if(!showNewWR)return [];const m=new Map();wrList.forEach(w=>(w.dims||[]).forEach(d=>{const v=String(d.embalaje||"").trim().toUpperCase();if(v)m.set(v,(m.get(v)||0)+1);}));
+    return [...m.entries()].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0])).map(([v])=>v);})();
   const swCaja=(idx,k,v)=>setWrf(p=>({...p,cajas:p.cajas.map((c,i)=>i===idx?{...c,[k]:v}:c)}));
   const addCaja=()=>setWrf(p=>({...p,cajas:[...p.cajas,emptyCaja()]}));
   const removeCaja=(idx)=>setWrf(p=>({...p,cajas:p.cajas.filter((_,i)=>i!==idx)}));
@@ -3592,6 +3595,7 @@ export default function SistemaCarga(){
           tracking:normTrk(wrf.cajas[i].tracking),
           factura:wrf.cajas[i].numFactura,
           descripcion:cleanReempaqueDesc(wrf.cajas[i].descripcion),
+          embalaje:String(wrf.cajas[i].tipoEmbalaje||"").trim().toUpperCase(),
           valor:r2((parseFloat(wrf.cajas[i].montoFactura)||0)/(c.qty||1)),
         });
       }
@@ -4624,6 +4628,7 @@ export default function SistemaCarga(){
         </div>
 
         {/* CAJAS — dinámicas */}
+        <datalist id="lst-embalaje">{embalajesUsados.map(v=><option key={v} value={v}/>)}</datalist>
         {wrf.cajas.map((caja,idx)=>{
           const cc=cajaCalcs[idx]||{};
           const hasVol=cc.volLb>0;
@@ -4686,7 +4691,7 @@ export default function SistemaCarga(){
                   </div>
                   <div className="fg">
                     <div className="fl">Embalaje</div>
-                    <input className="fi" value={caja.tipoEmbalaje} onChange={e=>swCaja(idx,"tipoEmbalaje",e.target.value.toUpperCase())} style={{fontSize:13}}/>
+                    <input className="fi" list="lst-embalaje" autoComplete="off" value={caja.tipoEmbalaje||""} onChange={e=>swCaja(idx,"tipoEmbalaje",e.target.value.toUpperCase())} style={{fontSize:13}}/>
                   </div>
                   <div className="fg"><div className="fl">Largo</div><input className="fi" type="number" value={caja.largo} onChange={e=>swCaja(idx,"largo",e.target.value)}/></div>
                   <div className="fg"><div className="fl">Ancho</div><input className="fi" type="number" value={caja.ancho} onChange={e=>swCaja(idx,"ancho",e.target.value)}/></div>
@@ -4820,6 +4825,7 @@ export default function SistemaCarga(){
                     cantidad:1,
                     carrier:d.carrier||"",tracking:d.tracking||"",
                     numFactura:d.factura||"",descripcion:cleanReempaqueDesc(d.descripcion||""),
+                    tipoEmbalaje:d.embalaje||"",
                   }))
                 :[emptyCaja()];
               setWrf({...emptyWRF(""),
@@ -5012,8 +5018,8 @@ export default function SistemaCarga(){
             <div className="wb-t" style={{fontSize:16}}><Ico e="📐" sp/>Dimensiones y Peso — {selWR.cajas} {selWR.cajas===1?"caja":"cajas"}</div>
             {selWR.dims&&selWR.dims.length>0&&(
               <>
-                <div style={{display:"grid",gridTemplateColumns:"30px 1.4fr 1fr 1fr 1fr 1fr 1fr 1fr 2fr 1fr",gap:6,marginBottom:4,padding:"4px 0",borderBottom:"2px solid var(--navy)"}}>
-                  {["#","Dims (in)","Lb.","Lb. Vol","Ft³","M³","Kg.","Kg. Vol","Tracking","Carrier"].map(h=>(
+                <div style={{display:"grid",gridTemplateColumns:"30px 1.1fr 1.4fr 1fr 1fr 1fr 1fr 1fr 1fr 2fr 1fr",gap:6,marginBottom:4,padding:"4px 0",borderBottom:"2px solid var(--navy)"}}>
+                  {["#","Embalaje","Dims (in)","Lb.","Lb. Vol","Ft³","M³","Kg.","Kg. Vol","Tracking","Carrier"].map(h=>(
                     <div key={h} style={{fontSize:16,color:"var(--navy)",fontWeight:700,textTransform:"uppercase",letterSpacing:.5}}>{h}</div>
                   ))}
                 </div>
@@ -5023,8 +5029,9 @@ export default function SistemaCarga(){
                   const car=d.carrier||selWR.carrier||"—";
                   return (
                     <div key={i} style={{borderBottom:"1px solid var(--b2)",paddingBottom:6,marginBottom:4}}>
-                      <div style={{display:"grid",gridTemplateColumns:"30px 1.4fr 1fr 1fr 1fr 1fr 1fr 1fr 2fr 1fr",gap:6,padding:"4px 0",alignItems:"center"}}>
+                      <div style={{display:"grid",gridTemplateColumns:"30px 1.1fr 1.4fr 1fr 1fr 1fr 1fr 1fr 1fr 2fr 1fr",gap:6,padding:"4px 0",alignItems:"center"}}>
                         <div style={{fontWeight:700,color:"var(--navy)",fontSize:16}}>{i+1}</div>
+                        <div style={{fontWeight:700,fontSize:16,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{d.embalaje||"—"}</div>
                         <div style={{fontFamily:"'DM Mono',monospace",fontSize:16}}>{toIn(d.l)}×{toIn(d.a)}×{toIn(d.h)}"</div>
                         <div style={{fontFamily:"'DM Mono',monospace",fontSize:16,fontWeight:600}}>{fmtDec(d.pkLb?parseFloat(d.pkLb):toLb(d.pk))}</div>
                         <div style={{fontFamily:"'DM Mono',monospace",fontSize:16,color:"var(--orange)",fontWeight:700}}>{fmtDec(dv.volLb,2)}</div>
@@ -6856,17 +6863,17 @@ svg.bc{width:100%;align-self:stretch;display:block;flex-shrink:1;min-height:36px
     const tipoCli=!cl?"":({matriz:"Casa matriz",agente:"Agente",vendedor_agente:"Vendedor de agente",oficina:"Oficina",vendedor_oficina:"Vendedor de oficina",autonomo:"Autónomo"})[cl.clienteTipo||"matriz"]||"";
     const dims=(w.dims||[]).length?w.dims:[];
     const filas=dims.map((d,i)=>{const hay=d.l||d.a||d.h;const v=hay?calcVol(d.l||0,d.a||0,d.h||0,"cm",calcDe(w.tipoEnvio).div,calcDe(w.tipoEnvio).divFt3):{volLb:0,ft3:0,m3:0};
-      return `<tr><td>${i+1}</td><td>${hay?`${toIn(d.l)}×${toIn(d.a)}×${toIn(d.h)}`:"—"}${d.carrier?`<div class="sub">${prnE(d.carrier)}</div>`:""}</td>
+      return `<tr><td>${i+1}</td><td>${prnE(d.embalaje||"")}</td><td>${hay?`${toIn(d.l)}×${toIn(d.a)}×${toIn(d.h)}`:"—"}${d.carrier?`<div class="sub">${prnE(d.carrier)}</div>`:""}</td>
         <td><span class="mono">${prnE(d.tracking||"")}</span>${d.descripcion?`<div>${prnE(d.descripcion)}</div>`:""}${d.factura?`<div class="sub">Fact.: ${prnE(d.factura)}</div>`:""}</td>
         <td class="r"><b>${d.pkLb?nm(parseFloat(d.pkLb)):d.pk?toLb(d.pk):"—"}</b></td><td class="r">${hay?v.volLb:"—"}</td><td class="r">${hay?v.ft3:"—"}</td><td class="r">${hay?v.m3:"—"}</td></tr>`;}).join("");
-    const tot=`<tr class="tot"><td colspan="3">${w.cajas||dims.length||0} pieza${(w.cajas||dims.length)===1?"":"s"}</td><td class="r">${fmtDec(w.pesoLb,2)}</td><td class="r">${fmtDec(w.volLb,2,"—")}</td><td class="r">${fmtDec(w.ft3,2,"—")}</td><td class="r">${fmtDec(w.m3,3,"—")}</td></tr>`;
+    const tot=`<tr class="tot"><td colspan="4">${w.cajas||dims.length||0} pieza${(w.cajas||dims.length)===1?"":"s"}</td><td class="r">${fmtDec(w.pesoLb,2)}</td><td class="r">${fmtDec(w.volLb,2,"—")}</td><td class="r">${fmtDec(w.ft3,2,"—")}</td><td class="r">${fmtDec(w.m3,3,"—")}</td></tr>`;
     const cuerpo=
       pGrid(2,[pBox("Remitente",`<b>${prnE(w.shipper||"—")}</b>`,prnE([w.remitenteDir,[w.remitenteTel,w.remitenteEmail].filter(Boolean).join(" · ")].filter(Boolean).join(" · "))),
         pBox("Consignatario",`<b>${prnE(w.consignee||"—")}</b>${w.casillero?` · #${prnE(w.casillero)}`:""}`,prnE([dest,`${w.destCity||""} ${nomPaisCo(w.destCountry)}`.trim()].filter(Boolean).join(" · ")))])+
       pGrid(4,[pBox("Tipo de pago",prnE(w.tipoPago||"—")),pBox("Tipo de envío",prnE(w.tipoEnvio||"Por definir")),pBox("Destino",prnE(`${w.destCity||""} · ${nomPaisCo(w.destCountry)}`)),pBox("Tipo de cliente",prnE(tipoCli||"—"))])+
       (w.notas?`<div class="nota"><b>Notas:</b> ${prnE(w.notas)}</div>`:"")+
       pSec("Detalle de la carga")+
-      pTabla([{l:"#"},{l:"Medidas (in)"},{l:"Tracking / contenido"},{l:"Peso lb",r:1},{l:"Vol. lb",r:1},{l:"Ft³",r:1},{l:"M³",r:1}],filas,tot)+
+      pTabla([{l:"#"},{l:"Embalaje"},{l:"Medidas (in)"},{l:"Tracking / contenido"},{l:"Peso lb",r:1},{l:"Vol. lb",r:1},{l:"Ft³",r:1},{l:"M³",r:1}],filas,tot)+
       pFirmas([["Empresa"],["Nombre"],["Firma"]])+
       `<div class="legal">${prnE(notaLegalWR(w))}</div>`;
     return prnHTML({titulo:"Warehouse Receipt",numero:w.id,barcode:true,pais:w.origCountry,emisor,
