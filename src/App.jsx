@@ -3356,8 +3356,9 @@ export default function SistemaCarga(){
     if(!bq||(t.length<2&&!/^\d$/.test(t))){setClientResults([]);return;}
     const coD=COUNTRIES.find(co=>nomPaisCo(co)===wrf.destPais)||null;
     const mEnt=matrizDe(oficinas.find(o=>o.id===wrf.sucursalEntrega))?.id||"";
-    const paisCli=c=>{const m=oficinas.find(o=>o.id===c.matrizId);return m?paisDeOfi(m):paisPorNombre(c.pais);};
-    const res=clientesVisibles.filter(c=>c.tipo==="cliente"&&(!coD||paisCli(c)===coD)&&(
+    // El cliente sale si su matriz o su dirección son del país destino
+    const enPais=c=>{const m=oficinas.find(o=>o.id===c.matrizId);return (m&&paisDeOfi(m)===coD)||paisPorNombre(c.pais)===coD;};
+    const res=clientesVisibles.filter(c=>c.tipo==="cliente"&&c.activo!==false&&(!coD||enPais(c))&&(
       bq.casillero(c.casillero)||bq.nombre(fullName(c))||(t.length>=2&&fullName(c).toLowerCase().includes(t.toLowerCase()))
     )).sort((a,b)=>(bq.casillero(b.casillero)?1:0)-(bq.casillero(a.casillero)?1:0)||((mEnt&&b.matrizId===mEnt)?1:0)-((mEnt&&a.matrizId===mEnt)?1:0));
     setClientResults(res);
@@ -4547,7 +4548,7 @@ export default function SistemaCarga(){
               </div>
               <div className="fg fi-search">
                 <div className="fl">Buscar por Nombre o N° Casillero</div>
-                <input className="fi" value={clientSearch} disabled={!_destPaisCo&&!editWR} onChange={e=>handleClientSearch(e.target.value)} placeholder={_destPaisCo||editWR?"Nombre o casillero":"Primero elige el país destino"}/>
+                <input className="fi" value={clientSearch} disabled={!_destPaisCo&&!editWR} onChange={e=>handleClientSearch(e.target.value)}/>
                 {clientResults.length>0&&(
                   <div className="fi-search-res">
                     {clientResults.map(c=>(
@@ -4560,7 +4561,7 @@ export default function SistemaCarga(){
                   </div>
                 )}
               </div>
-              <div className="fg"><div className="fl">Nombre (si no está registrado)</div><input className="fi" value={wrf.consignee} onChange={e=>sw("consignee",e.target.value)} placeholder="Nombre completo"/></div>
+              <div className="fg"><div className="fl">Nombre (si no está registrado)</div><input className="fi" value={wrf.consignee} onChange={e=>sw("consignee",e.target.value)}/></div>
               <div className="fg"><div className="fl">N° Casillero</div><input className="fi" value={wrf.casillero} onChange={e=>sw("casillero",e.target.value)} style={{fontFamily:"'DM Mono',monospace",fontWeight:800,fontSize:16,color:"var(--navy)",letterSpacing:1,background:"#EEF3FF",border:"2px solid #B8C8F0"}}/></div>
             </div>
           </div>
