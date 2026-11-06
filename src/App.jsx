@@ -6728,7 +6728,7 @@ body{font-family:Arial,Helvetica,sans-serif;color:#000;-webkit-print-color-adjus
 .row{display:flex;border-bottom:2px solid #000;flex-shrink:0}.inv{background:#000;color:#fff}.cc{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
 .k{font-size:9px;font-weight:700;letter-spacing:.6px;text-transform:uppercase}.b{font-weight:700}.x{font-weight:900}
 .el{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ad{font-size:11px;line-height:1.3}
-svg.bc{width:100%;display:block}svg.bc rect,svg path{fill:#000}`;
+svg.bc{width:100%;align-self:stretch;display:block;flex-shrink:0}svg.bc rect,svg path{fill:#000}`;
   const etqDoc=(titulo,tam,cuerpo)=>`<!doctype html><html><head><meta charset="utf-8"><title>${prnE(titulo)}</title><style>${etqCss(tam)}</style></head><body>${cuerpo}</body></html>`;
   const etqRuta=(o,d,fs,fa,gap)=>`<span class="x" style="font-size:${fs}px">${prnE(o||"")}</span><span class="x" style="font-size:${fa}px;${gap?`margin:0 ${gap}px`:""}">&#8594;</span><span class="x" style="font-size:${fs}px">${prnE(d||"")}</span>`;
 
