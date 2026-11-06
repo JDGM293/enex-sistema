@@ -6797,7 +6797,7 @@ svg.bc{width:100%;align-self:stretch;display:block;flex-shrink:0}svg.bc rect,svg
     const wrsG=(g.wrIds||conts.flatMap(c=>(c.wr||[]).map(x=>x.id))).map(id=>wrList.find(w=>w.id===id)).filter(Boolean);
     const moda=a=>{const m={};a.filter(Boolean).forEach(x=>m[x]=(m[x]||0)+1);return Object.entries(m).sort((x,y)=>y[1]-x[1])[0]?.[0]||"";};
     const oO=oficinas.find(x=>x.id===g.ofiOrigen),oD=oficinas.find(x=>x.id===g.ofiDestino);
-    const o=moda(wrsG.map(w=>w.origCity))||oO?.codigo||"",d=g.destino||moda(wrsG.map(w=>w.destCity))||oD?.codigo||"";
+    const o=(oO&&ofiCodigos(oO).code)||moda(wrsG.map(w=>w.origCity))||"",d=g.destino||(oD&&ofiCodigos(oD).code)||moda(wrsG.map(w=>w.destCity))||"";
     const cod=g.tipoEnvio?etqCod(g.tipoEnvio):(estilo==="PPN"?"P":"");
     const mar=/MARIT/.test(sinAcentos(String(g.tipoEnvio||"")).toUpperCase());
     const doc=g.awb||g.bl||"",docK=g.awb?"AWB":g.bl?"BL":mar?"BL":"AWB",via=g.numVuelo||"",viaK=mar?"Viaje":"Vuelo";
