@@ -6725,7 +6725,7 @@ body{font-family:Arial,Helvetica,sans-serif;color:#000;-webkit-print-color-adjus
 .lb{width:4in;height:${tam==="4x2"?"2in":"6in"};border:2px solid #000;background:#fff;display:flex;flex-direction:column;overflow:hidden;page-break-after:always;break-after:page}
 .lb:last-child{page-break-after:auto;break-after:auto}
 @media screen{body{background:#d9dde3;padding:16px}.lb{margin:0 auto 16px}}
-.row{display:flex;border-bottom:2px solid #000;flex-shrink:0}.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}.inv{background:#000;color:#fff}.cc{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.row{display:flex;border-bottom:2px solid #000;flex-shrink:0}.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}.lb div[style*="width:"]{flex-shrink:0;overflow:hidden}.inv{background:#000;color:#fff}.cc{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
 .k{font-size:9px;font-weight:700;letter-spacing:.6px;text-transform:uppercase}.b{font-weight:700}.x{font-weight:900}
 .el{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ad{font-size:11px;line-height:1.3}
 svg.bc{width:100%;align-self:stretch;display:block;flex-shrink:1;min-height:36px}svg.bc rect,svg path{fill:#000}`;
@@ -6818,7 +6818,7 @@ svg.bc{width:100%;align-self:stretch;display:block;flex-shrink:1;min-height:36px
           :`<div class="row" style="height:54px"><div class="inv cc" style="width:50px"><span class="x" style="font-size:28px">${prnE(cod)}</span></div><div style="width:120px;display:flex;align-items:center;justify-content:center;border-right:2px solid #000">${etqRuta(o,d,19,13,4)}</div><div style="flex:1;border-right:2px solid #000"></div><div class="cc" style="width:96px"><span class="k" style="font-size:7px">Bulto</span><span class="x" style="font-size:20px;line-height:1">${bt}</span></div></div>`;
         return `<div class="lb">${top}
  <div style="flex:1;min-height:0;display:flex;border-bottom:2px solid #000"><div class="cc" style="flex:1;min-width:0;padding:2px 8px">${barcodeSVG(bv,46)}<span class="b" style="font-size:13px;letter-spacing:1px">GUÍA ${prnE(bv)}</span></div>
-  <div class="b" style="width:96px;border-left:2px solid #000;display:flex;flex-direction:column;justify-content:center;padding:0 7px;font-size:10px;line-height:1.35"><span>${nWR} WR</span><span>${cajas} CAJAS</span><span>${lb?`${lb} LB`:""}</span><span>${ft?`${ft} FT³`:""}</span><span>${med}</span></div></div>
+  <div class="b" style="width:96px;border-left:2px solid #000;display:flex;flex-direction:column;justify-content:center;padding:0 6px;font-size:10px;line-height:1.35;white-space:nowrap"><span>${nWR} WR</span><span>${cajas} CAJAS</span><span>${lb?`${lb} LB`:""}</span><span>${ft?`${ft} FT³`:""}</span><span style="font-size:9px">${med}</span></div></div>
  <div class="b" style="height:18px;display:flex;justify-content:space-between;align-items:center;padding:0 8px;font-size:10px;flex-shrink:0"><span>${doc?`${docK} ${prnE(doc)}`:""}</span><span>${emp}</span></div></div>`;
       }
       const ruta=estilo==="PPN"
