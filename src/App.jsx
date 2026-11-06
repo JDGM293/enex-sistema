@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo, Fragment } from "react";
 import { createPortal } from "react-dom";
 import { renderToStaticMarkup } from "react-dom/server";
+import qrcode from "qrcode-generator";
 import { dbGetPickups, dbUpsertPickup, dbSecuencias, urlComprobante, dbGetSolicitudesRpq, dbUpsertSolicitudRpq } from './supabase'
 import { descargarXlsx } from './xlsx'
 import { dbGetActividadReporte } from './supabase'
@@ -1283,6 +1284,8 @@ const buscarParcial=(v,items,campos)=>{
   const parciales=items.filter(it=>vals(it).some(x=>x.includes(q)));
   if(parciales.length===1)return {item:parciales[0]};
   if(parciales.length>1)return {varios:parciales};
+  const pz=q.match(/^(.+)-\d{1,3}(\/\d{1,3})?$/);
+  if(pz)return buscarParcial(pz[1],items,campos);
   return {};
 };
 // Buscador: WR y tracking coinciden por el final (últimos dígitos), el casillero por su
@@ -1856,8 +1859,15 @@ const getHeaderName=(w,clients=[],agentes=[],oficinas=[],empresaNombre="")=>{
 };
 
 // ─── BARCODE COMPONENT (Code 128, escaneable) ────────────────────────────────
+const C128=["11011001100","11001101100","11001100110","10010011000","10010001100","10001001100","10011001000","10011000100","10001100100","11001001000","11001000100","11000100100","10110011100","10011011100","10011001110","10111001100","10011101100","10011100110","11001110010","11001011100","11001001110","11011100100","11001110100","11101101110","11101001100","11100101100","11100100110","11101100100","11100110100","11100110010","11011011000","11011000110","11000110110","10100011000","10001011000","10001000110","10110001000","10001101000","10001100010","11010001000","11000101000","11000100010","10110111000","10110001110","10001101110","10111011000","10111000110","10001110110","11101110110","11010001110","11000101110","11011101000","11011100010","11011101110","11101011000","11101000110","11100010110","11101101000","11101100010","11100011010","11101111010","11001000010","11110001010","10100110000","10100001100","10010110000","10010000110","10000101100","10000100110","10110100000","10110000100","10011010000","10011000010","10000110100","10000110010","11000010010","11001010000","11110111010","11000010100","10001111010","10100111100","10010111100","10010011110","10111100100","10011110100","10011110010","11110100100","11110010100","11110010010","11011011110","11011110110","11110110110","10101111000","10100011110","10001011110","10111101000","10111100010","11110101000","11110100010","10111011110","10111101110","11101011110","11110101110","11010000100","11010010000","11010011100","1100011101011"];
+const c128Bits=v=>{const s=String(v);const codes=[104];let chk=104;for(let i=0;i<s.length;i++){const c=s.charCodeAt(i)-32;codes.push(c);chk+=(i+1)*c;}codes.push(chk%103);codes.push(106);return codes.map(c=>C128[c]||"").join("");};
+// Código de barras como SVG (se estira al ancho disponible)
+const barcodeSVG=(v,h)=>{const bits=c128Bits(v);let r="",i=0;while(i<bits.length){const b=bits[i];let j=i;while(j<bits.length&&bits[j]===b)j++;if(b==="1")r+=`<rect x="${i}" y="0" width="${j-i}" height="${h}"/>`;i=j;}
+  return `<svg class="bc" viewBox="-10 0 ${bits.length+20} ${h}" preserveAspectRatio="none" height="${h}">${r}</svg>`;};
+const qrSVG=(txt,px)=>{const q=qrcode(0,"M");q.addData(String(txt));q.make();const n=q.getModuleCount();let r="";for(let y=0;y<n;y++)for(let x=0;x<n;x++)if(q.isDark(y,x))r+=`M${x} ${y}h1v1h-1z`;
+  return `<svg width="${px}" height="${px}" viewBox="0 0 ${n} ${n}" shape-rendering="crispEdges"><path d="${r}"/></svg>`;};
 const WRBarcode=({value,height=50,width=2})=>{
-  const B=["11011001100","11001101100","11001100110","10010011000","10010001100","10001001100","10011001000","10011000100","10001100100","11001001000","11001000100","11000100100","10110011100","10011011100","10011001110","10111001100","10011101100","10011100110","11001110010","11001011100","11001001110","11011100100","11001110100","11101101110","11101001100","11100101100","11100100110","11101100100","11100110100","11100110010","11011011000","11011000110","11000110110","10100011000","10001011000","10001000110","10110001000","10001101000","10001100010","11010001000","11000101000","11000100010","10110111000","10110001110","10001101110","10111011000","10111000110","10001110110","11101110110","11010001110","11000101110","11011101000","11011100010","11011101110","11101011000","11101000110","11100010110","11101101000","11101100010","11100011010","11101111010","11001000010","11110001010","10100110000","10100001100","10010110000","10010000110","10000101100","10000100110","10110100000","10110000100","10011010000","10011000010","10000110100","10000110010","11000010010","11001010000","11110111010","11000010100","10001111010","10100111100","10010111100","10010011110","10111100100","10011110100","10011110010","11110100100","11110010100","11110010010","11011011110","11011110110","11110110110","10101111000","10100011110","10001011110","10111101000","10111100010","11110101000","11110100010","10111011110","10111101110","11101011110","11110101110","11010000100","11010010000","11010011100","1100011101011"];
+  const B=C128;
   const s=String(value);
   const codes=[104];
   let chk=104;
@@ -2605,8 +2615,10 @@ export default function SistemaCarga(){
   const [wrSecInicio,setWrSecInicio]=useState(1);
   const [consolNumTipo,setConsolNumTipo]=useState(3);
   const [consolSecInicio,setConsolSecInicio]=useState(1);
-  const [labelWRTipo,setLabelWRTipo]=useState(1);   // 1=4×6 Básica, 2=4×6 Completa, 3=4×2 Básica, 4=4×2 Completa
-  const [labelCSATipo,setLabelCSATipo]=useState(1); // 1=4×6 Grande, 2=4×2 Compacta
+  // Etiquetas: tipo (PPN / ICT) y tamaño (4x6 / 4x2) predeterminados para WR y para guía
+  const [etqCfgWR,setEtqCfgWR]=useState({estilo:"PPN",tam:"4x6"});
+  const [etqCfgGuia,setEtqCfgGuia]=useState({estilo:"PPN",tam:"4x6"});
+  const [etqSel,setEtqSel]=useState(null);
   // Marca: el nombre y el logo de la empresa que usa el sistema. Se cambia en un solo lugar (Configuración › Empresa)
   const MARCA_VACIA={nombre:"",subtitulo:"",iniciales:"",logo:""};
   const [marca,setMarca]=useState(()=>{try{return {...MARCA_VACIA,...(JSON.parse(localStorage.getItem("marca")||"null")||{})};}catch{return MARCA_VACIA;}});
@@ -3064,9 +3076,10 @@ export default function SistemaCarga(){
       if(consolNumT)setConsolNumTipo(consolNumT);
       if(consolSecT)setConsolSecInicio(consolSecT);
       if(empSlugT)setEmpresaSlug(empSlugT);
-      if(labelWRT)setLabelWRTipo(Math.min(4,Math.max(1,parseInt(labelWRT)||1)));
+      const etqParse=(v,viejo4x2)=>{if(v&&typeof v==="object")return {estilo:v.estilo==="ICT"?"ICT":"PPN",tam:v.tam==="4x2"?"4x2":"4x6"};return {estilo:"PPN",tam:viejo4x2(parseInt(v)||1)?"4x2":"4x6"};};
+      if(labelWRT)setEtqCfgWR(etqParse(labelWRT,n=>n>=3));
+      if(labelCsaT)setEtqCfgGuia(etqParse(labelCsaT,n=>n>=2));
       // Guía consolidada ahora solo tiene 2 tipos; normalizar si había 3 o 4 guardado
-      if(labelCsaT){const n=parseInt(labelCsaT)||1;setLabelCSATipo(n>=2?2:1);}
     };
     load().catch(async e=>{
       console.error("load:",e);
@@ -6082,13 +6095,7 @@ export default function SistemaCarga(){
 
   // ── Acciones de guía (antes inline en la tabla de Consolidación; ahora las usa
   // la ventana de detalle que se abre al hacer clic en el N° de guía del Master).
-  const guiaEtiquetas=(c)=>setShowLabels({
-                        wr:{id:c.id,origCity:OFFICE_CONFIG.origCity,origCountry:OFFICE_CONFIG.origCountryName,destCity:c.destino,destCountry:OFFICE_CONFIG.destCountryName,
-                          consignee:"CONSOLIDADO",casillero:"—",fecha:c.fecha,branch:OFFICE_CONFIG.branch,tipoEnvio:c.tipoEnvio,
-                          shipper:empresaNombre,cajas:c.totalCajas,pesoLb:c.totalLb,volLb:c.totalVolLb,ft3:c.totalFt3,m3:c.totalM3},
-                        dims:c.containers.map((ct,i)=>({l:0,a:0,h:0,pk:0,pkLb:parseFloat(ct.pesoLb)||0,volLb:0,ft3:0,m3:0,tracking:`Cont. ${i+1} · ${ct.tipo} · Sello: ${ct.sello||"—"}`})),
-                        remitente:empresaNombre,tipoEnvio:c.tipoEnvio,
-                      });
+  const guiaEtiquetas=(c)=>setShowConsolLabels({guia:c,containers:c.containers||[]});
   const guiaEditar=async(c)=>{
     if(!hasPerm("editar_guia")||!guiaEditable(c)){window.alert(`La guía ${c.id} ya no se puede editar con tu rol.`);return;}
     // Cargar fotos guardadas del bucket consol-fotos para esta guía
@@ -6702,6 +6709,130 @@ export default function SistemaCarga(){
     document.body.appendChild(f);
     f.onload=()=>{try{f.contentWindow.focus();f.contentWindow.print();}catch(err){console.error(err);}setTimeout(()=>f.remove(),60000);};
     f.srcdoc=html;
+  };
+
+
+  // ── ETIQUETAS (impresora térmica) ───────────────────────────────────────────
+  // Dos tipos: PPN e ICT · dos tamaños: 4×6 y 4×2 · para WR (una por caja) y guía (una por bulto)
+  const etqEmpresa=()=>(marca.nombreComercial||marca.nombre||"").toUpperCase();
+  const etqCod=t=>{const w=sinAcentos(String(t||"")).toUpperCase().split(/\s+/).filter(Boolean);return w.length>1?w.slice(0,3).map(x=>x[0]).join(""):(w[0]||"")[0]||"";};
+  const etqFecha=f=>{if(!f)return "";const d=new Date(f);if(isNaN(d))return String(f);return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`;};
+  const etqN=(v,d=2)=>{const n=parseFloat(v);return isFinite(n)&&n>0?n.toFixed(d):"";};
+  const etqIn=cm=>{const n=parseFloat(cm);return n>0?String(Math.round(n/2.54*10)/10):"";};
+  const etqDir=c=>c?[c.dir,[c.municipio||c.ciudad,c.estado].filter(Boolean).join(" - "),[c.cp,c.pais].filter(Boolean).join(" - ")].map(x=>String(x||"").trim().toUpperCase()).filter(Boolean):[];
+  const etqCss=(tam)=>`@page{size:4in ${tam==="4x2"?"2in":"6in"};margin:0}*{box-sizing:border-box}html,body{margin:0;padding:0}
+body{font-family:Arial,Helvetica,sans-serif;color:#000;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.lb{width:4in;height:${tam==="4x2"?"2in":"6in"};border:2px solid #000;background:#fff;display:flex;flex-direction:column;overflow:hidden;page-break-after:always;break-after:page}
+.lb:last-child{page-break-after:auto;break-after:auto}
+@media screen{body{background:#d9dde3;padding:16px}.lb{margin:0 auto 16px}}
+.row{display:flex;border-bottom:2px solid #000;flex-shrink:0}.inv{background:#000;color:#fff}.cc{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.k{font-size:9px;font-weight:700;letter-spacing:.6px;text-transform:uppercase}.b{font-weight:700}.x{font-weight:900}
+.el{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ad{font-size:11px;line-height:1.3}
+svg.bc{width:100%;display:block}svg.bc rect,svg path{fill:#000}`;
+  const etqDoc=(titulo,tam,cuerpo)=>`<!doctype html><html><head><meta charset="utf-8"><title>${prnE(titulo)}</title><style>${etqCss(tam)}</style></head><body>${cuerpo}</body></html>`;
+  const etqRuta=(o,d,fs,fa,gap)=>`<span class="x" style="font-size:${fs}px">${prnE(o||"")}</span><span class="x" style="font-size:${fa}px;${gap?`margin:0 ${gap}px`:""}">&#8594;</span><span class="x" style="font-size:${fs}px">${prnE(d||"")}</span>`;
+
+  const etqWR=(w,estilo,tam)=>{
+    if(!w)return "";
+    const dims=(w.dims||[]).length?w.dims:Array.from({length:Math.max(1,parseInt(w.cajas)||1)},()=>({}));
+    const total=dims.length;
+    const cli=clients.find(c=>c.id===w.clienteId)||clients.find(c=>c.casillero&&c.casillero===w.casillero);
+    const rem=w.remitenteId?clients.find(c=>c.id===w.remitenteId):null;
+    const remLin=rem?etqDir(rem):[String(w.remitenteDir||"").toUpperCase()].filter(Boolean);
+    const conLin=etqDir(cli);
+    const ciudadPais=[(cli?.municipio||w.destCity||""),(cli?.pais||w.destCountry||"")].map(x=>String(x).toUpperCase()).filter(Boolean).join(" - ");
+    const confirmado=!!w.tipoEnvio&&!["1","2"].includes(w.status?.code);
+    const cod=estilo==="PPN"?(confirmado?etqCod(w.tipoEnvio):"P"):(w.tipoEnvio?etqCod(w.tipoEnvio):"");
+    const emp=prnE(etqEmpresa());const cas=prnE(w.casillero||"");const nom=prnE(String(w.consignee||"").toUpperCase());
+    const pago=prnE(String(w.tipoPago||"").toUpperCase());const fecha=etqFecha(w.fecha);
+    const o=w.origCity||"",d=w.destCity||"";
+    return dims.map((dm,i)=>{
+      const idx=i+1,pz=`${idx}/${total}`,bv=`${w.id}-${idx}`;
+      const unaCaja=total===1;
+      const lb=etqN(dm.pkLb||(dm.pk?dm.pk*LB_KG:0))||(unaCaja?etqN(w.pesoLb):"");
+      const med=dm.l&&dm.a&&dm.h?`${etqIn(dm.l)} × ${etqIn(dm.a)} × ${etqIn(dm.h)} IN`:"";
+      const ft=etqN(dm.ft3)||(unaCaja?etqN(w.ft3):"");
+      const trk=prnE(dm.tracking||(unaCaja?w.tracking:"")||"");
+      const qr=qrSVG(`${etqEmpresa()}|WR|${w.id}|${pz}|${o}-${d}|${w.casillero||""}`,88);
+      if(tam==="4x2"&&estilo==="PPN")return `<div class="lb">
+ <div class="row" style="height:50px"><div class="inv cc" style="width:50px"><span class="x" style="font-size:28px">${prnE(cod)}</span></div>
+  <div style="flex:1;min-width:0;padding:3px 8px;display:flex;flex-direction:column;justify-content:center"><span class="x el" style="font-size:16px">${nom}</span><span class="b el" style="font-size:11px">${prnE(ciudadPais)}</span></div>
+  <div class="inv cc" style="width:62px"><span class="x" style="font-size:22px">${cas}</span></div></div>
+ <div class="row" style="height:30px"><div style="flex:1;display:flex;align-items:center;justify-content:center;border-right:2px solid #000">${etqRuta(o,d,20,15,8)}</div>
+  <div class="cc" style="width:62px;border-right:2px solid #000"><span class="x" style="font-size:17px">${pz}</span></div><div class="cc" style="width:62px"><span class="x" style="font-size:11px">${pago}</span></div></div>
+ <div style="flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2px 8px">${barcodeSVG(bv,38)}<span class="b" style="font-size:12px;letter-spacing:1px">WR ${prnE(bv)}</span></div>
+ <div class="b" style="border-top:1px solid #000;padding:2px 8px;font-size:10px;line-height:1.3"><div style="display:flex;justify-content:space-between;gap:6px"><span>${lb?`${lb} LB`:""}</span><span>${med}</span><span>${ft?`${ft} FT³`:""}</span></div><div class="el">${trk?`TRK ${trk}`:"&nbsp;"}</div></div>
+</div>`;
+      if(tam==="4x2")return `<div class="lb">
+ <div class="row" style="height:64px"><div class="inv cc" style="width:50px"><span class="x" style="font-size:28px">${prnE(cod)}</span></div>
+  <div style="flex:1;min-width:0;padding:3px 7px;display:flex;flex-direction:column;justify-content:center;line-height:1.22"><span class="x el" style="font-size:13px">${nom}</span>${conLin.map(l=>`<span class="b el" style="font-size:9.5px">${prnE(l)}</span>`).join("")}</div>
+  <div class="inv cc" style="width:96px"><span class="b" style="font-size:18px;letter-spacing:1px">${prnE(w.id)}</span></div></div>
+ <div class="row" style="height:30px"><div style="width:130px;display:flex;align-items:center;justify-content:center;border-right:2px solid #000">${etqRuta(o,d,17,12,6)}</div><div style="flex:1;border-right:2px solid #000"></div>
+  <div class="cc" style="width:50px;border-right:2px solid #000"><span class="x" style="font-size:16px">${pz}</span></div><div class="cc" style="width:62px"><span class="x" style="font-size:10.5px">${pago}</span></div></div>
+ <div style="flex:1;min-height:0;display:flex"><div class="cc" style="flex:1;min-width:0;padding:3px 8px">${barcodeSVG(bv,48)}<span class="b" style="font-size:11px;letter-spacing:1px">WR ${prnE(bv)}</span></div>
+  <div class="b" style="width:112px;border-left:2px solid #000;display:flex;flex-direction:column;justify-content:center;padding:0 8px;font-size:10px;line-height:1.4"><span>${lb?`${lb} LB`:""}</span><span>${med}</span><span>${ft?`${ft} FT³`:""}</span></div></div>
+</div>`;
+      const cab=`<div class="row" style="height:${estilo==="PPN"?56:52}px"><div class="x el" style="flex:1;min-width:0;padding:0 12px;display:flex;align-items:center;font-size:26px;letter-spacing:2px">${emp}</div><div class="inv cc" style="width:92px"><span class="x" style="font-size:44px;line-height:1">${prnE(cod)}</span></div></div>`;
+      const remB=`<div class="row" style="padding:5px 10px;flex-direction:column;border-bottom-width:1px"><span class="k" style="font-size:8px">Remitente</span><span class="b el" style="font-size:13px">${prnE(String(w.shipper||"").toUpperCase())}</span><div class="ad">${remLin.map(prnE).join("<br>")}</div></div>`;
+      const pieB=(h,ancho)=>`<div class="row" style="height:${h}px"><div class="cc" style="width:${ancho}px;border-right:2px solid #000"><span class="k">Pieza</span><span class="x" style="font-size:30px;line-height:1">${pz}</span></div>
+  <div class="b" style="flex:1;min-width:0;border-right:2px solid #000;padding:3px 10px;display:flex;flex-direction:column;justify-content:center;font-size:12px;line-height:1.35"><span>${[lb&&`${lb} LB`,estilo==="ICT"&&ft&&`${ft} FT³`].filter(Boolean).join(" · ")}</span><span>${med}</span></div>
+  <div class="inv cc" style="width:92px"><span class="x" style="font-size:15px">${pago}</span></div></div>`;
+      const bcB=(h)=>`<div style="flex:1;min-height:0;display:flex;align-items:center;gap:8px;padding:6px 10px"><div class="cc" style="flex:1;min-width:0">${barcodeSVG(bv,h)}<span class="b" style="font-size:14px;letter-spacing:1px">WR ${prnE(w.id)} · ${pz}</span></div>${qr}</div>`;
+      if(estilo==="PPN")return `<div class="lb">${cab}${remB}
+ <div class="row" style="height:70px"><div style="flex:1;min-width:0;padding:6px 10px;display:flex;flex-direction:column;justify-content:center"><span class="k" style="font-size:8px">Consignatario</span><div class="x el" style="font-size:22px">${nom}</div><div class="b el" style="font-size:13px">${prnE(ciudadPais)}</div></div><div class="inv cc" style="width:92px"><span class="x" style="font-size:34px">${cas}</span></div></div>
+ <div class="row" style="align-items:center;padding:0 12px;justify-content:space-between;height:60px">${etqRuta(o,d,44,28)}</div>
+ ${pieB(62,110)}${bcB(80)}
+ <div class="b" style="border-top:1px solid #000;padding:3px 10px;display:flex;justify-content:space-between;font-size:10px;flex-shrink:0"><span class="el">${trk?`TRK ${trk}`:""}</span><span>${fecha}</span></div></div>`;
+      return `<div class="lb">${cab}${remB}
+ <div class="row" style="padding:4px 10px;flex-direction:column"><span class="k" style="font-size:8px">Consignatario</span><div class="x el" style="font-size:19px">${nom}${cas?` · ${cas}`:""}</div><div class="ad b">${conLin.map(prnE).join("<br>")}</div></div>
+ <div class="row" style="height:58px"><div style="width:178px;display:flex;align-items:center;justify-content:space-between;padding:0 10px;border-right:2px solid #000">${etqRuta(o,d,28,18)}</div><div style="flex:1"></div></div>
+ ${pieB(56,96)}${bcB(72)}
+ <div class="b" style="border-top:2px solid #000;height:26px;display:flex;font-size:10px;flex-shrink:0"><span style="flex:1"></span><span style="display:flex;align-items:center;padding:0 8px;border-left:1px solid #000">${fecha}</span></div></div>`;
+    }).join("");
+  };
+
+  const etqGuia=(g,estilo,tam)=>{
+    if(!g)return "";
+    const conts=(g.containers||[]).length?g.containers:[{wr:[]}];const total=conts.length;
+    const wrsG=(g.wrIds||conts.flatMap(c=>(c.wr||[]).map(x=>x.id))).map(id=>wrList.find(w=>w.id===id)).filter(Boolean);
+    const moda=a=>{const m={};a.filter(Boolean).forEach(x=>m[x]=(m[x]||0)+1);return Object.entries(m).sort((x,y)=>y[1]-x[1])[0]?.[0]||"";};
+    const oO=oficinas.find(x=>x.id===g.ofiOrigen),oD=oficinas.find(x=>x.id===g.ofiDestino);
+    const o=moda(wrsG.map(w=>w.origCity))||oO?.codigo||"",d=g.destino||moda(wrsG.map(w=>w.destCity))||oD?.codigo||"";
+    const cod=g.tipoEnvio?etqCod(g.tipoEnvio):(estilo==="PPN"?"P":"");
+    const mar=/MARIT/.test(sinAcentos(String(g.tipoEnvio||"")).toUpperCase());
+    const doc=g.awb||g.bl||"",docK=g.awb?"AWB":g.bl?"BL":mar?"BL":"AWB",via=g.numVuelo||"",viaK=mar?"Viaje":"Vuelo";
+    const emp=prnE(etqEmpresa()),fecha=etqFecha(g.fecha);
+    return conts.map((ct,i)=>{
+      const idx=i+1,bt=`${idx}/${total}`,bv=`${g.id}-${idx}`;
+      const ws=(ct.wr||[]),nWR=ws.length,cajas=ws.reduce((a,x)=>a+(parseInt(x.cajas)||1),0);
+      const lb=etqN(ct.pesoLb)||etqN(ws.reduce((a,x)=>a+(parseFloat(x.pesoLb)||0),0));
+      const reg=CONTAINER_TYPES.find(t=>t.code===ct.tipo);
+      const l=parseFloat(ct.largo),a=parseFloat(ct.ancho),h=parseFloat(ct.alto);
+      const med=l&&a&&h?`${l} × ${a} × ${h} IN`:(reg?.dim&&!/libre/i.test(reg.dim)?String(reg.dim).toUpperCase():"");
+      const ft=l&&a&&h?etqN(l*a*h/1728):etqN(ws.reduce((s2,x)=>s2+(parseFloat(x.ft3)||0),0));
+      const qr=qrSVG(estilo==="ICT"?`${etqEmpresa()}|GUIA|${g.id}|${bt}|${o}-${d}|${docK} ${doc}|${via}|${nWR} WR|${cajas} CAJAS|${ws.map(x=>x.id).join(",")}`:`${etqEmpresa()}|GUIA|${g.id}|${bt}|${o}-${d}|${docK} ${doc}`,estilo==="ICT"?112:88);
+      if(tam==="4x2"){
+        const top=estilo==="PPN"
+          ?`<div class="row" style="height:54px"><div class="inv cc" style="width:50px"><span class="x" style="font-size:28px">${prnE(cod)}</span></div><div style="flex:1;display:flex;align-items:center;justify-content:center">${etqRuta(o,d,30,18,10)}</div><div class="cc" style="width:84px;border-left:2px solid #000"><span class="k" style="font-size:7px">Bulto</span><span class="x" style="font-size:22px;line-height:1">${bt}</span></div></div>`
+          :`<div class="row" style="height:54px"><div class="inv cc" style="width:50px"><span class="x" style="font-size:28px">${prnE(cod)}</span></div><div style="width:136px;display:flex;align-items:center;justify-content:center;border-right:2px solid #000">${etqRuta(o,d,19,13,6)}</div><div style="flex:1;border-right:2px solid #000"></div><div class="cc" style="width:60px"><span class="k" style="font-size:7px">Bulto</span><span class="x" style="font-size:20px;line-height:1">${bt}</span></div></div>`;
+        return `<div class="lb">${top}
+ <div style="flex:1;min-height:0;display:flex;border-bottom:2px solid #000"><div class="cc" style="flex:1;min-width:0;padding:2px 8px">${barcodeSVG(bv,46)}<span class="b" style="font-size:13px;letter-spacing:1px">GUÍA ${prnE(bv)}</span></div>
+  <div class="b" style="width:96px;border-left:2px solid #000;display:flex;flex-direction:column;justify-content:center;padding:0 7px;font-size:10px;line-height:1.35"><span>${nWR} WR</span><span>${cajas} CAJAS</span><span>${lb?`${lb} LB`:""}</span><span>${ft?`${ft} FT³`:""}</span><span>${med}</span></div></div>
+ <div class="b" style="height:18px;display:flex;justify-content:space-between;align-items:center;padding:0 8px;font-size:10px;flex-shrink:0"><span>${doc?`${docK} ${prnE(doc)}`:""}</span><span>${emp}</span></div></div>`;
+      }
+      const ruta=estilo==="PPN"
+        ?`<div class="row" style="align-items:center;padding:4px 12px;justify-content:space-between;height:84px"><div><div class="x" style="font-size:44px;line-height:1">${prnE(o)}</div><div class="k">${prnE([oO?.codigo,oO?.nombre].filter(Boolean).join(" "))}</div></div><span class="x" style="font-size:28px">&#8594;</span><div style="text-align:right"><div class="x" style="font-size:44px;line-height:1">${prnE(d)}</div><div class="k">${prnE([oD?.codigo,oD?.nombre].filter(Boolean).join(" "))}</div></div></div>`
+        :`<div class="row" style="height:80px"><div style="width:190px;display:flex;align-items:center;justify-content:space-between;padding:0 10px;border-right:2px solid #000"><div><div class="x" style="font-size:28px;line-height:1">${prnE(o)}</div><div class="k" style="font-size:7.5px">${prnE(oO?.codigo||"")}</div></div><span class="x" style="font-size:18px">&#8594;</span><div style="text-align:right"><div class="x" style="font-size:28px;line-height:1">${prnE(d)}</div><div class="k" style="font-size:7.5px">${prnE(oD?.codigo||"")}</div></div></div><div style="flex:1"></div></div>`;
+      return `<div class="lb">
+ <div class="row" style="height:${estilo==="PPN"?56:52}px"><div class="x el" style="flex:1;min-width:0;padding:0 12px;display:flex;align-items:center;font-size:26px;letter-spacing:2px">${emp}</div><div class="inv cc" style="width:92px"><span class="x" style="font-size:44px;line-height:1">${prnE(cod)}</span></div></div>
+ ${ruta}
+ <div class="row" style="padding:5px 12px;display:grid;grid-template-columns:1fr 1fr"><div><div class="k">${docK}</div><div class="b el" style="font-size:16px">${prnE(doc)||"&nbsp;"}</div></div><div><div class="k">${viaK}</div><div class="b el" style="font-size:16px">${prnE(via)||"&nbsp;"}</div></div></div>
+ <div class="row" style="height:62px"><div class="cc" style="width:115px;border-right:2px solid #000"><span class="k">Bulto</span><span class="x" style="font-size:32px;line-height:1">${bt}</span></div><div class="cc" style="flex:1;border-right:2px solid #000"><span class="k">WR</span><span class="x" style="font-size:26px;line-height:1">${nWR}</span></div><div class="cc" style="flex:1"><span class="k">Cajas</span><span class="x" style="font-size:26px;line-height:1">${cajas}</span></div></div>
+ <div class="row" style="height:46px"><div class="cc" style="flex:1;border-right:2px solid #000"><span class="k">Peso</span><span class="b" style="font-size:14px">${lb?`${lb} LB`:""}</span></div><div class="cc" style="flex:1.2;border-right:2px solid #000"><span class="k">Medidas</span><span class="b" style="font-size:13px">${med}</span></div><div class="cc" style="flex:.9"><span class="k">Ft³</span><span class="b" style="font-size:14px">${ft}</span></div></div>
+ <div style="flex:1;min-height:0;display:flex;align-items:center;gap:10px;padding:6px 10px"><div class="cc" style="flex:1;min-width:0">${barcodeSVG(bv,estilo==="ICT"?70:80)}<span class="b" style="font-size:14px;letter-spacing:1px">GUÍA ${prnE(g.id)} · ${bt}</span></div>${qr}</div>
+ ${estilo==="PPN"?`<div class="b" style="border-top:1px solid #000;padding:3px 10px;display:flex;justify-content:flex-end;font-size:10px;flex-shrink:0"><span>${fecha}</span></div>`
+   :`<div class="b" style="border-top:2px solid #000;height:26px;display:flex;font-size:10px;flex-shrink:0"><span style="flex:1"></span><span style="display:flex;align-items:center;padding:0 8px;border-left:1px solid #000">${fecha}</span></div>`}</div>`;
+    }).join("");
   };
 
   // ── Documentos ─────────────────────────────────────────────────────────────
@@ -7951,7 +8082,7 @@ export default function SistemaCarga(){
           const subirLogo=f=>{if(!f)return;const rd=new FileReader();rd.onload=()=>{const img=new Image();img.onload=()=>{
             const k=Math.min(1,240/Math.max(img.width,img.height));const c=document.createElement("canvas");c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);
             c.getContext("2d").drawImage(img,0,0,c.width,c.height);set({logo:c.toDataURL("image/png")});};img.src=rd.result;};rd.readAsDataURL(f);};
-          const guardar=async()=>{const n={nombre:(m.nombre||"").trim(),subtitulo:(m.subtitulo||"").trim(),iniciales:(m.iniciales||"").trim().toUpperCase(),logo:m.logo||"",
+          const guardar=async()=>{const n={nombre:(m.nombre||"").trim(),nombreComercial:(m.nombreComercial||"").trim(),subtitulo:(m.subtitulo||"").trim(),iniciales:(m.iniciales||"").trim().toUpperCase(),logo:m.logo||"",
               razon:(m.razon||"").trim(),idFiscal:(m.idFiscal||"").trim(),dir:(m.dir||"").trim(),/* se conservan; los datos fiscales vigentes son los del país */ciudad:(m.ciudad||"").trim(),estado:(m.estado||"").trim(),pais:(m.pais||"").trim(),cp:(m.cp||"").trim(),tel:(m.tel||"").trim(),email:(m.email||"").trim(),web:(m.web||"").trim(),ofiOrigen:m.ofiOrigen||"",ofiDestino:m.ofiDestino||""};
             if(!n.nombre){window.alert("Escribe el nombre de la empresa.");return;}
             const ok=await dbSetConfig('marca',n);if(ok===false){window.alert("No se pudo guardar.");return;}
@@ -7968,6 +8099,7 @@ export default function SistemaCarga(){
                 </div>
                 <div style={{flex:1,minWidth:260}}>
                   <div className="fg" style={{marginBottom:10}}><div className="fl">Nombre de la empresa *</div><input className="fi" value={m.nombre} onChange={e=>set({nombre:e.target.value.toUpperCase()})}/></div>
+                  <div className="fg" style={{marginBottom:10}}><div className="fl">Nombre comercial</div><input className="fi" value={m.nombreComercial||""} onChange={e=>set({nombreComercial:e.target.value.toUpperCase()})}/></div>
                   <div className="fg" style={{marginBottom:10}}><div className="fl">Subtítulo</div><input className="fi" style={{textTransform:"none"}} value={m.subtitulo} onChange={e=>set({subtitulo:e.target.value})}/></div>
                   <div className="fg" style={{marginBottom:10,maxWidth:160}}><div className="fl">Iniciales (sin logo)</div><input className="fi" maxLength={4} value={m.iniciales} onChange={e=>set({iniciales:e.target.value.toUpperCase()})}/></div>
                 </div>
@@ -8039,26 +8171,14 @@ export default function SistemaCarga(){
 
             {/* ETIQUETAS */}
             <div style={{background:"var(--bg2)",border:"1px solid var(--b1)",borderRadius:10,padding:"16px",gridColumn:"1/-1"}}>
-              <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:16,fontWeight:700,color:"var(--navy)",marginBottom:12}}><Ico e="🏷️" sp/>Tipo de Etiqueta Predeterminada</div>
+              <div style={{fontFamily:"Arial,Helvetica,sans-serif",fontSize:16,fontWeight:700,color:"var(--navy)",marginBottom:12}}><Ico e="🏷️" sp/>Etiquetas</div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
-                <div>
-                  <div style={{fontSize:14,fontWeight:700,color:"var(--t2)",marginBottom:8}}><Ico e="📦" sp/>Etiqueta WR</div>
-                  {[{v:1,l:"4×6 pulg. — Tipo 1 Básica (7 franjas)"},{v:2,l:"4×6 pulg. — Tipo 2 Completa (5 franjas + QR)"},{v:3,l:"4×2 pulg. — Tipo 3 Básica (3 franjas)"},{v:4,l:"4×2 pulg. — Tipo 4 Completa (3 franjas)"}].map(t=>(
-                    <div key={t.v} onClick={()=>setLabelWRTipo(t.v)} style={{padding:"8px 12px",borderRadius:6,border:`2px solid ${labelWRTipo===t.v?"var(--navy)":"var(--b1)"}`,background:labelWRTipo===t.v?"#EEF3FF":"var(--bg3)",marginBottom:6,cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>
-                      <div style={{width:14,height:14,borderRadius:"50%",border:`2px solid ${labelWRTipo===t.v?"var(--navy)":"var(--b1)"}`,background:labelWRTipo===t.v?"var(--navy)":"transparent",flexShrink:0}}/>
-                      <div style={{fontSize:14,fontWeight:600}}>{t.l}</div>
-                    </div>
-                  ))}
-                </div>
-                <div>
-                  <div style={{fontSize:14,fontWeight:700,color:"var(--t2)",marginBottom:8}}><Ico e="🗂️" sp/>Etiqueta Guía Consolidada</div>
-                  {[{v:1,l:"4×6 pulg. — Tipo 1 Grande (5 franjas)"},{v:2,l:"4×2 pulg. — Tipo 2 Compacta"}].map(t=>(
-                    <div key={t.v} onClick={()=>setLabelCSATipo(t.v)} style={{padding:"8px 12px",borderRadius:6,border:`2px solid ${labelCSATipo===t.v?"var(--navy)":"var(--b1)"}`,background:labelCSATipo===t.v?"#EEF3FF":"var(--bg3)",marginBottom:6,cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>
-                      <div style={{width:14,height:14,borderRadius:"50%",border:`2px solid ${labelCSATipo===t.v?"var(--navy)":"var(--b1)"}`,background:labelCSATipo===t.v?"var(--navy)":"transparent",flexShrink:0}}/>
-                      <div style={{fontSize:14,fontWeight:600}}>{t.l}</div>
-                    </div>
-                  ))}
-                </div>
+                {[["WR",etqCfgWR,setEtqCfgWR],["Guía",etqCfgGuia,setEtqCfgGuia]].map(([t,v,set])=>(
+                  <div key={t}>
+                    <div style={{fontSize:14,fontWeight:700,color:"var(--t2)",marginBottom:8}}>{t}</div>
+                    <div style={{display:"flex",gap:6,marginBottom:8}}>{["PPN","ICT"].map(x=><button key={x} type="button" className={v.estilo===x?"btn-p":"btn-s"} style={{fontSize:13,padding:"6px 18px"}} onClick={()=>set({...v,estilo:x})}>{x}</button>)}</div>
+                    <div style={{display:"flex",gap:6}}>{[["4x6","4×6"],["4x2","4×2"]].map(([x,l])=><button key={x} type="button" className={v.tam===x?"btn-p":"btn-s"} style={{fontSize:13,padding:"6px 18px"}} onClick={()=>set({...v,tam:x})}>{l}</button>)}</div>
+                  </div>))}
               </div>
             </div>
             <div style={{display:"flex",justifyContent:"flex-end",marginTop:16}}>
@@ -8068,8 +8188,8 @@ export default function SistemaCarga(){
                 dbSetConfig('consol_num_tipo',consolNumTipo);
                 dbSetConfig('consol_sec_inicio',consolSecInicio);
                 dbSetConfig('empresa_slug',empresaSlug);
-                dbSetConfig('label_wr_tipo',labelWRTipo);
-                dbSetConfig('label_csa_tipo',labelCSATipo);
+                dbSetConfig('label_wr_tipo',etqCfgWR);
+                dbSetConfig('label_csa_tipo',etqCfgGuia);
                 logAction("Guardó configuración de numeración","");
                 alert("Configuración de numeración guardada correctamente.");
               }}><Ico e="💾" sp/>Guardar Numeración</button>
@@ -14849,443 +14969,24 @@ export default function SistemaCarga(){
 
       {/* RECIBO DE CARGO RELEASE INDIVIDUAL — imprimible */}
       {crIndivRecibo&&<PrnModal titulo="Comprobante de egreso" html={htmlReleaseRecibo(crIndivRecibo)} onClose={()=>setCrIndivRecibo(null)}/>}
-      {showLabels&&(()=>{
-        const _lwr=showLabels.wr;const _ldims=showLabels.dims||[];
-        const _hdrName=getHeaderName(_lwr,clients,agentes,oficinas,empresaNombre);
-        // ── ETIQUETAS DE CAJA WR — 4 TIPOS ──────────────────────────────────
-        // TODAS: fondo blanco, letras negras, orientación correcta.
-        // Tipo 1 Básica:  4"ancho × 6"alto portrait (384×576)  · 7 franjas
-        // Tipo 2 Completa:4"ancho × 6"alto portrait (384×576)  · 5 franjas + QR placeholder
-        // Tipo 3 Básica:  4"ancho × 2"alto landscape (384×192) · 3 franjas
-        // Tipo 4 Completa:4"ancho × 2"alto landscape (384×192) · 3 franjas
-        // Barcode de caja: `${WR#}-${idx}/${total}`
-
-        const _fechaStr=_lwr?.fecha?new Date(_lwr.fecha).toLocaleDateString("es-VE"):"—";
-        const _horaStr=_lwr?.fecha?new Date(_lwr.fecha).toLocaleTimeString("es-VE",{hour:"2-digit",minute:"2-digit"}):"";
-        const _shipperName=showLabels.remitente||_lwr?.shipper||_lwr?.remitente||"—";
-        const _referencia=_lwr?.proNumber||_lwr?.ocNumber||"—";
-
-        // ── Tipo 1 Básica — 4"×6" (portrait) 7 franjas ──────────────────────
-        const LabelCaja1=({d,idx,total})=>{
-          const bval=`${_lwr?.id||""}-${idx}/${total}`;
-          const dimStr=d.l&&d.a&&d.h?`${parseFloat((d.l/2.54).toFixed(2))}×${parseFloat((d.a/2.54).toFixed(2))}×${parseFloat((d.h/2.54).toFixed(2))}"`:"—";
-          const pkLb=d.pkLb||(d.pk?parseFloat((d.pk*LB_KG).toFixed(2)):null);
-          const pvLb=d.volLb||d.pv||null;
-          const ft3=d.ft3||null;
-          const m3=d.m3||null;
-          return(
-            <div className="label-card label-4x6" style={{width:384,height:576,border:"2px solid #000",background:"#fff",color:"#000",display:"flex",flexDirection:"column",pageBreakInside:"avoid",fontFamily:"Arial,sans-serif"}}>
-              {/* Franja 1 — Nombre dinámico */}
-              <div style={{textAlign:"center",padding:"10px 8px",borderBottom:"2px solid #000"}}>
-                <div style={{fontWeight:900,fontSize:26,letterSpacing:3,lineHeight:1.05,color:"#000"}}>{_hdrName}</div>
-              </div>
-              {/* Franja 2 — WR# + barcode */}
-              <div style={{padding:"6px 10px",borderBottom:"2px solid #000",textAlign:"center"}}>
-                <div style={{fontFamily:"'DM Mono',monospace",fontWeight:900,fontSize:20,letterSpacing:2,marginBottom:2}}>{_lwr?.id||"—"}</div>
-                <div style={{overflow:"hidden"}}><WRBarcode value={_lwr?.id||""} height={40} width={1.6}/></div>
-              </div>
-              {/* Franja 3 — Shipper */}
-              <div style={{padding:"6px 10px",borderBottom:"1.5px solid #000"}}>
-                <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:"#000"}}>Shipper</div>
-                <div style={{fontSize:15,fontWeight:700,lineHeight:1.2}}>{_shipperName}</div>
-                {_lwr?.remitenteTel&&<div style={{fontSize:12,fontFamily:"'DM Mono',monospace"}}>{_lwr.remitenteTel}</div>}
-              </div>
-              {/* Franja 4 — Consignatario (Nombre y Apellido) */}
-              <div style={{padding:"6px 10px",borderBottom:"1.5px solid #000"}}>
-                <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Consignatario</div>
-                <div style={{fontSize:18,fontWeight:900,lineHeight:1.1}}>{_lwr?.consignee||"—"}</div>
-                <div style={{fontSize:12,fontFamily:"'DM Mono',monospace",fontWeight:700,marginTop:1}}>#{_lwr?.casillero||"—"}</div>
-              </div>
-              {/* Franja 5 — Origen | Destino */}
-              <div style={{display:"flex",borderBottom:"1.5px solid #000"}}>
-                <div style={{flex:1,padding:"6px 10px",borderRight:"1.5px solid #000"}}>
-                  <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Origen</div>
-                  <div style={{fontSize:16,fontWeight:800}}>{_lwr?.origCity||"—"}</div>
-                </div>
-                <div style={{flex:1,padding:"6px 10px",textAlign:"right"}}>
-                  <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Destino</div>
-                  <div style={{fontSize:16,fontWeight:800}}>{_lwr?.destCity||"—"}</div>
-                </div>
-              </div>
-              {/* Franja 6 — Tracking + pesos + medidas + recuadro pieza */}
-              <div style={{padding:"6px 10px",borderBottom:"1.5px solid #000",display:"flex",alignItems:"stretch",gap:8,flex:1}}>
-                <div style={{flex:1,display:"flex",flexDirection:"column",gap:3,fontSize:12}}>
-                  <div><span style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Tracking </span><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,wordBreak:"break-all"}}>{d.tracking||"—"}</span></div>
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:2,fontFamily:"'DM Mono',monospace",fontWeight:700}}>
-                    <span>P: {pkLb?`${pkLb} lb`:"—"}</span>
-                    <span>Pv: {pvLb?`${pvLb} lb`:"—"}</span>
-                    <span>ft³: {ft3||"—"}</span>
-                    <span>m³: {m3||"—"}</span>
-                  </div>
-                  <div><span style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Medidas </span><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700}}>{dimStr}</span></div>
-                </div>
-                {/* Recuadro pequeño — número de pieza */}
-                <div style={{width:70,border:"2px solid #000",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                  <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Pieza</div>
-                  <div style={{fontFamily:"'Arial Black',Arial,sans-serif",fontSize:24,fontWeight:900,lineHeight:1}}>{idx}/{total}</div>
-                </div>
-              </div>
-              {/* Franja 7 — Fecha y hora de registro + barcode pieza */}
-              <div style={{padding:"3px 10px",display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:10}}>
-                <span style={{fontFamily:"'DM Mono',monospace",fontWeight:700}}>{_fechaStr} {_horaStr}</span>
-                <span style={{fontFamily:"'DM Mono',monospace",fontWeight:700}}>{bval}</span>
-              </div>
-            </div>
-          );
-        };
-
-        // ── Tipo 2 Completa — 4"×6" (portrait) 5 franjas ────────────────────
-        const LabelCaja2=({d,idx,total})=>{
-          const bval=`${_lwr?.id||""}-${idx}/${total}`;
-          const dimStr=d.l&&d.a&&d.h?`${parseFloat((d.l/2.54).toFixed(2))}×${parseFloat((d.a/2.54).toFixed(2))}×${parseFloat((d.h/2.54).toFixed(2))}"`:"—";
-          const pkLb=d.pkLb||(d.pk?parseFloat((d.pk*LB_KG).toFixed(2)):null);
-          const pvLb=d.volLb||d.pv||null;
-          return(
-            <div className="label-card label-4x6" style={{width:384,height:576,border:"2px solid #000",background:"#fff",color:"#000",display:"flex",flexDirection:"column",pageBreakInside:"avoid",fontFamily:"Arial,sans-serif"}}>
-              {/* Franja 1 — Shipper | Consignatario */}
-              <div style={{display:"flex",borderBottom:"2px solid #000"}}>
-                <div style={{flex:1,padding:"6px 10px",borderRight:"2px solid #000"}}>
-                  <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Shipper</div>
-                  <div style={{fontSize:14,fontWeight:700,lineHeight:1.2}}>{_shipperName}</div>
-                </div>
-                <div style={{flex:1,padding:"6px 10px"}}>
-                  <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Consignatario</div>
-                  <div style={{fontSize:15,fontWeight:900,lineHeight:1.15}}>{_lwr?.consignee||"—"}</div>
-                  <div style={{fontSize:11,fontFamily:"'DM Mono',monospace",fontWeight:700}}>#{_lwr?.casillero||"—"}</div>
-                </div>
-              </div>
-              {/* Franja 2 — Pesos + medidas + recuadro pieza */}
-              <div style={{padding:"6px 10px",borderBottom:"2px solid #000",display:"flex",alignItems:"stretch",gap:8}}>
-                <div style={{flex:1,fontSize:12,display:"flex",flexDirection:"column",gap:2}}>
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:2,fontFamily:"'DM Mono',monospace",fontWeight:700}}>
-                    <span>Peso: {pkLb?`${pkLb} lb`:"—"}</span>
-                    <span>P.Vol: {pvLb?`${pvLb} lb`:"—"}</span>
-                    <span>ft³: {fmtDec(d.ft3,2,"—")}</span>
-                    <span>m³: {fmtDec(d.m3,3,"—")}</span>
-                  </div>
-                  <div><span style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Medidas </span><span style={{fontFamily:"'DM Mono',monospace",fontWeight:700}}>{dimStr}</span></div>
-                </div>
-                <div style={{width:70,border:"2px solid #000",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                  <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Pieza</div>
-                  <div style={{fontFamily:"'Arial Black',Arial,sans-serif",fontSize:24,fontWeight:900,lineHeight:1}}>{idx}/{total}</div>
-                </div>
-              </div>
-              {/* Franja 3 — N° WR + Código Barra + Tipo Envío */}
-              <div style={{padding:"6px 10px",borderBottom:"2px solid #000",textAlign:"center"}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:3}}>
-                  <div style={{fontFamily:"'DM Mono',monospace",fontWeight:900,fontSize:18,letterSpacing:2}}>{_lwr?.id||"—"}</div>
-                  <div style={{fontSize:12,fontWeight:700,border:"1.5px solid #000",padding:"2px 8px",borderRadius:3}}>{_lwr?.tipoEnvio||showLabels.tipoEnvio||"—"}</div>
-                </div>
-                <div style={{overflow:"hidden"}}><WRBarcode value={_lwr?.id||""} height={38} width={1.5}/></div>
-              </div>
-              {/* Franja 4 — Notas + Referencia + Tipo de Pago */}
-              <div style={{padding:"6px 10px",borderBottom:"2px solid #000",flex:1,display:"flex",flexDirection:"column",gap:3}}>
-                <div><span style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Notas </span><span style={{fontSize:12,fontWeight:600}}>{_lwr?.notas||"—"}</span></div>
-                <div style={{display:"flex",justifyContent:"space-between",gap:8}}>
-                  <div style={{flex:1}}><span style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Ref </span><span style={{fontSize:12,fontFamily:"'DM Mono',monospace",fontWeight:700}}>{_referencia}</span></div>
-                  <div><span style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Pago </span><span style={{fontSize:12,fontWeight:700}}>{_lwr?.tipoPago||"—"}</span></div>
-                </div>
-              </div>
-              {/* Franja 5 — QR + Origen/Destino + fecha/hora */}
-              <div style={{padding:"6px 10px",display:"flex",alignItems:"stretch",gap:8}}>
-                {/* QR placeholder */}
-                <div style={{width:70,height:70,border:"1.5px dashed #888",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                  <div style={{fontSize:9,color:"#888",textAlign:"center",fontWeight:700}}>QR<br/>RUTA<br/>(futuro)</div>
-                </div>
-                <div style={{flex:1,display:"flex",flexDirection:"column",justifyContent:"space-between"}}>
-                  <div style={{display:"flex",justifyContent:"space-between",fontSize:13,fontWeight:800}}>
-                    <div>
-                      <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Origen</div>
-                      <div>{_lwr?.origCity||"—"}</div>
-                    </div>
-                    <div style={{textAlign:"right"}}>
-                      <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Destino</div>
-                      <div>{_lwr?.destCity||"—"}</div>
-                    </div>
-                  </div>
-                  <div style={{fontSize:10,fontFamily:"'DM Mono',monospace",fontWeight:700,textAlign:"right"}}>{_fechaStr} {_horaStr}</div>
-                </div>
-              </div>
-            </div>
-          );
-        };
-
-        // ── Tipo 3 Básica — 4"×2" (landscape) 3 franjas ─────────────────────
-        const LabelCaja3=({d,idx,total})=>{
-          const bval=`${_lwr?.id||""}-${idx}/${total}`;
-          const dimStr=d.l&&d.a&&d.h?`${parseFloat((d.l/2.54).toFixed(2))}×${parseFloat((d.a/2.54).toFixed(2))}×${parseFloat((d.h/2.54).toFixed(2))}"`:"—";
-          const pkLb=d.pkLb||(d.pk?parseFloat((d.pk*LB_KG).toFixed(2)):null);
-          return(
-            <div className="label-card label-4x2" style={{width:384,height:192,border:"2px solid #000",background:"#fff",color:"#000",display:"flex",flexDirection:"column",pageBreakInside:"avoid",fontFamily:"Arial,sans-serif"}}>
-              {/* Franja 1 — Col 1 Nombre | Col 2 Consignatario */}
-              <div style={{display:"flex",borderBottom:"1.5px solid #000"}}>
-                <div style={{flex:1,padding:"4px 8px",borderRight:"1.5px solid #000"}}>
-                  <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>De</div>
-                  <div style={{fontSize:14,fontWeight:900,lineHeight:1.1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{_hdrName}</div>
-                </div>
-                <div style={{flex:1,padding:"4px 8px"}}>
-                  <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Consignatario</div>
-                  <div style={{fontSize:14,fontWeight:900,lineHeight:1.1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{_lwr?.consignee||"—"}</div>
-                  <div style={{fontSize:11,fontFamily:"'DM Mono',monospace",fontWeight:700}}>#{_lwr?.casillero||"—"}</div>
-                </div>
-              </div>
-              {/* Franja 2 — N° WR + barcode + Ciudad Destino */}
-              <div style={{padding:"3px 8px",borderBottom:"1.5px solid #000",display:"flex",alignItems:"center",gap:6}}>
-                <div style={{flex:1,overflow:"hidden"}}>
-                  <div style={{fontFamily:"'DM Mono',monospace",fontWeight:900,fontSize:13,letterSpacing:1}}>{_lwr?.id||"—"}</div>
-                  <div style={{overflow:"hidden"}}><WRBarcode value={_lwr?.id||""} height={28} width={1.2}/></div>
-                </div>
-                <div style={{textAlign:"right",flexShrink:0}}>
-                  <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Destino</div>
-                  <div style={{fontSize:14,fontWeight:900}}>{_lwr?.destCity||"—"}</div>
-                </div>
-              </div>
-              {/* Franja 3 — Pesos + medidas + tracking + pieza */}
-              <div style={{padding:"3px 8px",flex:1,display:"flex",alignItems:"stretch",gap:6}}>
-                <div style={{flex:1,fontSize:11,display:"flex",flexDirection:"column",justifyContent:"center",gap:1,fontFamily:"'DM Mono',monospace",fontWeight:700}}>
-                  <div>{pkLb?`${pkLb}lb`:"—"} · {dimStr}</div>
-                  <div style={{whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>Trk: {d.tracking||"—"}</div>
-                </div>
-                <div style={{width:52,border:"1.5px solid #000",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                  <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase"}}>Pieza</div>
-                  <div style={{fontFamily:"'Arial Black',Arial,sans-serif",fontSize:17,fontWeight:900,lineHeight:1}}>{idx}/{total}</div>
-                </div>
-              </div>
-            </div>
-          );
-        };
-
-        // ── Tipo 4 Completa — 4"×2" (landscape) 3 franjas 2-col ─────────────
-        const LabelCaja4=({d,idx,total})=>{
-          const bval=`${_lwr?.id||""}-${idx}/${total}`;
-          const dimStr=d.l&&d.a&&d.h?`${parseFloat((d.l/2.54).toFixed(2))}×${parseFloat((d.a/2.54).toFixed(2))}×${parseFloat((d.h/2.54).toFixed(2))}"`:"—";
-          const pkLb=d.pkLb||(d.pk?parseFloat((d.pk*LB_KG).toFixed(2)):null);
-          return(
-            <div className="label-card label-4x2" style={{width:384,height:192,border:"2px solid #000",background:"#fff",color:"#000",display:"flex",flexDirection:"column",pageBreakInside:"avoid",fontFamily:"Arial,sans-serif"}}>
-              {/* Franja 1 — Col1 (más pequeña) Nombre | Col2 WR# + barcode */}
-              <div style={{display:"flex",borderBottom:"1.5px solid #000"}}>
-                <div style={{width:110,padding:"3px 6px",borderRight:"1.5px solid #000",display:"flex",flexDirection:"column",justifyContent:"center"}}>
-                  <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>De</div>
-                  <div style={{fontSize:13,fontWeight:900,lineHeight:1.1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{_hdrName}</div>
-                </div>
-                <div style={{flex:1,padding:"3px 8px"}}>
-                  <div style={{fontFamily:"'DM Mono',monospace",fontWeight:900,fontSize:13,letterSpacing:1}}>{_lwr?.id||"—"}</div>
-                  <div style={{overflow:"hidden"}}><WRBarcode value={_lwr?.id||""} height={26} width={1.2}/></div>
-                </div>
-              </div>
-              {/* Franja 2 — Col1 Shipper | Col2 Consignatario */}
-              <div style={{display:"flex",borderBottom:"1.5px solid #000"}}>
-                <div style={{flex:1,padding:"3px 8px",borderRight:"1.5px solid #000"}}>
-                  <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Shipper</div>
-                  <div style={{fontSize:12,fontWeight:700,lineHeight:1.1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{_shipperName}</div>
-                </div>
-                <div style={{flex:1,padding:"3px 8px"}}>
-                  <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Consignatario</div>
-                  <div style={{fontSize:12,fontWeight:900,lineHeight:1.1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{_lwr?.consignee||"—"}</div>
-                  <div style={{fontSize:10,fontFamily:"'DM Mono',monospace",fontWeight:700}}>#{_lwr?.casillero||"—"}</div>
-                </div>
-              </div>
-              {/* Franja 3 — Col1 Pesos/Medidas/Tracking | Col2 Envío/Pago/Pieza/Ruta */}
-              <div style={{display:"flex",flex:1}}>
-                <div style={{flex:1,padding:"3px 8px",borderRight:"1.5px solid #000",fontSize:10,display:"flex",flexDirection:"column",justifyContent:"center",gap:1,fontFamily:"'DM Mono',monospace",fontWeight:700}}>
-                  <div>P: {pkLb?`${pkLb}lb`:"—"}</div>
-                  <div>Med: {dimStr}</div>
-                  <div style={{whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>Trk: {d.tracking||"—"}</div>
-                </div>
-                <div style={{flex:1,padding:"3px 8px",fontSize:10,display:"flex",flexDirection:"column",justifyContent:"center",gap:1,fontFamily:"'DM Mono',monospace",fontWeight:700}}>
-                  <div>Env: {_lwr?.tipoEnvio||showLabels.tipoEnvio||"—"}</div>
-                  <div>Pago: {_lwr?.tipoPago||"—"}</div>
-                  <div>Pz: <b style={{fontSize:12}}>{idx}/{total}</b></div>
-                  <div style={{whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{_lwr?.origCity||"—"} → {_lwr?.destCity||"—"}</div>
-                </div>
-              </div>
-            </div>
-          );
-        };
-
-        // Router — selecciona el componente según labelWRTipo
-        const LabelCaja=labelWRTipo===2?LabelCaja2:labelWRTipo===3?LabelCaja3:labelWRTipo===4?LabelCaja4:LabelCaja1;
-        const _tipoDesc=labelWRTipo===2?"4×6 Tipo 2 Completa":labelWRTipo===3?"4×2 Tipo 3 Básica":labelWRTipo===4?"4×2 Tipo 4 Completa":"4×6 Tipo 1 Básica";
-
-        return(
-        <div className="ov">
-          <div className="modal mxl" onClick={e=>e.stopPropagation()} style={{maxHeight:"90vh",overflowY:"auto"}}>
-            <div className="mhd">
-              <div className="mt"><Ico e="🏷️" sp/>Etiquetas de Caja — {_lwr?.id}</div>
-              <div style={{display:"flex",gap:6}}>
-                <button className="btn-p" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>window.print()}><Ico e="🖨️" sp/>Imprimir todo</button>
-                <button className="mcl" onClick={()=>setShowLabels(null)}>✕</button>
-              </div>
-            </div>
-            <div style={{marginBottom:12}}>
-              <div style={{fontSize:13,fontWeight:700,color:"var(--navy)",marginBottom:4}}><Ico e="📦" sp/>Etiquetas de Caja ({_ldims.length||_lwr?.cajas||0}) · Tipo actual: <span style={{fontFamily:"'DM Mono',monospace"}}>{_tipoDesc}</span></div>
-              <div style={{display:"flex",flexWrap:"wrap",gap:12,justifyContent:"center"}}>
-                {_ldims.length>0?_ldims.map((d,i)=><LabelCaja key={i} d={d} idx={i+1} total={_ldims.length}/>)
-                  :Array.from({length:_lwr?.cajas||1},(_,i)=><LabelCaja key={i} d={{}} idx={i+1} total={_lwr?.cajas||1}/>)}
-              </div>
-            </div>
-          </div>
-        </div>
-        );
-      })()}
-
-      {/* ── ETIQUETAS DE GUÍA CONSOLIDADA ─────────────────────────────────── */}
-      {showConsolLabels&&(()=>{
-        const _g=showConsolLabels.guia;
-        const _conts=showConsolLabels.containers||[];
-        const _rem=showConsolLabels.remitente||empresaNombre;
-        const _total=_conts.length||1;
-        const _totalWR=_conts.reduce((s,c)=>s+(c.wr?.length||0),0);
-        const _totalCajas=_conts.reduce((s,c)=>s+(c.wr||[]).reduce((a,w)=>a+(w.cajas||1),0),0);
-
-        // Helper: resolver tipo de contenedor y medidas — CONTAINER_TYPES manda;
-        // si el código no existe en la config, se usan las medidas manuales del container.
-        const contDims=(ct)=>{
-          const reg=CONTAINER_TYPES.find(t=>t.code===ct.tipo);
-          if(reg&&reg.dim&&reg.dim.toLowerCase()!=="libre")return{tipo:reg.name||reg.code,dim:reg.dim,manual:false};
-          const l=ct.largo,a=ct.ancho,h=ct.alto;
-          if(l&&a&&h)return{tipo:ct.tipo||"—",dim:`${l}×${a}×${h} in`,manual:true};
-          return{tipo:ct.tipo||"—",dim:"—",manual:true};
-        };
-
-        // Helpers de fecha/hora (registro de la guía)
-        const _gfechaStr=(()=>{const d=_g?.fecha?new Date(_g.fecha):null;return d?d.toLocaleDateString("es-VE"):(_g?.fechaSalida||"—");})();
-        const _ghoraStr=(()=>{const d=_g?.fecha?new Date(_g.fecha):null;return d?d.toLocaleTimeString("es-VE",{hour:"2-digit",minute:"2-digit"}):"";})();
-
-        // ── Tipo 1 Grande — 4" ancho × 6" alto (portrait 384×576), 5 franjas ─
-        const LabelGuiaConsol1=({ct,idx,total})=>{
-          const bval=`${_g?.id||""}-${idx}/${total}`;
-          const cd=contDims(ct);
-          const cajasInCont=(ct.wr||[]).reduce((a,w)=>a+(w.cajas||1),0);
-          return(
-            <div className="label-card label-4x6" style={{width:384,height:576,border:"2px solid #000",background:"#fff",color:"#000",display:"flex",flexDirection:"column",pageBreakInside:"avoid",fontFamily:"Arial,sans-serif"}}>
-              {/* Franja 1 — Nombre Empresa Matriz */}
-              <div style={{textAlign:"center",padding:"8px 10px",borderBottom:"2px solid #000"}}>
-                <div style={{fontWeight:900,fontSize:24,letterSpacing:4,lineHeight:1}}>{_rem}</div>
-                <div style={{fontSize:11,letterSpacing:3,marginTop:3,fontWeight:700}}>GUÍA CONSOLIDADA</div>
-              </div>
-              {/* Franja 2 — Número de Guía */}
-              <div style={{textAlign:"center",padding:"10px 10px",borderBottom:"2px solid #000",background:"#fff"}}>
-                <div style={{fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:2}}>N° Guía</div>
-                <div style={{fontFamily:"'DM Mono',monospace",fontWeight:900,fontSize:28,letterSpacing:3,marginTop:2}}>{_g?.id||"—"}</div>
-              </div>
-              {/* Franja 3 — Origen | Destino */}
-              <div style={{display:"flex",borderBottom:"2px solid #000"}}>
-                <div style={{flex:1,padding:"8px 10px",borderRight:"1.5px solid #000",textAlign:"center"}}>
-                  <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:2}}>Origen</div>
-                  <div style={{fontSize:16,fontWeight:900,marginTop:2}}>{OFFICE_CONFIG.origCity||"—"}</div>
-                </div>
-                <div style={{flex:1,padding:"8px 10px",textAlign:"center"}}>
-                  <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:2}}>Destino</div>
-                  <div style={{fontSize:16,fontWeight:900,marginTop:2}}>{_g?.destino||"—"}</div>
-                </div>
-              </div>
-              {/* Franja 4 — Tipo Envío | Tipo Cont+Medidas | Peso Contenedor */}
-              <div style={{display:"flex",borderBottom:"2px solid #000"}}>
-                <div style={{flex:"0 0 100px",padding:"6px 6px",borderRight:"1px solid #000",textAlign:"center"}}>
-                  <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Tipo Envío</div>
-                  <div style={{fontSize:13,fontWeight:900,marginTop:2}}>{_g?.tipoEnvio||"—"}</div>
-                </div>
-                <div style={{flex:1,padding:"6px 6px",borderRight:"1px solid #000",textAlign:"center"}}>
-                  <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Contenedor</div>
-                  <div style={{fontSize:12,fontWeight:900,marginTop:2}}>{cd.tipo}</div>
-                  <div style={{fontFamily:"'DM Mono',monospace",fontSize:11,fontWeight:700,marginTop:1}}>{cd.dim}{cd.manual&&<span style={{fontSize:9,marginLeft:3}}>(man)</span>}</div>
-                </div>
-                <div style={{flex:"0 0 88px",padding:"6px 6px",textAlign:"center"}}>
-                  <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Peso</div>
-                  <div style={{fontFamily:"'DM Mono',monospace",fontSize:15,fontWeight:900,marginTop:2}}>{ct.pesoLb?`${fmtDec(ct.pesoLb,2)} lb`:"—"}</div>
-                </div>
-              </div>
-              {/* Franja 5 — Barcode + Pieza + recuadro paquetes + fecha/hora */}
-              <div style={{flex:1,padding:"8px 8px",display:"flex",flexDirection:"column"}}>
-                <div style={{display:"flex",alignItems:"center",gap:6,flex:1}}>
-                  <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
-                    <div style={{overflow:"hidden",width:"100%"}}><WRBarcode value={bval} height={70} width={1.9}/></div>
-                    <div style={{fontFamily:"'DM Mono',monospace",fontSize:12,letterSpacing:2,fontWeight:700,marginTop:2}}>{bval}</div>
-                  </div>
-                  <div style={{flex:"0 0 54px",textAlign:"center",border:"1.5px solid #000",padding:"4px 2px"}}>
-                    <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Pieza</div>
-                    <div style={{fontFamily:"'DM Mono',monospace",fontSize:18,fontWeight:900,lineHeight:1,marginTop:2}}>{idx}/{total}</div>
-                  </div>
-                  <div style={{flex:"0 0 54px",textAlign:"center",border:"2px solid #000",padding:"4px 2px"}}>
-                    <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Paq.</div>
-                    <div style={{fontFamily:"'DM Mono',monospace",fontSize:22,fontWeight:900,lineHeight:1,marginTop:2}}>{cajasInCont}</div>
-                  </div>
-                </div>
-                <div style={{textAlign:"center",fontFamily:"'DM Mono',monospace",fontSize:11,fontWeight:700,marginTop:6,paddingTop:4,borderTop:"1px dashed #888"}}>
-                  {_gfechaStr} {_ghoraStr}
-                </div>
-              </div>
-            </div>
-          );
-        };
-
-        // ── Tipo 2 Compacta — 4" ancho × 2" alto (landscape 384×192), 3 franjas ─
-        const LabelGuiaConsol2=({ct,idx,total})=>{
-          const bval=`${_g?.id||""}-${idx}/${total}`;
-          const cd=contDims(ct);
-          const cajasInCont=(ct.wr||[]).reduce((a,w)=>a+(w.cajas||1),0);
-          return(
-            <div className="label-card label-4x2" style={{width:384,height:192,border:"2px solid #000",background:"#fff",color:"#000",display:"flex",flexDirection:"column",pageBreakInside:"avoid",fontFamily:"Arial,sans-serif"}}>
-              {/* Franja 1 — Empresa Matriz + N° Guía */}
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"3px 8px",borderBottom:"1.5px solid #000"}}>
-                <div style={{fontWeight:900,fontSize:15,letterSpacing:2,lineHeight:1}}>{_rem}</div>
-                <div style={{fontFamily:"'DM Mono',monospace",fontWeight:900,fontSize:15,letterSpacing:1}}>{_g?.id||"—"}</div>
-              </div>
-              {/* Franja 2 — Ruta + tipo envío + contenedor/medidas + peso */}
-              <div style={{padding:"3px 8px",borderBottom:"1.5px solid #000"}}>
-                <div style={{display:"flex",justifyContent:"space-between",fontSize:12,fontWeight:700}}>
-                  <span>{OFFICE_CONFIG.origCity||"—"} → {_g?.destino||"—"}</span>
-                  <span>{_g?.tipoEnvio||"—"}</span>
-                </div>
-                <div style={{display:"flex",justifyContent:"space-between",fontSize:11,fontFamily:"'DM Mono',monospace",fontWeight:700,marginTop:2}}>
-                  <span>{cd.tipo} {cd.dim}</span>
-                  <span>{ct.pesoLb?`${fmtDec(ct.pesoLb,2)}lb`:"—"}</span>
-                </div>
-              </div>
-              {/* Franja 3 — Barcode + Pieza + Paquetes */}
-              <div style={{flex:1,padding:"3px 6px",display:"flex",alignItems:"center",gap:4}}>
-                <div style={{flex:1,textAlign:"center",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
-                  <div style={{overflow:"hidden",width:"100%"}}><WRBarcode value={bval} height={42} width={1.3}/></div>
-                  <div style={{fontFamily:"'DM Mono',monospace",fontSize:10,letterSpacing:1,fontWeight:700,marginTop:1}}>{bval}</div>
-                </div>
-                <div style={{flex:"0 0 40px",textAlign:"center",border:"1.5px solid #000",padding:"2px 1px"}}>
-                  <div style={{fontSize:8,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Pz.</div>
-                  <div style={{fontFamily:"'DM Mono',monospace",fontSize:14,fontWeight:900,lineHeight:1}}>{idx}/{total}</div>
-                </div>
-                <div style={{flex:"0 0 40px",textAlign:"center",border:"2px solid #000",padding:"2px 1px"}}>
-                  <div style={{fontSize:8,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Paq.</div>
-                  <div style={{fontFamily:"'DM Mono',monospace",fontSize:16,fontWeight:900,lineHeight:1}}>{cajasInCont}</div>
-                </div>
-              </div>
-            </div>
-          );
-        };
-
-        // Router — solo 2 tipos: 1=Grande 4×6, 2=Compacta 4×2
-        const LabelGuiaConsol=labelCSATipo===2?LabelGuiaConsol2:LabelGuiaConsol1;
-        const _tipoDesc=labelCSATipo===2?"4×2 Tipo 2 Compacta":"4×6 Tipo 1 Grande";
-
-        return(
-          <div className="ov">
-            <div className="modal mxl" onClick={e=>e.stopPropagation()} style={{maxHeight:"90vh",overflowY:"auto"}}>
-              <div className="mhd">
-                <div className="mt"><Ico e="📋" sp/>Etiquetas de Guía Consolidada — {_g?.id}</div>
-                <div style={{display:"flex",gap:6}}>
-                  <button className="btn-p" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>window.print()}><Ico e="🖨️" sp/>Imprimir todo</button>
-                  <button className="mcl" onClick={()=>setShowConsolLabels(null)}>✕</button>
-                </div>
-              </div>
-              <div style={{marginBottom:12}}>
-                <div style={{fontSize:13,fontWeight:700,color:"var(--navy)",marginBottom:4}}><Ico e="📋" sp/>Etiquetas de Guía Consolidada ({_total}) · Tipo actual: <span style={{fontFamily:"'DM Mono',monospace"}}>{_tipoDesc}</span></div>
-                <div style={{fontSize:12,color:"var(--t3)",marginBottom:8}}>Total: {_totalWR} WR · {_totalCajas} cajas</div>
-                <div style={{display:"flex",flexWrap:"wrap",gap:12,justifyContent:"center"}}>
-                  {_conts.map((ct,i)=><LabelGuiaConsol key={i} ct={ct} idx={i+1} total={_total}/>)}
-                </div>
-              </div>
-            </div>
-          </div>
-        );
+      {(showLabels||showConsolLabels)&&(()=>{
+        const esG=!!showConsolLabels&&!showLabels;
+        const cfgT=esG?etqCfgGuia:etqCfgWR;
+        const est=etqSel?.estilo||cfgT.estilo,tam=etqSel?.tam||cfgT.tam;
+        const cerrar=()=>{setShowLabels(null);setShowConsolLabels(null);setEtqSel(null);};
+        const doc=esG?showConsolLabels.guia:showLabels.wr;
+        const titulo=`${esG?"Etiquetas guía":"Etiquetas WR"} ${doc?.id||""}`;
+        const html=etqDoc(titulo,tam,esG?etqGuia({...doc,containers:showConsolLabels.containers||doc?.containers||[]},est,tam):etqWR({...doc,dims:showLabels.dims||doc?.dims||[]},est,tam));
+        const opt=(v,l,cur,k)=><button key={v} className={cur===v?"btn-p":"btn-s"} style={{fontSize:13,padding:"5px 14px"}} onClick={()=>setEtqSel({estilo:est,tam,[k]:v})}>{l}</button>;
+        return <div className="ov" onClick={cerrar}><div className="modal mlg" onClick={e=>e.stopPropagation()}>
+          <div className="mhd"><div className="mt"><Ico e="🏷️" sp/>{titulo}</div>
+            <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
+              {opt("PPN","PPN",est,"estilo")}{opt("ICT","ICT",est,"estilo")}<span style={{width:10}}/>
+              {opt("4x6","4×6",tam,"tam")}{opt("4x2","4×2",tam,"tam")}<span style={{width:10}}/>
+              <button className="btn-p" style={{fontSize:13,padding:"5px 12px"}} onClick={()=>prnImprimir(html)}><Ico e="🖨️" sp/>Imprimir</button>
+              <button className="mcl" onClick={cerrar}>✕</button></div></div>
+          <iframe title={titulo} srcDoc={html} style={{width:"100%",height:"74vh",border:"1px solid var(--b1)",borderRadius:6,background:"#d9dde3",display:"block"}}/>
+        </div></div>;
       })()}
 
       {showNewCl&&<ClientModal matrizFija={matrizTrabajo} esAdmin={currentUser.rol==="A"} elegirMatriz={!["E","E1","F","G","I"].includes(currentUser.rol)} acceso={hasPerm("dar_acceso")} tiposOk={Array.isArray(showNewCl)?showNewCl:tiposCrear} rolesOk={rolesAsignables} agentes={agentesVis} oficinas={oficinas} autonomos={autonomosVis} allClients={clients} title="Nuevo Registro" initial={{tipo:(Array.isArray(showNewCl)?showNewCl:tiposCrear)[0]||"cliente",clienteTipo:"matriz",primerNombre:"",segundoNombre:"",primerApellido:"",segundoApellido:"",cedula:"",dir:"",municipio:"",estado:"",pais:"",cp:"",tel1:"",tel2:"",email:"",casillero:"",rol:"I",password:"",...presetDominio()}} onClose={()=>setShowNewCl(false)} onSave={async f=>{const _sec=await refrescarSec();const esUser=f.tipo==="usuario";const newId=sigIdRegistro(esUser,clients,_sec);const casillero=(!esUser&&!f.casillero)?nextCasillero(clients,_sec):f.casillero;const newRec={...f,id:newId,casillero,clienteTipo:f.clienteTipo||"matriz",password:""};setClients(p=>[...p,newRec]);setShowNewCl(false);logAction("Creó registro",`${newId} — ${f.primerNombre} ${f.primerApellido}`);(async()=>{await dbUpsertCliente(newRec);await sincronizarCuenta(newRec,f.password);})();}}/>}
