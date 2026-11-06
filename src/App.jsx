@@ -6728,7 +6728,7 @@ body{font-family:Arial,Helvetica,sans-serif;color:#000;-webkit-print-color-adjus
 .row{display:flex;border-bottom:2px solid #000;flex-shrink:0}.inv{background:#000;color:#fff}.cc{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
 .k{font-size:9px;font-weight:700;letter-spacing:.6px;text-transform:uppercase}.b{font-weight:700}.x{font-weight:900}
 .el{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ad{font-size:11px;line-height:1.3}
-svg.bc{width:100%;align-self:stretch;display:block;flex-shrink:0}svg.bc rect,svg path{fill:#000}`;
+svg.bc{width:100%;align-self:stretch;display:block;flex-shrink:1;min-height:36px}svg.bc rect,svg path{fill:#000}`;
   const etqDoc=(titulo,tam,cuerpo)=>`<!doctype html><html><head><meta charset="utf-8"><title>${prnE(titulo)}</title><style>${etqCss(tam)}</style></head><body>${cuerpo}</body></html>`;
   const etqRuta=(o,d,fs,fa,gap)=>`<span class="x" style="font-size:${fs}px">${prnE(o||"")}</span><span class="x" style="font-size:${fa}px;${gap?`margin:0 ${gap}px`:""}">&#8594;</span><span class="x" style="font-size:${fs}px">${prnE(d||"")}</span>`;
 
@@ -6753,7 +6753,7 @@ svg.bc{width:100%;align-self:stretch;display:block;flex-shrink:0}svg.bc rect,svg
       const med=dm.l&&dm.a&&dm.h?`${etqIn(dm.l)} × ${etqIn(dm.a)} × ${etqIn(dm.h)} IN`:"";
       const ft=etqN(dm.ft3)||(unaCaja?etqN(w.ft3):"");
       const trk=prnE(dm.tracking||(unaCaja?w.tracking:"")||"");
-      const qr=qrSVG(`${etqEmpresa()}|WR|${w.id}|${pz}|${o}-${d}|${w.casillero||""}`,88);
+      const qr=qrSVG(`${etqEmpresa()}|WR|${w.id}|${pz}|${o}-${d}|${w.casillero||""}`,estilo==="ICT"?104:112);
       if(tam==="4x2"&&estilo==="PPN")return `<div class="lb">
  <div class="row" style="height:50px"><div class="inv cc" style="width:50px"><span class="x" style="font-size:28px">${prnE(cod)}</span></div>
   <div style="flex:1;min-width:0;padding:3px 8px;display:flex;flex-direction:column;justify-content:center"><span class="x el" style="font-size:16px">${nom}</span><span class="b el" style="font-size:11px">${prnE(ciudadPais)}</span></div>
@@ -6781,12 +6781,12 @@ svg.bc{width:100%;align-self:stretch;display:block;flex-shrink:0}svg.bc rect,svg
       if(estilo==="PPN")return `<div class="lb">${cab}${remB}
  <div class="row" style="height:70px"><div style="flex:1;min-width:0;padding:6px 10px;display:flex;flex-direction:column;justify-content:center"><span class="k" style="font-size:8px">Consignatario</span><div class="x el" style="font-size:22px">${nom}</div><div class="b el" style="font-size:13px">${prnE(ciudadPais)}</div></div><div class="inv cc" style="width:92px"><span class="x" style="font-size:34px">${cas}</span></div></div>
  <div class="row" style="align-items:center;padding:0 12px;justify-content:space-between;height:60px">${etqRuta(o,d,44,28)}</div>
- ${pieB(62,110)}${bcB(80)}
+ ${pieB(62,110)}${bcB(118)}
  <div class="b" style="border-top:1px solid #000;padding:3px 10px;display:flex;justify-content:space-between;font-size:10px;flex-shrink:0"><span class="el">${trk?`TRK ${trk}`:""}</span><span>${fecha}</span></div></div>`;
       return `<div class="lb">${cab}${remB}
  <div class="row" style="padding:4px 10px;flex-direction:column"><span class="k" style="font-size:8px">Consignatario</span><div class="x el" style="font-size:19px">${nom}${cas?` · ${cas}`:""}</div><div class="ad b">${conLin.map(prnE).join("<br>")}</div></div>
  <div class="row" style="height:58px"><div style="width:178px;display:flex;align-items:center;justify-content:center;padding:0 10px;border-right:2px solid #000">${etqRuta(o,d,28,18,10)}</div><div style="flex:1"></div></div>
- ${pieB(56,96)}${bcB(72)}
+ ${pieB(56,96)}${bcB(108)}
  <div class="b" style="border-top:2px solid #000;height:26px;display:flex;font-size:10px;flex-shrink:0"><span style="flex:1"></span><span style="display:flex;align-items:center;padding:0 8px;border-left:1px solid #000">${fecha}</span></div></div>`;
     }).join("");
   };
@@ -6810,7 +6810,7 @@ svg.bc{width:100%;align-self:stretch;display:block;flex-shrink:0}svg.bc rect,svg
       const l=parseFloat(ct.largo),a=parseFloat(ct.ancho),h=parseFloat(ct.alto);
       const med=l&&a&&h?`${l} × ${a} × ${h} IN`:(reg?.dim&&!/libre/i.test(reg.dim)?String(reg.dim).toUpperCase():"");
       const ft=l&&a&&h?etqN(l*a*h/1728):etqN(ws.reduce((s2,x)=>s2+(parseFloat(x.ft3)||0),0));
-      const qr=qrSVG(estilo==="ICT"?`${etqEmpresa()}|GUIA|${g.id}|${bt}|${o}-${d}|${docK} ${doc}|${via}|${nWR} WR|${cajas} CAJAS|${ws.map(x=>x.id).join(",")}`:`${etqEmpresa()}|GUIA|${g.id}|${bt}|${o}-${d}|${docK} ${doc}`,estilo==="ICT"?112:88);
+      const qr=qrSVG(estilo==="ICT"?`${etqEmpresa()}|GUIA|${g.id}|${bt}|${o}-${d}|${docK} ${doc}|${via}|${nWR} WR|${cajas} CAJAS|${ws.map(x=>x.id).join(",")}`:`${etqEmpresa()}|GUIA|${g.id}|${bt}|${o}-${d}|${docK} ${doc}`,estilo==="ICT"?132:124);
       if(tam==="4x2"){
         const top=estilo==="PPN"
           ?`<div class="row" style="height:54px"><div class="inv cc" style="width:50px"><span class="x" style="font-size:28px">${prnE(cod)}</span></div><div style="flex:1;display:flex;align-items:center;justify-content:center">${etqRuta(o,d,30,18,10)}</div><div class="cc" style="width:84px;border-left:2px solid #000"><span class="k" style="font-size:7px">Bulto</span><span class="x" style="font-size:22px;line-height:1">${bt}</span></div></div>`
@@ -6829,7 +6829,7 @@ svg.bc{width:100%;align-self:stretch;display:block;flex-shrink:0}svg.bc rect,svg
  <div class="row" style="padding:5px 12px;display:grid;grid-template-columns:1fr 1fr"><div><div class="k">${docK}</div><div class="b el" style="font-size:16px">${prnE(doc)||"&nbsp;"}</div></div><div><div class="k">${viaK}</div><div class="b el" style="font-size:16px">${prnE(via)||"&nbsp;"}</div></div></div>
  <div class="row" style="height:62px"><div class="cc" style="width:115px;border-right:2px solid #000"><span class="k">Bulto</span><span class="x" style="font-size:32px;line-height:1">${bt}</span></div><div class="cc" style="flex:1;border-right:2px solid #000"><span class="k">WR</span><span class="x" style="font-size:26px;line-height:1">${nWR}</span></div><div class="cc" style="flex:1"><span class="k">Cajas</span><span class="x" style="font-size:26px;line-height:1">${cajas}</span></div></div>
  <div class="row" style="height:46px"><div class="cc" style="flex:1;border-right:2px solid #000"><span class="k">Peso</span><span class="b" style="font-size:14px">${lb?`${lb} LB`:""}</span></div><div class="cc" style="flex:1.2;border-right:2px solid #000"><span class="k">Medidas</span><span class="b" style="font-size:13px">${med}</span></div><div class="cc" style="flex:.9"><span class="k">Ft³</span><span class="b" style="font-size:14px">${ft}</span></div></div>
- <div style="flex:1;min-height:0;display:flex;align-items:center;gap:10px;padding:6px 10px"><div class="cc" style="flex:1;min-width:0">${barcodeSVG(bv,estilo==="ICT"?70:80)}<span class="b" style="font-size:14px;letter-spacing:1px">GUÍA ${prnE(g.id)} · ${bt}</span></div>${qr}</div>
+ <div style="flex:1;min-height:0;display:flex;align-items:center;gap:10px;padding:6px 10px"><div class="cc" style="flex:1;min-width:0">${barcodeSVG(bv,estilo==="ICT"?118:126)}<span class="b" style="font-size:14px;letter-spacing:1px">GUÍA ${prnE(g.id)} · ${bt}</span></div>${qr}</div>
  ${estilo==="PPN"?`<div class="b" style="border-top:1px solid #000;padding:3px 10px;display:flex;justify-content:flex-end;font-size:10px;flex-shrink:0"><span>${fecha}</span></div>`
    :`<div class="b" style="border-top:2px solid #000;height:26px;display:flex;font-size:10px;flex-shrink:0"><span style="flex:1"></span><span style="display:flex;align-items:center;padding:0 8px;border-left:1px solid #000">${fecha}</span></div>`}</div>`;
     }).join("");
