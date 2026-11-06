@@ -6743,7 +6743,7 @@ svg.bc{width:100%;align-self:stretch;display:block;flex-shrink:0}svg.bc rect,svg
     const ciudadPais=[(cli?.municipio||w.destCity||""),(cli?.pais||w.destCountry||"")].map(x=>String(x).toUpperCase()).filter(Boolean).join(" - ");
     const confirmado=!!w.tipoEnvio&&!["1","2"].includes(w.status?.code);
     const cod=estilo==="PPN"?(confirmado?etqCod(w.tipoEnvio):"P"):(w.tipoEnvio?etqCod(w.tipoEnvio):"");
-    const emp=prnE(etqEmpresa());const cas=prnE(w.casillero||"");const nom=prnE(String(w.consignee||"").toUpperCase());
+    const emp=prnE(etqEmpresa());const empFs=etqEmpresa().length<=12?26:etqEmpresa().length<=16?20:16;const cas=prnE(w.casillero||"");const nom=prnE(String(w.consignee||"").toUpperCase());
     const pago=prnE(String(w.tipoPago||"").toUpperCase());const fecha=etqFecha(w.fecha);
     const o=w.origCity||"",d=w.destCity||"";
     return dims.map((dm,i)=>{
@@ -6772,7 +6772,7 @@ svg.bc{width:100%;align-self:stretch;display:block;flex-shrink:0}svg.bc rect,svg
  <div style="flex:1;min-height:0;display:flex"><div class="cc" style="flex:1;min-width:0;padding:3px 8px">${barcodeSVG(bv,48)}<span class="b" style="font-size:11px;letter-spacing:1px">WR ${prnE(bv)}</span></div>
   <div class="b" style="width:112px;border-left:2px solid #000;display:flex;flex-direction:column;justify-content:center;padding:0 8px;font-size:10px;line-height:1.4"><span>${lb?`${lb} LB`:""}</span><span>${med}</span><span>${ft?`${ft} FT³`:""}</span></div></div>
 </div>`;
-      const cab=`<div class="row" style="height:${estilo==="PPN"?56:52}px"><div class="x el" style="flex:1;min-width:0;padding:0 12px;display:flex;align-items:center;font-size:26px;letter-spacing:2px">${emp}</div><div class="inv cc" style="width:92px"><span class="x" style="font-size:44px;line-height:1">${prnE(cod)}</span></div></div>`;
+      const cab=`<div class="row" style="height:${estilo==="PPN"?56:52}px"><div class="x el" style="flex:1;min-width:0;padding:0 12px;display:flex;align-items:center;font-size:${empFs}px;letter-spacing:${empFs>20?2:1}px">${emp}</div><div class="inv cc" style="width:92px"><span class="x" style="font-size:44px;line-height:1">${prnE(cod)}</span></div></div>`;
       const remB=`<div class="row" style="padding:5px 10px;flex-direction:column;border-bottom-width:1px"><span class="k" style="font-size:8px">Remitente</span><span class="b el" style="font-size:13px">${prnE(String(w.shipper||"").toUpperCase())}</span><div class="ad">${remLin.map(prnE).join("<br>")}</div></div>`;
       const pieB=(h,ancho)=>`<div class="row" style="height:${h}px"><div class="cc" style="width:${ancho}px;border-right:2px solid #000"><span class="k">Pieza</span><span class="x" style="font-size:30px;line-height:1">${pz}</span></div>
   <div class="b" style="flex:1;min-width:0;border-right:2px solid #000;padding:3px 10px;display:flex;flex-direction:column;justify-content:center;font-size:12px;line-height:1.35"><span>${[lb&&`${lb} LB`,estilo==="ICT"&&ft&&`${ft} FT³`].filter(Boolean).join(" · ")}</span><span>${med}</span></div>
@@ -6785,7 +6785,7 @@ svg.bc{width:100%;align-self:stretch;display:block;flex-shrink:0}svg.bc rect,svg
  <div class="b" style="border-top:1px solid #000;padding:3px 10px;display:flex;justify-content:space-between;font-size:10px;flex-shrink:0"><span class="el">${trk?`TRK ${trk}`:""}</span><span>${fecha}</span></div></div>`;
       return `<div class="lb">${cab}${remB}
  <div class="row" style="padding:4px 10px;flex-direction:column"><span class="k" style="font-size:8px">Consignatario</span><div class="x el" style="font-size:19px">${nom}${cas?` · ${cas}`:""}</div><div class="ad b">${conLin.map(prnE).join("<br>")}</div></div>
- <div class="row" style="height:58px"><div style="width:178px;display:flex;align-items:center;justify-content:space-between;padding:0 10px;border-right:2px solid #000">${etqRuta(o,d,28,18)}</div><div style="flex:1"></div></div>
+ <div class="row" style="height:58px"><div style="width:178px;display:flex;align-items:center;justify-content:center;padding:0 10px;border-right:2px solid #000">${etqRuta(o,d,28,18,10)}</div><div style="flex:1"></div></div>
  ${pieB(56,96)}${bcB(72)}
  <div class="b" style="border-top:2px solid #000;height:26px;display:flex;font-size:10px;flex-shrink:0"><span style="flex:1"></span><span style="display:flex;align-items:center;padding:0 8px;border-left:1px solid #000">${fecha}</span></div></div>`;
     }).join("");
@@ -6801,7 +6801,7 @@ svg.bc{width:100%;align-self:stretch;display:block;flex-shrink:0}svg.bc rect,svg
     const cod=g.tipoEnvio?etqCod(g.tipoEnvio):(estilo==="PPN"?"P":"");
     const mar=/MARIT/.test(sinAcentos(String(g.tipoEnvio||"")).toUpperCase());
     const doc=g.awb||g.bl||"",docK=g.awb?"AWB":g.bl?"BL":mar?"BL":"AWB",via=g.numVuelo||"",viaK=mar?"Viaje":"Vuelo";
-    const emp=prnE(etqEmpresa()),fecha=etqFecha(g.fecha);
+    const emp=prnE(etqEmpresa()),fecha=etqFecha(g.fecha);const empFs=etqEmpresa().length<=12?26:etqEmpresa().length<=16?20:16;
     return conts.map((ct,i)=>{
       const idx=i+1,bt=`${idx}/${total}`,bv=`${g.id}-${idx}`;
       const ws=(ct.wr||[]),nWR=ws.length,cajas=ws.reduce((a,x)=>a+(parseInt(x.cajas)||1),0);
@@ -6824,7 +6824,7 @@ svg.bc{width:100%;align-self:stretch;display:block;flex-shrink:0}svg.bc rect,svg
         ?`<div class="row" style="align-items:center;padding:4px 12px;justify-content:space-between;height:84px"><div><div class="x" style="font-size:44px;line-height:1">${prnE(o)}</div><div class="k">${prnE([oO?.codigo,oO?.nombre].filter(Boolean).join(" "))}</div></div><span class="x" style="font-size:28px">&#8594;</span><div style="text-align:right"><div class="x" style="font-size:44px;line-height:1">${prnE(d)}</div><div class="k">${prnE([oD?.codigo,oD?.nombre].filter(Boolean).join(" "))}</div></div></div>`
         :`<div class="row" style="height:80px"><div style="width:190px;display:flex;align-items:center;justify-content:space-between;padding:0 10px;border-right:2px solid #000"><div><div class="x" style="font-size:28px;line-height:1">${prnE(o)}</div><div class="k" style="font-size:7.5px">${prnE(oO?.codigo||"")}</div></div><span class="x" style="font-size:18px">&#8594;</span><div style="text-align:right"><div class="x" style="font-size:28px;line-height:1">${prnE(d)}</div><div class="k" style="font-size:7.5px">${prnE(oD?.codigo||"")}</div></div></div><div style="flex:1"></div></div>`;
       return `<div class="lb">
- <div class="row" style="height:${estilo==="PPN"?56:52}px"><div class="x el" style="flex:1;min-width:0;padding:0 12px;display:flex;align-items:center;font-size:26px;letter-spacing:2px">${emp}</div><div class="inv cc" style="width:92px"><span class="x" style="font-size:44px;line-height:1">${prnE(cod)}</span></div></div>
+ <div class="row" style="height:${estilo==="PPN"?56:52}px"><div class="x el" style="flex:1;min-width:0;padding:0 12px;display:flex;align-items:center;font-size:${empFs}px;letter-spacing:${empFs>20?2:1}px">${emp}</div><div class="inv cc" style="width:92px"><span class="x" style="font-size:44px;line-height:1">${prnE(cod)}</span></div></div>
  ${ruta}
  <div class="row" style="padding:5px 12px;display:grid;grid-template-columns:1fr 1fr"><div><div class="k">${docK}</div><div class="b el" style="font-size:16px">${prnE(doc)||"&nbsp;"}</div></div><div><div class="k">${viaK}</div><div class="b el" style="font-size:16px">${prnE(via)||"&nbsp;"}</div></div></div>
  <div class="row" style="height:62px"><div class="cc" style="width:115px;border-right:2px solid #000"><span class="k">Bulto</span><span class="x" style="font-size:32px;line-height:1">${bt}</span></div><div class="cc" style="flex:1;border-right:2px solid #000"><span class="k">WR</span><span class="x" style="font-size:26px;line-height:1">${nWR}</span></div><div class="cc" style="flex:1"><span class="k">Cajas</span><span class="x" style="font-size:26px;line-height:1">${cajas}</span></div></div>
