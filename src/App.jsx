@@ -3346,7 +3346,7 @@ export default function SistemaCarga(){
   };
 
   // WR FORM state
-  const EMAIL_KEYS_W=["remitenteId","remitenteEmail","email","password","unitDim","unitPeso","sucursalEntrega","clienteId"];
+  const EMAIL_KEYS_W=["remitenteId","remitenteEmail","email","password","unitDim","unitPeso","sucursalEntrega","clienteId","origSel","destPais","tipoEnvio","tipoPago"];
   const sw=(k,v)=>setWrf(p=>({...p,[k]:typeof v==="string"&&!EMAIL_KEYS_W.includes(k)?v.toUpperCase():v}));
 
   // Client search
