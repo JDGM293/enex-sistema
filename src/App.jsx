@@ -2080,10 +2080,10 @@ const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomo
           </div>;})()}
         <div className="sdiv">DATOS PERSONALES</div>
         <div className="fgrid g4" style={{marginBottom:10}}>
-          <div className="fg"><div className="fl">Primer Nombre *</div><input className="fi" value={f.primerNombre} onChange={e=>ff("primerNombre",e.target.value)} placeholder="Primer nombre"/></div>
-          <div className="fg"><div className="fl">Segundo Nombre</div><input className="fi" value={f.segundoNombre} onChange={e=>ff("segundoNombre",e.target.value)} placeholder="Segundo nombre"/></div>
-          <div className="fg"><div className="fl">Primer Apellido *</div><input className="fi" value={f.primerApellido} onChange={e=>ff("primerApellido",e.target.value)} placeholder="Primer apellido"/></div>
-          <div className="fg"><div className="fl">Segundo Apellido</div><input className="fi" value={f.segundoApellido} onChange={e=>ff("segundoApellido",e.target.value)} placeholder="Segundo apellido"/></div>
+          <div className="fg"><div className="fl">Primer Nombre *</div><input className="fi" value={f.primerNombre} onChange={e=>ff("primerNombre",e.target.value)}/></div>
+          <div className="fg"><div className="fl">Segundo Nombre</div><input className="fi" value={f.segundoNombre} onChange={e=>ff("segundoNombre",e.target.value)}/></div>
+          <div className="fg"><div className="fl">Primer Apellido *</div><input className="fi" value={f.primerApellido} onChange={e=>ff("primerApellido",e.target.value)}/></div>
+          <div className="fg"><div className="fl">Segundo Apellido</div><input className="fi" value={f.segundoApellido} onChange={e=>ff("segundoApellido",e.target.value)}/></div>
         </div>
         <div className="fgrid g3" style={{marginBottom:10}}>
           <div className="fg"><div className="fl">ID Identificación *</div>{ocultar&&initial?.cedula&&f.cedula===initial.cedula?<DatoOculto valor={f.cedula} onCambiar={()=>ff("cedula","")}/>:<input className="fi" value={f.cedula} onChange={e=>ff("cedula",e.target.value)}/>}</div>
@@ -8009,7 +8009,7 @@ svg.bc{width:100%;align-self:stretch;display:block;flex-shrink:1;min-height:36px
               <thead><tr><th>Concepto</th><th style={{width:140}}>Cantidad</th><th style={{width:140}}>Precio</th><th style={{width:130,textAlign:"right"}}>Importe</th><th style={{width:40}}></th></tr></thead>
               <tbody>{m.lineas.map((l,i)=>(
                 <tr key={i}>
-                  <td>{l.tipo==="flete"?<><Num t="wr" id={l.wrId}/> <span style={{color:"var(--t3)",fontSize:13}}>flete</span></>:<input className="fi" value={l.descripcion} placeholder="Concepto del cobro" onChange={e=>setL(i,{descripcion:e.target.value.toUpperCase()})}/>}</td>
+                  <td>{l.tipo==="flete"?<><Num t="wr" id={l.wrId}/> <span style={{color:"var(--t3)",fontSize:13}}>flete</span></>:<input className="fi" value={l.descripcion} onChange={e=>setL(i,{descripcion:e.target.value.toUpperCase()})}/>}</td>
                   <td><div style={{display:"flex",alignItems:"center",gap:4}}><input className="fi" type="number" value={l.cantidad} onChange={e=>setL(i,{cantidad:e.target.value})}/>{l.unidad&&<span style={{fontSize:13,color:"var(--t3)"}}>{UL[l.unidad]}</span>}</div></td>
                   <td><input className="fi" type="number" value={l.precio} onChange={e=>setL(i,{precio:e.target.value})}/></td>
                   <td style={{textAlign:"right",fontFamily:"'DM Mono',monospace",fontWeight:700}}>{fmtMoney((parseFloat(l.cantidad)||0)*(parseFloat(l.precio)||0),m.moneda)}</td>
@@ -8643,7 +8643,7 @@ svg.bc{width:100%;align-self:stretch;display:block;flex-shrink:1;min-height:36px
                 <div className="modal msm" onClick={e=>e.stopPropagation()}>
                   <div className="mhd"><div className="mt">{editAgente?"Editar Agente":"Nuevo Agente"}</div><button className="mcl" onClick={()=>{setShowNewAgente(false);setEditAgente(null);}}>✕</button></div>
                   <div className="fgrid g2" style={{marginBottom:10}}>
-                    <div className="fg full"><div className="fl">Nombre del Agente *</div><input className="fi" value={agForm.nombre} onChange={e=>setAgForm(p=>({...p,nombre:e.target.value.toUpperCase()}))} placeholder="Nombre completo o razón social"/></div>
+                    <div className="fg full"><div className="fl">Nombre del Agente *</div><input className="fi" value={agForm.nombre} onChange={e=>setAgForm(p=>({...p,nombre:e.target.value.toUpperCase()}))}/></div>
                     <div className="fg full"><div className="fl">Dirección</div><input className="fi" value={agForm.dir||""} onChange={e=>setAgForm(p=>({...p,dir:e.target.value.toUpperCase()}))}/></div>
                     <div className="fg"><div className="fl">Ciudad</div><input className="fi" value={agForm.ciudad} onChange={e=>setAgForm(p=>({...p,ciudad:e.target.value.toUpperCase()}))}/></div>
                     <div className="fg"><div className="fl">Estado / provincia</div><input className="fi" value={agForm.estado||""} onChange={e=>setAgForm(p=>({...p,estado:e.target.value.toUpperCase()}))}/></div>
@@ -12053,7 +12053,7 @@ svg.bc{width:100%;align-self:stretch;display:block;flex-shrink:1;min-height:36px
               <input className="fi" placeholder="Buscar WR, consignatario, tracking…" value={rpqSearch} onChange={e=>setRpqSearch(e.target.value)} style={{fontSize:14,padding:"6px 10px",width:260}}/>
               <span style={{fontSize:13,color:"var(--t2)",fontWeight:600}}>Seleccionados: {rpqSel.length}</span>
               {hasPerm("crear_reempaque")&&<button className="btn-p" disabled={rpqSel.length===0} style={{opacity:rpqSel.length===0?.5:1}} onClick={createReempaque}>+ Crear Reempaque ({wrNumPrev})</button>}
-              {soloSolicita&&<><input className="fi" placeholder="Notas para el almacén" value={srNota} onChange={e=>setSrNota(e.target.value)} style={{fontSize:14,padding:"6px 10px",width:220}}/>
+              {soloSolicita&&<><input className="fi" value={srNota} onChange={e=>setSrNota(e.target.value)} style={{fontSize:14,padding:"6px 10px",width:220}}/>
                 <button className="btn-p" disabled={rpqSel.length<2} style={{opacity:rpqSel.length<2?.5:1}} onClick={srSolicitar}><Ico e="📨" sp/>Solicitar reempaque</button></>}
             </div>
           </div>
@@ -14968,7 +14968,7 @@ svg.bc{width:100%;align-self:stretch;display:block;flex-shrink:1;min-height:36px
                 </div>
                 <div className="fg">
                   <div className="fl">ID Identificación *</div>
-                  <input className="fi" value={f.id} onChange={e=>setCrIndivModal(p=>({...p,id:e.target.value}))} placeholder="Nº de identificación"/>
+                  <input className="fi" value={f.id} onChange={e=>setCrIndivModal(p=>({...p,id:e.target.value}))}/>
                 </div>
                 <div className="fg">
                   <div className="fl">Empresa</div>
@@ -14976,7 +14976,7 @@ svg.bc{width:100%;align-self:stretch;display:block;flex-shrink:1;min-height:36px
                 </div>
                 <div className="fg">
                   <div className="fl">Notas</div>
-                  <textarea className="fi" value={f.notas} onChange={e=>setCrIndivModal(p=>({...p,notas:e.target.value}))} placeholder="Observaciones opcionales…" rows={3} style={{resize:"vertical",minHeight:60,fontFamily:"inherit",fontSize:14}}/>
+                  <textarea className="fi" value={f.notas} onChange={e=>setCrIndivModal(p=>({...p,notas:e.target.value}))} rows={3} style={{resize:"vertical",minHeight:60,fontFamily:"inherit",fontSize:14}}/>
                 </div>
               </div>
               <div className="mft">
@@ -15040,14 +15040,14 @@ svg.bc{width:100%;align-self:stretch;display:block;flex-shrink:1;min-height:36px
               <div className="mbd" style={{maxHeight:"70vh",overflow:"auto"}}>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
                   <div><div style={{fontSize:12,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Agente de carga *</div>
-                    <input className="fi" list="cr-agentes" value={f.agenteCarga} onChange={e=>setCrModal(p=>({...p,agenteCarga:e.target.value}))} placeholder="Nombre del agente/transportista…"/>
+                    <input className="fi" list="cr-agentes" value={f.agenteCarga} onChange={e=>setCrModal(p=>({...p,agenteCarga:e.target.value}))}/>
                     <datalist id="cr-agentes">{agentesCarga.map(a=>(<option key={a.id||a.nombre} value={a.nombre||a.name||""}/>))}</datalist>
                   </div>
                   <div><div style={{fontSize:12,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Contacto (persona)</div>
                     <input className="fi" value={f.contacto} onChange={e=>setCrModal(p=>({...p,contacto:e.target.value}))}/>
                   </div>
                   <div><div style={{fontSize:12,fontWeight:700,color:"var(--t2)",marginBottom:4}}>ID Identificación</div>
-                    <input className="fi" value={f.documento} onChange={e=>setCrModal(p=>({...p,documento:e.target.value}))} placeholder="Nº de identificación"/>
+                    <input className="fi" value={f.documento} onChange={e=>setCrModal(p=>({...p,documento:e.target.value}))}/>
                   </div>
                   <div><div style={{fontSize:12,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Vehículo (placa/modelo)</div>
                     <input className="fi" value={f.vehiculo} onChange={e=>setCrModal(p=>({...p,vehiculo:e.target.value}))}/>
@@ -15055,7 +15055,7 @@ svg.bc{width:100%;align-self:stretch;display:block;flex-shrink:1;min-height:36px
                 </div>
                 <div style={{marginBottom:12}}>
                   <div style={{fontSize:12,fontWeight:700,color:"var(--t2)",marginBottom:4}}>Notas</div>
-                  <textarea className="fi" rows={2} value={f.notas} onChange={e=>setCrModal(p=>({...p,notas:e.target.value}))} placeholder="Observaciones del egreso…" style={{resize:"vertical"}}/>
+                  <textarea className="fi" rows={2} value={f.notas} onChange={e=>setCrModal(p=>({...p,notas:e.target.value}))} style={{resize:"vertical"}}/>
                 </div>
 
                 <div style={{background:"#F5F7FB",padding:10,borderRadius:6,marginBottom:10}}>
@@ -15469,13 +15469,13 @@ svg.bc{width:100%;align-self:stretch;display:block;flex-shrink:1;min-height:36px
                     <div style={{fontSize:12,fontWeight:700,color:"var(--navy)",marginBottom:6}}>4️⃣ Datos del receptor que firma</div>
                     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
                       <div><div style={{fontSize:11,fontWeight:600,color:"var(--t2)",marginBottom:2}}>Consignatario *</div>
-                        <input className="fi" value={f.consignatario} onChange={e=>setDnModal(p=>({...p,consignatario:e.target.value}))} placeholder="Nombre del destinatario / empresa"/>
+                        <input className="fi" value={f.consignatario} onChange={e=>setDnModal(p=>({...p,consignatario:e.target.value}))}/>
                       </div>
                       <div><div style={{fontSize:11,fontWeight:600,color:"var(--t2)",marginBottom:2}}>Persona que firma *</div>
-                        <input className="fi" value={f.receptorNombre} onChange={e=>setDnModal(p=>({...p,receptorNombre:e.target.value}))} placeholder="Nombre y apellido"/>
+                        <input className="fi" value={f.receptorNombre} onChange={e=>setDnModal(p=>({...p,receptorNombre:e.target.value}))}/>
                       </div>
                       <div><div style={{fontSize:11,fontWeight:600,color:"var(--t2)",marginBottom:2}}>ID Identificación</div>
-                        {ocCampo(f.receptorDocumento,"",null,()=>setDnModal(p=>({...p,receptorDocumento:""})))||<input className="fi" value={f.receptorDocumento} onChange={e=>setDnModal(p=>({...p,receptorDocumento:e.target.value}))} placeholder="Nº de identificación"/>}
+                        {ocCampo(f.receptorDocumento,"",null,()=>setDnModal(p=>({...p,receptorDocumento:""})))||<input className="fi" value={f.receptorDocumento} onChange={e=>setDnModal(p=>({...p,receptorDocumento:e.target.value}))}/>}
                       </div>
                       <div><div style={{fontSize:11,fontWeight:600,color:"var(--t2)",marginBottom:2}}>Teléfono</div>
                         {ocCampo(f.receptorTelefono,"",null,()=>setDnModal(p=>({...p,receptorTelefono:""})))||<input className="fi" value={f.receptorTelefono} onChange={e=>setDnModal(p=>({...p,receptorTelefono:e.target.value}))}/>}
@@ -15498,7 +15498,7 @@ svg.bc{width:100%;align-self:stretch;display:block;flex-shrink:1;min-height:36px
                       </div>
                       <div style={{gridColumn:"1/-1"}}>
                         <div style={{fontSize:11,fontWeight:600,color:"var(--t2)",marginBottom:2}}>Notas</div>
-                        <textarea className="fi" rows={2} value={f.notas} onChange={e=>setDnModal(p=>({...p,notas:e.target.value}))} placeholder="Observaciones de la entrega…" style={{resize:"vertical"}}/>
+                        <textarea className="fi" rows={2} value={f.notas} onChange={e=>setDnModal(p=>({...p,notas:e.target.value}))} style={{resize:"vertical"}}/>
                       </div>
                     </div>
                   </div>
@@ -15736,7 +15736,7 @@ svg.bc{width:100%;align-self:stretch;display:block;flex-shrink:1;min-height:36px
                     <thead><tr><th>Concepto</th><th style={{textAlign:"right"}}>Cant.</th><th style={{textAlign:"right"}}>Precio</th><th style={{textAlign:"right"}}>Importe</th><th></th></tr></thead>
                     <tbody>{ex.map(l=>(
                       <tr key={l._i}>
-                        <td><input className="fi" value={l.descripcion||""} onChange={e=>updL(l._i,"descripcion",e.target.value)} placeholder="Concepto"/></td>
+                        <td><input className="fi" value={l.descripcion||""} onChange={e=>updL(l._i,"descripcion",e.target.value)}/></td>
                         <td style={{textAlign:"right"}}>{numIn(l.cantidad,v=>updL(l._i,"cantidad",v),70)}</td>
                         <td style={{textAlign:"right"}}>{numIn(l.precio,v=>updL(l._i,"precio",v))}</td>
                         <td style={{textAlign:"right",fontFamily:"'DM Mono',monospace",fontWeight:700}}>{fmtMoney(l.total,f.moneda)}</td>
