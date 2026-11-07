@@ -1054,7 +1054,8 @@ const ubicacionWR=w=>{if(!w)return "";if(w.trasladoId)return ""; // va en un tra
   if(c==="20.2")return w.ofiActual||w.sucursalEntrega||w.ofiDestino||"";
   if(c==="20.1"||(n>=5&&n<17))return "";
   if(n>=17&&n<21)return w.ofiDestino||w.ofiActual||"";
-  if(n>=21)return w.ofiActual||"";
+  // Entregado/cobrado: la oficina que lo entregó (la sucursal si pasó por ella, si no la matriz destino)
+  if(n>=21)return ((w.historial||[]).some(h=>h?.code==="20.2")?(w.sucursalEntrega||w.ofiDestino):w.ofiDestino)||w.ofiActual||"";
   return w.ofiActual||w.ofiOrigen||"";};
 // Guardar WR anotando su ubicación actual
 const dbUpsertWR=w=>dbUpsertWRBase(w&&w.ofiOrigen?{...w,ofiActual:ubicacionWR(w)}:w);
@@ -7331,7 +7332,7 @@ svg.bc{width:100%;align-self:stretch;display:block;flex-shrink:1;min-height:36px
         W("Importes","total","Total","money",r=>r.total,{cur:r=>r.moneda}),W("Importes","pagado","Pagado","money",r=>r.pagado,{cur:r=>r.moneda}),W("Importes","saldo","Saldo pendiente","money",r=>r.saldo,{cur:r=>r.moneda}),
         W("Importes","flete","Flete","money",r=>r2((r.lineas||[]).filter(l=>l.tipo==="flete").reduce((t,l)=>t+(parseFloat(l.total)||0),0)),{cur:r=>r.moneda}),
         W("Importes","adicionales","Servicios y gastos","money",r=>r2((r.lineas||[]).filter(l=>l.tipo==="adicional").reduce((t,l)=>t+(parseFloat(l.total)||0),0)),{cur:r=>r.moneda}),
-        W("Importes","minimo","Ajuste a mínimo","money",r=>r2((r.lineas||[]).filter(l=>l.tipo==="minimo").reduce((t,l)=>t+(parseFloat(l.total)||0),0)),{cur:r=>r.moneda}),
+        W("Importes","minimo","Cargo mínimo","money",r=>r2((r.lineas||[]).filter(l=>l.tipo==="minimo").reduce((t,l)=>t+(parseFloat(l.total)||0),0)),{cur:r=>r.moneda}),
         W("Importes","extras","Cobros extra","money",r=>r2((r.lineas||[]).filter(l=>(l.tipo||"extra")==="extra").reduce((t,l)=>t+(parseFloat(l.total)||0),0)),{cur:r=>r.moneda}),
         W("Tarifa","tarifaUnidad","Tarifa por unidad","money",r=>parseFloat(r.tarifa?.porLb||r.tarifa?.porFt3)||0,{cur:r=>r.moneda}),W("Tarifa","tarifaRuta","Ruta de la tarifa","txt",r=>r.tarifa?.ruta||""),
         W("Tarifa","tarifaEspecial","Tarifa especial","txt",r=>siNo(r.tarifa?.especial)),W("Tarifa","monedaTarifa","Moneda de la tarifa","txt",r=>r.tarifa?.monedaTarifa||r.moneda||""),
@@ -7343,7 +7344,7 @@ svg.bc{width:100%;align-self:stretch;display:block;flex-shrink:1;min-height:36px
       lineaFactura:{l:"Líneas de factura",ic:<Ico e="📃"/>,fecha:"fecha",campos:[
         W("Factura","factura","N° factura","txt",r=>r.f.id),W("Factura","fecha","Fecha","fecha",r=>r.f.fechaEmision||r.f.fecha),W("Factura","estado","Estado","txt",r=>(FAC_STATUS_LABEL[r.f.status]||r.f.status).replace(/^\S+\s/,"")),
         W("Factura","receptor","Receptor","txt",r=>r.f.receptorNombre||""),
-        W("Línea","tipoLinea","Tipo de línea","txt",r=>({flete:"Flete",adicional:"Servicio / gasto",minimo:"Ajuste a mínimo",extra:"Otro"})[r.l.tipo||"extra"]),
+        W("Línea","tipoLinea","Tipo de línea","txt",r=>({flete:"Flete",adicional:"Servicio / gasto",minimo:"Cargo mínimo",extra:"Otro"})[r.l.tipo||"extra"]),
         W("Línea","concepto","Concepto","txt",r=>r.l.descripcion||""),W("Línea","wr","WR","txt",r=>r.l.wrId||""),W("Línea","cantidad","Cantidad","num",r=>parseFloat(r.l.cantidad)||0),
         W("Línea","unidad","Unidad","txt",r=>r.l.unidad||""),W("Línea","precio","Precio","money",r=>parseFloat(r.l.precio)||0,{cur:r=>r.f.moneda}),W("Línea","totalLinea","Total línea","money",r=>parseFloat(r.l.total)||0,{cur:r=>r.f.moneda})],
         filas:()=>facsVis.filter(f=>!["borrador","anulada"].includes(f.status)).flatMap(f=>(f.lineas||[]).map(l=>({f,l})))},
@@ -10060,7 +10061,7 @@ svg.bc{width:100%;align-self:stretch;display:block;flex-shrink:1;min-height:36px
     const minimo=parseFloat(f.tarifa?.min)||0;
     if(hayFlete&&minimo>0&&flete<minimo){
       const aj=r2(minimo-flete);
-      lineas.push({tipo:"minimo",descripcion:`Ajuste a mínimo de tarifa (${fmtMoney(minimo,f.moneda)})`,cantidad:1,precio:aj,total:aj});
+      lineas.push({tipo:"minimo",descripcion:"Cargo mínimo",cantidad:1,precio:aj,total:aj});
     }
     lineas=lineas.map((l,i)=>({l,i})).sort((a,b)=>(FAC_ORDEN[a.l.tipo]??9)-(FAC_ORDEN[b.l.tipo]??9)||a.i-b.i).map(x=>x.l);
     const subtotal=r2(lineas.reduce((s,l)=>s+l.total,0));
@@ -10094,7 +10095,7 @@ svg.bc{width:100%;align-self:stretch;display:block;flex-shrink:1;min-height:36px
     const simple=(tt,arr,conWR)=>arr.length?pSec(tt)+pTabla([...(conWR?[{l:"N° WR"}]:[]),{l:"Concepto"},{l:"Cant.",r:1},{l:"Precio",r:1},{l:"Importe",r:1}],
       arr.map(l=>`<tr>${conWR?`<td class="mono">${e(l.wrId||"")}</td>`:""}<td>${e(l.descripcion)}</td><td class="r">${nm(l.cantidad)}</td><td class="r">${$(l.precio)}</td><td class="r"><b>${$(l.total)}</b></td></tr>`).join("")):"";
     cuerpo+=simple("Servicios y gastos adicionales",ad,true)+simple("Cobros extra",ex,false);
-    cuerpo+=pTotales([fl.length&&["Flete",$(S(fl,"total"))],mn.length&&["Ajuste a mínimo",$(S(mn,"total"))],ad.length&&["Servicios y gastos",$(S(ad,"total"))],ex.length&&["Cobros extra",$(S(ex,"total"))],
+    cuerpo+=pTotales([fl.length&&["Flete",$(S(fl,"total"))],mn.length&&["Cargo mínimo",$(S(mn,"total"))],ad.length&&["Servicios y gastos",$(S(ad,"total"))],ex.length&&["Cobros extra",$(S(ex,"total"))],
       ["<b>Subtotal</b>",`<b>${$(f.subtotal)}</b>`],(f.descuento||0)>0&&[`Descuento${f.descuentoTipo==="pct"?` (${nm(f.descuentoValor)}%)`:""}`,`−${$(f.descuento)}`],
       ["Total",$(f.total),"gt"],(f.pagado||0)>0&&["Pagado",$(f.pagado)],(f.pagado||0)>0&&["<b>Saldo</b>",`<b>${$(f.saldo)}</b>`]]);
     if(pagosAplic.length)cuerpo+=pSec("Pagos aplicados")+pTabla([{l:"N° pago"},{l:"Fecha"},{l:"Forma"},{l:"Referencia"},{l:"Monto",r:1}],
@@ -15752,7 +15753,7 @@ svg.bc{width:100%;align-self:stretch;display:block;flex-shrink:1;min-height:36px
                     <textarea className="fi" rows={2} value={f.condiciones||""} onChange={e=>setFacModal(p=>({...p,condiciones:e.target.value}))} style={{resize:"vertical",textTransform:"none"}}/>
                   </div>
                   <div style={{background:"var(--bg4)",padding:12,borderRadius:8,border:"1px solid var(--b1)",fontSize:14}}>
-                    {[["Flete",sum(fl,"total")],["Ajuste a mínimo",sum(mn,"total")],["Servicios y gastos",sum(ad,"total")],["Cobros extra",sum(ex,"total")]].filter(([k,v])=>v!==0||k==="Flete").map(([k,v])=>(
+                    {[["Flete",sum(fl,"total")],["Cargo mínimo",sum(mn,"total")],["Servicios y gastos",sum(ad,"total")],["Cobros extra",sum(ex,"total")]].filter(([k,v])=>v!==0||k==="Flete").map(([k,v])=>(
                       <div key={k} style={{display:"flex",justifyContent:"space-between",marginBottom:4}}><span>{k}:</span><span style={{fontFamily:"'DM Mono',monospace"}}>{fmtMoney(v,f.moneda)}</span></div>
                     ))}
                     <div style={{display:"flex",justifyContent:"space-between",margin:"6px 0",paddingTop:6,borderTop:"1px solid var(--b1)",fontWeight:700}}><span>Subtotal:</span><span style={{fontFamily:"'DM Mono',monospace"}}>{fmtMoney(f.subtotal||0,f.moneda)}</span></div>
