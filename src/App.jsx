@@ -12384,18 +12384,13 @@ svg.bc{width:100%;align-self:stretch;display:block;flex-shrink:1;min-height:36px
     const st=getStatus("17");
     const allWrIds=(guia.containers||[]).flatMap(ct=>(ct.wr||[]).map(w=>w.id));
     if(allWrIds.length===0){window.alert(`La guía ${guia.id} no tiene WRs asociados.`);return;}
-    let cambiados=0;
-    setWrList(p=>p.map(w=>{
-      if(!allWrIds.includes(w.id))return w;
-      // respetar WRs ya procesados (Almacén, Faltante, Investigación, Sobrante, Por Entrega, etc.)
-      if(["17","18","18.1","18.2","18.3","19","20","20.1","20.2","21","22","23","25"].includes(w.status?.code||""))return w;
-      cambiados++;
-      const upd={...w,status:st,historial:[...(w.historial||[]),{code:"17",label:"Almacén",fecha:new Date(),user:currentUser.id,nota:`${nota} — guía ${guia.id}`}]};
-      dbUpsertWR(upd);
-      return upd;
-    }));
-    logAction(`Recibió guía ${guia.id} (bulk)`,`${cambiados} WR → Almacén`);
-    window.alert(`${cambiados} WR marcados como recibidos (Almacén).\nUsa "Cerrar recepción de guía" cuando termines el checklist para pasarlos a Por Entrega.`);
+    const FIJOS=["17","18","18.1","18.2","18.3","19","20","20.1","20.2","21","22","23","25"];
+    const ahora=new Date();
+    const upds=wrList.filter(w=>allWrIds.includes(w.id)&&!FIJOS.includes(w.status?.code||""))
+      .map(w=>({...w,status:st,historial:[...(w.historial||[]),{code:"17",label:"Almacén",fecha:ahora,user:currentUser.id,nota:`${nota} — guía ${guia.id}`}]}));
+    if(upds.length){const m=new Map(upds.map(u=>[u.id,u]));setWrList(p=>p.map(w=>m.get(w.id)||w));upds.forEach(u=>dbUpsertWR(u));}
+    logAction(`Recibió guía ${guia.id} (bulk)`,`${upds.length} WR → Almacén`);
+    window.alert(`Guía ${guia.id}: ${upds.length} WR recibidos en Almacén.`);
   };
   // ── CARGO RELEASE (Egreso) ──────────────────────────────────────────────────
   // Un Cargo Release agrupa 1+ WRs entregados a un agente/transportista.
@@ -12470,7 +12465,7 @@ svg.bc{width:100%;align-self:stretch;display:block;flex-shrink:1;min-height:36px
     // WR estaba en 1/2/3. Si no encontramos historial previo, fallback a "1".
     // Si el WR ya avanzó a otro estado por otra vía (no debería ocurrir, pero
     // por seguridad), respetamos su estado actual.
-    let revertidos=0;
+    const revertidos=wrList.filter(w=>cr.wrIds.includes(w.id)&&w.status?.code==="25").length;
     setWrList(p=>p.map(w=>{
       if(!cr.wrIds.includes(w.id))return w;
       if(w.status?.code!=="25")return w;
@@ -12479,7 +12474,7 @@ svg.bc{width:100%;align-self:stretch;display:block;flex-shrink:1;min-height:36px
       const prevCode=prev?.code||"1";
       const stPrev=getStatus(prevCode)||getStatus("1");
       if(!stPrev)return w;
-      revertidos++;
+      
       const u={...w,status:stPrev,historial:[...hist,{code:stPrev.code,label:stPrev.label,fecha:new Date(),user:currentUser.id,nota:`Egreso ${cr.id} anulado: ${motivo}`}]};
       dbUpsertWR(u);
       return u;
