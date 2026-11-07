@@ -12824,7 +12824,8 @@ svg.bc{width:100%;align-self:stretch;display:block;flex-shrink:1;min-height:36px
     setDeliveryNotes(p=>[dn,...p]);
     setWrList(p=>p.map(w=>{
       if(!dn.wrIds.includes(w.id))return w;
-      const upd={...w,status:st,historial:[...(w.historial||[]),{code:st.code,label:st.label,fecha:now,user:currentUser.id,nota:notaHist}]};
+      let upd={...w,status:st,historial:[...(w.historial||[]),{code:st.code,label:st.label,fecha:now,user:currentUser.id,nota:notaHist}]};
+      if(st.code==="21")upd={...upd,...trasEntrega(upd,upd,now)};
       dbUpsertWR(upd);
       return upd;
     }));
@@ -12832,6 +12833,14 @@ svg.bc{width:100%;align-self:stretch;display:block;flex-shrink:1;min-height:36px
     logAction(f.tipo==="despacho"?"Creó despacho":"Creó entrega",`${id} · ${dn.wrIds.length} WR → ${f.tipo==="despacho"?f.entidad.nombre:dn.consignatario}`);
     setDnQuick(null);
     setDnPrint(dn);
+  };
+  // Al entregar: si el WR ya tiene factura, pasa a Por Cobrar (emitida / pago parcial) o Cobrado (pagada)
+  const trasEntrega=(w,hist,now)=>{
+    const f=facturas.find(x=>x.status!=="anulada"&&x.tipo!=="nota_credito"&&Array.isArray(x.wrIds)&&x.wrIds.includes(w.id));
+    const c=!f?null:f.status==="pagada"?"23":["emitida","pagada_parcial"].includes(f.status)?"22":null;
+    const st=c&&getStatus(c);
+    if(!st)return hist;
+    return {status:st,historial:[...hist.historial,{code:st.code,label:st.label,fecha:now,user:currentUser.id,nota:`Factura ${f.id} ${c==="23"?"pagada":"pendiente de cobro"}`}]};
   };
   // La oficina confirma que recibió la carga despachada (20.1 → 20.2)
   const dnRecibirSucursal=(dom,wrs)=>{
@@ -12900,7 +12909,8 @@ svg.bc{width:100%;align-self:stretch;display:block;flex-shrink:1;min-height:36px
       const st21=getStatus("21");
       setWrList(p=>p.map(w=>{
         if(!dn.wrIds.includes(w.id))return w;
-        const upd={...w,status:st21,historial:[...(w.historial||[]),{code:"21",label:"Entregado",fecha:now,user:currentUser.id,nota:`Nota ${id} → ${dn.receptorNombre} (${dn.consignatario})`}]};
+        let upd={...w,status:st21,historial:[...(w.historial||[]),{code:"21",label:"Entregado",fecha:now,user:currentUser.id,nota:`Nota ${id} → ${dn.receptorNombre} (${dn.consignatario})`}]};
+        upd={...upd,...trasEntrega(upd,upd,now)};
         dbUpsertWR(upd);
         return upd;
       }));
