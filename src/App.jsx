@@ -10402,9 +10402,9 @@ svg.bc{width:100%;align-self:stretch;display:block;flex-shrink:1;min-height:36px
     // Con "cobrar_prepaid" solo se cobra la factura PREPAID indicada, sin ver las demás del pagador
     const _soloPre=!puedeCobrarGeneral()&&hasPerm("cobrar_prepaid")&&recien&&(recien.wrIds||[]).length>0&&(recien.wrIds||[]).every(id=>esPrepaidWR(wrList.find(w=>w.id===id)));
     if(!puedeCobrarGeneral()&&!_soloPre){window.alert("Tu rol no tiene permiso para registrar pagos.");return;}
-    if(recien){setCobroModal({soloIds:_soloPre?[recien.id]:null,fecha:new Date(),tipoPago:"efectivo",referencia:"",nota:"",archivo:null,pagador:pg,moneda:recien.moneda||"USD",sel:{[recien.id]:true},usarSaldo:saldoFavorDe(pg,recien.moneda||"USD")>0,
+    if(recien){setCobroModal({soloIds:_soloPre?[recien.id]:null,fecha:new Date(),tipoPago:"",referencia:"",nota:"",archivo:null,pagador:pg,moneda:recien.moneda||"USD",sel:{[recien.id]:true},usarSaldo:saldoFavorDe(pg,recien.moneda||"USD")>0,
       monto:String(Math.max(0,Math.round(((recien.saldo??recien.total)-saldoFavorDe(pg,recien.moneda||"USD"))*100)/100))});return;}
-    const base={fecha:new Date(),tipoPago:"efectivo",referencia:"",nota:"",archivo:null};
+    const base={fecha:new Date(),tipoPago:"",referencia:"",nota:"",archivo:null};
     if(!pg){setCobroModal({...base,pagador:null,moneda:"USD",sel:{},monto:"",usarSaldo:true});return;}
     const abiertas=facAbiertasDe(pg);
     const pre=preSel?abiertas.filter(f=>preSel.includes(f.id)):[];
@@ -10439,7 +10439,7 @@ svg.bc{width:100%;align-self:stretch;display:block;flex-shrink:1;min-height:36px
   };
   const cobroSubmit=async()=>{
     let m=cobroModal; if(!m)return;
-    if(!pagoMetodos(m.moneda).some(x=>x.k===m.tipoPago))m={...m,tipoPago:"efectivo"};
+    if(!pagoMetodos(m.moneda).some(x=>x.k===m.tipoPago)){window.alert("Elige la forma de pago.");return;}
     if(!(puedeCobrarGeneral()||(hasPerm("cobrar_prepaid")&&m.soloIds))){window.alert("Tu rol no tiene permiso para esta acción.");return;}
     if(!m.pagador){window.alert("Elige quién paga.");return;}
     const c=cobroCalc(m);
@@ -10677,6 +10677,7 @@ svg.bc{width:100%;align-self:stretch;display:block;flex-shrink:1;min-height:36px
     const m=cuadrePago;if(!m)return;
     if(!hasPerm("registrar_pago")&&!hasPerm("cobrar")){window.alert("Tu rol no tiene permiso.");return;}
     const monto=r2(m.monto);if(!monto||monto<=0){window.alert("Monto inválido.");return;}
+    if(!pagoMetodos(m.moneda).some(x=>x.k===m.tipoPago)){window.alert("Elige la forma de pago.");return;}
     const disp=saldoFavorDe(pg,m.moneda);
     if(monto>disp+0.001){window.alert(`El saldo a favor de ${pg.nombre} es ${fmtMoney(disp,m.moneda)}.`);return;}
     const pago={id:pagoBuildId(),facturaId:"",fecha:new Date(),monto:-monto,moneda:m.moneda,tipoPago:m.tipoPago||"efectivo",
@@ -10942,7 +10943,7 @@ svg.bc{width:100%;align-self:stretch;display:block;flex-shrink:1;min-height:36px
                   <div style={{textAlign:"right"}}><div style={{fontSize:12,color:"var(--t3)"}}>Nos debe</div><div style={{...mono,fontSize:18,fontWeight:800,color:"var(--orange)"}}>{fmtMoney(deuda,mon)}</div></div>
                   <div style={{textAlign:"right"}}><div style={{fontSize:12,color:"var(--t3)"}}>Le debemos</div><div style={{...mono,fontSize:18,fontWeight:800,color:"var(--green)"}}>{fmtMoney(favor,mon)}</div></div>
                   {puede&&<button className="btn-p" style={{fontSize:13}} onClick={()=>cobroAbrir(pg)}><Ico e="💵" sp/>Cobrar</button>}
-                  {puede&&favor>0&&!cuadrePago&&<button className="btn-s" style={{fontSize:13}} onClick={()=>setCuadrePago({monto:String(favor),moneda:mon,tipoPago:"efectivo",referencia:""})}><Ico e="💸" sp/>Pagarle</button>}
+                  {puede&&favor>0&&!cuadrePago&&<button className="btn-s" style={{fontSize:13}} onClick={()=>setCuadrePago({monto:String(favor),moneda:mon,tipoPago:"",referencia:""})}><Ico e="💸" sp/>Pagarle</button>}
                   {hasPerm("imp_estado_cuenta")&&<button className="btn-s" style={{fontSize:13}} onClick={imprimir}><Ico e="🖨️" sp/>Imprimir</button>}
                   {hasPerm("imp_estado_cuenta")&&hasPerm("exportar_excel")&&<button className="btn-s" style={{fontSize:13}} onClick={expTabla(`Cuenta ${pg.nombre}`,[{l:"Fecha",v:x=>x.fecha},{l:"Documento",v:x=>x.doc},{l:"Detalle",v:x=>x.det||""},{l:"Moneda",v:()=>mon},{l:"Debe",v:x=>x.debe||0,r:1},{l:"Haber",v:x=>x.haber||0,r:1},{l:"Saldo",v:x=>x.saldo,r:1}],vis).excel}><Ico e="📊" sp/>Excel</button>}
                 </div>
@@ -10952,7 +10953,7 @@ svg.bc{width:100%;align-self:stretch;display:block;flex-shrink:1;min-height:36px
                   <b style={{alignSelf:"center",marginRight:8}}><Ico e="💸" sp/>Pagar a {pg.nombre}</b>
                   <div><label className="fl">Monto</label><input className="fi" type="number" step="0.01" style={{width:130}} value={cuadrePago.monto} onChange={e=>setCuadrePago(x=>({...x,monto:e.target.value}))}/></div>
                   <div><label className="fl">Moneda</label><select className="fi" value={cuadrePago.moneda} onChange={e=>setCuadrePago(x=>({...x,moneda:e.target.value,monto:String(saldoFavorDe(pg,e.target.value)||"")}))}>{(monsCon.length?monsCon:monedasUso()).map(m=><option key={m}>{m}</option>)}</select></div>
-                  <div><label className="fl">Forma de pago</label><select className="fi" value={pagoMetodos(cuadrePago.moneda).some(x=>x.k===cuadrePago.tipoPago)?cuadrePago.tipoPago:"efectivo"} onChange={e=>setCuadrePago(x=>({...x,tipoPago:e.target.value}))}>{pagoMetodos(cuadrePago.moneda).map(x=><option key={x.k} value={x.k}>{x.l}</option>)}</select></div>
+                  <div><label className="fl">Forma de pago</label><select className="fi" value={pagoMetodos(cuadrePago.moneda).some(x=>x.k===cuadrePago.tipoPago)?cuadrePago.tipoPago:""} onChange={e=>setCuadrePago(x=>({...x,tipoPago:e.target.value}))}><option value="">—</option>{pagoMetodos(cuadrePago.moneda).map(x=><option key={x.k} value={x.k}>{x.l}</option>)}</select></div>
                   <div><label className="fl">Referencia</label><input className="fi" style={{width:160}} value={cuadrePago.referencia} onChange={e=>setCuadrePago(x=>({...x,referencia:e.target.value}))}/></div>
                   <button className="btn-p" style={{fontSize:13}} onClick={()=>cuadrePagar(pg)}><Ico e="💸" sp/>Registrar pago</button>
                   <button className="btn-s" style={{fontSize:13}} onClick={()=>setCuadrePago(null)}>Cancelar</button>
@@ -15842,7 +15843,7 @@ svg.bc{width:100%;align-self:stretch;display:block;flex-shrink:1;min-height:36px
                     <div><label className="fl">Fecha</label>
                       <input className="fi" type="date" value={new Date(m.fecha).toISOString().slice(0,10)} onChange={e=>set({fecha:new Date(e.target.value+"T12:00:00")})}/></div>
                     <div><label className="fl">Forma de pago</label>
-                      <select className="fi" value={pagoMetodos(m.moneda).some(x=>x.k===m.tipoPago)?m.tipoPago:"efectivo"} onChange={e=>set({tipoPago:e.target.value})}>{pagoMetodos(m.moneda).map(x=><option key={x.k} value={x.k}>{x.l}</option>)}</select></div>
+                      <select className="fi" value={pagoMetodos(m.moneda).some(x=>x.k===m.tipoPago)?m.tipoPago:""} onChange={e=>set({tipoPago:e.target.value})}><option value="">—</option>{pagoMetodos(m.moneda).map(x=><option key={x.k} value={x.k}>{x.l}</option>)}</select></div>
                     <div><label className="fl">Referencia</label>
                       <input className="fi" value={m.referencia} onChange={e=>set({referencia:e.target.value})}/></div>
                     <div><label className="fl">Comprobante</label>
