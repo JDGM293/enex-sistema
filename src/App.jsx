@@ -6717,7 +6717,8 @@ export default function SistemaCarga(){
     f.setAttribute("aria-hidden","true");
     Object.assign(f.style,{position:"fixed",right:"0",bottom:"0",width:"0",height:"0",border:"0",visibility:"hidden"});
     document.body.appendChild(f);
-    f.onload=()=>{try{f.contentWindow.focus();f.contentWindow.print();}catch(err){console.error(err);}setTimeout(()=>f.remove(),60000);};
+    // El diálogo de impresión congela la página: se abre un momento después para que los guardados en curso salgan antes
+    f.onload=()=>{setTimeout(()=>{try{f.contentWindow.focus();f.contentWindow.print();}catch(err){console.error(err);}},900);setTimeout(()=>f.remove(),60000);};
     f.srcdoc=html;
   };
 
