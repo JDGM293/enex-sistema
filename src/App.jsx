@@ -12729,7 +12729,8 @@ svg.bc{width:100%;align-self:stretch;display:block;flex-shrink:1;min-height:36px
     const sucId=sucursalDeWR(w,cli);
     if(sucId){
       const of=oficinas.find(o=>o.id===sucId);
-      if(of&&enDestino(of.pais))return {tipo:"oficina",id:of.id,nombre:of.nombre||of.codigo||"Oficina"};
+      // Si se entrega en la propia matriz, la entrega la hace la matriz (no hay traslado)
+      if(of&&!esMatriz(of)&&enDestino(of.pais))return {tipo:"oficina",id:of.id,nombre:of.nombre||of.codigo||"Oficina"};
     }
     return {tipo:"matriz",id:"matriz",nombre:empresaNombre||"Matriz"};
   };
