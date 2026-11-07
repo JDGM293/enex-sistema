@@ -2076,7 +2076,7 @@ const ClientModal=({initial,onClose,onSave,title,agentes=[],oficinas=[],autonomo
         <div className="fgrid g3" style={{marginBottom:10}}>
           <div className="fg"><div className="fl">ID Identificación *</div>{ocultar&&initial?.cedula&&f.cedula===initial.cedula?<DatoOculto valor={f.cedula} onCambiar={()=>ff("cedula","")}/>:<input className="fi" value={f.cedula} onChange={e=>ff("cedula",e.target.value)}/>}</div>
           {f.tipo==="cliente"
-            ?<div className="fg"><div className="fl">Casillero (auto)</div><input className="fi" value={f.casillero} onChange={e=>ff("casillero",e.target.value)} placeholder="Se genera automático" style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)"}}/></div>
+            ?<div className="fg"><div className="fl">Casillero (auto)</div><input className="fi" value={f.casillero} onChange={e=>ff("casillero",e.target.value)} style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"var(--navy)"}}/></div>
             :<div className="fg"><div className="fl">Rol del Sistema</div><select className="fs" value={f.rol==="I"?"":(f.rol||"")} onChange={e=>ff("rol",e.target.value)}><option value="">— Selecciona el rol —</option>{ALL_ROLES.filter(r=>r.code!=="I"&&(!rolesOk||rolesOk.includes(r.code)||r.code===initial?.rol)).map(r=><option key={r.code} value={r.code} disabled={!!rolesOk&&!rolesOk.includes(r.code)}>{r.code} — {r.name}</option>)}</select></div>}
             {f.tipo==="usuario"&&f.rol==="F"&&<div className="fg"><div className="fl">Dirección en los WR de sus clientes</div><select className="fs" value={f.wrDir||"matriz"} onChange={e=>ff("wrDir",e.target.value)}><option value="matriz">Dirección de la casa matriz</option><option value="origen">Dirección de la oficina de origen del WR</option></select></div>}
           {f.tipo==="usuario"&&<div className="fg"><div className="fl">Login (usuario)</div><input className="fi" value={f.login||f.email} onChange={e=>ff("login",e.target.value)} placeholder="usuario@email.com o nick"/></div>}
@@ -3753,7 +3753,7 @@ export default function SistemaCarga(){
       if(uploadedCount>0) logAction("Subió fotos WR",`${n.id} (${uploadedCount})`);
       setShowLabels({wr:n,dims,remitente:wrf.remitente,tipoEnvio:wrf.tipoEnvio});
       // PREPAID: abrir su factura al guardar (si se marcó la opción)
-      if(String(n.tipoPago||"").toLowerCase().includes("prepa")&&wrf.facturarPrepaid!==false&&puedeFacturarWR(n)){
+      if(String(n.tipoPago||"").toLowerCase().includes("prepa")&&wrf.facturarPrepaid===true&&puedeFacturarWR(n)){
         if(n.tipoEnvio)facOpenNew(facConstruirWR(n),[n]);
       }
     }
@@ -4004,9 +4004,9 @@ export default function SistemaCarga(){
             <input className="fi" value={scanCarrier} onChange={e=>setScanCarrier(e.target.value.toUpperCase())} style={{textTransform:"uppercase",fontWeight:600}}/>
           </div>
           <div className="fg">
-            <div className="fl">Tracking — Escanear o escribir</div>
+            <div className="fl">Tracking</div>
             <input className="fi" style={{fontFamily:"'DM Mono',monospace",fontSize:16,letterSpacing:1}}
-              placeholder="Escanear o escribir tracking…" value={scanV} onChange={e=>setScanV(e.target.value.toUpperCase())}
+              value={scanV} onChange={e=>setScanV(e.target.value.toUpperCase())}
               onKeyDown={e=>{if(e.key==="Enter")doScan();}}/>
           </div>
           <div className="fg">
@@ -4523,10 +4523,10 @@ export default function SistemaCarga(){
                   </div>);
                 const enl=wrf.remitenteId&&clients.find(x=>x.id===wrf.remitenteId);
                 return <>
-                  {campo("remitente",<>Nombre / Empresa {enl&&<span style={{color:"var(--gold2)",fontFamily:"'DM Mono',monospace",fontWeight:700}}>#{enl.casillero} <span onClick={()=>setWrf(p=>({...p,remitenteId:""}))} style={{cursor:"pointer",color:"var(--red)",marginLeft:4}}>✕</span></span>}</>,{placeholder:"Nombre o casillero"})}
+                  {campo("remitente",<>Nombre / Empresa {enl&&<span style={{color:"var(--gold2)",fontFamily:"'DM Mono',monospace",fontWeight:700}}>#{enl.casillero} <span onClick={()=>setWrf(p=>({...p,remitenteId:""}))} style={{cursor:"pointer",color:"var(--red)",marginLeft:4}}>✕</span></span>}</>)}
                   {campo("remitenteDoc","ID Identificación")}
                   <div className="fg"><div className="fl">Dirección</div><input className="fi" value={wrf.remitenteDir} onChange={e=>sw("remitenteDir",e.target.value)}/></div>
-                  {campo("remitenteTel","Teléfono",{placeholder:"+1 000 000 0000"})}
+                  {campo("remitenteTel","Teléfono")}
                   {campo("remitenteEmail","Email")}
                 </>;
               })()}
@@ -4583,7 +4583,7 @@ export default function SistemaCarga(){
           <div className="fg"><div className="fl">Tipo de Pago
             {!editWR&&wrf.tipoEnvio&&String(wrf.tipoPago||"").toLowerCase().includes("prepa")&&puedeFacturarWR(wrf)&&(
               <label style={{marginLeft:10,fontWeight:700,color:"var(--navy)",textTransform:"none",letterSpacing:0,cursor:"pointer"}}>
-                <input type="checkbox" checked={wrf.facturarPrepaid!==false} onChange={e=>sw("facturarPrepaid",e.target.checked)} style={{marginRight:4}}/><Ico e="🧾" sp/>Facturar al guardar
+                <input type="checkbox" checked={wrf.facturarPrepaid===true} onChange={e=>sw("facturarPrepaid",e.target.checked)} style={{marginRight:4}}/><Ico e="🧾" sp/>Facturar al guardar
               </label>)}
           </div><select className="fs" value={wrf.tipoPago} onChange={e=>sw("tipoPago",e.target.value)}><option value="">— Selecciona —</option>{PAY_TYPES.map(t=><option key={t}>{t}</option>)}</select></div>
           <div className="fg">
@@ -4661,13 +4661,13 @@ export default function SistemaCarga(){
                           {/* Transportista */}
                           <div>
                             <div className="fl" style={{marginBottom:2,fontSize:10}}>Transp. {ti+1}{ti>0?" (opc.)":""}</div>
-                            <input className="fi" style={{padding:"4px 6px",fontSize:12,textTransform:"uppercase",fontWeight:600}} value={caja[cfield]||""} onChange={e=>swCaja(idx,cfield,e.target.value.toUpperCase())} placeholder={ti===0?"":"Opcional"}/>
+                            <input className="fi" style={{padding:"4px 6px",fontSize:12,textTransform:"uppercase",fontWeight:600}} value={caja[cfield]||""} onChange={e=>swCaja(idx,cfield,e.target.value.toUpperCase())} />
                           </div>
                           {/* Tracking */}
                           <div>
                             <div className="fl" style={{marginBottom:2,fontSize:10}}>Tracking {ti+1}</div>
                             <div style={{display:"flex",gap:4}}>
-                              <input className="fi" style={{padding:"4px 6px",fontFamily:"'DM Mono',monospace",fontSize:12,flex:1}} value={caja[tfield]||""} onChange={e=>swCaja(idx,tfield,e.target.value.toUpperCase())} placeholder="Escanear…"/>
+                              <input className="fi" style={{padding:"4px 6px",fontFamily:"'DM Mono',monospace",fontSize:12,flex:1}} value={caja[tfield]||""} onChange={e=>swCaja(idx,tfield,e.target.value.toUpperCase())}/>
                             </div>
                           </div>
                         </Fragment>
@@ -6156,7 +6156,9 @@ export default function SistemaCarga(){
   };
   // Origen de una guía: no hay campo propio, se toma de las ciudades de origen de
   // sus WR (normalmente una sola); si no hay WR, la oficina configurada.
+  // Origen de la guía: la ciudad de la matriz de donde sale
   const guiaOrigen=(c)=>{
+    const oO=oficinas.find(o=>o.id===c.ofiOrigen);if(oO&&ofiCodigos(oO).code)return ofiCodigos(oO).code;
     const ids=(c.containers||[]).flatMap(ct=>(ct.wr||[]).map(w=>w.id));
     const cs=[...new Set(wrList.filter(w=>ids.includes(w.id)).map(w=>w.origCity).filter(Boolean))];
     return cs.length?cs.join(", "):(OFFICE_CONFIG.origCity||"—");
@@ -6301,15 +6303,15 @@ export default function SistemaCarga(){
               </div>
               <div className="fg" style={{gridColumn:"span 2"}}>
                 <div className="fl">Notas</div>
-                <input className="fi" value={cf.notas} onChange={e=>sc2("notas",e.target.value)} placeholder="Observaciones…"/>
+                <input className="fi" value={cf.notas} onChange={e=>sc2("notas",e.target.value)}/>
               </div>
             </div>
 
             {/* WR CONFIRMADOS DISPONIBLES — solo del tipoEnvio elegido */}
-            <div className="sdiv">WR CONFIRMADOS DISPONIBLES{cf.tipoEnvio?` — ${cf.tipoEnvio} (clic para agregar al contenedor activo)`:" — selecciona primero el Tipo de Envío"}</div>
+            <div className="sdiv">WR CONFIRMADOS DISPONIBLES{cf.tipoEnvio?` — ${cf.tipoEnvio}`:""}</div>
             <div style={{background:"var(--bg4)",border:"1px solid var(--b1)",borderRadius:8,padding:"8px 12px",marginBottom:14,maxHeight:"40vh",overflowY:"auto"}}>
               {!cf.tipoEnvio?(
-                <div style={{color:"var(--orange)",fontSize:13,padding:"8px 0",fontWeight:600}}><Ico e="⚠️" sp/>Selecciona el Tipo de Envío.</div>
+                <div style={{fontSize:13,padding:"8px 0",color:"var(--t4)"}}>—</div>
               ):(()=>{
                 // WR ya metidos en OTRA guía (la que se edita no cuenta)
                 const enOtraGuia=new Set(consolList.filter(g=>g.id!==editConsolId).flatMap(g=>(g.containers||[]).flatMap(ct=>(ct.wr||[]).map(r=>r.id))));
@@ -6358,7 +6360,7 @@ export default function SistemaCarga(){
                     {/* Input + datalist: permite elegir un tipo registrado en Configuración
                         o escribir uno libre si el tipo no existe aún. */}
                     <input list={`container-types-${ci}`} value={cont.tipo}
-                      placeholder="Selecciona o escribe el tipo…"
+                      
                       onChange={e=>{
                         const val=e.target.value;
                         const reg=CONTAINER_TYPES.find(t=>t.code===val||t.name===val);
@@ -6408,14 +6410,14 @@ export default function SistemaCarga(){
 
                     {/* Escáner de WR — autoFocus */}
                     <div style={{marginBottom:8}}>
-                      <div className="fl" style={{marginBottom:4}}>Escanear o escribir N° WR</div>
+                      <div className="fl" style={{marginBottom:4}}>N° WR</div>
                       <div style={{display:"flex",gap:8}}>
                         <input className="fi" style={{fontFamily:"'DM Mono',monospace",flex:1,fontWeight:600,fontSize:15}}
                           autoFocus={ci===cf.containers.length-1}
                           value={contScanVal[ci]||""}
                           onChange={e=>handleContScan(ci,e.target.value)}
                           onKeyDown={e=>{if(e.key==="Enter")doContScan(ci);}}
-                          placeholder="Escanear o escribir N° WR…"/>
+                         />
                         <button className="scan-btn" onClick={()=>doContScan(ci)}><Ico e="📡" sp/>Agregar</button>
                       </div>
                       {contScanErr[ci]&&<div style={{fontSize:12,color:"var(--red)",marginTop:4}}><Ico e="⚠️" sp/>{contScanErr[ci]}</div>}
@@ -6848,7 +6850,7 @@ svg.bc{width:100%;align-self:stretch;display:block;flex-shrink:1;min-height:36px
   const htmlWR=w=>{
     if(!w)return "";
     const cl=clients.find(c=>c.id===w.clienteId)||clients.find(c=>c.casillero&&c.casillero===w.casillero);
-    const of=oficinas.find(o=>(o.ciudad||"").toUpperCase().startsWith((w.origCity||"").toUpperCase()))||_origOff;
+    const of=oficinas.find(o=>o.id===w.ofiOrigen)||oficinas.find(o=>(o.ciudad||"").toUpperCase().startsWith((w.origCity||"").toUpperCase()))||_origOff;
     const ct=cl?.clienteTipo||"matriz";let emisor=null;
     // Agentes y autónomos: su nombre, teléfono y correo; la dirección es la de la matriz o la de la oficina de origen
     const dirDe=pref=>{if(pref==="origen"&&of&&(of.dir||of.ciudad))return [of.dir,lineaCiudad(of)];const E=docCfg(w.origCountry,"empresa");return [E.dir,E.dir2];};
@@ -13286,7 +13288,7 @@ svg.bc{width:100%;align-self:stretch;display:block;flex-shrink:1;min-height:36px
               <div>
                 <div style={{fontSize:12,color:"var(--t3)",marginBottom:3,fontWeight:600}}>Por escaneo (N° guía / N° WR / Tracking)</div>
                 <div style={{display:"flex",gap:6}}>
-                  <input className="fi" placeholder="Escanear o escribir…" value={rdScan} onChange={e=>setRdScan(e.target.value.toUpperCase())} onKeyDown={e=>{if(e.key==="Enter"&&hasPerm("hacer_recepcion_dest"))rdOnScan();}} disabled={!hasPerm("hacer_recepcion_dest")} style={{flex:1,fontFamily:"'DM Mono',monospace",fontSize:15,letterSpacing:1,padding:"8px 12px",opacity:hasPerm("hacer_recepcion_dest")?1:.5}} autoFocus/>
+                  <input className="fi" value={rdScan} onChange={e=>setRdScan(e.target.value.toUpperCase())} onKeyDown={e=>{if(e.key==="Enter"&&hasPerm("hacer_recepcion_dest"))rdOnScan();}} disabled={!hasPerm("hacer_recepcion_dest")} style={{flex:1,fontFamily:"'DM Mono',monospace",fontSize:15,letterSpacing:1,padding:"8px 12px",opacity:hasPerm("hacer_recepcion_dest")?1:.5}} autoFocus/>
                   {hasPerm("hacer_recepcion_dest")&&<button className="btn-p" onClick={rdOnScan}><Ico e="📥" sp/>Recibir</button>}
                 </div>
               </div>
@@ -14202,8 +14204,7 @@ svg.bc{width:100%;align-self:stretch;display:block;flex-shrink:1;min-height:36px
             <div className="fg"><div className="fl">N° de tracking</div><input className="fi" value={f.tracking} onChange={up("tracking")}/></div></div>}
           <div className="sdiv">WR DEL TRASLADO</div>
           <div style={{display:"flex",gap:8,marginBottom:6}}>
-            <input className="fi" style={{flex:1,fontSize:15}} value={f.scan} disabled={!D} onChange={up("scan")} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();trAgregarWR();}}}
-              placeholder={D?"Escanea o escribe el WR o el tracking y pulsa Enter":"Primero elige la oficina que envía"}/>
+            <input className="fi" style={{flex:1,fontSize:15}} value={f.scan} disabled={!D} onChange={up("scan")} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();trAgregarWR();}}}/>
             <button className="btn-s" disabled={!D} onClick={trAgregarWR}>Agregar</button>
           </div>
           {f.err&&<div style={{color:"var(--red)",fontSize:13,fontWeight:600,marginBottom:6}}>{f.err}</div>}
@@ -14237,7 +14238,7 @@ svg.bc{width:100%;align-self:stretch;display:block;flex-shrink:1;min-height:36px
           <div style={{fontSize:15,marginBottom:10}}><b>{trOfiNom(t.desde)}</b> → <b>{trOfiNom(t.hasta)}</b> · {t.modo==="carrier"?`${t.carrier}${t.tracking?` · ${t.tracking}`:""}`:`${t.chofer}${t.vehiculo?` · ${t.vehiculo}`:""}`}</div>
           <div style={{display:"flex",gap:8,marginBottom:6}}>
             <input className="fi" autoFocus style={{flex:1,fontSize:16,padding:"10px 12px"}} value={r.scan} onChange={e=>setTrRecibir(p=>({...p,scan:e.target.value.toUpperCase()}))}
-              onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();trEscanear();}}} placeholder="Escanea o escribe el WR o el tracking y pulsa Enter"/>
+              onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();trEscanear();}}}/>
             <button className="btn-s" onClick={trEscanear}>Recibir</button>
             {hasPerm("saltar_bloqueos")&&<button className="btn-s" onClick={()=>setTrRecibir(p=>({...p,ok:pend.map(w=>w.id),err:"",msg:"Todos marcados como recibidos."}))}>Marcar todos</button>}
           </div>
