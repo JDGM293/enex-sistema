@@ -11396,14 +11396,15 @@ svg.bc{width:100%;align-self:stretch;display:block;flex-shrink:1;min-height:36px
                   <input className="fi" placeholder="Buscar guía o cliente…" value={facGuiaBuscar} onChange={e=>setFacGuiaBuscar(e.target.value)} style={{fontSize:15,padding:"9px 12px",flex:1,minWidth:220}}/>
                   {expBotones(expTabla(facGuiaVista==="historial"?"Guías facturadas":"Guías por facturar",[{l:"Guía",v:x=>x.g.id,m:1},{l:"Envío",v:x=>x.g.tipoEnvio||""},{l:"Destino",v:x=>x.g.destino||""},{l:"Fecha",v:x=>x.g.fecha?new Date(x.g.fecha):""},
                     {l:"WR",v:x=>x.grupos.reduce((t,y)=>t+y.wrs.length,0)+x.prepaid.length,c:1},{l:"WR sin facturar",v:x=>x.grupos.reduce((t,y)=>t+y.pendientes.length,0)+x.prepaidSin.length,c:1},
-                    {l:"Facturado",v:x=>{const facs=[...new Map([...x.grupos.flatMap(y=>y.facturas),...x.facPrepaid].map(f=>[f.id,f])).values()];const pm={};facs.forEach(f=>{pm[f.moneda||"USD"]=(pm[f.moneda||"USD"]||0)+(f.total||0);});return Object.entries(pm).map(([m,v])=>fmtMoney(v,m)).join(" · ");}}],visibles),hasPerm("imp_factura")||hasPerm("ver_factura"))}
+                    {l:"Facturado",v:x=>{const facs=[...new Map([...x.grupos.flatMap(y=>y.facturas),...x.facPrepaid].map(f=>[f.id,f])).values()].filter(f=>!misOficinas||!f.matrizId||misOficinas.has(f.matrizId));const pm={};facs.forEach(f=>{pm[f.moneda||"USD"]=(pm[f.moneda||"USD"]||0)+(f.total||0);});return Object.entries(pm).map(([m,v])=>fmtMoney(v,m)).join(" · ");}}],visibles),hasPerm("imp_factura")||hasPerm("ver_factura"))}
                 </div>
                 {visibles.length===0?<div className="card" style={{textAlign:"center",padding:50,color:"var(--t3)"}}>{facGuiaVista==="historial"?"No hay guías completamente facturadas.":"No hay guías con carga por facturar."}</div>:
                 <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(290px,1fr))",gap:12}}>
                   {visibles.map(({g,grupos,prepaid,facPrepaid,prepaidSin,faltantes})=>{
                     const wrsTot=grupos.reduce((t,x)=>t+x.wrs.length,0)+prepaid.length;
                     const tot=wrsTot, hechos=wrsTot-grupos.reduce((t,x)=>t+x.pendientes.length,0)-prepaidSin.length;
-                    const facs=[...new Map([...grupos.flatMap(x=>x.facturas),...facPrepaid].map(f=>[f.id,f])).values()];
+                    // Importe: solo lo facturado por la matriz de trabajo (el PREPAID de otra matriz lo cobra esa matriz)
+                    const facs=[...new Map([...grupos.flatMap(x=>x.facturas),...facPrepaid].map(f=>[f.id,f])).values()].filter(f=>!misOficinas||!f.matrizId||misOficinas.has(f.matrizId));
                     const porMon={};facs.forEach(f=>{porMon[f.moneda||"USD"]=(porMon[f.moneda||"USD"]||0)+(f.total||0);});
                     const pct=tot?Math.round(hechos*100/tot):0;
                     const nBor=facs.filter(f=>f.status==="borrador").length;
