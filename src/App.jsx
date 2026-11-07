@@ -1925,6 +1925,18 @@ const SelectorLugares=({titulo,countries,value,onChange})=>{
     </div>
   );
 };
+// Selector con buscador: se escribe para filtrar y se elige de la lista (sin listas desplegables largas)
+const BuscaSel=({value,options,onChange,max=40})=>{
+  const [q,setQ]=useState("");const [abierto,setAbierto]=useState(false);
+  const sel=options.find(o=>o.id===value);
+  const Q=sinAcentos(q);
+  const lista=abierto&&Q?options.filter(o=>sinAcentos(o.label).includes(Q)).slice(0,max):[];
+  return <div className="fi-search" style={{position:"relative"}}>
+    <input className="fi" value={abierto?q:(sel?.label||"")} onFocus={()=>{setAbierto(true);setQ("");}} onBlur={()=>setTimeout(()=>setAbierto(false),200)} onChange={e=>setQ(e.target.value.toUpperCase())}/>
+    {sel&&!abierto&&<span onClick={()=>onChange("")} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",cursor:"pointer",color:"var(--red)"}}>✕</span>}
+    {lista.length>0&&<div className="fi-search-res">{lista.map(o=><div key={o.id} className="fi-search-item" onMouseDown={()=>{onChange(o.id);setAbierto(false);setQ("");}}>{o.label}</div>)}</div>}
+  </div>;
+};
 const PwInput=({style,...props})=>{
   const [ver,setVer]=useState(false);
   return (
@@ -15608,10 +15620,7 @@ svg.bc{width:100%;align-self:stretch;display:block;flex-shrink:1;min-height:36px
 
                 <div style={{marginBottom:10}}>
                   <label className="fl">Seleccionar {(REC_TYPES.find(r=>r.k===f.receptorTipo)||{l:""}).l}</label>
-                  <select className="fi" value={f.receptorId} onChange={e=>setRec(f.receptorTipo,e.target.value)}>
-                    <option value="">— Selecciona —</option>
-                    {recOptions.map(o=><option key={o.id} value={o.id}>{o.label}</option>)}
-                  </select>
+                  <BuscaSel value={f.receptorId} options={recOptions} onChange={v=>setRec(f.receptorTipo,v)}/>
                 </div>
 
                 <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr",gap:10,marginBottom:10}}>
